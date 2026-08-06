@@ -49,7 +49,11 @@ test("preserves local data compatibility and critical one-handed flows", async (
   assert.match(app, /function parseStoredData/);
   assert.match(app, /Start \{nursingSide\} timer/);
   assert.match(app, /saveDiaper\(diaperKind\)/);
-  assert.match(app, /aria-current=\{active \? "page"/);
+  assert.match(app, /<Tabs value=\{activeTab\}/);
+  assert.match(app, /<ToggleGroup type="single"/);
+  assert.match(app, /<AlertDialog>/);
+  assert.match(app, /<Card className=/);
+  assert.doesNotMatch(app, /<button\b/);
   assert.doesNotMatch(app, /refreshTimers/);
   assert.doesNotMatch(app, /serviceWorker\.register/);
   assert.match(css, /@media \(min-width: 768px\)/);
@@ -59,13 +63,19 @@ test("preserves local data compatibility and critical one-handed flows", async (
   assert.match(app, /function EditActivityForm/);
   assert.match(app, /const timelineGroups = useMemo/);
   assert.match(css, /\.secondary-actions/);
-  assert.deepEqual(Object.keys(packageJson.dependencies).sort(), [
+  for (const dependency of [
+    "@radix-ui/react-alert-dialog",
+    "@radix-ui/react-dialog",
+    "@radix-ui/react-tabs",
+    "@radix-ui/react-toggle-group",
+    "@radix-ui/react-switch",
     "class-variance-authority",
-    "clsx",
-    "lucide-react",
-    "react",
-    "react-dom",
-  ]);
+    "sonner",
+    "tailwind-merge",
+  ]) {
+    assert.ok(packageJson.dependencies[dependency], `${dependency} must be installed`);
+  }
+  assert.ok(packageJson.devDependencies.tailwindcss);
 });
 
 test("keeps the initial production UI bundle lightweight", async () => {
@@ -77,5 +87,5 @@ test("keeps the initial production UI bundle lightweight", async () => {
   }));
   const totalGzip = compressedSizes.reduce((sum, size) => sum + size, 0);
 
-  assert.ok(totalGzip < 90_000, `Initial JS + CSS is ${totalGzip} gzip bytes`);
+  assert.ok(totalGzip < 140_000, `Initial JS + CSS is ${totalGzip} gzip bytes`);
 });

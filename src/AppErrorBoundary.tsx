@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { Button } from "./components/ui/button";
 
 type Props = { children: ReactNode };
 type State = { failed: boolean };
@@ -22,7 +23,7 @@ export class AppErrorBoundary extends Component<Props, State> {
         <div className="brand-mark" aria-hidden="true">BT</div>
         <h1>Something didn’t load.</h1>
         <p>The app stopped before continuing. Reload to try again; if this repeats, restore your latest backup.</p>
-        <button onClick={() => window.location.reload()}>Try again</button>
+        <Button onClick={() => window.location.reload()}>Try again</Button>
       </main>
     );
   }

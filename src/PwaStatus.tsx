@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { registerSW } from "virtual:pwa-register";
+import { Button } from "./components/ui/button";
 
 export function PwaStatus() {
   const [offlineReady, setOfflineReady] = useState(false);
@@ -27,8 +28,8 @@ export function PwaStatus() {
     <aside className="pwa-toast" role="status" aria-live="polite">
       <span>{needsRefresh ? "A safer, faster version is ready." : "Ready to use offline."}</span>
       <div>
-        {needsRefresh && <button onClick={() => updateApp.current()}>Update</button>}
-        <button onClick={() => { setOfflineReady(false); setNeedsRefresh(false); }}>Dismiss</button>
+        {needsRefresh && <Button onClick={() => updateApp.current()}>Update</Button>}
+        <Button onClick={() => { setOfflineReady(false); setNeedsRefresh(false); }}>Dismiss</Button>
       </div>
     </aside>
   );
