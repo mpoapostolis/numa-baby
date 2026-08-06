@@ -1,4 +1,4 @@
-const CACHE_NAME = "numa-shell-v1";
+const CACHE_NAME = "baby-tracker-shell-v3";
 const APP_SHELL = ["/", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {

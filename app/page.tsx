@@ -70,6 +70,22 @@ function formatShortDay(date: Date) {
   return new Intl.DateTimeFormat("en", { weekday: "short" }).format(date);
 }
 
+function formatLongDate(date: Date) {
+  return new Intl.DateTimeFormat("en", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  }).format(date);
+}
+
+function greeting() {
+  const hour = new Date().getHours();
+  if (hour < 5) return "You’re up late";
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
 function minutesBetween(start: string, end = new Date().toISOString()) {
   return Math.max(0, Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60_000));
 }
@@ -79,6 +95,18 @@ function humanDuration(minutes: number) {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   return mins ? `${hours}h ${mins}m` : `${hours}h`;
+}
+
+function liveDuration(start: string) {
+  const totalSeconds = Math.max(
+    0,
+    Math.floor((Date.now() - new Date(start).getTime()) / 1_000),
+  );
+  const hours = Math.floor(totalSeconds / 3_600);
+  const minutes = Math.floor((totalSeconds % 3_600) / 60);
+  const seconds = totalSeconds % 60;
+  const clock = [minutes, seconds].map((value) => String(value).padStart(2, "0")).join(":");
+  return hours > 0 ? `${hours}:${clock}` : clock;
 }
 
 function timeAgo(value?: string) {
@@ -180,12 +208,14 @@ function activityDetail(activity: Activity) {
   }
   if (activity.type === "nursing") {
     const side = activity.side === "left" ? "Left side" : "Right side";
-    return `${side} · ${humanDuration(minutesBetween(activity.startedAt, activity.endedAt))}`;
+    return activity.endedAt
+      ? `${side} · ${formatTime(activity.startedAt)}–${formatTime(activity.endedAt)} · ${humanDuration(minutesBetween(activity.startedAt, activity.endedAt))}`
+      : `${side} · started ${formatTime(activity.startedAt)}`;
   }
   if (activity.type === "sleep") {
     return activity.endedAt
-      ? humanDuration(minutesBetween(activity.startedAt, activity.endedAt))
-      : `Started ${timeAgo(activity.startedAt)}`;
+      ? `${formatTime(activity.startedAt)}–${formatTime(activity.endedAt)} · ${humanDuration(minutesBetween(activity.startedAt, activity.endedAt))}`
+      : `Started ${formatTime(activity.startedAt)} · ${timeAgo(activity.startedAt)}`;
   }
   return "Quick logged";
 }
@@ -218,7 +248,7 @@ export default function HomePage() {
   const importRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const timer = window.setInterval(() => refreshTimers((current) => current + 1), 30_000);
+    const timer = window.setInterval(() => refreshTimers((current) => current + 1), 1_000);
     return () => {
       window.clearInterval(timer);
       if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -226,36 +256,40 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved) as {
-          activities: Activity[];
-          profile: Profile;
-          nightMode?: boolean;
-        };
-        setActivities(parsed.activities ?? []);
-        setProfile(parsed.profile);
-        setNightMode(Boolean(parsed.nightMode));
-      } catch {
+    const frame = window.requestAnimationFrame(() => {
+      const saved = window.localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved) as {
+            activities: Activity[];
+            profile: Profile;
+            nightMode?: boolean;
+          };
+          setActivities(parsed.activities ?? []);
+          setProfile(parsed.profile);
+          setNightMode(Boolean(parsed.nightMode));
+        } catch {
+          setActivities(demoData());
+        }
+      } else {
+        const birthday = new Date();
+        birthday.setDate(birthday.getDate() - 18);
+        setProfile({
+          name: "Mia",
+          birthDate: birthday.toISOString().slice(0, 10),
+          feedingMode: "mixed",
+          isDemo: true,
+        });
         setActivities(demoData());
       }
-    } else {
-      const birthday = new Date();
-      birthday.setDate(birthday.getDate() - 18);
-      setProfile({
-        name: "Mia",
-        birthDate: birthday.toISOString().slice(0, 10),
-        feedingMode: "mixed",
-        isDemo: true,
-      });
-      setActivities(demoData());
-    }
-    setHydrated(true);
+      setHydrated(true);
+    });
 
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => undefined);
     }
+
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {
@@ -298,6 +332,9 @@ export default function HomePage() {
   );
   const activeNursing = sortedActivities.find(
     (activity) => activity.type === "nursing" && !activity.endedAt,
+  );
+  const activeTimers = [activeNursing, activeSleep].filter(
+    (activity): activity is Activity => Boolean(activity),
   );
 
   const feedingGaps = useMemo(() => {
@@ -453,7 +490,7 @@ export default function HomePage() {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `numa-${profile.name.toLowerCase().replace(/\s+/g, "-")}-backup.json`;
+    anchor.download = `baby-tracker-${profile.name.toLowerCase().replace(/\s+/g, "-")}-backup.json`;
     anchor.click();
     URL.revokeObjectURL(url);
     showToast("Private backup downloaded");
@@ -483,9 +520,9 @@ export default function HomePage() {
 
   if (!hydrated) {
     return (
-      <main className="loading-screen" aria-label="Loading Numa">
+      <main className="loading-screen" aria-label="Loading Baby Tracker">
         <div className="brand-mark"><Baby size={24} /></div>
-        <span>Numa</span>
+        <span>Baby Tracker</span>
       </main>
     );
   }
@@ -494,6 +531,17 @@ export default function HomePage() {
     <div className={`numa-shell ${nightMode ? "theme-night" : ""}`}>
       <div className="app-frame">
         <header className="topbar">
+          <div className="wordmark" aria-label="Baby Tracker">
+            <span className="wordmark-mark"><Baby size={20} /></span>
+            <span className="wordmark-copy">
+              <strong>Baby Tracker</strong>
+              <small>Private family log</small>
+            </span>
+          </div>
+          <div className="topbar-date">
+            <Clock size={16} />
+            <span>{formatLongDate(new Date())}</span>
+          </div>
           <button className="baby-identity" onClick={() => openSheet("profile")}>
             <span className="baby-avatar"><Baby size={19} /></span>
             <span>
@@ -502,10 +550,6 @@ export default function HomePage() {
             </span>
             <ChevronRight size={16} />
           </button>
-          <div className="wordmark" aria-label="Numa baby tracker">
-            <span className="wordmark-dot" />
-            numa
-          </div>
         </header>
 
         {profile.isDemo && (
@@ -520,8 +564,9 @@ export default function HomePage() {
             <section className="screen today-screen" aria-labelledby="today-heading">
               <div className="section-heading">
                 <div>
-                  <p className="eyebrow">Today · {new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date())}</p>
-                  <h1 id="today-heading">Right now</h1>
+                  <p className="eyebrow">{formatLongDate(new Date())}</p>
+                  <h1 id="today-heading">{greeting()}, {profile.name}.</h1>
+                  <p className="page-subtitle">Everything that matters today, without having to remember it.</p>
                 </div>
                 <button className="icon-button" aria-label="Open settings" onClick={() => setActiveTab("more")}>
                   <Settings size={20} />
@@ -550,17 +595,20 @@ export default function HomePage() {
                 )}
               </article>
 
-              {(activeSleep || activeNursing) && (
-                <article className="active-card">
-                  <span className="pulse" />
-                  <div>
-                    <strong>{activeSleep ? "Sleeping" : `Nursing · ${activeNursing?.side}`}</strong>
-                    <span>{humanDuration(minutesBetween((activeSleep ?? activeNursing)!.startedAt))}</span>
+              {activeTimers.length > 0 && (
+                <div className="active-stack" aria-label="Active timers">
+                  <div className="timer-heading">
+                    <span><i className="pulse" /> Running now</span>
+                    <small>{activeTimers.length} {activeTimers.length === 1 ? "timer" : "timers"}</small>
                   </div>
-                  <button onClick={activeSleep ? toggleSleep : stopNursing}>
-                    <Square size={15} fill="currentColor" /> Stop
-                  </button>
-                </article>
+                  {activeTimers.map((timer) => (
+                    <ActiveTimerCard
+                      key={timer.id}
+                      activity={timer}
+                      onStop={timer.type === "sleep" ? toggleSleep : stopNursing}
+                    />
+                  ))}
+                </div>
               )}
 
               <div className="summary-grid" aria-label="Today's summary">
@@ -708,7 +756,7 @@ export default function HomePage() {
 
               <article className="gentle-note">
                 <ShieldCheck size={20} />
-                <p><strong>Useful, not judgmental.</strong> Numa summarizes what you logged. It never scores your parenting or replaces medical advice.</p>
+                <p><strong>Useful, not judgmental.</strong> Baby Tracker summarizes what you logged. It never scores your parenting or replaces medical advice.</p>
               </article>
             </section>
           )}
@@ -718,7 +766,7 @@ export default function HomePage() {
               <div className="section-heading">
                 <div>
                   <p className="eyebrow">Private by design</p>
-                  <h1 id="more-heading">Your Numa</h1>
+                  <h1 id="more-heading">Your tracker</h1>
                 </div>
                 <button className="icon-button" aria-label="Toggle night mode" onClick={() => setNightMode((value) => !value)}>
                   {nightMode ? <Home size={19} /> : <Moon size={19} />}
@@ -763,7 +811,7 @@ export default function HomePage() {
                 <button onClick={() => showToast("Family Pro is next on the roadmap")}>Coming next</button>
               </article>
 
-              <p className="version-note">Numa preview · Local-first baby tracking</p>
+              <p className="version-note">Baby Tracker preview · Local-first and private</p>
             </section>
           )}
         </main>
@@ -857,6 +905,31 @@ function ActivityRow({ activity, onRemove, showDate = false }: { activity: Activ
         {showDate && <small>{new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(activity.startedAt))}</small>}
       </div>
       <button className="delete-button" aria-label={`Delete ${activityTitle(activity)}`} onClick={() => onRemove(activity)}><Trash2 size={16} /></button>
+    </article>
+  );
+}
+
+function ActiveTimerCard({ activity, onStop }: { activity: Activity; onStop: () => void }) {
+  const isSleep = activity.type === "sleep";
+  const title = isSleep
+    ? "Sleeping"
+    : `Nursing · ${activity.side === "left" ? "Left" : "Right"}`;
+  const elapsed = liveDuration(activity.startedAt);
+
+  return (
+    <article className={`active-card active-${activity.type}`}>
+      <span className="active-icon"><ActivityGlyph type={activity.type} /></span>
+      <div className="active-copy">
+        <strong>{title}</strong>
+        <span>Started at {formatTime(activity.startedAt)} · {formatTime(activity.startedAt)} → now</span>
+      </div>
+      <div className="active-elapsed" aria-live="polite">
+        <small>Elapsed</small>
+        <strong>{elapsed}</strong>
+      </div>
+      <button onClick={onStop} aria-label={`Stop ${title.toLowerCase()} timer`}>
+        <Square size={14} fill="currentColor" /> Stop
+      </button>
     </article>
   );
 }

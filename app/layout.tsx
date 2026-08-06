@@ -15,10 +15,10 @@ export async function generateMetadata(): Promise<Metadata> {
   const origin = `${protocol}://${host}`;
 
   return {
-    title: "Numa — Calm baby tracking",
+    title: "Baby Tracker — Calm, private baby logging",
     description:
       "A private, local-first baby tracker for feeds, diapers, sleep and gentle insights.",
-    applicationName: "Numa",
+    applicationName: "Baby Tracker",
     icons: {
       icon: "/icon-192.png",
       apple: "/icon-192.png",
@@ -26,20 +26,20 @@ export async function generateMetadata(): Promise<Metadata> {
     appleWebApp: {
       capable: true,
       statusBarStyle: "default",
-      title: "Numa",
+      title: "Baby Tracker",
     },
     openGraph: {
-      title: "Numa — Calm baby tracking",
+      title: "Baby Tracker — Calm, private baby logging",
       description: "Private by design. Made for one tired hand.",
       type: "website",
       url: origin,
-      images: [{ url: `${origin}/og.png`, width: 1200, height: 630, alt: "Numa — Calm baby tracking" }],
+      images: [{ url: `${origin}/og-baby-tracker.png`, width: 1200, height: 630, alt: "Baby Tracker — Calm, private baby logging" }],
     },
     twitter: {
       card: "summary_large_image",
-      title: "Numa — Calm baby tracking",
+      title: "Baby Tracker — Calm, private baby logging",
       description: "Private by design. Made for one tired hand.",
-      images: [`${origin}/og.png`],
+      images: [`${origin}/og-baby-tracker.png`],
     },
   };
 }
@@ -48,7 +48,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#f3f1ea",
+  themeColor: "#f4f7f5",
 };
 
 export default function RootLayout({
