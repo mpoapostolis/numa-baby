@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   Square,
   Stethoscope,
+  Sun,
   Thermometer,
   Trash2,
   Upload,
@@ -478,8 +479,8 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    document.documentElement.classList.toggle("theme-night", nightMode);
-    return () => document.documentElement.classList.remove("theme-night");
+    document.documentElement.classList.toggle("dark", nightMode);
+    return () => document.documentElement.classList.remove("dark");
   }, [nightMode]);
 
   useEffect(() => {
@@ -1083,7 +1084,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className={`numa-shell ${nightMode ? "theme-night" : ""}`}>
+    <div className="numa-shell">
       <div className="app-frame">
         <header className="topbar">
           <div className="wordmark" aria-label="Baby Tracker">
@@ -1433,7 +1434,7 @@ export default function HomePage() {
                   <p className="page-subtitle">Profile, privacy and backups in one place.</p>
                 </div>
                 <div className="theme-switch">
-                  <Moon size={18} />
+                  <span>{nightMode ? <Moon size={17} /> : <Sun size={17} />} Dark mode</span>
                   <Switch checked={nightMode} onCheckedChange={setNightMode} aria-label="Use night mode" />
                 </div>
               </div>
@@ -2026,8 +2027,8 @@ function ProfileForm({ profile, onChange, onDone }: { profile: Profile; onChange
       <Label className="text-field"><span>Name</span><Input autoFocus data-initial-focus maxLength={80} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Baby’s name" /></Label>
       <Label className="text-field"><span>Date of birth</span><Input type="date" value={draft.birthDate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setDraft({ ...draft, birthDate: event.target.value })} /></Label>
       <Label className="field-label">How are you feeding?</Label>
-      <ToggleGroup type="single" value={draft.feedingMode} className="segmented three-way" onValueChange={(value) => value && setDraft({ ...draft, feedingMode: value as FeedingMode })}>
-        {(["breast", "bottle", "mixed"] as FeedingMode[]).map((mode) => <ToggleGroupItem key={mode} value={mode}>{mode}</ToggleGroupItem>)}
+      <ToggleGroup type="single" value={draft.feedingMode} className="segmented three-way" aria-label="Feeding method" onValueChange={(value) => value && setDraft({ ...draft, feedingMode: value as FeedingMode })}>
+        {(["breast", "bottle", "mixed"] as FeedingMode[]).map((mode) => <ToggleGroupItem key={mode} value={mode}>{mode[0].toUpperCase() + mode.slice(1)}</ToggleGroupItem>)}
       </ToggleGroup>
       <Button className="primary-button sheet-primary" onClick={() => { onChange({ ...draft, name: draft.name.trim() || "Baby", isDemo: false }); onDone(); }}>Save profile</Button>
     </>
