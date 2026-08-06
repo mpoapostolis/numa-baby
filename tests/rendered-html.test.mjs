@@ -61,7 +61,10 @@ test("preserves local data compatibility and critical one-handed flows", async (
   assert.match(app, /Notification\.requestPermission/);
   assert.match(app, /registration\.showNotification/);
   assert.match(app, /<form/);
-  assert.match(app, /Start \{nursingSide\} timer/);
+  assert.match(app, /nursingEntryMode/);
+  assert.match(app, /value="manual"/);
+  assert.match(app, /function saveNursing/);
+  assert.match(app, /endedAt/);
   assert.match(app, /saveDiaper\(diaperKind\)/);
   assert.match(app, /<Tabs value=\{activeTab\}/);
   assert.match(app, /<ToggleGroup type="single"/);

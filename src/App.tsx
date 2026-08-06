@@ -446,6 +446,7 @@ export default function HomePage() {
   const [logTime, setLogTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [nursingSide, setNursingSide] = useState<"left" | "right">("left");
+  const [nursingEntryMode, setNursingEntryMode] = useState<"timer" | "manual">("timer");
   const [diaperKind, setDiaperKind] = useState<DiaperKind>("wet");
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -789,7 +790,10 @@ export default function HomePage() {
     setEntryNote("");
     setFormError(null);
     setEditingActivity(null);
-    if (next === "nursing") setNursingSide("left");
+    if (next === "nursing") {
+      setNursingSide("left");
+      setNursingEntryMode("timer");
+    }
     if (next === "diaper") setDiaperKind("wet");
     if (next === "growth") {
       setWeightGrams("");
@@ -909,15 +913,42 @@ export default function HomePage() {
     if (addActivity(entry, `${bottleAmount} ml bottle saved`)) setSheet(null);
   }
 
-  function startNursing(side: "left" | "right") {
+  function changeNursingEntryMode(mode: "timer" | "manual") {
+    setNursingEntryMode(mode);
+    setFormError(null);
+    const ended = new Date();
+    setEndTime(mode === "manual" ? localDateInput(ended) : "");
+    setLogTime(localDateInput(mode === "manual" ? new Date(ended.getTime() - 15 * 60_000) : ended));
+  }
+
+  function saveNursing() {
+    const start = new Date(logTime);
+    if (!Number.isFinite(start.getTime()) || start.getTime() > Date.now()) {
+      showFormError("Choose a valid start time that is not in the future.");
+      return;
+    }
+
+    let endedAt: string | undefined;
+    if (nursingEntryMode === "manual") {
+      const end = new Date(endTime);
+      if (!endTime || !Number.isFinite(end.getTime()) || end.getTime() <= start.getTime() || end.getTime() > Date.now()) {
+        showFormError("The end time must be after the start and not in the future.");
+        return;
+      }
+      endedAt = end.toISOString();
+    }
+
     const entry: Activity = {
       id: makeId(),
       type: "nursing",
-      startedAt: new Date(logTime || Date.now()).toISOString(),
-      side,
+      startedAt: start.toISOString(),
+      endedAt,
+      side: nursingSide,
       note: entryNote.trim() || undefined,
     };
-    if (addActivity(entry, `${side === "left" ? "Left" : "Right"} timer started`)) setSheet(null);
+    const sideLabel = nursingSide === "left" ? "Left" : "Right";
+    const message = nursingEntryMode === "manual" ? `${sideLabel} nursing saved` : `${sideLabel} timer started`;
+    if (addActivity(entry, message)) setSheet(null);
   }
 
   function stopNursing() {
@@ -1735,16 +1766,41 @@ export default function HomePage() {
               )}
 
               {sheet === "nursing" && (
-                <SheetForm onSubmit={() => startNursing(nursingSide)}>
-                  <LogDialogHeader icon={<Heart />} eyebrow="Start timer" title="Which side?" description="The timer keeps running if you close the app." />
-                  <ToggleGroup type="single" value={nursingSide} className="side-grid" onValueChange={(value) => value && setNursingSide(value as "left" | "right")}>
-                    <ToggleGroupItem autoFocus data-initial-focus value="left"><span>L</span><strong>Left</strong></ToggleGroupItem>
-                    <ToggleGroupItem value="right"><span>R</span><strong>Right</strong></ToggleGroupItem>
+                <SheetForm onSubmit={saveNursing}>
+                  <LogDialogHeader icon={<Heart />} eyebrow="Nursing" title="Log a nursing session" description="Start a live timer or add a completed session." />
+                  <ToggleGroup
+                    type="single"
+                    value={nursingEntryMode}
+                    className="segmented nursing-mode"
+                    aria-label="Nursing entry method"
+                    onValueChange={(value) => value && changeNursingEntryMode(value as "timer" | "manual")}
+                  >
+                    <ToggleGroupItem autoFocus data-initial-focus value="timer"><Clock /> Timer</ToggleGroupItem>
+                    <ToggleGroupItem value="manual"><Pencil /> Manual</ToggleGroupItem>
                   </ToggleGroup>
-                  <TimeField value={logTime} onChange={setLogTime} />
+                  <Field className="nursing-side-field">
+                    <FieldLabel>Side</FieldLabel>
+                    <ToggleGroup type="single" value={nursingSide} className="side-grid" aria-label="Nursing side" onValueChange={(value) => value && setNursingSide(value as "left" | "right")}>
+                      <ToggleGroupItem value="left"><span>L</span><strong>Left</strong></ToggleGroupItem>
+                      <ToggleGroupItem value="right"><span>R</span><strong>Right</strong></ToggleGroupItem>
+                    </ToggleGroup>
+                  </Field>
+                  {nursingEntryMode === "timer" ? (
+                    <TimeField value={logTime} label="Started" inputRef={invalidFieldRef} error={Boolean(formError)} onChange={(value) => { setLogTime(value); setFormError(null); }} />
+                  ) : (
+                    <div className="measurement-row nursing-time-row">
+                      <TimeField value={logTime} label="Started" inputRef={invalidFieldRef} error={Boolean(formError)} onChange={(value) => { setLogTime(value); setFormError(null); }} />
+                      <TimeField value={endTime} label="Ended" error={Boolean(formError)} onChange={(value) => { setEndTime(value); setFormError(null); }} />
+                    </div>
+                  )}
                   <NoteField value={entryNote} onChange={setEntryNote} />
-                  <p className="sheet-footnote">The timer stays active if you close the app.</p>
-                  <DialogFooter><Button type="submit" className="primary-button sheet-primary">Start {nursingSide} timer</Button></DialogFooter>
+                  <FormError message={formError} />
+                  <p className="sheet-footnote">{nursingEntryMode === "timer" ? "The timer stays active if you close the app." : "The completed session will be added directly to the timeline."}</p>
+                  <DialogFooter>
+                    <Button type="submit" className="primary-button sheet-primary">
+                      {nursingEntryMode === "timer" ? `Start ${nursingSide} timer` : `Save ${nursingSide} session`}
+                    </Button>
+                  </DialogFooter>
                 </SheetForm>
               )}
 
