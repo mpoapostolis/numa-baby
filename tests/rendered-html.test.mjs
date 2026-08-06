@@ -59,7 +59,13 @@ test("preserves local data compatibility and critical one-handed flows", async (
   assert.match(app, /function EditActivityForm/);
   assert.match(app, /const timelineGroups = useMemo/);
   assert.match(css, /\.secondary-actions/);
-  assert.deepEqual(Object.keys(packageJson.dependencies).sort(), ["lucide-react", "react", "react-dom"]);
+  assert.deepEqual(Object.keys(packageJson.dependencies).sort(), [
+    "class-variance-authority",
+    "clsx",
+    "lucide-react",
+    "react",
+    "react-dom",
+  ]);
 });
 
 test("keeps the initial production UI bundle lightweight", async () => {

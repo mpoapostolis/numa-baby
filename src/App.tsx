@@ -23,9 +23,12 @@ import {
   Upload,
   Users,
   Weight,
-  X,
 } from "lucide-react";
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { Button } from "./components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "./components/ui/dialog";
+import { Input } from "./components/ui/input";
+import { Textarea } from "./components/ui/textarea";
 
 type ActivityType = "bottle" | "nursing" | "diaper" | "sleep" | "growth" | "health";
 type DiaperKind = "wet" | "dirty" | "both";
@@ -416,7 +419,6 @@ export default function HomePage() {
   const [minuteClock, setMinuteClock] = useState(Date.now);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
-  const sheetRef = useRef<HTMLElement>(null);
   const invalidFieldRef = useRef<HTMLInputElement>(null);
   const sheetTriggerRef = useRef<HTMLElement | null>(null);
 
@@ -523,52 +525,6 @@ export default function HomePage() {
     window.addEventListener("storage", syncFromAnotherTab);
     return () => window.removeEventListener("storage", syncFromAnotherTab);
   }, []);
-
-  useEffect(() => {
-    if (!sheet) return;
-    const dialog = sheetRef.current;
-    if (!dialog) return;
-    const background = document.querySelectorAll<HTMLElement>(".topbar, .banner-stack, main.content, .bottom-nav");
-    background.forEach((element) => { element.inert = true; });
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    const focusable = () => Array.from(
-      dialog.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-      ),
-    );
-    const focusFrame = window.requestAnimationFrame(() => {
-      (dialog.querySelector<HTMLElement>("[data-initial-focus]") ?? focusable()[0] ?? dialog).focus();
-    });
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        setSheet(null);
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const elements = focusable();
-      if (!elements.length) return;
-      const first = elements[0];
-      const last = elements[elements.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.cancelAnimationFrame(focusFrame);
-      document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = previousOverflow;
-      background.forEach((element) => { element.inert = false; });
-      sheetTriggerRef.current?.focus();
-    };
-  }, [sheet]);
 
   const sortedActivities = useMemo(
     () =>
@@ -1405,11 +1361,23 @@ export default function HomePage() {
           </div>
         )}
 
-        {sheet && (
-          <div className="sheet-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setSheet(null)}>
-            <section ref={sheetRef} className="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" tabIndex={-1}>
+        <Dialog open={Boolean(sheet)} onOpenChange={(open) => { if (!open) setSheet(null); }}>
+          {sheet && (
+            <DialogContent
+              className="bottom-sheet"
+              onOpenAutoFocus={(event) => {
+                event.preventDefault();
+                window.requestAnimationFrame(() => {
+                  document.querySelector<HTMLElement>(".bottom-sheet [data-initial-focus]")?.focus();
+                });
+              }}
+              onCloseAutoFocus={(event) => {
+                event.preventDefault();
+                sheetTriggerRef.current?.focus();
+              }}
+            >
+              <DialogTitle className="sr-only">Log baby activity</DialogTitle>
               <div className="sheet-handle" />
-              <button className="sheet-close" aria-label="Close" onClick={() => setSheet(null)}><X size={20} /></button>
 
               {sheet === "bottle" && (
                 <>
@@ -1429,7 +1397,7 @@ export default function HomePage() {
                   </div>
                   <TimeField value={logTime} onChange={setLogTime} />
                   <NoteField value={entryNote} onChange={setEntryNote} />
-                  <button className="primary-button sheet-primary" onClick={saveBottle}>Save {bottleAmount} ml</button>
+                  <Button className="primary-button sheet-primary" onClick={saveBottle}>Save {bottleAmount} ml</Button>
                 </>
               )}
 
@@ -1443,7 +1411,7 @@ export default function HomePage() {
                   <TimeField value={logTime} onChange={setLogTime} />
                   <NoteField value={entryNote} onChange={setEntryNote} />
                   <p className="sheet-footnote">The timer stays active if you close the app.</p>
-                  <button className="primary-button sheet-primary" onClick={() => startNursing(nursingSide)}>Start {nursingSide} timer</button>
+                  <Button className="primary-button sheet-primary" onClick={() => startNursing(nursingSide)}>Start {nursingSide} timer</Button>
                 </>
               )}
 
@@ -1457,7 +1425,7 @@ export default function HomePage() {
                   </div>
                   <TimeField value={logTime} onChange={setLogTime} />
                   <NoteField value={entryNote} onChange={setEntryNote} />
-                  <button className="primary-button sheet-primary" onClick={() => saveDiaper(diaperKind)}>Save {diaperKind === "both" ? "wet + dirty" : diaperKind} diaper</button>
+                  <Button className="primary-button sheet-primary" onClick={() => saveDiaper(diaperKind)}>Save {diaperKind === "both" ? "wet + dirty" : diaperKind} diaper</Button>
                 </>
               )}
 
@@ -1466,23 +1434,23 @@ export default function HomePage() {
                   <div className="sheet-heading"><span className="sheet-symbol growth-symbol"><Weight size={23} /></span><div><p>Growth check</p><h2 id="sheet-title">Add measurement</h2></div></div>
                   <label className="measurement-field measurement-primary">
                     <span>Weight</span>
-                      <div><input ref={invalidFieldRef} autoFocus data-initial-focus inputMode="decimal" type="number" min="500" max="30000" step="1" value={weightGrams} aria-invalid={Boolean(formError)} aria-describedby={formError ? "sheet-error" : undefined} onChange={(event) => { setWeightGrams(event.target.value); setFormError(null); }} placeholder="3500" /><strong>g</strong></div>
+                      <div><Input ref={invalidFieldRef} autoFocus data-initial-focus inputMode="decimal" type="number" min="500" max="30000" step="1" value={weightGrams} aria-invalid={Boolean(formError)} aria-describedby={formError ? "sheet-error" : undefined} onChange={(event) => { setWeightGrams(event.target.value); setFormError(null); }} placeholder="3500" /><strong>g</strong></div>
                   </label>
                   <div className="measurement-row">
                     <label className="measurement-field">
                       <span>Length <small>optional</small></span>
-                      <div><input inputMode="decimal" type="number" min="20" max="130" step="0.1" value={lengthCm} onChange={(event) => setLengthCm(event.target.value)} placeholder="51.5" /><strong>cm</strong></div>
+                      <div><Input inputMode="decimal" type="number" min="20" max="130" step="0.1" value={lengthCm} onChange={(event) => setLengthCm(event.target.value)} placeholder="51.5" /><strong>cm</strong></div>
                     </label>
                     <label className="measurement-field">
                       <span>Head <small>optional</small></span>
-                      <div><input inputMode="decimal" type="number" min="20" max="80" step="0.1" value={headCm} onChange={(event) => setHeadCm(event.target.value)} placeholder="35.1" /><strong>cm</strong></div>
+                      <div><Input inputMode="decimal" type="number" min="20" max="80" step="0.1" value={headCm} onChange={(event) => setHeadCm(event.target.value)} placeholder="35.1" /><strong>cm</strong></div>
                     </label>
                   </div>
                   <TimeField value={logTime} onChange={setLogTime} />
                   <NoteField value={entryNote} onChange={setEntryNote} placeholder="Clinic, home scale, or anything useful" />
                   <p className="sheet-advice">Measure consistently and use the trend as context for your paediatrician.</p>
                   <FormError message={formError} />
-                  <button className="primary-button sheet-primary" onClick={saveGrowth}>Save growth check</button>
+                  <Button className="primary-button sheet-primary" onClick={saveGrowth}>Save growth check</Button>
                 </>
               )}
 
@@ -1491,7 +1459,7 @@ export default function HomePage() {
                   <div className="sheet-heading"><span className="sheet-symbol health-symbol"><Thermometer size={23} /></span><div><p>Health log</p><h2 id="sheet-title">Temperature or note</h2></div></div>
                   <label className="temperature-field">
                     <span>Temperature <small>optional</small></span>
-                    <div><input ref={invalidFieldRef} autoFocus data-initial-focus inputMode="decimal" type="number" min="30" max="45" step="0.1" value={temperatureC} aria-invalid={Boolean(formError)} aria-describedby={formError ? "sheet-error" : undefined} onChange={(event) => { setTemperatureC(event.target.value); setFormError(null); }} placeholder="36.7" /><strong>°C</strong></div>
+                    <div><Input ref={invalidFieldRef} autoFocus data-initial-focus inputMode="decimal" type="number" min="30" max="45" step="0.1" value={temperatureC} aria-invalid={Boolean(formError)} aria-describedby={formError ? "sheet-error" : undefined} onChange={(event) => { setTemperatureC(event.target.value); setFormError(null); }} placeholder="36.7" /><strong>°C</strong></div>
                   </label>
                   {Number(temperatureC) >= 38 && (
                     <div className="health-alert" role="alert"><Thermometer size={18} /><p>{babyAgeMonths !== null && babyAgeMonths < 3 ? <><strong>38 °C or higher</strong> in a baby under 3 months needs urgent medical advice.</> : <><strong>Temperature recorded.</strong> If your baby seems unwell or you are concerned, seek medical advice.</>}</p></div>
@@ -1499,7 +1467,7 @@ export default function HomePage() {
                   <NoteField value={entryNote} onChange={setEntryNote} placeholder="Medicine, spit-up, rash, question for the doctor…" />
                   <TimeField value={logTime} onChange={setLogTime} />
                   <FormError message={formError} />
-                  <button className="primary-button sheet-primary" onClick={saveHealthNote}>Save health log</button>
+                  <Button className="primary-button sheet-primary" onClick={saveHealthNote}>Save health log</Button>
                 </>
               )}
 
@@ -1551,9 +1519,9 @@ export default function HomePage() {
                   onDone={() => setSheet(null)}
                 />
               )}
-            </section>
-          </div>
-        )}
+            </DialogContent>
+          )}
+        </Dialog>
       </div>
     </div>
   );
@@ -1732,7 +1700,7 @@ function TimeField({
   return (
     <label className="time-field">
       <span>{label}</span>
-      <input ref={inputRef} autoFocus={autoFocus} data-initial-focus={autoFocus ? "" : undefined} type="datetime-local" value={value} max={localDateInput(new Date())} aria-invalid={error} aria-describedby={error ? "sheet-error" : undefined} onChange={(event) => onChange(event.target.value)} />
+      <Input ref={inputRef} autoFocus={autoFocus} data-initial-focus={autoFocus ? "" : undefined} type="datetime-local" value={value} max={localDateInput(new Date())} aria-invalid={error} aria-describedby={error ? "sheet-error" : undefined} onChange={(event) => onChange(event.target.value)} />
     </label>
   );
 }
@@ -1749,7 +1717,7 @@ function NoteField({
   return (
     <label className="note-field">
       <span>Note <small>optional</small></span>
-      <textarea
+      <Textarea
         value={value}
         maxLength={240}
         rows={2}
@@ -1842,7 +1810,7 @@ function EditActivityForm({
         <>
           <label className="measurement-field measurement-primary">
             <span>Amount</span>
-            <div><input ref={invalidFieldRef} autoFocus data-initial-focus inputMode="numeric" type="number" min="1" max="1000" step="1" value={bottleAmount} aria-invalid={Boolean(error)} aria-describedby={error ? "sheet-error" : undefined} onChange={(event) => { setBottleAmount(Number(event.target.value)); clearError(); }} /><strong>ml</strong></div>
+            <div><Input ref={invalidFieldRef} autoFocus data-initial-focus inputMode="numeric" type="number" min="1" max="1000" step="1" value={bottleAmount} aria-invalid={Boolean(error)} aria-describedby={error ? "sheet-error" : undefined} onChange={(event) => { setBottleAmount(Number(event.target.value)); clearError(); }} /><strong>ml</strong></div>
           </label>
           <div className="preset-row">
             {bottlePresets.map((amount) => <button className={bottleAmount === amount ? "selected" : ""} aria-pressed={bottleAmount === amount} key={amount} onClick={() => { setBottleAmount(amount); clearError(); }}>{amount}</button>)}
@@ -1873,11 +1841,11 @@ function EditActivityForm({
         <>
           <label className="measurement-field measurement-primary">
             <span>Weight</span>
-            <div><input ref={invalidFieldRef} autoFocus data-initial-focus inputMode="decimal" type="number" min="500" max="30000" step="1" value={weightGrams} aria-invalid={Boolean(error)} aria-describedby={error ? "sheet-error" : undefined} onChange={(event) => { setWeightGrams(event.target.value); clearError(); }} /><strong>g</strong></div>
+            <div><Input ref={invalidFieldRef} autoFocus data-initial-focus inputMode="decimal" type="number" min="500" max="30000" step="1" value={weightGrams} aria-invalid={Boolean(error)} aria-describedby={error ? "sheet-error" : undefined} onChange={(event) => { setWeightGrams(event.target.value); clearError(); }} /><strong>g</strong></div>
           </label>
           <div className="measurement-row">
-            <label className="measurement-field"><span>Length <small>optional</small></span><div><input inputMode="decimal" type="number" min="20" max="130" step="0.1" value={lengthCm} onChange={(event) => { setLengthCm(event.target.value); clearError(); }} /><strong>cm</strong></div></label>
-            <label className="measurement-field"><span>Head <small>optional</small></span><div><input inputMode="decimal" type="number" min="20" max="80" step="0.1" value={headCm} onChange={(event) => { setHeadCm(event.target.value); clearError(); }} /><strong>cm</strong></div></label>
+            <label className="measurement-field"><span>Length <small>optional</small></span><div><Input inputMode="decimal" type="number" min="20" max="130" step="0.1" value={lengthCm} onChange={(event) => { setLengthCm(event.target.value); clearError(); }} /><strong>cm</strong></div></label>
+            <label className="measurement-field"><span>Head <small>optional</small></span><div><Input inputMode="decimal" type="number" min="20" max="80" step="0.1" value={headCm} onChange={(event) => { setHeadCm(event.target.value); clearError(); }} /><strong>cm</strong></div></label>
           </div>
         </>
       )}
@@ -1885,7 +1853,7 @@ function EditActivityForm({
       {activity.type === "health" && (
         <label className="temperature-field">
           <span>Temperature <small>optional</small></span>
-          <div><input ref={invalidFieldRef} autoFocus data-initial-focus inputMode="decimal" type="number" min="30" max="45" step="0.1" value={temperatureC} aria-invalid={Boolean(error)} aria-describedby={error ? "sheet-error" : undefined} onChange={(event) => { setTemperatureC(event.target.value); clearError(); }} placeholder="36.7" /><strong>°C</strong></div>
+          <div><Input ref={invalidFieldRef} autoFocus data-initial-focus inputMode="decimal" type="number" min="30" max="45" step="0.1" value={temperatureC} aria-invalid={Boolean(error)} aria-describedby={error ? "sheet-error" : undefined} onChange={(event) => { setTemperatureC(event.target.value); clearError(); }} placeholder="36.7" /><strong>°C</strong></div>
         </label>
       )}
 
@@ -1895,7 +1863,7 @@ function EditActivityForm({
       </div>
       <NoteField value={note} onChange={(value) => { setNote(value); clearError(); }} />
       <FormError message={error} />
-      <button className="primary-button sheet-primary" onClick={onSave}>Save changes</button>
+      <Button className="primary-button sheet-primary" onClick={onSave}>Save changes</Button>
 
       <div className={`edit-danger ${confirmDelete ? "is-confirming" : ""}`}>
         {!confirmDelete ? (
@@ -1916,13 +1884,13 @@ function ProfileForm({ profile, onChange, onDone }: { profile: Profile; onChange
   return (
     <>
       <div className="sheet-heading"><span className="sheet-symbol"><Baby size={23} /></span><div><p>Keep it personal</p><h2 id="sheet-title">Baby profile</h2></div></div>
-      <label className="text-field"><span>Name</span><input autoFocus data-initial-focus maxLength={80} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Baby’s name" /></label>
-      <label className="text-field"><span>Date of birth</span><input type="date" value={draft.birthDate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setDraft({ ...draft, birthDate: event.target.value })} /></label>
+      <label className="text-field"><span>Name</span><Input autoFocus data-initial-focus maxLength={80} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Baby’s name" /></label>
+      <label className="text-field"><span>Date of birth</span><Input type="date" value={draft.birthDate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setDraft({ ...draft, birthDate: event.target.value })} /></label>
       <label className="field-label">How are you feeding?</label>
       <div className="segmented three-way">
         {(["breast", "bottle", "mixed"] as FeedingMode[]).map((mode) => <button key={mode} className={draft.feedingMode === mode ? "selected" : ""} aria-pressed={draft.feedingMode === mode} onClick={() => setDraft({ ...draft, feedingMode: mode })}>{mode}</button>)}
       </div>
-      <button className="primary-button sheet-primary" onClick={() => { onChange({ ...draft, name: draft.name.trim() || "Baby", isDemo: false }); onDone(); }}>Save profile</button>
+      <Button className="primary-button sheet-primary" onClick={() => { onChange({ ...draft, name: draft.name.trim() || "Baby", isDemo: false }); onDone(); }}>Save profile</Button>
     </>
   );
 }
