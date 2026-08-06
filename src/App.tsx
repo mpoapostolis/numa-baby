@@ -1140,7 +1140,7 @@ export default function HomePage() {
   }
 
   return (
-    <SidebarProvider defaultOpen>
+    <SidebarProvider defaultOpen className="numa-shell">
       <AppSidebar
         activeTab={activeTab}
         onNavigate={setActiveTab}
