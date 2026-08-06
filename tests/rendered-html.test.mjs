@@ -83,7 +83,7 @@ test("preserves local data compatibility and critical one-handed flows", async (
   assert.match(css, /@media \(min-width: 1024px\)/);
   assert.match(css, /@media \(min-width: 1440px\)/);
   assert.match(css, /--shell-header-height: 64px/);
-  assert.match(css, /Sidebar v2/);
+  assert.match(css, /Numa product system/);
   assert.match(css, /\[data-state="collapsed"\].*\[data-sidebar="menu-button"\]/s);
   assert.match(css, /\.onboarding-layout/);
   assert.doesNotMatch(css, /\.demo-banner/);

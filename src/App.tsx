@@ -1284,6 +1284,33 @@ export default function HomePage() {
                 </div>
               )}
 
+              <Card size="sm" className="now-card">
+                <CardHeader className="now-card-top">
+                  <Badge variant="secondary" className="status-pill"><span /> Last feed</Badge>
+                  <span className="now-time">{lastFeed ? formatTime(lastFeed.startedAt) : "—"}</span>
+                </CardHeader>
+                <CardContent className="now-main">
+                  <div>
+                    <strong>{timeAgo(lastFeed?.startedAt, minuteClock)}</strong>
+                    <p>{lastFeed ? `${activityTitle(lastFeed)} · ${activityDetail(lastFeed)}` : "Log the first feed when it happens."}</p>
+                  </div>
+                  <Milk size={36} strokeWidth={1.7} />
+                </CardContent>
+                {typicalGap > 0 && (
+                  <CardFooter className="usual-row">
+                    <Clock size={15} />
+                    <span>Usual gap from your logs: {humanDuration(typicalGap)}</span>
+                  </CardFooter>
+                )}
+              </Card>
+
+              <Card size="sm" className="summary-grid" aria-label="Today's summary">
+                <div><strong>{feedsToday.length}</strong><span>feeds</span></div>
+                <div><strong>{bottleMlToday}</strong><span>ml logged</span></div>
+                <div><strong>{diapersToday}</strong><span>diapers</span></div>
+                <div><strong>{humanDuration(sleepMinutesToday)}</strong><span>sleep</span></div>
+              </Card>
+
               <Card size="sm" className="care-forecast" aria-labelledby="care-forecast-title">
                 <CardHeader className="care-forecast-heading">
                   <div>
@@ -1324,33 +1351,6 @@ export default function HomePage() {
                   <span><Clock size={15} /> Patterns, not a schedule — cues and your clinician’s care plan come first.</span>
                   <span><ShieldCheck size={15} /> Safe sleep: back, firm flat surface, clear sleep space.</span>
                 </CardFooter>
-              </Card>
-
-              <Card size="sm" className="now-card">
-                <CardHeader className="now-card-top">
-                  <Badge variant="secondary" className="status-pill"><span /> Last feed</Badge>
-                  <span className="now-time">{lastFeed ? formatTime(lastFeed.startedAt) : "—"}</span>
-                </CardHeader>
-                <CardContent className="now-main">
-                  <div>
-                    <strong>{timeAgo(lastFeed?.startedAt, minuteClock)}</strong>
-                    <p>{lastFeed ? `${activityTitle(lastFeed)} · ${activityDetail(lastFeed)}` : "Log the first feed when it happens."}</p>
-                  </div>
-                  <Milk size={36} strokeWidth={1.7} />
-                </CardContent>
-                {typicalGap > 0 && (
-                  <CardFooter className="usual-row">
-                    <Clock size={15} />
-                    <span>Usual gap from your logs: {humanDuration(typicalGap)}</span>
-                  </CardFooter>
-                )}
-              </Card>
-
-              <Card size="sm" className="summary-grid" aria-label="Today's summary">
-                <div><strong>{feedsToday.length}</strong><span>feeds</span></div>
-                <div><strong>{bottleMlToday}</strong><span>ml logged</span></div>
-                <div><strong>{diapersToday}</strong><span>diapers</span></div>
-                <div><strong>{humanDuration(sleepMinutesToday)}</strong><span>sleep</span></div>
               </Card>
 
               <div className="recent-section">
@@ -2025,6 +2025,7 @@ function AppSidebar({
             <SidebarMenuButton
               size="lg"
               tooltip="Baby Tracker"
+              aria-label="Baby Tracker"
               className="app-sidebar-brand"
               onClick={() => navigate("today")}
             >
@@ -2047,6 +2048,7 @@ function AppSidebar({
                   <SidebarMenuButton
                     size="lg"
                     tooltip={item.label}
+                    aria-label={item.label}
                     isActive={activeTab === item.value}
                     onClick={() => navigate(item.value)}
                   >
@@ -2067,6 +2069,7 @@ function AppSidebar({
                 size="lg"
                 className="sidebar-theme-toggle"
                 tooltip={nightMode ? "Use light mode" : "Use dark mode"}
+                aria-label={nightMode ? "Use light mode" : "Use dark mode"}
                 aria-pressed={nightMode}
                 onClick={() => onNightModeChange(!nightMode)}
               >
@@ -2081,7 +2084,7 @@ function AppSidebar({
             )}
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" className="sidebar-profile-button" tooltip="Baby profile" onClick={onProfile}>
+            <SidebarMenuButton size="lg" className="sidebar-profile-button" tooltip="Baby profile" aria-label="Baby profile" onClick={onProfile}>
               <span className="baby-avatar"><Baby /></span>
               <span className="sidebar-profile-copy">
                 <strong>{profile.name}</strong>
