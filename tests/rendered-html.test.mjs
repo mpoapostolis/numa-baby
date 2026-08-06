@@ -42,11 +42,12 @@ test("ships offline assets, security headers, reminders and SPA fallback", async
 });
 
 test("preserves local data compatibility and critical one-handed flows", async () => {
-  const [app, css, packageText, themeInit] = await Promise.all([
+  const [app, css, packageText, themeInit, sidebar] = await Promise.all([
     readFile(new URL("src/App.tsx", project), "utf8"),
     readFile(new URL("src/styles.css", project), "utf8"),
     readFile(new URL("package.json", project), "utf8"),
     readFile(new URL("public/theme-init.js", project), "utf8"),
+    readFile(new URL("src/components/ui/sidebar.tsx", project), "utf8"),
   ]);
   const packageJson = JSON.parse(packageText);
 
@@ -82,9 +83,13 @@ test("preserves local data compatibility and critical one-handed flows", async (
   assert.match(css, /@media \(min-width: 1024px\)/);
   assert.match(css, /@media \(min-width: 1440px\)/);
   assert.match(css, /--shell-header-height: 64px/);
+  assert.match(css, /Sidebar v2/);
+  assert.match(css, /\[data-state="collapsed"\].*\[data-sidebar="menu-button"\]/s);
   assert.match(css, /\.onboarding-layout/);
   assert.doesNotMatch(css, /\.demo-banner/);
   assert.match(themeInit, /document\.documentElement\.classList\.toggle\("dark"/);
+  assert.match(sidebar, /const SIDEBAR_WIDTH = "15rem"/);
+  assert.match(sidebar, /const SIDEBAR_WIDTH_ICON = "3\.5rem"/);
   assert.doesNotMatch(css, /\.recent-list\s*\{[^}]*grid-template-columns/s);
   assert.match(app, /function EditActivityForm/);
   assert.match(app, /const timelineGroups = useMemo/);

@@ -2004,7 +2004,7 @@ function AppSidebar({
   nightMode: boolean;
   onNightModeChange: (enabled: boolean) => void;
 }) {
-  const { setOpenMobile, state } = useSidebar();
+  const { isMobile, setOpenMobile, state } = useSidebar();
   const navItems: Array<{ value: Tab; label: string; icon: React.ReactNode }> = [
     { value: "today", label: "Today", icon: <Home /> },
     { value: "timeline", label: "Timeline", icon: <Clock /> },
@@ -2039,7 +2039,7 @@ function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+          <SidebarGroupLabel>Tracker</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => (
@@ -2062,7 +2062,7 @@ function AppSidebar({
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem className="sidebar-theme-item">
-            {state === "collapsed" ? (
+            {state === "collapsed" && !isMobile ? (
               <SidebarMenuButton
                 size="lg"
                 className="sidebar-theme-toggle"
