@@ -517,7 +517,7 @@ export default function HomePage() {
 
         <main className="content">
           {activeTab === "today" && (
-            <section className="screen" aria-labelledby="today-heading">
+            <section className="screen today-screen" aria-labelledby="today-heading">
               <div className="section-heading">
                 <div>
                   <p className="eyebrow">Today · {new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date())}</p>
@@ -528,6 +528,8 @@ export default function HomePage() {
                 </button>
               </div>
 
+              <div className="today-dashboard">
+                <div className="today-primary">
               <article className="now-card">
                 <div className="now-card-top">
                   <span className="status-pill"><span /> Last feed</span>
@@ -567,6 +569,7 @@ export default function HomePage() {
                 <div><strong>{diapersToday}</strong><span>diapers</span></div>
                 <div><strong>{humanDuration(sleepMinutesToday)}</strong><span>sleep</span></div>
               </div>
+                </div>
 
               <div className="quick-section">
                 <div className="mini-heading">
@@ -603,6 +606,7 @@ export default function HomePage() {
                   </button>
                 </div>
               </div>
+              </div>
 
               <div className="recent-section">
                 <div className="mini-heading">
@@ -620,7 +624,7 @@ export default function HomePage() {
           )}
 
           {activeTab === "timeline" && (
-            <section className="screen" aria-labelledby="timeline-heading">
+            <section className="screen timeline-screen" aria-labelledby="timeline-heading">
               <div className="section-heading">
                 <div>
                   <p className="eyebrow">The full picture</p>
@@ -639,7 +643,7 @@ export default function HomePage() {
           )}
 
           {activeTab === "insights" && (
-            <section className="screen" aria-labelledby="insights-heading">
+            <section className="screen insights-screen" aria-labelledby="insights-heading">
               <div className="section-heading">
                 <div>
                   <p className="eyebrow">Last 7 days</p>
@@ -710,7 +714,7 @@ export default function HomePage() {
           )}
 
           {activeTab === "more" && (
-            <section className="screen" aria-labelledby="more-heading">
+            <section className="screen more-screen" aria-labelledby="more-heading">
               <div className="section-heading">
                 <div>
                   <p className="eyebrow">Private by design</p>
