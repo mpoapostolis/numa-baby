@@ -11,6 +11,7 @@ import {
   Minus,
   Milk,
   Moon,
+  Pencil,
   Plus,
   Settings,
   ShieldCheck,
@@ -54,7 +55,7 @@ type Profile = {
   isDemo: boolean;
 };
 
-type Sheet = null | "bottle" | "nursing" | "diaper" | "growth" | "health" | "profile";
+type Sheet = null | "bottle" | "nursing" | "diaper" | "growth" | "health" | "profile" | "edit";
 
 const STORAGE_KEY = "numa-baby-v1";
 const RECOVERY_KEY = "numa-baby-v1-recovery";
@@ -156,6 +157,20 @@ function formatLongDate(date: Date) {
   }).format(date);
 }
 
+function formatTimelineDay(value: string) {
+  const date = new Date(value);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  if (isSameDay(value, today)) return "Today";
+  if (isSameDay(value, yesterday)) return "Yesterday";
+  return new Intl.DateTimeFormat("en", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  }).format(date);
+}
+
 function greeting() {
   const hour = new Date().getHours();
   if (hour < 5) return "You’re up late";
@@ -206,9 +221,9 @@ function ageInMonths(birthDate: string) {
   return Math.max(0, months);
 }
 
-function timeAgo(value?: string) {
+function timeAgo(value?: string, now = Date.now()) {
   if (!value) return "No entries yet";
-  const minutes = minutesBetween(value);
+  const minutes = Math.max(0, Math.round((now - new Date(value).getTime()) / 60_000));
   if (minutes < 1) return "just now";
   if (minutes < 60) return `${minutes}m ago`;
   const hours = Math.floor(minutes / 60);
@@ -386,22 +401,40 @@ export default function HomePage() {
   const [headCm, setHeadCm] = useState("");
   const [temperatureC, setTemperatureC] = useState("");
   const [logTime, setLogTime] = useState("");
+  const [endTime, setEndTime] = useState("");
   const [nursingSide, setNursingSide] = useState<"left" | "right">("left");
   const [diaperKind, setDiaperKind] = useState<DiaperKind>("wet");
+  const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [nightMode, setNightMode] = useState(false);
   const [storageWarning, setStorageWarning] = useState<string | null>(null);
   const [persistenceEnabled, setPersistenceEnabled] = useState(false);
   const [timelineFilter, setTimelineFilter] = useState<"all" | ActivityType>("all");
   const [timelineLimit, setTimelineLimit] = useState(80);
   const [toast, setToast] = useState<{ message: string; undo?: () => void } | null>(null);
+  const [minuteClock, setMinuteClock] = useState(Date.now);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
   const sheetRef = useRef<HTMLElement>(null);
+  const invalidFieldRef = useRef<HTMLInputElement>(null);
   const sheetTriggerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     return () => {
       if (toastTimer.current) clearTimeout(toastTimer.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    const update = () => setMinuteClock(Date.now());
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") update();
+    }, 60_000);
+    document.addEventListener("visibilitychange", update);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", update);
     };
   }, []);
 
@@ -495,6 +528,8 @@ export default function HomePage() {
     if (!sheet) return;
     const dialog = sheetRef.current;
     if (!dialog) return;
+    const background = document.querySelectorAll<HTMLElement>(".topbar, .banner-stack, main.content, .bottom-nav");
+    background.forEach((element) => { element.inert = true; });
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
@@ -504,7 +539,7 @@ export default function HomePage() {
       ),
     );
     const focusFrame = window.requestAnimationFrame(() => {
-      (dialog.querySelector<HTMLElement>("[autofocus]") ?? focusable()[0] ?? dialog).focus();
+      (dialog.querySelector<HTMLElement>("[data-initial-focus]") ?? focusable()[0] ?? dialog).focus();
     });
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -530,6 +565,7 @@ export default function HomePage() {
       window.cancelAnimationFrame(focusFrame);
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = previousOverflow;
+      background.forEach((element) => { element.inert = false; });
       sheetTriggerRef.current?.focus();
     };
   }, [sheet]);
@@ -626,6 +662,17 @@ export default function HomePage() {
     () => sortedActivities.filter((activity) => timelineFilter === "all" || activity.type === timelineFilter),
     [sortedActivities, timelineFilter],
   );
+  const timelineGroups = useMemo(() => {
+    const groups = new Map<string, Activity[]>();
+    filteredTimeline.slice(0, timelineLimit).forEach((activity) => {
+      const date = new Date(activity.startedAt);
+      const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+      const current = groups.get(key) ?? [];
+      current.push(activity);
+      groups.set(key, current);
+    });
+    return [...groups.values()];
+  }, [filteredTimeline, timelineLimit]);
   const babyAgeMonths = ageInMonths(profile.birthDate);
 
   const maxMl = Math.max(...weekly.map((day) => day.ml), 1);
@@ -652,7 +699,11 @@ export default function HomePage() {
       ? document.activeElement
       : null;
     setLogTime(localDateInput(new Date()));
+    setEndTime("");
     setEntryNote("");
+    setFormError(null);
+    setConfirmDelete(false);
+    setEditingActivity(null);
     if (next === "nursing") setNursingSide("left");
     if (next === "diaper") setDiaperKind("wet");
     if (next === "growth") {
@@ -662,6 +713,102 @@ export default function HomePage() {
     }
     if (next === "health") setTemperatureC("");
     setSheet(next);
+  }
+
+  function showFormError(message: string) {
+    setFormError(message);
+    window.requestAnimationFrame(() => invalidFieldRef.current?.focus());
+  }
+
+  function openEdit(activity: Activity) {
+    sheetTriggerRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    setEditingActivity(activity);
+    setLogTime(localDateInput(new Date(activity.startedAt)));
+    setEndTime(activity.endedAt ? localDateInput(new Date(activity.endedAt)) : "");
+    setEntryNote(activity.note ?? "");
+    setBottleAmount(activity.amount ?? 90);
+    setMilkType(activity.milkType ?? "formula");
+    setNursingSide(activity.side ?? "left");
+    setDiaperKind(activity.diaperKind ?? "wet");
+    setWeightGrams(activity.weightGrams ? String(activity.weightGrams) : "");
+    setLengthCm(activity.lengthCm ? String(activity.lengthCm) : "");
+    setHeadCm(activity.headCm ? String(activity.headCm) : "");
+    setTemperatureC(activity.temperatureC ? String(activity.temperatureC) : "");
+    setFormError(null);
+    setConfirmDelete(false);
+    setSheet("edit");
+  }
+
+  function saveEditedActivity() {
+    if (!editingActivity) return;
+    const start = new Date(logTime);
+    const end = endTime ? new Date(endTime) : null;
+    if (!Number.isFinite(start.getTime()) || start.getTime() > Date.now()) {
+      showFormError("Choose a valid start time that is not in the future.");
+      return;
+    }
+    if (end && (!Number.isFinite(end.getTime()) || end.getTime() < start.getTime() || end.getTime() > Date.now())) {
+      showFormError("The end time must be after the start and not in the future.");
+      return;
+    }
+
+    const next: Activity = {
+      ...editingActivity,
+      startedAt: start.toISOString(),
+      endedAt: editingActivity.type === "sleep" || editingActivity.type === "nursing"
+        ? end?.toISOString()
+        : undefined,
+      note: entryNote.trim() || undefined,
+    };
+
+    if (next.type === "bottle") {
+      if (!Number.isFinite(bottleAmount) || bottleAmount < 1 || bottleAmount > 1_000) {
+        showFormError("Enter a bottle amount between 1 and 1,000 ml.");
+        return;
+      }
+      next.amount = Math.round(bottleAmount);
+      next.milkType = milkType;
+    }
+    if (next.type === "nursing") next.side = nursingSide;
+    if (next.type === "diaper") next.diaperKind = diaperKind;
+    if (next.type === "growth") {
+      const weight = Number(weightGrams);
+      const length = lengthCm ? Number(lengthCm) : undefined;
+      const head = headCm ? Number(headCm) : undefined;
+      if (!Number.isFinite(weight) || weight < 500 || weight > 30_000) {
+        showFormError("Enter a weight between 500 and 30,000 grams.");
+        return;
+      }
+      if (length !== undefined && (!Number.isFinite(length) || length < 20 || length > 130)) {
+        showFormError("Enter a length between 20 and 130 centimetres.");
+        return;
+      }
+      if (head !== undefined && (!Number.isFinite(head) || head < 20 || head > 80)) {
+        showFormError("Enter a head measurement between 20 and 80 centimetres.");
+        return;
+      }
+      next.weightGrams = Math.round(weight);
+      next.lengthCm = length === undefined ? undefined : Math.round(length * 10) / 10;
+      next.headCm = head === undefined ? undefined : Math.round(head * 10) / 10;
+    }
+    if (next.type === "health") {
+      const temperature = temperatureC ? Number(temperatureC) : undefined;
+      if (temperature === undefined && !next.note) {
+        showFormError("Add a temperature or a note.");
+        return;
+      }
+      if (temperature !== undefined && (!Number.isFinite(temperature) || temperature < 30 || temperature > 45)) {
+        showFormError("Enter a temperature between 30 and 45 °C.");
+        return;
+      }
+      next.temperatureC = temperature === undefined ? undefined : Math.round(temperature * 10) / 10;
+    }
+
+    setActivities((current) => current.map((activity) => activity.id === next.id ? next : activity));
+    setSheet(null);
+    showToast(`${activityTitle(next)} updated`);
   }
 
   function saveBottle() {
@@ -719,15 +866,15 @@ export default function HomePage() {
     const head = headCm ? Number(headCm) : undefined;
 
     if (!Number.isFinite(weight) || weight < 500 || weight > 30_000) {
-      showToast("Enter a valid weight in grams");
+      showFormError("Enter a weight between 500 and 30,000 grams.");
       return;
     }
     if (length !== undefined && (!Number.isFinite(length) || length < 20 || length > 130)) {
-      showToast("Check the length in centimetres");
+      showFormError("Enter a length between 20 and 130 centimetres.");
       return;
     }
     if (head !== undefined && (!Number.isFinite(head) || head < 20 || head > 80)) {
-      showToast("Check the head measurement");
+      showFormError("Enter a head measurement between 20 and 80 centimetres.");
       return;
     }
 
@@ -749,14 +896,14 @@ export default function HomePage() {
     const note = entryNote.trim();
 
     if (temperature === undefined && !note) {
-      showToast("Add a temperature or a note");
+      showFormError("Add a temperature or a note.");
       return;
     }
     if (
       temperature !== undefined &&
       (!Number.isFinite(temperature) || temperature < 30 || temperature > 45)
     ) {
-      showToast("Check the temperature in °C");
+      showFormError("Enter a temperature between 30 and 45 °C.");
       return;
     }
 
@@ -836,6 +983,7 @@ export default function HomePage() {
   }
 
   function resetUnreadableData() {
+    if (!window.confirm("Reset the unreadable local copy? Download recovery first if you may need it.")) return;
     try {
       window.localStorage.removeItem(STORAGE_KEY);
       setStorageWarning(null);
@@ -860,6 +1008,14 @@ export default function HomePage() {
         const parsed = parseStoredData(String(reader.result));
         if (!window.confirm("Replace the current timeline with this backup? This cannot be undone unless you download the current backup first.")) {
           return;
+        }
+        try {
+          window.localStorage.setItem(
+            RECOVERY_KEY,
+            JSON.stringify({ profile, activities, nightMode }),
+          );
+        } catch {
+          // Import can continue because the user has already chosen the backup file.
         }
         setProfile({ ...parsed.profile, isDemo: false });
         setActivities(parsed.activities);
@@ -947,26 +1103,6 @@ export default function HomePage() {
 
               <div className="today-dashboard">
                 <div className="today-primary">
-              <article className="now-card">
-                <div className="now-card-top">
-                  <span className="status-pill"><span /> Last feed</span>
-                  <span className="now-time">{lastFeed ? formatTime(lastFeed.startedAt) : "—"}</span>
-                </div>
-                <div className="now-main">
-                  <div>
-                    <strong>{timeAgo(lastFeed?.startedAt)}</strong>
-                    <p>{lastFeed ? `${activityTitle(lastFeed)} · ${activityDetail(lastFeed)}` : "Log the first feed when it happens."}</p>
-                  </div>
-                  <Milk size={36} strokeWidth={1.7} />
-                </div>
-                {typicalGap > 0 && (
-                  <div className="usual-row">
-                    <Clock size={15} />
-                    <span>Usual gap from your logs: {humanDuration(typicalGap)}</span>
-                  </div>
-                )}
-              </article>
-
               {activeTimers.length > 0 && (
                 <div className="active-stack" aria-label="Active timers">
                   <div className="timer-heading">
@@ -983,11 +1119,44 @@ export default function HomePage() {
                 </div>
               )}
 
+              <article className="now-card">
+                <div className="now-card-top">
+                  <span className="status-pill"><span /> Last feed</span>
+                  <span className="now-time">{lastFeed ? formatTime(lastFeed.startedAt) : "—"}</span>
+                </div>
+                <div className="now-main">
+                  <div>
+                    <strong>{timeAgo(lastFeed?.startedAt, minuteClock)}</strong>
+                    <p>{lastFeed ? `${activityTitle(lastFeed)} · ${activityDetail(lastFeed)}` : "Log the first feed when it happens."}</p>
+                  </div>
+                  <Milk size={36} strokeWidth={1.7} />
+                </div>
+                {typicalGap > 0 && (
+                  <div className="usual-row">
+                    <Clock size={15} />
+                    <span>Usual gap from your logs: {humanDuration(typicalGap)}</span>
+                  </div>
+                )}
+              </article>
+
               <div className="summary-grid" aria-label="Today's summary">
                 <div><strong>{feedsToday.length}</strong><span>feeds</span></div>
                 <div><strong>{bottleMlToday}</strong><span>ml logged</span></div>
                 <div><strong>{diapersToday}</strong><span>diapers</span></div>
                 <div><strong>{humanDuration(sleepMinutesToday)}</strong><span>sleep</span></div>
+              </div>
+
+              <div className="recent-section">
+                <div className="mini-heading">
+                  <h2>Recent</h2>
+                  <button onClick={() => setActiveTab("timeline")}>See all <ChevronRight size={15} /></button>
+                </div>
+                <div className="activity-list recent-list">
+                  {sortedActivities.slice(0, 6).map((activity) => (
+                    <ActivityRow key={activity.id} activity={activity} onEdit={openEdit} />
+                  ))}
+                  {!sortedActivities.length && <EmptyState text="Your day will appear here as you log it." />}
+                </div>
               </div>
                 </div>
 
@@ -1010,7 +1179,7 @@ export default function HomePage() {
                       onClick={activeNursing ? stopNursing : () => openSheet("nursing")}
                     >
                       <span className="action-icon"><Heart size={22} /></span>
-                      <span><strong>{activeNursing ? "Stop nursing" : "Nursing"}</strong><small>{activeNursing ? humanDuration(minutesBetween(activeNursing.startedAt)) : "Left or right"}</small></span>
+                      <span><strong>{activeNursing ? "Stop nursing" : "Nursing"}</strong><small>{activeNursing ? humanDuration(minutesBetween(activeNursing.startedAt, new Date(minuteClock).toISOString())) : "Left or right"}</small></span>
                       {activeNursing ? <Square size={16} fill="currentColor" /> : <Plus size={18} />}
                     </button>
                   )}
@@ -1021,7 +1190,7 @@ export default function HomePage() {
                   </button>
                   <button className={`action-tile action-sleep ${activeSleep ? "is-active" : ""}`} onClick={toggleSleep}>
                     <span className="action-icon"><Moon size={22} /></span>
-                    <span><strong>{activeSleep ? "Wake up" : "Sleep"}</strong><small>{activeSleep ? humanDuration(minutesBetween(activeSleep.startedAt)) : "Start timer"}</small></span>
+                    <span><strong>{activeSleep ? "Wake up" : "Sleep"}</strong><small>{activeSleep ? humanDuration(minutesBetween(activeSleep.startedAt, new Date(minuteClock).toISOString())) : "Start timer"}</small></span>
                     {activeSleep ? <Square size={16} fill="currentColor" /> : <Plus size={18} />}
                   </button>
                 </div>
@@ -1038,19 +1207,7 @@ export default function HomePage() {
                   </button>
                 </div>
               </div>
-              </div>
 
-              <div className="recent-section">
-                <div className="mini-heading">
-                  <h2>Recent</h2>
-                  <button onClick={() => setActiveTab("timeline")}>See all <ChevronRight size={15} /></button>
-                </div>
-                <div className="activity-list">
-                  {sortedActivities.slice(0, 4).map((activity) => (
-                    <ActivityRow key={activity.id} activity={activity} onRemove={removeActivity} />
-                  ))}
-                  {!sortedActivities.length && <EmptyState text="Your day will appear here as you log it." />}
-                </div>
               </div>
             </section>
           )}
@@ -1076,10 +1233,20 @@ export default function HomePage() {
                   </button>
                 ))}
               </div>
-              <div className="timeline-date"><span>Latest first</span><span>Tap trash to remove</span></div>
-              <div className="activity-list timeline-list">
-                {filteredTimeline.slice(0, timelineLimit).map((activity) => (
-                  <ActivityRow key={activity.id} activity={activity} onRemove={removeActivity} showDate />
+              <div className="timeline-date"><span>Latest first</span><span>Open any entry to correct its details</span></div>
+              <div className="timeline-groups">
+                {timelineGroups.map((group) => (
+                  <section className="timeline-day" key={new Date(group[0].startedAt).toDateString()}>
+                    <div className="timeline-day-heading">
+                      <h2>{formatTimelineDay(group[0].startedAt)}</h2>
+                      <span>{group.length} {group.length === 1 ? "log" : "logs"}</span>
+                    </div>
+                    <div className="activity-list timeline-list">
+                      {group.map((activity) => (
+                        <ActivityRow key={activity.id} activity={activity} onEdit={openEdit} />
+                      ))}
+                    </div>
+                  </section>
                 ))}
                 {!filteredTimeline.length && <EmptyState text="No matching logs yet." />}
               </div>
@@ -1228,7 +1395,7 @@ export default function HomePage() {
           <NavButton active={activeTab === "today"} label="Today" onClick={() => setActiveTab("today")} icon={<Home size={20} />} />
           <NavButton active={activeTab === "timeline"} label="Timeline" onClick={() => setActiveTab("timeline")} icon={<Clock size={20} />} />
           <NavButton active={activeTab === "insights"} label="Insights" onClick={() => setActiveTab("insights")} icon={<BarChart3 size={20} />} />
-          <NavButton active={activeTab === "more"} label="More" onClick={() => setActiveTab("more")} icon={<Settings size={20} />} />
+          <NavButton active={activeTab === "more"} label="Settings" onClick={() => setActiveTab("more")} icon={<Settings size={20} />} />
         </nav>
 
         {toast && (
@@ -1254,7 +1421,7 @@ export default function HomePage() {
                     <button aria-label="Increase amount" onClick={() => setBottleAmount((value) => Math.min(400, value + 10))}><Plus size={20} /></button>
                   </div>
                   <div className="preset-row">
-                    {bottlePresets.map((amount) => <button className={bottleAmount === amount ? "selected" : ""} aria-pressed={bottleAmount === amount} key={amount} onClick={() => setBottleAmount(amount)}>{amount}</button>)}
+                    {bottlePresets.map((amount, index) => <button autoFocus={index === 0} data-initial-focus={index === 0 ? "" : undefined} className={bottleAmount === amount ? "selected" : ""} aria-pressed={bottleAmount === amount} key={amount} onClick={() => setBottleAmount(amount)}>{amount}</button>)}
                   </div>
                   <div className="segmented">
                     <button className={milkType === "formula" ? "selected" : ""} aria-pressed={milkType === "formula"} onClick={() => setMilkType("formula")}>Formula</button>
@@ -1270,7 +1437,7 @@ export default function HomePage() {
                 <>
                   <div className="sheet-heading"><span className="sheet-symbol"><Heart size={23} /></span><div><p>Start timer</p><h2 id="sheet-title">Which side?</h2></div></div>
                   <div className="side-grid">
-                    <button autoFocus className={nursingSide === "left" ? "selected" : ""} aria-pressed={nursingSide === "left"} onClick={() => setNursingSide("left")}><span>L</span><strong>Left</strong></button>
+                    <button autoFocus data-initial-focus className={nursingSide === "left" ? "selected" : ""} aria-pressed={nursingSide === "left"} onClick={() => setNursingSide("left")}><span>L</span><strong>Left</strong></button>
                     <button className={nursingSide === "right" ? "selected" : ""} aria-pressed={nursingSide === "right"} onClick={() => setNursingSide("right")}><span>R</span><strong>Right</strong></button>
                   </div>
                   <TimeField value={logTime} onChange={setLogTime} />
@@ -1284,7 +1451,7 @@ export default function HomePage() {
                 <>
                   <div className="sheet-heading"><span className="sheet-symbol"><Droplet size={23} /></span><div><p>Quick log</p><h2 id="sheet-title">What was it?</h2></div></div>
                   <div className="diaper-grid">
-                    <button autoFocus className={diaperKind === "wet" ? "selected" : ""} aria-pressed={diaperKind === "wet"} onClick={() => setDiaperKind("wet")}><Droplet size={22} /><strong>Wet</strong></button>
+                    <button autoFocus data-initial-focus className={diaperKind === "wet" ? "selected" : ""} aria-pressed={diaperKind === "wet"} onClick={() => setDiaperKind("wet")}><Droplet size={22} /><strong>Wet</strong></button>
                     <button className={diaperKind === "dirty" ? "selected" : ""} aria-pressed={diaperKind === "dirty"} onClick={() => setDiaperKind("dirty")}><span className="dot-icon">●</span><strong>Dirty</strong></button>
                     <button className={diaperKind === "both" ? "selected" : ""} aria-pressed={diaperKind === "both"} onClick={() => setDiaperKind("both")}><span className="both-icon"><Droplet size={18} />●</span><strong>Both</strong></button>
                   </div>
@@ -1299,7 +1466,7 @@ export default function HomePage() {
                   <div className="sheet-heading"><span className="sheet-symbol growth-symbol"><Weight size={23} /></span><div><p>Growth check</p><h2 id="sheet-title">Add measurement</h2></div></div>
                   <label className="measurement-field measurement-primary">
                     <span>Weight</span>
-                    <div><input autoFocus inputMode="decimal" type="number" min="500" max="30000" step="1" value={weightGrams} onChange={(event) => setWeightGrams(event.target.value)} placeholder="3500" /><strong>g</strong></div>
+                      <div><input ref={invalidFieldRef} autoFocus data-initial-focus inputMode="decimal" type="number" min="500" max="30000" step="1" value={weightGrams} aria-invalid={Boolean(formError)} aria-describedby={formError ? "sheet-error" : undefined} onChange={(event) => { setWeightGrams(event.target.value); setFormError(null); }} placeholder="3500" /><strong>g</strong></div>
                   </label>
                   <div className="measurement-row">
                     <label className="measurement-field">
@@ -1314,6 +1481,7 @@ export default function HomePage() {
                   <TimeField value={logTime} onChange={setLogTime} />
                   <NoteField value={entryNote} onChange={setEntryNote} placeholder="Clinic, home scale, or anything useful" />
                   <p className="sheet-advice">Measure consistently and use the trend as context for your paediatrician.</p>
+                  <FormError message={formError} />
                   <button className="primary-button sheet-primary" onClick={saveGrowth}>Save growth check</button>
                 </>
               )}
@@ -1323,19 +1491,65 @@ export default function HomePage() {
                   <div className="sheet-heading"><span className="sheet-symbol health-symbol"><Thermometer size={23} /></span><div><p>Health log</p><h2 id="sheet-title">Temperature or note</h2></div></div>
                   <label className="temperature-field">
                     <span>Temperature <small>optional</small></span>
-                    <div><input autoFocus inputMode="decimal" type="number" min="30" max="45" step="0.1" value={temperatureC} onChange={(event) => setTemperatureC(event.target.value)} placeholder="36.7" /><strong>°C</strong></div>
+                    <div><input ref={invalidFieldRef} autoFocus data-initial-focus inputMode="decimal" type="number" min="30" max="45" step="0.1" value={temperatureC} aria-invalid={Boolean(formError)} aria-describedby={formError ? "sheet-error" : undefined} onChange={(event) => { setTemperatureC(event.target.value); setFormError(null); }} placeholder="36.7" /><strong>°C</strong></div>
                   </label>
                   {Number(temperatureC) >= 38 && (
                     <div className="health-alert" role="alert"><Thermometer size={18} /><p>{babyAgeMonths !== null && babyAgeMonths < 3 ? <><strong>38 °C or higher</strong> in a baby under 3 months needs urgent medical advice.</> : <><strong>Temperature recorded.</strong> If your baby seems unwell or you are concerned, seek medical advice.</>}</p></div>
                   )}
                   <NoteField value={entryNote} onChange={setEntryNote} placeholder="Medicine, spit-up, rash, question for the doctor…" />
                   <TimeField value={logTime} onChange={setLogTime} />
+                  <FormError message={formError} />
                   <button className="primary-button sheet-primary" onClick={saveHealthNote}>Save health log</button>
                 </>
               )}
 
+              {sheet === "edit" && editingActivity && (
+                <EditActivityForm
+                  activity={editingActivity}
+                  bottleAmount={bottleAmount}
+                  setBottleAmount={setBottleAmount}
+                  milkType={milkType}
+                  setMilkType={setMilkType}
+                  nursingSide={nursingSide}
+                  setNursingSide={setNursingSide}
+                  diaperKind={diaperKind}
+                  setDiaperKind={setDiaperKind}
+                  weightGrams={weightGrams}
+                  setWeightGrams={setWeightGrams}
+                  lengthCm={lengthCm}
+                  setLengthCm={setLengthCm}
+                  headCm={headCm}
+                  setHeadCm={setHeadCm}
+                  temperatureC={temperatureC}
+                  setTemperatureC={setTemperatureC}
+                  logTime={logTime}
+                  setLogTime={setLogTime}
+                  endTime={endTime}
+                  setEndTime={setEndTime}
+                  note={entryNote}
+                  setNote={setEntryNote}
+                  error={formError}
+                  clearError={() => setFormError(null)}
+                  invalidFieldRef={invalidFieldRef}
+                  confirmDelete={confirmDelete}
+                  setConfirmDelete={setConfirmDelete}
+                  onSave={saveEditedActivity}
+                  onDelete={() => {
+                    removeActivity(editingActivity);
+                    setSheet(null);
+                  }}
+                />
+              )}
+
               {sheet === "profile" && (
-                <ProfileForm profile={profile} onChange={setProfile} onDone={() => setSheet(null)} />
+                <ProfileForm
+                  profile={profile}
+                  onChange={(nextProfile) => {
+                    if (profile.isDemo) setActivities([]);
+                    setProfile(nextProfile);
+                  }}
+                  onDone={() => setSheet(null)}
+                />
               )}
             </section>
           </div>
@@ -1345,25 +1559,26 @@ export default function HomePage() {
   );
 }
 
-function ActivityRow({ activity, onRemove, showDate = false }: { activity: Activity; onRemove: (activity: Activity) => void; showDate?: boolean }) {
+function ActivityRow({ activity, onEdit }: { activity: Activity; onEdit: (activity: Activity) => void }) {
   return (
     <article className="activity-row">
-      <span className={`activity-glyph glyph-${activity.type}`}><ActivityGlyph type={activity.type} /></span>
-      <div className="activity-copy">
-        <strong>{activityTitle(activity)}</strong>
-        <span>{activityDetail(activity)}</span>
-      </div>
-      <div className="activity-meta">
-        <time>{formatTime(activity.startedAt)}</time>
-        {showDate && <small>{new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(activity.startedAt))}</small>}
-      </div>
-      <button className="delete-button" aria-label={`Delete ${activityTitle(activity)}`} onClick={() => onRemove(activity)}><Trash2 size={16} /></button>
+      <button className="activity-open" onClick={() => onEdit(activity)} aria-label={`Edit ${activityTitle(activity)} from ${formatTime(activity.startedAt)}`}>
+        <span className={`activity-glyph glyph-${activity.type}`}><ActivityGlyph type={activity.type} /></span>
+        <span className="activity-copy">
+          <strong>{activityTitle(activity)}</strong>
+          <span>{activityDetail(activity)}</span>
+        </span>
+        <span className="activity-meta">
+          <time dateTime={activity.startedAt}>{formatTime(activity.startedAt)}</time>
+        </span>
+        <span className="activity-row-action" aria-hidden="true"><Pencil size={16} /></span>
+      </button>
     </article>
   );
 }
 
 function ActiveTimerCard({ activity, onStop }: { activity: Activity; onStop: () => void }) {
-  const [now, setNow] = useState(0);
+  const [now, setNow] = useState(Date.now);
   const isSleep = activity.type === "sleep";
   const title = isSleep
     ? "Sleeping"
@@ -1499,11 +1714,25 @@ function NavButton({ active, label, onClick, icon }: { active: boolean; label: s
   return <button className={active ? "active" : ""} aria-current={active ? "page" : undefined} onClick={onClick}>{icon}<span>{label}</span></button>;
 }
 
-function TimeField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+function TimeField({
+  value,
+  onChange,
+  label = "When",
+  inputRef,
+  error = false,
+  autoFocus = false,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  label?: string;
+  inputRef?: React.Ref<HTMLInputElement>;
+  error?: boolean;
+  autoFocus?: boolean;
+}) {
   return (
     <label className="time-field">
-      <span>When</span>
-      <input type="datetime-local" value={value} max={localDateInput(new Date())} onChange={(event) => onChange(event.target.value)} />
+      <span>{label}</span>
+      <input ref={inputRef} autoFocus={autoFocus} data-initial-focus={autoFocus ? "" : undefined} type="datetime-local" value={value} max={localDateInput(new Date())} aria-invalid={error} aria-describedby={error ? "sheet-error" : undefined} onChange={(event) => onChange(event.target.value)} />
     </label>
   );
 }
@@ -1531,12 +1760,163 @@ function NoteField({
   );
 }
 
+function FormError({ message }: { message: string | null }) {
+  if (!message) return null;
+  return <p className="form-error" id="sheet-error" role="alert">{message}</p>;
+}
+
+type EditActivityFormProps = {
+  activity: Activity;
+  bottleAmount: number;
+  setBottleAmount: React.Dispatch<React.SetStateAction<number>>;
+  milkType: "formula" | "expressed";
+  setMilkType: (value: "formula" | "expressed") => void;
+  nursingSide: "left" | "right";
+  setNursingSide: (value: "left" | "right") => void;
+  diaperKind: DiaperKind;
+  setDiaperKind: (value: DiaperKind) => void;
+  weightGrams: string;
+  setWeightGrams: (value: string) => void;
+  lengthCm: string;
+  setLengthCm: (value: string) => void;
+  headCm: string;
+  setHeadCm: (value: string) => void;
+  temperatureC: string;
+  setTemperatureC: (value: string) => void;
+  logTime: string;
+  setLogTime: (value: string) => void;
+  endTime: string;
+  setEndTime: (value: string) => void;
+  note: string;
+  setNote: (value: string) => void;
+  error: string | null;
+  clearError: () => void;
+  invalidFieldRef: React.RefObject<HTMLInputElement | null>;
+  confirmDelete: boolean;
+  setConfirmDelete: (value: boolean) => void;
+  onSave: () => void;
+  onDelete: () => void;
+};
+
+function EditActivityForm({
+  activity,
+  bottleAmount,
+  setBottleAmount,
+  milkType,
+  setMilkType,
+  nursingSide,
+  setNursingSide,
+  diaperKind,
+  setDiaperKind,
+  weightGrams,
+  setWeightGrams,
+  lengthCm,
+  setLengthCm,
+  headCm,
+  setHeadCm,
+  temperatureC,
+  setTemperatureC,
+  logTime,
+  setLogTime,
+  endTime,
+  setEndTime,
+  note,
+  setNote,
+  error,
+  clearError,
+  invalidFieldRef,
+  confirmDelete,
+  setConfirmDelete,
+  onSave,
+  onDelete,
+}: EditActivityFormProps) {
+  const isTimed = activity.type === "nursing" || activity.type === "sleep";
+  return (
+    <>
+      <div className="sheet-heading">
+        <span className={`sheet-symbol glyph-${activity.type}`}><ActivityGlyph type={activity.type} /></span>
+        <div><p>Edit log</p><h2 id="sheet-title">{activityTitle(activity)}</h2></div>
+      </div>
+
+      {activity.type === "bottle" && (
+        <>
+          <label className="measurement-field measurement-primary">
+            <span>Amount</span>
+            <div><input ref={invalidFieldRef} autoFocus data-initial-focus inputMode="numeric" type="number" min="1" max="1000" step="1" value={bottleAmount} aria-invalid={Boolean(error)} aria-describedby={error ? "sheet-error" : undefined} onChange={(event) => { setBottleAmount(Number(event.target.value)); clearError(); }} /><strong>ml</strong></div>
+          </label>
+          <div className="preset-row">
+            {bottlePresets.map((amount) => <button className={bottleAmount === amount ? "selected" : ""} aria-pressed={bottleAmount === amount} key={amount} onClick={() => { setBottleAmount(amount); clearError(); }}>{amount}</button>)}
+          </div>
+          <div className="segmented">
+            <button className={milkType === "formula" ? "selected" : ""} aria-pressed={milkType === "formula"} onClick={() => setMilkType("formula")}>Formula</button>
+            <button className={milkType === "expressed" ? "selected" : ""} aria-pressed={milkType === "expressed"} onClick={() => setMilkType("expressed")}>Breast milk</button>
+          </div>
+        </>
+      )}
+
+      {activity.type === "nursing" && (
+        <div className="side-grid">
+          <button autoFocus data-initial-focus className={nursingSide === "left" ? "selected" : ""} aria-pressed={nursingSide === "left"} onClick={() => setNursingSide("left")}><span>L</span><strong>Left</strong></button>
+          <button className={nursingSide === "right" ? "selected" : ""} aria-pressed={nursingSide === "right"} onClick={() => setNursingSide("right")}><span>R</span><strong>Right</strong></button>
+        </div>
+      )}
+
+      {activity.type === "diaper" && (
+        <div className="diaper-grid">
+          <button autoFocus data-initial-focus className={diaperKind === "wet" ? "selected" : ""} aria-pressed={diaperKind === "wet"} onClick={() => setDiaperKind("wet")}><Droplet size={22} /><strong>Wet</strong></button>
+          <button className={diaperKind === "dirty" ? "selected" : ""} aria-pressed={diaperKind === "dirty"} onClick={() => setDiaperKind("dirty")}><span className="dot-icon">●</span><strong>Dirty</strong></button>
+          <button className={diaperKind === "both" ? "selected" : ""} aria-pressed={diaperKind === "both"} onClick={() => setDiaperKind("both")}><span className="both-icon"><Droplet size={18} />●</span><strong>Both</strong></button>
+        </div>
+      )}
+
+      {activity.type === "growth" && (
+        <>
+          <label className="measurement-field measurement-primary">
+            <span>Weight</span>
+            <div><input ref={invalidFieldRef} autoFocus data-initial-focus inputMode="decimal" type="number" min="500" max="30000" step="1" value={weightGrams} aria-invalid={Boolean(error)} aria-describedby={error ? "sheet-error" : undefined} onChange={(event) => { setWeightGrams(event.target.value); clearError(); }} /><strong>g</strong></div>
+          </label>
+          <div className="measurement-row">
+            <label className="measurement-field"><span>Length <small>optional</small></span><div><input inputMode="decimal" type="number" min="20" max="130" step="0.1" value={lengthCm} onChange={(event) => { setLengthCm(event.target.value); clearError(); }} /><strong>cm</strong></div></label>
+            <label className="measurement-field"><span>Head <small>optional</small></span><div><input inputMode="decimal" type="number" min="20" max="80" step="0.1" value={headCm} onChange={(event) => { setHeadCm(event.target.value); clearError(); }} /><strong>cm</strong></div></label>
+          </div>
+        </>
+      )}
+
+      {activity.type === "health" && (
+        <label className="temperature-field">
+          <span>Temperature <small>optional</small></span>
+          <div><input ref={invalidFieldRef} autoFocus data-initial-focus inputMode="decimal" type="number" min="30" max="45" step="0.1" value={temperatureC} aria-invalid={Boolean(error)} aria-describedby={error ? "sheet-error" : undefined} onChange={(event) => { setTemperatureC(event.target.value); clearError(); }} placeholder="36.7" /><strong>°C</strong></div>
+        </label>
+      )}
+
+      <div className={isTimed ? "measurement-row edit-time-row" : ""}>
+        <TimeField value={logTime} label={isTimed ? "Started" : "When"} autoFocus={activity.type === "sleep"} inputRef={activity.type === "sleep" || activity.type === "nursing" || activity.type === "diaper" ? invalidFieldRef : undefined} error={Boolean(error)} onChange={(value) => { setLogTime(value); clearError(); }} />
+        {isTimed && <TimeField value={endTime} label="Ended (leave empty if running)" error={Boolean(error)} onChange={(value) => { setEndTime(value); clearError(); }} />}
+      </div>
+      <NoteField value={note} onChange={(value) => { setNote(value); clearError(); }} />
+      <FormError message={error} />
+      <button className="primary-button sheet-primary" onClick={onSave}>Save changes</button>
+
+      <div className={`edit-danger ${confirmDelete ? "is-confirming" : ""}`}>
+        {!confirmDelete ? (
+          <button onClick={() => setConfirmDelete(true)}><Trash2 size={17} /> Delete this log</button>
+        ) : (
+          <div>
+            <p><strong>Delete {activityTitle(activity)}?</strong><span>{formatTimelineDay(activity.startedAt)} at {formatTime(activity.startedAt)}. You can undo right after.</span></p>
+            <div><button className="confirm-cancel" onClick={() => setConfirmDelete(false)}>Cancel</button><button className="confirm-remove" onClick={onDelete}>Delete</button></div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
 function ProfileForm({ profile, onChange, onDone }: { profile: Profile; onChange: (profile: Profile) => void; onDone: () => void }) {
   const [draft, setDraft] = useState(profile);
   return (
     <>
       <div className="sheet-heading"><span className="sheet-symbol"><Baby size={23} /></span><div><p>Keep it personal</p><h2 id="sheet-title">Baby profile</h2></div></div>
-      <label className="text-field"><span>Name</span><input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Baby’s name" /></label>
+      <label className="text-field"><span>Name</span><input autoFocus data-initial-focus maxLength={80} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Baby’s name" /></label>
       <label className="text-field"><span>Date of birth</span><input type="date" value={draft.birthDate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setDraft({ ...draft, birthDate: event.target.value })} /></label>
       <label className="field-label">How are you feeding?</label>
       <div className="segmented three-way">

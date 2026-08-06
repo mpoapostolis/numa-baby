@@ -52,7 +52,12 @@ test("preserves local data compatibility and critical one-handed flows", async (
   assert.match(app, /aria-current=\{active \? "page"/);
   assert.doesNotMatch(app, /refreshTimers/);
   assert.doesNotMatch(app, /serviceWorker\.register/);
-  assert.match(css, /grid-template-columns:\s*252px minmax\(0, 1fr\)/);
+  assert.match(css, /@media \(min-width: 768px\)/);
+  assert.match(css, /@media \(min-width: 1024px\)/);
+  assert.match(css, /@media \(min-width: 1440px\)/);
+  assert.doesNotMatch(css, /\.recent-list\s*\{[^}]*grid-template-columns/s);
+  assert.match(app, /function EditActivityForm/);
+  assert.match(app, /const timelineGroups = useMemo/);
   assert.match(css, /\.secondary-actions/);
   assert.deepEqual(Object.keys(packageJson.dependencies).sort(), ["lucide-react", "react", "react-dom"]);
 });
