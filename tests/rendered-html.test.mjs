@@ -53,6 +53,11 @@ test("preserves local data compatibility and critical one-handed flows", async (
   assert.match(app, /<ToggleGroup type="single"/);
   assert.match(app, /<AlertDialog>/);
   assert.match(app, /<Card className=/);
+  assert.match(app, /What may be next/);
+  assert.match(app, /const feedPatternReady/);
+  assert.match(app, /const sleepPatternReady/);
+  assert.match(app, /Patterns, not a schedule/);
+  assert.match(app, /Safe sleep: back, firm flat surface/);
   assert.doesNotMatch(app, /<button\b/);
   assert.doesNotMatch(app, /refreshTimers/);
   assert.doesNotMatch(app, /serviceWorker\.register/);

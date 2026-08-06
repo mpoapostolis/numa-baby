@@ -511,20 +511,24 @@ html.theme-night,
   gap: 9px;
 }
 
-.quick-section {
+.care-forecast {
   order: 2;
 }
 
-.now-card {
+.quick-section {
   order: 3;
 }
 
-.summary-grid {
+.now-card {
   order: 4;
 }
 
-.recent-section {
+.summary-grid {
   order: 5;
+}
+
+.recent-section {
+  order: 6;
 }
 
 .timer-heading {
@@ -643,6 +647,127 @@ html.theme-night,
   font-size: var(--text-sm);
   font-weight: 850;
   cursor: pointer;
+}
+
+.care-forecast {
+  padding: 16px;
+  border-color: var(--line);
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgb(20 35 29 / 4%);
+}
+
+.care-forecast-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 13px;
+}
+
+.care-forecast-heading p {
+  margin: 0 0 3px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 750;
+}
+
+.care-forecast-heading h2 {
+  margin: 0;
+  font-size: var(--text-title);
+  letter-spacing: -0.025em;
+}
+
+.care-forecast-heading > div:last-child {
+  flex: 0 0 auto;
+  color: var(--brand);
+}
+
+.forecast-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.forecast-item {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-tint);
+}
+
+.forecast-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+}
+
+.forecast-feed .forecast-icon {
+  background: var(--aqua);
+  color: var(--aqua-ink);
+}
+
+.forecast-sleep .forecast-icon {
+  background: var(--lavender);
+  color: var(--lavender-ink);
+}
+
+.forecast-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.forecast-copy > span,
+.forecast-copy small {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.forecast-copy strong {
+  font-size: var(--text-body);
+  line-height: 1.2;
+}
+
+.forecast-copy small {
+  overflow: hidden;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+}
+
+.forecast-item > button {
+  min-height: 44px;
+  padding-right: 12px;
+  padding-left: 12px;
+}
+
+.forecast-guidance {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+}
+
+.forecast-guidance span {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.forecast-guidance svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--brand);
 }
 
 .now-card {
@@ -2358,6 +2483,10 @@ html.theme-night,
 }
 
 @media (min-width: 768px) {
+  .forecast-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .app-frame {
     --rail: clamp(88px, 15vw, 196px);
     display: grid;

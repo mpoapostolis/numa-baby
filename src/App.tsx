@@ -211,6 +211,27 @@ function humanDuration(minutes: number) {
   return mins ? `${hours}h ${mins}m` : `${hours}h`;
 }
 
+function median(values: number[]) {
+  if (!values.length) return 0;
+  const ordered = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(ordered.length / 2);
+  return ordered.length % 2
+    ? ordered[middle]
+    : Math.round((ordered[middle - 1] + ordered[middle]) / 2);
+}
+
+function forecastRelative(target: number, now: number) {
+  const minutes = Math.round((target - now) / 60_000);
+  if (minutes <= 15) return "Check cues now";
+  return `Likely in ${humanDuration(minutes)}`;
+}
+
+function forecastRange(target: number, spreadMinutes: number) {
+  const start = new Date(target - spreadMinutes * 60_000).toISOString();
+  const end = new Date(target + spreadMinutes * 60_000).toISOString();
+  return `${formatTime(start)}–${formatTime(end)}`;
+}
+
 function liveDuration(start: string, now: number) {
   const totalSeconds = Math.max(
     0,
@@ -309,17 +330,24 @@ function demoData() {
       }
     });
 
-    const sleepStart = new Date(day);
-    sleepStart.setHours(12, 20 + (dayOffset % 3) * 10, 0, 0);
-    const sleepEnd = new Date(sleepStart.getTime() + (75 + (dayOffset % 2) * 25) * 60_000);
-    if (sleepStart <= now) {
+    [
+      { hour: 2, minute: 30, duration: 110 },
+      { hour: 9, minute: 25, duration: 65 },
+      { hour: 13, minute: 5, duration: 80 },
+      { hour: 17, minute: 15, duration: 45 },
+      { hour: 23, minute: 10, duration: 145 },
+    ].forEach((sleep, index) => {
+      const sleepStart = new Date(day);
+      sleepStart.setHours(sleep.hour, sleep.minute + (dayOffset % 3) * 5, 0, 0);
+      if (sleepStart > now) return;
+      const sleepEnd = new Date(sleepStart.getTime() + sleep.duration * 60_000);
       activities.push({
-        id: `demo-sleep-${dayOffset}`,
+        id: `demo-sleep-v2-${dayOffset}-${index}`,
         type: "sleep",
         startedAt: sleepStart.toISOString(),
-        endedAt: sleepEnd > now ? now.toISOString() : sleepEnd.toISOString(),
+        endedAt: sleepEnd <= now ? sleepEnd.toISOString() : undefined,
       });
-    }
+    });
   }
 
   [
@@ -462,16 +490,23 @@ export default function HomePage() {
           try {
             const parsed = parseStoredData(saved);
             const restoredActivities = parsed.activities ?? [];
-            const missingPreviewGrowth =
-              parsed.profile?.isDemo &&
+            const previewSeed = parsed.profile?.isDemo ? demoData() : [];
+            const missingPreviewGrowth = parsed.profile?.isDemo &&
               !restoredActivities.some((activity) => activity.type === "growth");
+            const needsPreviewSleepRefresh = parsed.profile?.isDemo &&
+              !restoredActivities.some((activity) => activity.id.startsWith("demo-sleep-v2-"));
             setActivities(
-              missingPreviewGrowth
-                ? [
-                    ...restoredActivities,
-                    ...demoData().filter((activity) => activity.type === "growth"),
-                  ]
-                : restoredActivities,
+              [
+                ...restoredActivities.filter((activity) =>
+                  !(needsPreviewSleepRefresh && activity.type === "sleep" && activity.id.startsWith("demo-sleep-")),
+                ),
+                ...(missingPreviewGrowth
+                  ? previewSeed.filter((activity) => activity.type === "growth")
+                  : []),
+                ...(needsPreviewSleepRefresh
+                  ? previewSeed.filter((activity) => activity.id.startsWith("demo-sleep-v2-"))
+                  : []),
+              ],
             );
             setProfile(parsed.profile);
             setNightMode(Boolean(parsed.nightMode));
@@ -602,10 +637,49 @@ export default function HomePage() {
   }, [sortedActivities]);
 
   const typicalGap = useMemo(() => {
-    if (!feedingGaps.length) return 0;
-    const ordered = [...feedingGaps].sort((a, b) => a - b);
-    return ordered[Math.floor(ordered.length / 2)];
+    return median(feedingGaps);
   }, [feedingGaps]);
+
+  const completedSleeps = useMemo(
+    () => sortedActivities
+      .filter((activity) => activity.type === "sleep" && activity.endedAt)
+      .slice(0, 24),
+    [sortedActivities],
+  );
+  const wakeGaps = useMemo(() => {
+    const chronological = [...completedSleeps].sort(
+      (a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime(),
+    );
+    return chronological
+      .slice(1)
+      .map((sleep, index) => Math.round(
+        (new Date(sleep.startedAt).getTime() - new Date(chronological[index].endedAt!).getTime()) / 60_000,
+      ))
+      .filter((minutes) => minutes >= 20 && minutes <= 360);
+  }, [completedSleeps]);
+  const typicalWakeGap = useMemo(() => median(wakeGaps), [wakeGaps]);
+
+  const feedPatternReady = feedingGaps.length >= 3 && Boolean(lastFeed);
+  const feedSpread = feedPatternReady
+    ? Math.max(15, Math.min(45, median(feedingGaps.map((gap) => Math.abs(gap - typicalGap)))))
+    : 20;
+  const nextFeedAt = feedPatternReady && lastFeed
+    ? new Date(lastFeed.startedAt).getTime() + typicalGap * 60_000
+    : null;
+
+  const lastCompletedSleep = completedSleeps[0];
+  const sleepPatternReady = wakeGaps.length >= 2 && Boolean(lastCompletedSleep);
+  const sleepSpread = sleepPatternReady
+    ? Math.max(15, Math.min(40, median(wakeGaps.map((gap) => Math.abs(gap - typicalWakeGap)))))
+    : 20;
+  const nextSleepAt = sleepPatternReady && lastCompletedSleep?.endedAt
+    ? new Date(lastCompletedSleep.endedAt).getTime() + typicalWakeGap * 60_000
+    : null;
+  const forecastFeedSheet: "bottle" | "nursing" = profile.feedingMode === "breast"
+    ? "nursing"
+    : profile.feedingMode === "bottle"
+      ? "bottle"
+      : lastFeed?.type === "nursing" ? "nursing" : "bottle";
 
   const weekly = useMemo(() => {
     return Array.from({ length: 7 }, (_, index) => {
@@ -1085,6 +1159,48 @@ export default function HomePage() {
                   ))}
                 </div>
               )}
+
+              <Card className="care-forecast" aria-labelledby="care-forecast-title">
+                <div className="care-forecast-heading">
+                  <div>
+                    <p>From {profile.name}’s rhythm</p>
+                    <h2 id="care-forecast-title">What may be next</h2>
+                  </div>
+                  <Badge variant="outline">Calculated on device</Badge>
+                </div>
+                <div className="forecast-grid">
+                  <div className="forecast-item forecast-feed">
+                    <span className="forecast-icon"><Milk size={21} /></span>
+                    <div className="forecast-copy">
+                      <span>Next likely feed</span>
+                      <strong>{nextFeedAt ? forecastRelative(nextFeedAt, minuteClock) : "Learning the pattern"}</strong>
+                      <small>{nextFeedAt
+                        ? `${forecastRange(nextFeedAt, feedSpread)} · ${feedingGaps.length + 1} recent feeds`
+                        : "Log at least 4 feeds to estimate a window"}</small>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => openSheet(forecastFeedSheet)}>Log</Button>
+                  </div>
+                  <div className="forecast-item forecast-sleep">
+                    <span className="forecast-icon"><Moon size={21} /></span>
+                    <div className="forecast-copy">
+                      <span>{activeSleep ? "Current sleep" : "Next likely sleep"}</span>
+                      <strong>{activeSleep
+                        ? "Sleeping now"
+                        : nextSleepAt ? forecastRelative(nextSleepAt, minuteClock) : "Learning the pattern"}</strong>
+                      <small>{activeSleep
+                        ? `Started ${formatTime(activeSleep.startedAt)}`
+                        : nextSleepAt
+                          ? `${forecastRange(nextSleepAt, sleepSpread)} · ${wakeGaps.length + 1} wake periods`
+                          : "Log at least 3 complete sleeps to estimate a window"}</small>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={toggleSleep}>{activeSleep ? "Stop" : "Start"}</Button>
+                  </div>
+                </div>
+                <div className="forecast-guidance">
+                  <span><Clock size={15} /> Patterns, not a schedule — cues and your clinician’s care plan come first.</span>
+                  <span><ShieldCheck size={15} /> Safe sleep: back, firm flat surface, clear sleep space.</span>
+                </div>
+              </Card>
 
               <Card className="now-card">
                 <div className="now-card-top">
