@@ -22,19 +22,23 @@ test("builds a complete installable application shell", async () => {
   assert.equal(manifest.icons.length, 2);
 });
 
-test("ships offline assets, security headers and SPA fallback", async () => {
-  const [files, headers, workerText] = await Promise.all([
+test("ships offline assets, security headers, reminders and SPA fallback", async () => {
+  const [files, headers, workerText, notificationWorker] = await Promise.all([
     readdir(dist),
     readFile(new URL("_headers", dist), "utf8"),
     readFile(new URL("server/index.js", dist), "utf8"),
+    readFile(new URL("notification-sw.js", dist), "utf8"),
   ]);
 
   assert.ok(files.includes("sw.js"));
+  assert.ok(files.includes("notification-sw.js"));
   assert.ok(files.some((file) => file.startsWith("workbox-") && file.endsWith(".js")));
   assert.match(headers, /Content-Security-Policy:/);
   assert.match(headers, /X-Content-Type-Options: nosniff/);
   assert.match(workerText, /env\.ASSETS\.fetch/);
   assert.match(workerText, /\/index\.html/);
+  assert.match(notificationWorker, /notificationclick/);
+  assert.match(notificationWorker, /clients\.openWindow/);
 });
 
 test("preserves local data compatibility and critical one-handed flows", async () => {
@@ -47,6 +51,10 @@ test("preserves local data compatibility and critical one-handed flows", async (
 
   assert.match(app, /const STORAGE_KEY = "numa-baby-v1"/);
   assert.match(app, /function parseStoredData/);
+  assert.match(app, /function persistSnapshot/);
+  assert.match(app, /Notification\.requestPermission/);
+  assert.match(app, /registration\.showNotification/);
+  assert.match(app, /<form/);
   assert.match(app, /Start \{nursingSide\} timer/);
   assert.match(app, /saveDiaper\(diaperKind\)/);
   assert.match(app, /<Tabs value=\{activeTab\}/);

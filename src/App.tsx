@@ -1,6 +1,7 @@
 import {
   BarChart3,
   Baby,
+  Bell,
   Check,
   ChevronRight,
   Clock,
@@ -40,6 +41,7 @@ import {
 import { Badge } from "./components/ui/badge";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
@@ -133,10 +135,16 @@ type Profile = {
   isDemo: boolean;
 };
 
+type ReminderSettings = {
+  feedEnabled: boolean;
+  feedIntervalMinutes: number;
+};
+
 type Sheet = null | "bottle" | "nursing" | "diaper" | "growth" | "health" | "profile" | "edit";
 
 const STORAGE_KEY = "numa-baby-v1";
 const RECOVERY_KEY = "numa-baby-v1-recovery";
+const DEFAULT_REMINDERS: ReminderSettings = { feedEnabled: false, feedIntervalMinutes: 180 };
 const bottlePresets = [60, 90, 120, 150];
 const activityTypes = new Set<ActivityType>([
   "bottle",
@@ -151,6 +159,7 @@ type StoredData = {
   activities: Activity[];
   profile: Profile;
   nightMode?: boolean;
+  reminders?: ReminderSettings;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -192,6 +201,14 @@ function isValidProfile(value: unknown): value is Profile {
   );
 }
 
+function isValidReminderSettings(value: unknown): value is ReminderSettings {
+  return (
+    isRecord(value) &&
+    typeof value.feedEnabled === "boolean" &&
+    [120, 180, 240].includes(Number(value.feedIntervalMinutes))
+  );
+}
+
 function parseStoredData(value: string): StoredData {
   const parsed: unknown = JSON.parse(value);
   if (!isRecord(parsed) || !isValidProfile(parsed.profile) || !Array.isArray(parsed.activities)) {
@@ -203,10 +220,14 @@ function parseStoredData(value: string): StoredData {
   if (parsed.nightMode !== undefined && typeof parsed.nightMode !== "boolean") {
     throw new Error("Invalid Baby Tracker preference");
   }
+  if (parsed.reminders !== undefined && !isValidReminderSettings(parsed.reminders)) {
+    throw new Error("Invalid Baby Tracker reminder preference");
+  }
   return {
     profile: parsed.profile,
     activities: parsed.activities,
     nightMode: parsed.nightMode,
+    reminders: parsed.reminders,
   };
 }
 
@@ -225,14 +246,6 @@ function formatTime(value: string) {
 
 function formatShortDay(date: Date) {
   return new Intl.DateTimeFormat("en", { weekday: "short" }).format(date);
-}
-
-function formatLongDate(date: Date) {
-  return new Intl.DateTimeFormat("en", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  }).format(date);
 }
 
 function formatTimelineDay(value: string) {
@@ -513,8 +526,11 @@ export default function HomePage() {
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [nightMode, setNightMode] = useState(false);
+  const [reminders, setReminders] = useState<ReminderSettings>(DEFAULT_REMINDERS);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | "unsupported">(
+    () => "Notification" in window ? Notification.permission : "unsupported",
+  );
   const [storageWarning, setStorageWarning] = useState<string | null>(null);
-  const [persistenceEnabled, setPersistenceEnabled] = useState(false);
   const [timelineFilter, setTimelineFilter] = useState<"all" | ActivityType>("all");
   const [timelineLimit, setTimelineLimit] = useState(80);
   const [minuteClock, setMinuteClock] = useState(Date.now);
@@ -567,7 +583,7 @@ export default function HomePage() {
             );
             setProfile(parsed.profile);
             setNightMode(Boolean(parsed.nightMode));
-            setPersistenceEnabled(true);
+            setReminders(parsed.reminders ?? DEFAULT_REMINDERS);
           } catch {
             try {
               window.localStorage.setItem(RECOVERY_KEY, saved);
@@ -587,7 +603,6 @@ export default function HomePage() {
             isDemo: true,
           });
           setActivities(demoData());
-          setPersistenceEnabled(true);
         }
       } catch {
         setStorageWarning("This browser is blocking local storage. New entries may not persist.");
@@ -601,22 +616,6 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    if (!hydrated || !persistenceEnabled) return;
-    const timer = window.setTimeout(() => {
-      try {
-        window.localStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify({ activities, profile, nightMode }),
-        );
-      } catch {
-        setPersistenceEnabled(false);
-        setStorageWarning("This browser could not save the latest change. Download a backup before closing.");
-      }
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [activities, profile, nightMode, hydrated, persistenceEnabled]);
-
-  useEffect(() => {
     const syncFromAnotherTab = (event: StorageEvent) => {
       if (event.key !== STORAGE_KEY || !event.newValue) return;
       try {
@@ -624,6 +623,7 @@ export default function HomePage() {
         setActivities(parsed.activities);
         setProfile(parsed.profile);
         setNightMode(Boolean(parsed.nightMode));
+        setReminders(parsed.reminders ?? DEFAULT_REMINDERS);
       } catch {
         setStorageWarning("A change from another tab could not be read. This tab kept its current data.");
       }
@@ -656,6 +656,35 @@ export default function HomePage() {
   const lastFeed = sortedActivities.find(
     (activity) => activity.type === "bottle" || activity.type === "nursing",
   );
+  const feedReminderTargetAt = lastFeed
+    ? new Date(lastFeed.startedAt).getTime() + reminders.feedIntervalMinutes * 60_000
+    : null;
+
+  useEffect(() => {
+    if (
+      !reminders.feedEnabled ||
+      notificationPermission !== "granted" ||
+      !feedReminderTargetAt ||
+      !("serviceWorker" in navigator)
+    ) return;
+
+    const delay = feedReminderTargetAt - Date.now();
+    if (delay <= 0) return;
+    const timer = window.setTimeout(() => {
+      void navigator.serviceWorker.ready
+        .then((registration) => registration.showNotification("Time to check feeding cues", {
+          body: `${profile.name}’s feed reminder is due. Follow your baby’s cues and care plan.`,
+          icon: "/icon-192.png",
+          badge: "/icon-192.png",
+          tag: `feed-reminder-${lastFeed?.id ?? "latest"}`,
+          data: { url: "/" },
+        }))
+        .catch(() => undefined);
+    }, delay);
+
+    return () => window.clearTimeout(timer);
+  }, [feedReminderTargetAt, lastFeed?.id, notificationPermission, profile.name, reminders.feedEnabled]);
+
   const activeSleep = sortedActivities.find(
     (activity) => activity.type === "sleep" && !activity.endedAt,
   );
@@ -788,11 +817,42 @@ export default function HomePage() {
     });
   }
 
+  function persistSnapshot(
+    nextActivities: Activity[],
+    nextProfile: Profile = profile,
+    nextNightMode: boolean = nightMode,
+    nextReminders: ReminderSettings = reminders,
+  ) {
+    try {
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ activities: nextActivities, profile: nextProfile, nightMode: nextNightMode, reminders: nextReminders }),
+      );
+      setStorageWarning(null);
+      return true;
+    } catch {
+      setStorageWarning("This browser could not save the latest change. Your previous data is still intact.");
+      showToast("Could not save on this device. Nothing was changed.");
+      return false;
+    }
+  }
+
   function addActivity(activity: Activity, message: string) {
-    setActivities((current) => [activity, ...current]);
+    const previous = activities;
+    const previousProfile = profile;
+    const nextProfile = profile.isDemo ? { ...profile, isDemo: false } : profile;
+    const currentActivities = profile.isDemo ? [] : activities;
+    const next = [activity, ...currentActivities];
+    if (!persistSnapshot(next, nextProfile)) return false;
+    setActivities(next);
+    setProfile(nextProfile);
     showToast(message, () => {
-      setActivities((current) => current.filter((item) => item.id !== activity.id));
+      if (!persistSnapshot(previous, previousProfile)) return;
+      setActivities(previous);
+      setProfile(previousProfile);
+      showToast("Last change undone");
     });
+    return true;
   }
 
   function openSheet(next: Exclude<Sheet, null>) {
@@ -905,7 +965,9 @@ export default function HomePage() {
       next.temperatureC = temperature === undefined ? undefined : Math.round(temperature * 10) / 10;
     }
 
-    setActivities((current) => current.map((activity) => activity.id === next.id ? next : activity));
+    const nextActivities = activities.map((activity) => activity.id === next.id ? next : activity);
+    if (!persistSnapshot(nextActivities)) return;
+    setActivities(nextActivities);
     setSheet(null);
     showToast(`${activityTitle(next)} updated`);
   }
@@ -919,8 +981,7 @@ export default function HomePage() {
       milkType,
       note: entryNote.trim() || undefined,
     };
-    addActivity(entry, `${bottleAmount} ml bottle saved`);
-    setSheet(null);
+    if (addActivity(entry, `${bottleAmount} ml bottle saved`)) setSheet(null);
   }
 
   function startNursing(side: "left" | "right") {
@@ -931,19 +992,18 @@ export default function HomePage() {
       side,
       note: entryNote.trim() || undefined,
     };
-    addActivity(entry, `${side === "left" ? "Left" : "Right"} timer started`);
-    setSheet(null);
+    if (addActivity(entry, `${side === "left" ? "Left" : "Right"} timer started`)) setSheet(null);
   }
 
   function stopNursing() {
     if (!activeNursing) return;
-    setActivities((current) =>
-      current.map((activity) =>
+    const nextActivities = activities.map((activity) =>
         activity.id === activeNursing.id
           ? { ...activity, endedAt: new Date().toISOString() }
           : activity,
-      ),
     );
+    if (!persistSnapshot(nextActivities)) return;
+    setActivities(nextActivities);
     showToast("Nursing session saved");
   }
 
@@ -955,8 +1015,7 @@ export default function HomePage() {
       startedAt: new Date(logTime || Date.now()).toISOString(),
       note: entryNote.trim() || undefined,
     };
-    addActivity(entry, `${kind === "both" ? "Wet + dirty" : kind === "dirty" ? "Dirty" : "Wet"} diaper saved`);
-    setSheet(null);
+    if (addActivity(entry, `${kind === "both" ? "Wet + dirty" : kind === "dirty" ? "Dirty" : "Wet"} diaper saved`)) setSheet(null);
   }
 
   function saveGrowth() {
@@ -986,8 +1045,7 @@ export default function HomePage() {
       headCm: head === undefined ? undefined : Math.round(head * 10) / 10,
       note: entryNote.trim() || undefined,
     };
-    addActivity(entry, `${(weight / 1_000).toFixed(2)} kg saved`);
-    setSheet(null);
+    if (addActivity(entry, `${(weight / 1_000).toFixed(2)} kg saved`)) setSheet(null);
   }
 
   function saveHealthNote() {
@@ -1014,19 +1072,18 @@ export default function HomePage() {
         temperature === undefined ? undefined : Math.round(temperature * 10) / 10,
       note: note || undefined,
     };
-    addActivity(entry, temperature === undefined ? "Health note saved" : "Temperature saved");
-    setSheet(null);
+    if (addActivity(entry, temperature === undefined ? "Health note saved" : "Temperature saved")) setSheet(null);
   }
 
   function toggleSleep() {
     if (activeSleep) {
-      setActivities((current) =>
-        current.map((activity) =>
+      const nextActivities = activities.map((activity) =>
           activity.id === activeSleep.id
             ? { ...activity, endedAt: new Date().toISOString() }
             : activity,
-        ),
       );
+      if (!persistSnapshot(nextActivities)) return;
+      setActivities(nextActivities);
       showToast("Sleep session saved");
       return;
     }
@@ -1039,21 +1096,79 @@ export default function HomePage() {
   }
 
   function removeActivity(activity: Activity) {
-    setActivities((current) => current.filter((item) => item.id !== activity.id));
+    const previous = activities;
+    const next = previous.filter((item) => item.id !== activity.id);
+    if (!persistSnapshot(next)) return false;
+    setActivities(next);
     showToast("Entry removed", () => {
-      setActivities((current) => [activity, ...current]);
+      if (!persistSnapshot(previous)) return;
+      setActivities(previous);
+      showToast("Entry restored");
     });
+    return true;
   }
 
   function startFresh() {
+    const nextProfile = { ...profile, isDemo: false };
+    if (!persistSnapshot([], nextProfile)) return;
     setActivities([]);
-    setProfile((current) => ({ ...current, isDemo: false }));
+    setProfile(nextProfile);
     openSheet("profile");
     showToast("Demo entries cleared");
   }
 
+  function changeNightMode(enabled: boolean) {
+    if (!persistSnapshot(activities, profile, enabled)) return;
+    setNightMode(enabled);
+  }
+
+  function saveProfile(nextProfile: Profile) {
+    const nextActivities = profile.isDemo ? [] : activities;
+    if (!persistSnapshot(nextActivities, nextProfile)) return false;
+    setActivities(nextActivities);
+    setProfile(nextProfile);
+    return true;
+  }
+
+  async function changeFeedReminders(enabled: boolean) {
+    if (!enabled) {
+      const next = { ...reminders, feedEnabled: false };
+      if (!persistSnapshot(activities, profile, nightMode, next)) return;
+      setReminders(next);
+      showToast("Feed reminders off");
+      return;
+    }
+
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+      setNotificationPermission("unsupported");
+      showToast("Notifications are not supported in this browser");
+      return;
+    }
+
+    const permission = Notification.permission === "default"
+      ? await Notification.requestPermission()
+      : Notification.permission;
+    setNotificationPermission(permission);
+    if (permission !== "granted") {
+      showToast("Notifications were not enabled. You can allow them in browser settings.");
+      return;
+    }
+
+    const next = { ...reminders, feedEnabled: true };
+    if (!persistSnapshot(activities, profile, nightMode, next)) return;
+    setReminders(next);
+    showToast("Feed reminders on");
+  }
+
+  function changeFeedReminderInterval(minutes: number) {
+    if (![120, 180, 240].includes(minutes)) return;
+    const next = { ...reminders, feedIntervalMinutes: minutes };
+    if (!persistSnapshot(activities, profile, nightMode, next)) return;
+    setReminders(next);
+  }
+
   function exportData() {
-    const payload = JSON.stringify({ profile, activities, nightMode, exportedAt: new Date().toISOString() }, null, 2);
+    const payload = JSON.stringify({ profile, activities, nightMode, reminders, exportedAt: new Date().toISOString() }, null, 2);
     const blob = new Blob([payload], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
@@ -1084,8 +1199,7 @@ export default function HomePage() {
     if (!window.confirm("Reset the unreadable local copy? Download recovery first if you may need it.")) return;
     try {
       window.localStorage.removeItem(STORAGE_KEY);
-      setStorageWarning(null);
-      setPersistenceEnabled(true);
+      if (!persistSnapshot(activities, profile, nightMode)) return;
       showToast("Local storage reset. Preview data is ready.");
     } catch {
       showToast("This browser is still blocking local storage");
@@ -1107,19 +1221,25 @@ export default function HomePage() {
         if (!window.confirm("Replace the current timeline with this backup? This cannot be undone unless you download the current backup first.")) {
           return;
         }
+        let recoveryCreated = true;
         try {
           window.localStorage.setItem(
             RECOVERY_KEY,
-            JSON.stringify({ profile, activities, nightMode }),
+            JSON.stringify({ profile, activities, nightMode, reminders }),
           );
         } catch {
-          // Import can continue because the user has already chosen the backup file.
+          recoveryCreated = false;
         }
-        setProfile({ ...parsed.profile, isDemo: false });
+        if (!recoveryCreated && !window.confirm("This browser cannot create a recovery copy. Restore anyway and replace the current timeline without rollback?")) {
+          return;
+        }
+        const nextProfile = { ...parsed.profile, isDemo: false };
+        const nextReminders = parsed.reminders ?? DEFAULT_REMINDERS;
+        if (!persistSnapshot(parsed.activities, nextProfile, Boolean(parsed.nightMode), nextReminders)) return;
+        setProfile(nextProfile);
         setActivities(parsed.activities);
         setNightMode(Boolean(parsed.nightMode));
-        setStorageWarning(null);
-        setPersistenceEnabled(true);
+        setReminders(nextReminders);
         showToast("Backup restored");
       } catch {
         showToast("That backup could not be read");
@@ -1147,21 +1267,23 @@ export default function HomePage() {
         profile={profile}
         onProfile={() => openSheet("profile")}
         nightMode={nightMode}
-        onNightModeChange={setNightMode}
+        onNightModeChange={changeNightMode}
       />
       <SidebarInset className="app-frame">
         <header className="topbar">
-          <SidebarTrigger className="sidebar-trigger" aria-label="Open navigation" />
-          <div className="wordmark" aria-label="Baby Tracker">
-            <span className="wordmark-mark"><Baby size={20} /></span>
-            <span className="wordmark-copy">
-              <strong>Baby Tracker</strong>
-              <small>Private family log</small>
+          <div className="topbar-start">
+            <SidebarTrigger className="sidebar-trigger" aria-label="Open navigation" />
+            <Separator orientation="vertical" className="topbar-separator" />
+            <span className="topbar-page-title">
+              {activeTab === "more" ? "Settings" : activeTab[0].toUpperCase() + activeTab.slice(1)}
             </span>
-          </div>
-          <div className="topbar-date">
-            <Clock size={16} />
-            <span>{formatLongDate(new Date())}</span>
+            <div className="wordmark" aria-label="Baby Tracker">
+              <span className="wordmark-mark"><Baby size={20} /></span>
+              <span className="wordmark-copy">
+                <strong>Baby Tracker</strong>
+                <small>Private family log</small>
+              </span>
+            </div>
           </div>
           <Button className="baby-identity" onClick={() => openSheet("profile")}>
             <span className="baby-avatar"><Baby size={19} /></span>
@@ -1199,13 +1321,10 @@ export default function HomePage() {
             <section className="screen today-screen" aria-labelledby="today-heading">
               <div className="section-heading">
                 <div>
-                  <p className="eyebrow">{formatLongDate(new Date())}</p>
+                  <p className="eyebrow">Today</p>
                   <h1 id="today-heading">{greeting()}, {profile.name}.</h1>
                   <p className="page-subtitle">Everything that matters today, without having to remember it.</p>
                 </div>
-                <Button className="icon-button" aria-label="Open settings" onClick={() => setActiveTab("more")}>
-                  <Settings size={20} />
-                </Button>
               </div>
 
               <div className="today-dashboard">
@@ -1226,13 +1345,13 @@ export default function HomePage() {
                 </div>
               )}
 
-              <Card className="care-forecast" aria-labelledby="care-forecast-title">
+              <Card size="sm" className="care-forecast" aria-labelledby="care-forecast-title">
                 <CardHeader className="care-forecast-heading">
                   <div>
                     <p>From {profile.name}’s rhythm</p>
                     <CardTitle id="care-forecast-title">What may be next</CardTitle>
                   </div>
-                  <Badge variant="outline">Calculated on device</Badge>
+                  <CardAction><Badge variant="outline">On-device</Badge></CardAction>
                 </CardHeader>
                 <CardContent className="forecast-grid">
                   <div className="forecast-item forecast-feed">
@@ -1268,7 +1387,7 @@ export default function HomePage() {
                 </CardFooter>
               </Card>
 
-              <Card className="now-card">
+              <Card size="sm" className="now-card">
                 <CardHeader className="now-card-top">
                   <Badge variant="secondary" className="status-pill"><span /> Last feed</Badge>
                   <span className="now-time">{lastFeed ? formatTime(lastFeed.startedAt) : "—"}</span>
@@ -1288,7 +1407,7 @@ export default function HomePage() {
                 )}
               </Card>
 
-              <Card className="summary-grid" aria-label="Today's summary">
+              <Card size="sm" className="summary-grid" aria-label="Today's summary">
                 <div><strong>{feedsToday.length}</strong><span>feeds</span></div>
                 <div><strong>{bottleMlToday}</strong><span>ml logged</span></div>
                 <div><strong>{diapersToday}</strong><span>diapers</span></div>
@@ -1300,7 +1419,7 @@ export default function HomePage() {
                   <h2>Recent</h2>
                   <Button onClick={() => setActiveTab("timeline")}>See all <ChevronRight size={15} /></Button>
                 </div>
-                <Card className="activity-list recent-list">
+                <Card size="sm" className="activity-list recent-list">
                   <CardContent className="activity-list-content">
                     <ItemGroup>
                       {sortedActivities.slice(0, 6).map((activity, index) => (
@@ -1316,13 +1435,13 @@ export default function HomePage() {
               </div>
                 </div>
 
-              <Card className="quick-section">
+              <Card size="sm" className="quick-section">
                 <CardHeader className="quick-section-header">
                   <div>
                     <CardTitle>Quick log</CardTitle>
                     <CardDescription>One tap now. Details only when you need them.</CardDescription>
                   </div>
-                  <Badge variant="secondary">Local only</Badge>
+                  <CardAction><Badge variant="secondary">Private</Badge></CardAction>
                 </CardHeader>
                 <CardContent className="quick-section-content">
                   <ItemGroup className="action-grid">
@@ -1411,7 +1530,7 @@ export default function HomePage() {
                       <h2>{formatTimelineDay(group[0].startedAt)}</h2>
                       <span>{group.length} {group.length === 1 ? "log" : "logs"}</span>
                     </div>
-                    <Card className="activity-list timeline-list">
+                    <Card size="sm" className="activity-list timeline-list">
                       <CardContent className="activity-list-content">
                         <ItemGroup>
                           {group.map((activity, index) => (
@@ -1442,17 +1561,16 @@ export default function HomePage() {
                   <p className="eyebrow">Last 7 days</p>
                   <h1 id="insights-heading">Patterns, calmly</h1>
                 </div>
-                <span className="insight-spark"><BarChart3 size={20} /></span>
               </div>
 
-              <Card className="insight-summary">
+              <Card size="sm" className="insight-summary">
                 <div><span>Typical feed gap</span><strong>{typicalGap ? humanDuration(typicalGap) : "—"}</strong></div>
                 <div><span>Feeds / day</span><strong>{averageFeeds}</strong></div>
                 <div><span>Today’s bottle</span><strong>{bottleMlToday} ml</strong></div>
                 <div><span>Latest weight</span><strong>{latestGrowth?.weightGrams ? `${(latestGrowth.weightGrams / 1_000).toFixed(2)} kg` : "—"}</strong></div>
               </Card>
 
-              <Card className="chart-card">
+              <Card size="sm" className="chart-card">
                 <div className="chart-title">
                   <div><span>Bottle volume</span><strong>Daily total in ml</strong></div>
                   <Milk size={19} />
@@ -1470,7 +1588,7 @@ export default function HomePage() {
                 </div>
               </Card>
 
-              <Card className="chart-card rhythm-card">
+              <Card size="sm" className="chart-card rhythm-card">
                 <div className="chart-title">
                   <div><span>Feeding rhythm</span><strong>When feeds happened</strong></div>
                   <Clock size={19} />
@@ -1519,7 +1637,7 @@ export default function HomePage() {
                 </div>
                 <div className="theme-switch">
                   <span>{nightMode ? <Moon size={17} /> : <Sun size={17} />} Dark mode</span>
-                  <Switch checked={nightMode} onCheckedChange={setNightMode} aria-label="Use night mode" />
+                  <Switch checked={nightMode} onCheckedChange={changeNightMode} aria-label="Use night mode" />
                 </div>
               </div>
 
@@ -1537,6 +1655,57 @@ export default function HomePage() {
                 <CardContent>
                   <ItemGroup>
                     <SettingsAction title={profile.name} description={`${profile.feedingMode} feeding`} icon={<Baby />} onClick={() => openSheet("profile")} />
+                  </ItemGroup>
+                </CardContent>
+              </Card>
+
+              <Card className="settings-group reminder-settings">
+                <CardHeader>
+                  <CardTitle>Care reminders</CardTitle>
+                  <CardDescription>Optional prompts, scheduled privately on this device.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ItemGroup>
+                    <Item size="sm" className="reminder-row">
+                      <ItemMedia variant="icon" className="glyph-bottle"><Bell /></ItemMedia>
+                      <ItemContent>
+                        <ItemTitle>Feed reminder</ItemTitle>
+                        <ItemDescription>
+                          {notificationPermission === "denied"
+                            ? "Blocked in browser settings"
+                            : reminders.feedEnabled && feedReminderTargetAt && feedReminderTargetAt > minuteClock
+                              ? `Next prompt around ${formatTime(new Date(feedReminderTargetAt).toISOString())}`
+                              : "Prompt after the next feed you log"}
+                        </ItemDescription>
+                      </ItemContent>
+                      <ItemActions>
+                        <Switch
+                          checked={reminders.feedEnabled}
+                          disabled={notificationPermission === "unsupported"}
+                          onCheckedChange={(checked) => void changeFeedReminders(checked)}
+                          aria-label="Use feed reminders"
+                        />
+                      </ItemActions>
+                    </Item>
+                    {reminders.feedEnabled && (
+                      <>
+                        <ItemSeparator />
+                        <div className="reminder-options">
+                          <span>Remind after</span>
+                          <ToggleGroup
+                            type="single"
+                            value={String(reminders.feedIntervalMinutes)}
+                            aria-label="Feed reminder interval"
+                            onValueChange={(value) => value && changeFeedReminderInterval(Number(value))}
+                          >
+                            <ToggleGroupItem value="120">2 hours</ToggleGroupItem>
+                            <ToggleGroupItem value="180">3 hours</ToggleGroupItem>
+                            <ToggleGroupItem value="240">4 hours</ToggleGroupItem>
+                          </ToggleGroup>
+                          <p>Local reminders work while Baby Tracker remains active. Follow your baby’s cues and clinician’s care plan.</p>
+                        </div>
+                      </>
+                    )}
                   </ItemGroup>
                 </CardContent>
               </Card>
@@ -1603,14 +1772,14 @@ export default function HomePage() {
               <div className="sheet-handle" />
 
               {sheet === "bottle" && (
-                <>
+                <SheetForm onSubmit={saveBottle}>
                   <LogDialogHeader icon={<Milk />} eyebrow="Quick log" title="Bottle" description="Record the amount now; adjust details only if needed." />
                   <Field className="amount-field">
                     <FieldLabel>Amount</FieldLabel>
                     <ButtonGroup className="amount-control" aria-label="Bottle amount">
-                      <Button variant="outline" aria-label="Decrease amount" onClick={() => setBottleAmount((value) => Math.max(10, value - 10))}><Minus /></Button>
+                      <Button type="button" variant="outline" aria-label="Decrease amount" onClick={() => setBottleAmount((value) => Math.max(10, value - 10))}><Minus /></Button>
                       <ButtonGroupText><strong>{bottleAmount}</strong><span>ml</span></ButtonGroupText>
-                      <Button variant="outline" aria-label="Increase amount" onClick={() => setBottleAmount((value) => Math.min(400, value + 10))}><Plus /></Button>
+                      <Button type="button" variant="outline" aria-label="Increase amount" onClick={() => setBottleAmount((value) => Math.min(400, value + 10))}><Plus /></Button>
                     </ButtonGroup>
                   </Field>
                   <ToggleGroup type="single" value={String(bottleAmount)} className="preset-row" onValueChange={(value) => value && setBottleAmount(Number(value))}>
@@ -1622,12 +1791,12 @@ export default function HomePage() {
                   </ToggleGroup>
                   <TimeField value={logTime} onChange={setLogTime} />
                   <NoteField value={entryNote} onChange={setEntryNote} />
-                  <DialogFooter><Button className="primary-button sheet-primary" onClick={saveBottle}>Save {bottleAmount} ml</Button></DialogFooter>
-                </>
+                  <DialogFooter><Button type="submit" className="primary-button sheet-primary">Save {bottleAmount} ml</Button></DialogFooter>
+                </SheetForm>
               )}
 
               {sheet === "nursing" && (
-                <>
+                <SheetForm onSubmit={() => startNursing(nursingSide)}>
                   <LogDialogHeader icon={<Heart />} eyebrow="Start timer" title="Which side?" description="The timer keeps running if you close the app." />
                   <ToggleGroup type="single" value={nursingSide} className="side-grid" onValueChange={(value) => value && setNursingSide(value as "left" | "right")}>
                     <ToggleGroupItem autoFocus data-initial-focus value="left"><span>L</span><strong>Left</strong></ToggleGroupItem>
@@ -1636,12 +1805,12 @@ export default function HomePage() {
                   <TimeField value={logTime} onChange={setLogTime} />
                   <NoteField value={entryNote} onChange={setEntryNote} />
                   <p className="sheet-footnote">The timer stays active if you close the app.</p>
-                  <DialogFooter><Button className="primary-button sheet-primary" onClick={() => startNursing(nursingSide)}>Start {nursingSide} timer</Button></DialogFooter>
-                </>
+                  <DialogFooter><Button type="submit" className="primary-button sheet-primary">Start {nursingSide} timer</Button></DialogFooter>
+                </SheetForm>
               )}
 
               {sheet === "diaper" && (
-                <>
+                <SheetForm onSubmit={() => saveDiaper(diaperKind)}>
                   <LogDialogHeader icon={<Droplet />} eyebrow="Quick log" title="What was it?" description="Choose the closest match and save." />
                   <ToggleGroup type="single" value={diaperKind} className="diaper-grid" onValueChange={(value) => value && setDiaperKind(value as DiaperKind)}>
                     <ToggleGroupItem autoFocus data-initial-focus value="wet"><Droplet size={22} /><strong>Wet</strong></ToggleGroupItem>
@@ -1650,12 +1819,12 @@ export default function HomePage() {
                   </ToggleGroup>
                   <TimeField value={logTime} onChange={setLogTime} />
                   <NoteField value={entryNote} onChange={setEntryNote} />
-                  <DialogFooter><Button className="primary-button sheet-primary" onClick={() => saveDiaper(diaperKind)}>Save {diaperKind === "both" ? "wet + dirty" : diaperKind} diaper</Button></DialogFooter>
-                </>
+                  <DialogFooter><Button type="submit" className="primary-button sheet-primary">Save {diaperKind === "both" ? "wet + dirty" : diaperKind} diaper</Button></DialogFooter>
+                </SheetForm>
               )}
 
               {sheet === "growth" && (
-                <>
+                <SheetForm onSubmit={saveGrowth}>
                   <LogDialogHeader icon={<Weight />} eyebrow="Growth check" title="Add measurement" description="Record measurements consistently to make the trend useful." />
                   <FieldGroup className="measurement-fields">
                     <UnitField label="Weight" value={weightGrams} unit="g" min={500} max={30000} step={1} inputRef={invalidFieldRef} autoFocus invalid={Boolean(formError)} onChange={(value) => { setWeightGrams(value); setFormError(null); }} placeholder="3500" className="measurement-primary" />
@@ -1668,12 +1837,12 @@ export default function HomePage() {
                   <NoteField value={entryNote} onChange={setEntryNote} placeholder="Clinic, home scale, or anything useful" />
                   <p className="sheet-advice">Measure consistently and use the trend as context for your paediatrician.</p>
                   <FormError message={formError} />
-                  <DialogFooter><Button className="primary-button sheet-primary" onClick={saveGrowth}>Save growth check</Button></DialogFooter>
-                </>
+                  <DialogFooter><Button type="submit" className="primary-button sheet-primary">Save growth check</Button></DialogFooter>
+                </SheetForm>
               )}
 
               {sheet === "health" && (
-                <>
+                <SheetForm onSubmit={saveHealthNote}>
                   <LogDialogHeader icon={<Thermometer />} eyebrow="Health log" title="Temperature or note" description="Keep a time-stamped note you can refer back to." />
                   <UnitField label="Temperature" optional value={temperatureC} unit="°C" min={30} max={45} step={0.1} inputRef={invalidFieldRef} autoFocus invalid={Boolean(formError)} onChange={(value) => { setTemperatureC(value); setFormError(null); }} placeholder="36.7" />
                   {Number(temperatureC) >= 38 && (
@@ -1682,8 +1851,8 @@ export default function HomePage() {
                   <NoteField value={entryNote} onChange={setEntryNote} placeholder="Medicine, spit-up, rash, question for the doctor…" />
                   <TimeField value={logTime} onChange={setLogTime} />
                   <FormError message={formError} />
-                  <DialogFooter><Button className="primary-button sheet-primary" onClick={saveHealthNote}>Save health log</Button></DialogFooter>
-                </>
+                  <DialogFooter><Button type="submit" className="primary-button sheet-primary">Save health log</Button></DialogFooter>
+                </SheetForm>
               )}
 
               {sheet === "edit" && editingActivity && (
@@ -1716,8 +1885,7 @@ export default function HomePage() {
                   invalidFieldRef={invalidFieldRef}
                   onSave={saveEditedActivity}
                   onDelete={() => {
-                    removeActivity(editingActivity);
-                    setSheet(null);
+                    if (removeActivity(editingActivity)) setSheet(null);
                   }}
                 />
               )}
@@ -1725,10 +1893,7 @@ export default function HomePage() {
               {sheet === "profile" && (
                 <ProfileForm
                   profile={profile}
-                  onChange={(nextProfile) => {
-                    if (profile.isDemo) setActivities([]);
-                    setProfile(nextProfile);
-                  }}
+                  onChange={saveProfile}
                   onDone={() => setSheet(null)}
                 />
               )}
@@ -2219,6 +2384,20 @@ type EditActivityFormProps = {
   onDelete: () => void;
 };
 
+function SheetForm({ children, onSubmit }: { children: React.ReactNode; onSubmit: () => void }) {
+  return (
+    <form
+      className="sheet-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit();
+      }}
+    >
+      {children}
+    </form>
+  );
+}
+
 function EditActivityForm({
   activity,
   bottleAmount,
@@ -2251,7 +2430,7 @@ function EditActivityForm({
 }: EditActivityFormProps) {
   const isTimed = activity.type === "nursing" || activity.type === "sleep";
   return (
-    <>
+    <SheetForm onSubmit={onSave}>
       <LogDialogHeader
         icon={<ActivityGlyph type={activity.type} />}
         eyebrow="Edit log"
@@ -2308,12 +2487,12 @@ function EditActivityForm({
       </div>
       <NoteField value={note} onChange={(value) => { setNote(value); clearError(); }} />
       <FormError message={error} />
-      <DialogFooter><Button className="primary-button sheet-primary" onClick={onSave}>Save changes</Button></DialogFooter>
+      <DialogFooter><Button type="submit" className="primary-button sheet-primary">Save changes</Button></DialogFooter>
 
       <AlertDialog>
         <div className="edit-danger">
           <AlertDialogTrigger asChild>
-            <Button variant="ghost"><Trash2 size={17} /> Delete this log</Button>
+            <Button type="button" variant="ghost"><Trash2 size={17} /> Delete this log</Button>
           </AlertDialogTrigger>
         </div>
         <AlertDialogContent className="delete-dialog">
@@ -2329,16 +2508,18 @@ function EditActivityForm({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </SheetForm>
   );
 }
 
-function ProfileForm({ profile, onChange, onDone }: { profile: Profile; onChange: (profile: Profile) => void; onDone: () => void }) {
+function ProfileForm({ profile, onChange, onDone }: { profile: Profile; onChange: (profile: Profile) => boolean; onDone: () => void }) {
   const [draft, setDraft] = useState(profile);
   const nameId = useId();
   const birthDateId = useId();
   return (
-    <>
+    <SheetForm onSubmit={() => {
+      if (onChange({ ...draft, name: draft.name.trim() || "Baby", isDemo: false })) onDone();
+    }}>
       <LogDialogHeader icon={<Baby />} eyebrow="Keep it personal" title="Baby profile" description="Used only in this browser to personalise your tracker." />
       <FieldGroup>
         <Field>
@@ -2357,7 +2538,7 @@ function ProfileForm({ profile, onChange, onDone }: { profile: Profile; onChange
           <FieldDescription>This changes which quick actions are shown.</FieldDescription>
         </Field>
       </FieldGroup>
-      <DialogFooter><Button className="primary-button sheet-primary" onClick={() => { onChange({ ...draft, name: draft.name.trim() || "Baby", isDemo: false }); onDone(); }}>Save profile</Button></DialogFooter>
-    </>
+      <DialogFooter><Button type="submit" className="primary-button sheet-primary">Save profile</Button></DialogFooter>
+    </SheetForm>
   );
 }

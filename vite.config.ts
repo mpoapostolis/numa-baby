@@ -37,6 +37,7 @@ export default defineConfig({
       workbox: {
         cleanupOutdatedCaches: true,
         clientsClaim: true,
+        importScripts: ["/notification-sw.js"],
         navigateFallback: "/index.html",
         globPatterns: ["**/*.{html,js,css,png,svg,webmanifest}"],
         globIgnores: ["**/og-baby-tracker.png"],
