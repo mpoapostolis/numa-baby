@@ -1769,7 +1769,7 @@ function AppSidebar({
   };
 
   return (
-    <Sidebar variant="inset" collapsible="icon" className="numa-sidebar">
+    <Sidebar variant="sidebar" collapsible="icon" className="numa-sidebar">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
