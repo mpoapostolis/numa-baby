@@ -1,56 +1,70 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
+import { gzipSync } from "node:zlib";
 import test from "node:test";
 
-async function render() {
-  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
-  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
-  const { default: worker } = await import(workerUrl.href);
+const project = new URL("../", import.meta.url);
+const dist = new URL("../dist/", import.meta.url);
 
-  return worker.fetch(
-    new Request("http://localhost/", {
-      headers: { accept: "text/html" },
-    }),
-    {
-      ASSETS: {
-        fetch: async () => new Response("Not found", { status: 404 }),
-      },
-    },
-    {
-      waitUntil() {},
-      passThroughOnException() {},
-    },
-  );
-}
+test("builds a complete installable application shell", async () => {
+  const [html, manifestText] = await Promise.all([
+    readFile(new URL("index.html", dist), "utf8"),
+    readFile(new URL("manifest.webmanifest", dist), "utf8"),
+  ]);
+  const manifest = JSON.parse(manifestText);
 
-test("server-renders the Baby Tracker application shell", async () => {
-  const response = await render();
-  assert.equal(response.status, 200);
-  assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
-
-  const html = await response.text();
   assert.match(html, /<title>Baby Tracker — Calm, private baby logging<\/title>/i);
-  assert.match(html, /aria-label="Loading Baby Tracker"/i);
-  assert.match(html, /og-baby-tracker\.png/i);
   assert.match(html, /manifest\.webmanifest/i);
-  assert.doesNotMatch(html, />Numa</i);
+  assert.match(html, /og-baby-tracker\.png/i);
+  assert.match(html, /assets\/index-[^"']+\.js/i);
+  assert.equal(manifest.id, "/");
+  assert.equal(manifest.display, "standalone");
+  assert.equal(manifest.icons.length, 2);
 });
 
-test("keeps local-first tracking and the desktop workspace in the product source", async () => {
-  const [page, css, manifest] = await Promise.all([
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
-    readFile(new URL("../app/manifest.ts", import.meta.url), "utf8"),
+test("ships offline assets, security headers and SPA fallback", async () => {
+  const [files, headers, workerText] = await Promise.all([
+    readdir(dist),
+    readFile(new URL("_headers", dist), "utf8"),
+    readFile(new URL("server/index.js", dist), "utf8"),
   ]);
 
-  assert.match(page, /localStorage\.setItem/);
-  assert.match(page, /function ActiveTimerCard/);
-  assert.match(page, /function GrowthChart/);
-  assert.match(page, /weightGrams/);
-  assert.match(page, /Temperature or note/);
-  assert.match(page, /Started at/);
-  assert.match(page, /aria-live="polite"/);
-  assert.match(css, /Full desktop workspace/);
+  assert.ok(files.includes("sw.js"));
+  assert.ok(files.some((file) => file.startsWith("workbox-") && file.endsWith(".js")));
+  assert.match(headers, /Content-Security-Policy:/);
+  assert.match(headers, /X-Content-Type-Options: nosniff/);
+  assert.match(workerText, /env\.ASSETS\.fetch/);
+  assert.match(workerText, /\/index\.html/);
+});
+
+test("preserves local data compatibility and critical one-handed flows", async () => {
+  const [app, css, packageText] = await Promise.all([
+    readFile(new URL("src/App.tsx", project), "utf8"),
+    readFile(new URL("src/styles.css", project), "utf8"),
+    readFile(new URL("package.json", project), "utf8"),
+  ]);
+  const packageJson = JSON.parse(packageText);
+
+  assert.match(app, /const STORAGE_KEY = "numa-baby-v1"/);
+  assert.match(app, /function parseStoredData/);
+  assert.match(app, /Start \{nursingSide\} timer/);
+  assert.match(app, /saveDiaper\(diaperKind\)/);
+  assert.match(app, /aria-current=\{active \? "page"/);
+  assert.doesNotMatch(app, /refreshTimers/);
+  assert.doesNotMatch(app, /serviceWorker\.register/);
   assert.match(css, /grid-template-columns:\s*252px minmax\(0, 1fr\)/);
-  assert.match(manifest, /short_name:\s*"Baby Tracker"/);
+  assert.match(css, /\.secondary-actions/);
+  assert.deepEqual(Object.keys(packageJson.dependencies).sort(), ["lucide-react", "react", "react-dom"]);
+});
+
+test("keeps the initial production UI bundle lightweight", async () => {
+  const assetFiles = await readdir(new URL("assets/", dist));
+  const initialFiles = assetFiles.filter((file) => /^(index-.*\.(js|css))$/.test(file));
+  const compressedSizes = await Promise.all(initialFiles.map(async (file) => {
+    const contents = await readFile(new URL(`assets/${file}`, dist));
+    return gzipSync(contents).byteLength;
+  }));
+  const totalGzip = compressedSizes.reduce((sum, size) => sum + size, 0);
+
+  assert.ok(totalGzip < 90_000, `Initial JS + CSS is ${totalGzip} gzip bytes`);
 });

@@ -1,5 +1,3 @@
-"use client";
-
 import {
   BarChart3,
   Baby,
@@ -59,7 +57,79 @@ type Profile = {
 type Sheet = null | "bottle" | "nursing" | "diaper" | "growth" | "health" | "profile";
 
 const STORAGE_KEY = "numa-baby-v1";
+const RECOVERY_KEY = "numa-baby-v1-recovery";
 const bottlePresets = [60, 90, 120, 150];
+const activityTypes = new Set<ActivityType>([
+  "bottle",
+  "nursing",
+  "diaper",
+  "sleep",
+  "growth",
+  "health",
+]);
+
+type StoredData = {
+  activities: Activity[];
+  profile: Profile;
+  nightMode?: boolean;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function isValidDate(value: unknown): value is string {
+  return typeof value === "string" && Number.isFinite(new Date(value).getTime());
+}
+
+function isValidActivity(value: unknown): value is Activity {
+  if (!isRecord(value)) return false;
+  if (typeof value.id !== "string" || !value.id || !activityTypes.has(value.type as ActivityType)) {
+    return false;
+  }
+  if (!isValidDate(value.startedAt) || (value.endedAt !== undefined && !isValidDate(value.endedAt))) {
+    return false;
+  }
+  if (value.note !== undefined && (typeof value.note !== "string" || value.note.length > 240)) return false;
+  if (value.amount !== undefined && (typeof value.amount !== "number" || value.amount < 0 || value.amount > 1_000)) return false;
+  if (value.weightGrams !== undefined && (typeof value.weightGrams !== "number" || value.weightGrams < 500 || value.weightGrams > 30_000)) return false;
+  if (value.lengthCm !== undefined && (typeof value.lengthCm !== "number" || value.lengthCm < 20 || value.lengthCm > 130)) return false;
+  if (value.headCm !== undefined && (typeof value.headCm !== "number" || value.headCm < 20 || value.headCm > 80)) return false;
+  if (value.temperatureC !== undefined && (typeof value.temperatureC !== "number" || value.temperatureC < 30 || value.temperatureC > 45)) return false;
+  if (value.side !== undefined && value.side !== "left" && value.side !== "right") return false;
+  if (value.diaperKind !== undefined && !["wet", "dirty", "both"].includes(String(value.diaperKind))) return false;
+  if (value.milkType !== undefined && value.milkType !== "formula" && value.milkType !== "expressed") return false;
+  return true;
+}
+
+function isValidProfile(value: unknown): value is Profile {
+  return (
+    isRecord(value) &&
+    typeof value.name === "string" &&
+    value.name.length <= 80 &&
+    typeof value.birthDate === "string" &&
+    ["mixed", "breast", "bottle"].includes(String(value.feedingMode)) &&
+    typeof value.isDemo === "boolean"
+  );
+}
+
+function parseStoredData(value: string): StoredData {
+  const parsed: unknown = JSON.parse(value);
+  if (!isRecord(parsed) || !isValidProfile(parsed.profile) || !Array.isArray(parsed.activities)) {
+    throw new Error("Invalid Baby Tracker backup");
+  }
+  if (parsed.activities.length > 25_000 || !parsed.activities.every(isValidActivity)) {
+    throw new Error("Invalid Baby Tracker activities");
+  }
+  if (parsed.nightMode !== undefined && typeof parsed.nightMode !== "boolean") {
+    throw new Error("Invalid Baby Tracker preference");
+  }
+  return {
+    profile: parsed.profile,
+    activities: parsed.activities,
+    nightMode: parsed.nightMode,
+  };
+}
 
 function localDateInput(date: Date) {
   const offset = date.getTimezoneOffset();
@@ -105,16 +175,35 @@ function humanDuration(minutes: number) {
   return mins ? `${hours}h ${mins}m` : `${hours}h`;
 }
 
-function liveDuration(start: string) {
+function liveDuration(start: string, now: number) {
   const totalSeconds = Math.max(
     0,
-    Math.floor((Date.now() - new Date(start).getTime()) / 1_000),
+    Math.floor((now - new Date(start).getTime()) / 1_000),
   );
   const hours = Math.floor(totalSeconds / 3_600);
   const minutes = Math.floor((totalSeconds % 3_600) / 60);
   const seconds = totalSeconds % 60;
   const clock = [minutes, seconds].map((value) => String(value).padStart(2, "0")).join(":");
   return hours > 0 ? `${hours}:${clock}` : clock;
+}
+
+function minutesOnDay(activity: Activity, day: Date, now = Date.now()) {
+  const dayStart = new Date(day);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setDate(dayEnd.getDate() + 1);
+  const start = Math.max(new Date(activity.startedAt).getTime(), dayStart.getTime());
+  const end = Math.min(activity.endedAt ? new Date(activity.endedAt).getTime() : now, dayEnd.getTime());
+  return Math.max(0, Math.round((end - start) / 60_000));
+}
+
+function ageInMonths(birthDate: string) {
+  const birth = new Date(`${birthDate}T12:00:00`);
+  if (!Number.isFinite(birth.getTime())) return null;
+  const today = new Date();
+  let months = (today.getFullYear() - birth.getFullYear()) * 12 + today.getMonth() - birth.getMonth();
+  if (today.getDate() < birth.getDate()) months -= 1;
+  return Math.max(0, months);
 }
 
 function timeAgo(value?: string) {
@@ -297,75 +386,153 @@ export default function HomePage() {
   const [headCm, setHeadCm] = useState("");
   const [temperatureC, setTemperatureC] = useState("");
   const [logTime, setLogTime] = useState("");
+  const [nursingSide, setNursingSide] = useState<"left" | "right">("left");
+  const [diaperKind, setDiaperKind] = useState<DiaperKind>("wet");
   const [nightMode, setNightMode] = useState(false);
-  const [, refreshTimers] = useState(0);
+  const [storageWarning, setStorageWarning] = useState<string | null>(null);
+  const [persistenceEnabled, setPersistenceEnabled] = useState(false);
+  const [timelineFilter, setTimelineFilter] = useState<"all" | ActivityType>("all");
+  const [timelineLimit, setTimelineLimit] = useState(80);
   const [toast, setToast] = useState<{ message: string; undo?: () => void } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const importRef = useRef<HTMLInputElement>(null);
+  const sheetRef = useRef<HTMLElement>(null);
+  const sheetTriggerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    const timer = window.setInterval(() => refreshTimers((current) => current + 1), 1_000);
     return () => {
-      window.clearInterval(timer);
       if (toastTimer.current) clearTimeout(toastTimer.current);
     };
   }, []);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
-      const saved = window.localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved) as {
-            activities: Activity[];
-            profile: Profile;
-            nightMode?: boolean;
-          };
-          const restoredActivities = parsed.activities ?? [];
-          const missingPreviewGrowth =
-            parsed.profile?.isDemo &&
-            !restoredActivities.some((activity) => activity.type === "growth");
-          setActivities(
-            missingPreviewGrowth
-              ? [
-                  ...restoredActivities,
-                  ...demoData().filter((activity) => activity.type === "growth"),
-                ]
-              : restoredActivities,
-          );
-          setProfile(parsed.profile);
-          setNightMode(Boolean(parsed.nightMode));
-        } catch {
+      try {
+        const saved = window.localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          try {
+            const parsed = parseStoredData(saved);
+            const restoredActivities = parsed.activities ?? [];
+            const missingPreviewGrowth =
+              parsed.profile?.isDemo &&
+              !restoredActivities.some((activity) => activity.type === "growth");
+            setActivities(
+              missingPreviewGrowth
+                ? [
+                    ...restoredActivities,
+                    ...demoData().filter((activity) => activity.type === "growth"),
+                  ]
+                : restoredActivities,
+            );
+            setProfile(parsed.profile);
+            setNightMode(Boolean(parsed.nightMode));
+            setPersistenceEnabled(true);
+          } catch {
+            try {
+              window.localStorage.setItem(RECOVERY_KEY, saved);
+            } catch {
+              // The original value remains untouched when recovery storage is unavailable.
+            }
+            setStorageWarning("Your saved data could not be read. It was not overwritten.");
+            setActivities(demoData());
+          }
+        } else {
+          const birthday = new Date();
+          birthday.setDate(birthday.getDate() - 18);
+          setProfile({
+            name: "Mia",
+            birthDate: birthday.toISOString().slice(0, 10),
+            feedingMode: "mixed",
+            isDemo: true,
+          });
           setActivities(demoData());
+          setPersistenceEnabled(true);
         }
-      } else {
-        const birthday = new Date();
-        birthday.setDate(birthday.getDate() - 18);
-        setProfile({
-          name: "Mia",
-          birthDate: birthday.toISOString().slice(0, 10),
-          feedingMode: "mixed",
-          isDemo: true,
-        });
+      } catch {
+        setStorageWarning("This browser is blocking local storage. New entries may not persist.");
         setActivities(demoData());
       }
       setHydrated(true);
+      navigator.storage?.persist?.().catch(() => undefined);
     });
-
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => undefined);
-    }
 
     return () => window.cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
-    window.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ activities, profile, nightMode }),
+    if (!hydrated || !persistenceEnabled) return;
+    const timer = window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ activities, profile, nightMode }),
+        );
+      } catch {
+        setPersistenceEnabled(false);
+        setStorageWarning("This browser could not save the latest change. Download a backup before closing.");
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [activities, profile, nightMode, hydrated, persistenceEnabled]);
+
+  useEffect(() => {
+    const syncFromAnotherTab = (event: StorageEvent) => {
+      if (event.key !== STORAGE_KEY || !event.newValue) return;
+      try {
+        const parsed = parseStoredData(event.newValue);
+        setActivities(parsed.activities);
+        setProfile(parsed.profile);
+        setNightMode(Boolean(parsed.nightMode));
+      } catch {
+        setStorageWarning("A change from another tab could not be read. This tab kept its current data.");
+      }
+    };
+    window.addEventListener("storage", syncFromAnotherTab);
+    return () => window.removeEventListener("storage", syncFromAnotherTab);
+  }, []);
+
+  useEffect(() => {
+    if (!sheet) return;
+    const dialog = sheetRef.current;
+    if (!dialog) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const focusable = () => Array.from(
+      dialog.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ),
     );
-  }, [activities, profile, nightMode, hydrated]);
+    const focusFrame = window.requestAnimationFrame(() => {
+      (dialog.querySelector<HTMLElement>("[autofocus]") ?? focusable()[0] ?? dialog).focus();
+    });
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setSheet(null);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const elements = focusable();
+      if (!elements.length) return;
+      const first = elements[0];
+      const last = elements[elements.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      sheetTriggerRef.current?.focus();
+    };
+  }, [sheet]);
 
   const sortedActivities = useMemo(
     () =>
@@ -385,12 +552,9 @@ export default function HomePage() {
   );
   const bottleMlToday = feedsToday.reduce((sum, activity) => sum + (activity.amount ?? 0), 0);
   const diapersToday = todayActivities.filter((activity) => activity.type === "diaper").length;
-  const sleepMinutesToday = todayActivities
+  const sleepMinutesToday = sortedActivities
     .filter((activity) => activity.type === "sleep")
-    .reduce(
-      (sum, activity) => sum + minutesBetween(activity.startedAt, activity.endedAt),
-      0,
-    );
+    .reduce((sum, activity) => sum + minutesOnDay(activity, new Date()), 0);
   const lastFeed = sortedActivities.find(
     (activity) => activity.type === "bottle" || activity.type === "nursing",
   );
@@ -451,15 +615,18 @@ export default function HomePage() {
         feeds,
         ml: feeds.reduce((sum, activity) => sum + (activity.amount ?? 0), 0),
         diapers: dayActivities.filter((activity) => activity.type === "diaper").length,
-        sleep: dayActivities
+        sleep: sortedActivities
           .filter((activity) => activity.type === "sleep")
-          .reduce(
-            (sum, activity) => sum + minutesBetween(activity.startedAt, activity.endedAt),
-            0,
-          ),
+          .reduce((sum, activity) => sum + minutesOnDay(activity, date), 0),
       };
     });
   }, [sortedActivities]);
+
+  const filteredTimeline = useMemo(
+    () => sortedActivities.filter((activity) => timelineFilter === "all" || activity.type === timelineFilter),
+    [sortedActivities, timelineFilter],
+  );
+  const babyAgeMonths = ageInMonths(profile.birthDate);
 
   const maxMl = Math.max(...weekly.map((day) => day.ml), 1);
   const averageFeeds = Math.round(
@@ -481,8 +648,13 @@ export default function HomePage() {
   }
 
   function openSheet(next: Exclude<Sheet, null>) {
+    sheetTriggerRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
     setLogTime(localDateInput(new Date()));
     setEntryNote("");
+    if (next === "nursing") setNursingSide("left");
+    if (next === "diaper") setDiaperKind("wet");
     if (next === "growth") {
       setWeightGrams("");
       setLengthCm("");
@@ -568,7 +740,7 @@ export default function HomePage() {
       headCm: head === undefined ? undefined : Math.round(head * 10) / 10,
       note: entryNote.trim() || undefined,
     };
-    addActivity(entry, `${(entry.weightGrams / 1_000).toFixed(2)} kg saved`);
+    addActivity(entry, `${(weight / 1_000).toFixed(2)} kg saved`);
     setSheet(null);
   }
 
@@ -636,35 +808,70 @@ export default function HomePage() {
   }
 
   function exportData() {
-    const payload = JSON.stringify({ profile, activities, exportedAt: new Date().toISOString() }, null, 2);
+    const payload = JSON.stringify({ profile, activities, nightMode, exportedAt: new Date().toISOString() }, null, 2);
     const blob = new Blob([payload], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `baby-tracker-${profile.name.toLowerCase().replace(/\s+/g, "-")}-backup.json`;
+    anchor.download = `baby-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`;
     anchor.click();
     URL.revokeObjectURL(url);
     showToast("Private backup downloaded");
   }
 
+  function downloadRecovery() {
+    try {
+      const raw = window.localStorage.getItem(RECOVERY_KEY) ?? window.localStorage.getItem(STORAGE_KEY);
+      if (!raw) throw new Error("No recovery data");
+      const blob = new Blob([raw], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `baby-tracker-recovery-${new Date().toISOString().slice(0, 10)}.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      showToast("Recovery data is unavailable in this browser");
+    }
+  }
+
+  function resetUnreadableData() {
+    try {
+      window.localStorage.removeItem(STORAGE_KEY);
+      setStorageWarning(null);
+      setPersistenceEnabled(true);
+      showToast("Local storage reset. Preview data is ready.");
+    } catch {
+      showToast("This browser is still blocking local storage");
+    }
+  }
+
   function importData(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (file.size > 2_000_000) {
+      showToast("That backup is too large to import safely");
+      event.target.value = "";
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const parsed = JSON.parse(String(reader.result)) as {
-          profile: Profile;
-          activities: Activity[];
-        };
-        if (!parsed.profile || !Array.isArray(parsed.activities)) throw new Error("Invalid backup");
+        const parsed = parseStoredData(String(reader.result));
+        if (!window.confirm("Replace the current timeline with this backup? This cannot be undone unless you download the current backup first.")) {
+          return;
+        }
         setProfile({ ...parsed.profile, isDemo: false });
         setActivities(parsed.activities);
+        setNightMode(Boolean(parsed.nightMode));
+        setStorageWarning(null);
+        setPersistenceEnabled(true);
         showToast("Backup restored");
       } catch {
         showToast("That backup could not be read");
       }
     };
+    reader.onerror = () => showToast("That backup could not be opened");
     reader.readAsText(file);
     event.target.value = "";
   }
@@ -703,10 +910,24 @@ export default function HomePage() {
           </button>
         </header>
 
-        {profile.isDemo && (
-          <div className="demo-banner">
-            <span><strong>Preview data</strong> — explore the full app</span>
-            <button onClick={startFresh}>Start fresh</button>
+        {(profile.isDemo || storageWarning) && (
+          <div className="banner-stack">
+            {profile.isDemo && (
+              <div className="demo-banner">
+                <span><strong>Preview data</strong> — explore the full app</span>
+                <button onClick={startFresh}>Start fresh</button>
+              </div>
+            )}
+            {storageWarning && (
+              <div className="storage-banner" role="alert">
+                <ShieldCheck size={19} />
+                <span><strong>Local data needs attention.</strong> {storageWarning}</span>
+                <div>
+                  <button onClick={downloadRecovery}>Download recovery</button>
+                  <button onClick={resetUnreadableData}>Reset local copy</button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -803,15 +1024,17 @@ export default function HomePage() {
                     <span><strong>{activeSleep ? "Wake up" : "Sleep"}</strong><small>{activeSleep ? humanDuration(minutesBetween(activeSleep.startedAt)) : "Start timer"}</small></span>
                     {activeSleep ? <Square size={16} fill="currentColor" /> : <Plus size={18} />}
                   </button>
-                  <button className="action-tile action-growth" onClick={() => openSheet("growth")}>
+                </div>
+                <div className="secondary-actions" aria-label="Measurements and health">
+                  <button className="secondary-action action-growth" onClick={() => openSheet("growth")}>
                     <span className="action-icon"><Weight size={22} /></span>
                     <span><strong>Growth</strong><small>Weight & length</small></span>
-                    <Plus size={18} />
+                    <ChevronRight size={17} />
                   </button>
-                  <button className="action-tile action-health" onClick={() => openSheet("health")}>
+                  <button className="secondary-action action-health" onClick={() => openSheet("health")}>
                     <span className="action-icon"><Thermometer size={22} /></span>
                     <span><strong>Health note</strong><small>Temperature or note</small></span>
-                    <Plus size={18} />
+                    <ChevronRight size={17} />
                   </button>
                 </div>
               </div>
@@ -839,15 +1062,32 @@ export default function HomePage() {
                   <p className="eyebrow">The full picture</p>
                   <h1 id="timeline-heading">Timeline</h1>
                 </div>
-                <span className="count-badge">{sortedActivities.length} logs</span>
+                <span className="count-badge">{filteredTimeline.length} logs</span>
+              </div>
+              <div className="filter-row" aria-label="Filter timeline">
+                {(["all", "bottle", "nursing", "diaper", "sleep", "growth", "health"] as const).map((filter) => (
+                  <button
+                    key={filter}
+                    className={timelineFilter === filter ? "selected" : ""}
+                    aria-pressed={timelineFilter === filter}
+                    onClick={() => { setTimelineFilter(filter); setTimelineLimit(80); }}
+                  >
+                    {filter === "all" ? "All" : filter[0].toUpperCase() + filter.slice(1)}
+                  </button>
+                ))}
               </div>
               <div className="timeline-date"><span>Latest first</span><span>Tap trash to remove</span></div>
               <div className="activity-list timeline-list">
-                {sortedActivities.map((activity) => (
+                {filteredTimeline.slice(0, timelineLimit).map((activity) => (
                   <ActivityRow key={activity.id} activity={activity} onRemove={removeActivity} showDate />
                 ))}
-                {!sortedActivities.length && <EmptyState text="Nothing logged yet. Your first entry takes seconds." />}
+                {!filteredTimeline.length && <EmptyState text="No matching logs yet." />}
               </div>
+              {filteredTimeline.length > timelineLimit && (
+                <button className="load-more" onClick={() => setTimelineLimit((value) => value + 80)}>
+                  Show more entries
+                </button>
+              )}
             </section>
           )}
 
@@ -932,7 +1172,7 @@ export default function HomePage() {
                   <p className="eyebrow">Private by design</p>
                   <h1 id="more-heading">Your tracker</h1>
                 </div>
-                <button className="icon-button" aria-label="Toggle night mode" onClick={() => setNightMode((value) => !value)}>
+                <button className="icon-button" aria-label="Toggle night mode" aria-pressed={nightMode} onClick={() => setNightMode((value) => !value)}>
                   {nightMode ? <Home size={19} /> : <Moon size={19} />}
                 </button>
               </div>
@@ -996,13 +1236,13 @@ export default function HomePage() {
 
         {sheet && (
           <div className="sheet-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setSheet(null)}>
-            <section className="bottom-sheet" role="dialog" aria-modal="true" aria-label={`Log ${sheet}`}>
+            <section ref={sheetRef} className="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" tabIndex={-1}>
               <div className="sheet-handle" />
               <button className="sheet-close" aria-label="Close" onClick={() => setSheet(null)}><X size={20} /></button>
 
               {sheet === "bottle" && (
                 <>
-                  <div className="sheet-heading"><span className="sheet-symbol"><Milk size={23} /></span><div><p>Quick log</p><h2>Bottle</h2></div></div>
+                  <div className="sheet-heading"><span className="sheet-symbol"><Milk size={23} /></span><div><p>Quick log</p><h2 id="sheet-title">Bottle</h2></div></div>
                   <label className="field-label">Amount</label>
                   <div className="amount-control">
                     <button aria-label="Decrease amount" onClick={() => setBottleAmount((value) => Math.max(10, value - 10))}><Minus size={20} /></button>
@@ -1010,47 +1250,49 @@ export default function HomePage() {
                     <button aria-label="Increase amount" onClick={() => setBottleAmount((value) => Math.min(400, value + 10))}><Plus size={20} /></button>
                   </div>
                   <div className="preset-row">
-                    {bottlePresets.map((amount) => <button className={bottleAmount === amount ? "selected" : ""} key={amount} onClick={() => setBottleAmount(amount)}>{amount}</button>)}
+                    {bottlePresets.map((amount) => <button className={bottleAmount === amount ? "selected" : ""} aria-pressed={bottleAmount === amount} key={amount} onClick={() => setBottleAmount(amount)}>{amount}</button>)}
                   </div>
                   <div className="segmented">
-                    <button className={milkType === "formula" ? "selected" : ""} onClick={() => setMilkType("formula")}>Formula</button>
-                    <button className={milkType === "expressed" ? "selected" : ""} onClick={() => setMilkType("expressed")}>Breast milk</button>
+                    <button className={milkType === "formula" ? "selected" : ""} aria-pressed={milkType === "formula"} onClick={() => setMilkType("formula")}>Formula</button>
+                    <button className={milkType === "expressed" ? "selected" : ""} aria-pressed={milkType === "expressed"} onClick={() => setMilkType("expressed")}>Breast milk</button>
                   </div>
                   <TimeField value={logTime} onChange={setLogTime} />
                   <NoteField value={entryNote} onChange={setEntryNote} />
-                  <button className="primary-button" onClick={saveBottle}>Save {bottleAmount} ml</button>
+                  <button className="primary-button sheet-primary" onClick={saveBottle}>Save {bottleAmount} ml</button>
                 </>
               )}
 
               {sheet === "nursing" && (
                 <>
-                  <div className="sheet-heading"><span className="sheet-symbol"><Heart size={23} /></span><div><p>Start timer</p><h2>Which side?</h2></div></div>
+                  <div className="sheet-heading"><span className="sheet-symbol"><Heart size={23} /></span><div><p>Start timer</p><h2 id="sheet-title">Which side?</h2></div></div>
                   <div className="side-grid">
-                    <button onClick={() => startNursing("left")}><span>L</span><strong>Left</strong></button>
-                    <button onClick={() => startNursing("right")}><span>R</span><strong>Right</strong></button>
+                    <button autoFocus className={nursingSide === "left" ? "selected" : ""} aria-pressed={nursingSide === "left"} onClick={() => setNursingSide("left")}><span>L</span><strong>Left</strong></button>
+                    <button className={nursingSide === "right" ? "selected" : ""} aria-pressed={nursingSide === "right"} onClick={() => setNursingSide("right")}><span>R</span><strong>Right</strong></button>
                   </div>
                   <TimeField value={logTime} onChange={setLogTime} />
                   <NoteField value={entryNote} onChange={setEntryNote} />
                   <p className="sheet-footnote">The timer stays active if you close the app.</p>
+                  <button className="primary-button sheet-primary" onClick={() => startNursing(nursingSide)}>Start {nursingSide} timer</button>
                 </>
               )}
 
               {sheet === "diaper" && (
                 <>
-                  <div className="sheet-heading"><span className="sheet-symbol"><Droplet size={23} /></span><div><p>Quick log</p><h2>What was it?</h2></div></div>
+                  <div className="sheet-heading"><span className="sheet-symbol"><Droplet size={23} /></span><div><p>Quick log</p><h2 id="sheet-title">What was it?</h2></div></div>
                   <div className="diaper-grid">
-                    <button onClick={() => saveDiaper("wet")}><Droplet size={22} /><strong>Wet</strong></button>
-                    <button onClick={() => saveDiaper("dirty")}><span className="dot-icon">●</span><strong>Dirty</strong></button>
-                    <button onClick={() => saveDiaper("both")}><span className="both-icon"><Droplet size={18} />●</span><strong>Both</strong></button>
+                    <button autoFocus className={diaperKind === "wet" ? "selected" : ""} aria-pressed={diaperKind === "wet"} onClick={() => setDiaperKind("wet")}><Droplet size={22} /><strong>Wet</strong></button>
+                    <button className={diaperKind === "dirty" ? "selected" : ""} aria-pressed={diaperKind === "dirty"} onClick={() => setDiaperKind("dirty")}><span className="dot-icon">●</span><strong>Dirty</strong></button>
+                    <button className={diaperKind === "both" ? "selected" : ""} aria-pressed={diaperKind === "both"} onClick={() => setDiaperKind("both")}><span className="both-icon"><Droplet size={18} />●</span><strong>Both</strong></button>
                   </div>
                   <TimeField value={logTime} onChange={setLogTime} />
                   <NoteField value={entryNote} onChange={setEntryNote} />
+                  <button className="primary-button sheet-primary" onClick={() => saveDiaper(diaperKind)}>Save {diaperKind === "both" ? "wet + dirty" : diaperKind} diaper</button>
                 </>
               )}
 
               {sheet === "growth" && (
                 <>
-                  <div className="sheet-heading"><span className="sheet-symbol growth-symbol"><Weight size={23} /></span><div><p>Growth check</p><h2>Add measurement</h2></div></div>
+                  <div className="sheet-heading"><span className="sheet-symbol growth-symbol"><Weight size={23} /></span><div><p>Growth check</p><h2 id="sheet-title">Add measurement</h2></div></div>
                   <label className="measurement-field measurement-primary">
                     <span>Weight</span>
                     <div><input autoFocus inputMode="decimal" type="number" min="500" max="30000" step="1" value={weightGrams} onChange={(event) => setWeightGrams(event.target.value)} placeholder="3500" /><strong>g</strong></div>
@@ -1068,23 +1310,23 @@ export default function HomePage() {
                   <TimeField value={logTime} onChange={setLogTime} />
                   <NoteField value={entryNote} onChange={setEntryNote} placeholder="Clinic, home scale, or anything useful" />
                   <p className="sheet-advice">Measure consistently and use the trend as context for your paediatrician.</p>
-                  <button className="primary-button" onClick={saveGrowth}>Save growth check</button>
+                  <button className="primary-button sheet-primary" onClick={saveGrowth}>Save growth check</button>
                 </>
               )}
 
               {sheet === "health" && (
                 <>
-                  <div className="sheet-heading"><span className="sheet-symbol health-symbol"><Thermometer size={23} /></span><div><p>Health log</p><h2>Temperature or note</h2></div></div>
+                  <div className="sheet-heading"><span className="sheet-symbol health-symbol"><Thermometer size={23} /></span><div><p>Health log</p><h2 id="sheet-title">Temperature or note</h2></div></div>
                   <label className="temperature-field">
                     <span>Temperature <small>optional</small></span>
                     <div><input autoFocus inputMode="decimal" type="number" min="30" max="45" step="0.1" value={temperatureC} onChange={(event) => setTemperatureC(event.target.value)} placeholder="36.7" /><strong>°C</strong></div>
                   </label>
                   {Number(temperatureC) >= 38 && (
-                    <div className="health-alert" role="alert"><Thermometer size={18} /><p><strong>38 °C or higher</strong> in a baby under 3 months needs urgent medical advice.</p></div>
+                    <div className="health-alert" role="alert"><Thermometer size={18} /><p>{babyAgeMonths !== null && babyAgeMonths < 3 ? <><strong>38 °C or higher</strong> in a baby under 3 months needs urgent medical advice.</> : <><strong>Temperature recorded.</strong> If your baby seems unwell or you are concerned, seek medical advice.</>}</p></div>
                   )}
                   <NoteField value={entryNote} onChange={setEntryNote} placeholder="Medicine, spit-up, rash, question for the doctor…" />
                   <TimeField value={logTime} onChange={setLogTime} />
-                  <button className="primary-button" onClick={saveHealthNote}>Save health log</button>
+                  <button className="primary-button sheet-primary" onClick={saveHealthNote}>Save health log</button>
                 </>
               )}
 
@@ -1117,11 +1359,24 @@ function ActivityRow({ activity, onRemove, showDate = false }: { activity: Activ
 }
 
 function ActiveTimerCard({ activity, onStop }: { activity: Activity; onStop: () => void }) {
+  const [now, setNow] = useState(0);
   const isSleep = activity.type === "sleep";
   const title = isSleep
     ? "Sleeping"
     : `Nursing · ${activity.side === "left" ? "Left" : "Right"}`;
-  const elapsed = liveDuration(activity.startedAt);
+  const elapsed = liveDuration(activity.startedAt, now);
+
+  useEffect(() => {
+    const update = () => setNow(Date.now());
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") update();
+    }, 1_000);
+    document.addEventListener("visibilitychange", update);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", update);
+    };
+  }, []);
 
   return (
     <article className={`active-card active-${activity.type}`}>
@@ -1130,7 +1385,7 @@ function ActiveTimerCard({ activity, onStop }: { activity: Activity; onStop: () 
         <strong>{title}</strong>
         <span>Started at {formatTime(activity.startedAt)} · {formatTime(activity.startedAt)} → now</span>
       </div>
-      <div className="active-elapsed" aria-live="polite">
+      <div className="active-elapsed">
         <small>Elapsed</small>
         <strong>{elapsed}</strong>
       </div>
@@ -1156,6 +1411,15 @@ function GrowthChart({
   const maximum = weights.length ? Math.max(...weights) : 1;
   const range = Math.max(100, maximum - minimum);
   const latest = visible[visible.length - 1];
+  const firstTime = visible.length ? new Date(visible[0].startedAt).getTime() : 0;
+  const lastTime = visible.length ? new Date(visible[visible.length - 1].startedAt).getTime() : 1;
+  const timeRange = Math.max(1, lastTime - firstTime);
+  const points = visible.map((activity) => {
+    const weight = activity.weightGrams ?? 0;
+    const x = 32 + ((new Date(activity.startedAt).getTime() - firstTime) / timeRange) * 576;
+    const y = 150 - ((weight - minimum) / range) * 112;
+    return { activity, weight, x, y };
+  });
 
   return (
     <article className="chart-card growth-card">
@@ -1187,19 +1451,35 @@ function GrowthChart({
               <strong>{latest.lengthCm ? `${latest.lengthCm} cm` : "—"} / {latest.headCm ? `${latest.headCm} cm` : "—"}</strong>
             </div>
           </div>
-          <div className="growth-bars" aria-label="Recent weight measurements">
-            {visible.map((activity) => {
-              const weight = activity.weightGrams ?? 0;
-              const height = 28 + ((weight - minimum) / range) * 62;
-              return (
-                <div className="growth-column" key={activity.id}>
-                  <strong>{(weight / 1_000).toFixed(2)}</strong>
-                  <div className="growth-track"><i style={{ height: `${height}%` }} /></div>
-                  <span>{new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(activity.startedAt))}</span>
-                </div>
-              );
-            })}
+          <div className="growth-line-chart">
+            <svg viewBox="0 0 640 180" role="img" aria-labelledby="growth-chart-title growth-chart-description">
+              <title id="growth-chart-title">Recent weight measurements</title>
+              <desc id="growth-chart-description">A date-proportional line from {(minimum / 1_000).toFixed(2)} to {(maximum / 1_000).toFixed(2)} kilograms.</desc>
+              <line className="growth-gridline" x1="32" x2="608" y1="150" y2="150" />
+              {points.length > 1 && <polyline className="growth-line" points={points.map((point) => `${point.x},${point.y}`).join(" ")} />}
+              {points.map(({ activity, weight, x, y }) => (
+                <g key={activity.id}>
+                  <circle className="growth-point" cx={x} cy={y} r="7" />
+                  <text className="growth-value" x={x} y={Math.max(18, y - 14)} textAnchor="middle">{(weight / 1_000).toFixed(2)}</text>
+                  <text className="growth-date" x={x} y="173" textAnchor="middle">{new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(activity.startedAt))}</text>
+                </g>
+              ))}
+            </svg>
           </div>
+          <table className="sr-only">
+            <caption>Recent weight measurements</caption>
+            <thead><tr><th>Date</th><th>Weight</th><th>Length</th><th>Head</th></tr></thead>
+            <tbody>
+              {visible.map((activity) => (
+                <tr key={activity.id}>
+                  <td>{new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(activity.startedAt))}</td>
+                  <td>{activity.weightGrams} g</td>
+                  <td>{activity.lengthCm ? `${activity.lengthCm} cm` : "Not logged"}</td>
+                  <td>{activity.headCm ? `${activity.headCm} cm` : "Not logged"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </>
       )}
       <p className="growth-note">Trends are useful context for your paediatrician. A single measurement is not a diagnosis.</p>
@@ -1212,7 +1492,7 @@ function EmptyState({ text }: { text: string }) {
 }
 
 function NavButton({ active, label, onClick, icon }: { active: boolean; label: string; onClick: () => void; icon: React.ReactNode }) {
-  return <button className={active ? "active" : ""} onClick={onClick}>{icon}<span>{label}</span></button>;
+  return <button className={active ? "active" : ""} aria-current={active ? "page" : undefined} onClick={onClick}>{icon}<span>{label}</span></button>;
 }
 
 function TimeField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
@@ -1251,14 +1531,14 @@ function ProfileForm({ profile, onChange, onDone }: { profile: Profile; onChange
   const [draft, setDraft] = useState(profile);
   return (
     <>
-      <div className="sheet-heading"><span className="sheet-symbol"><Baby size={23} /></span><div><p>Keep it personal</p><h2>Baby profile</h2></div></div>
+      <div className="sheet-heading"><span className="sheet-symbol"><Baby size={23} /></span><div><p>Keep it personal</p><h2 id="sheet-title">Baby profile</h2></div></div>
       <label className="text-field"><span>Name</span><input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Baby’s name" /></label>
       <label className="text-field"><span>Date of birth</span><input type="date" value={draft.birthDate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setDraft({ ...draft, birthDate: event.target.value })} /></label>
       <label className="field-label">How are you feeding?</label>
       <div className="segmented three-way">
-        {(["breast", "bottle", "mixed"] as FeedingMode[]).map((mode) => <button key={mode} className={draft.feedingMode === mode ? "selected" : ""} onClick={() => setDraft({ ...draft, feedingMode: mode })}>{mode}</button>)}
+        {(["breast", "bottle", "mixed"] as FeedingMode[]).map((mode) => <button key={mode} className={draft.feedingMode === mode ? "selected" : ""} aria-pressed={draft.feedingMode === mode} onClick={() => setDraft({ ...draft, feedingMode: mode })}>{mode}</button>)}
       </div>
-      <button className="primary-button" onClick={() => { onChange({ ...draft, name: draft.name.trim() || "Baby", isDemo: false }); onDone(); }}>Save profile</button>
+      <button className="primary-button sheet-primary" onClick={() => { onChange({ ...draft, name: draft.name.trim() || "Baby", isDemo: false }); onDone(); }}>Save profile</button>
     </>
   );
 }

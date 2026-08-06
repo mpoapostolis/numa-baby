@@ -39,8 +39,17 @@ npm test
 ## Stack
 
 - React 19
-- Next.js-compatible app structure powered by vinext
+- Vite 8
 - TypeScript
 - Lucide icons
 - localStorage persistence
-- Cloudflare-compatible production build
+- Workbox service worker via `vite-plugin-pwa`
+- Cloudflare static-assets deployment with SPA fallback
+
+## Deploy
+
+```bash
+npm run build
+```
+
+Use `npm run build` as the Cloudflare build command and `dist` as the output directory. No Node server or database is required; `wrangler.jsonc` also contains the SPA fallback configuration for CLI deployments.
