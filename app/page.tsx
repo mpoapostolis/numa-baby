@@ -17,15 +17,18 @@ import {
   Settings,
   ShieldCheck,
   Square,
+  Stethoscope,
+  Thermometer,
   Trash2,
   Undo2,
   Upload,
   Users,
+  Weight,
   X,
 } from "lucide-react";
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 
-type ActivityType = "bottle" | "nursing" | "diaper" | "sleep";
+type ActivityType = "bottle" | "nursing" | "diaper" | "sleep" | "growth" | "health";
 type DiaperKind = "wet" | "dirty" | "both";
 type FeedingMode = "mixed" | "breast" | "bottle";
 type Tab = "today" | "timeline" | "insights" | "more";
@@ -39,6 +42,11 @@ type Activity = {
   side?: "left" | "right";
   diaperKind?: DiaperKind;
   milkType?: "formula" | "expressed";
+  weightGrams?: number;
+  lengthCm?: number;
+  headCm?: number;
+  temperatureC?: number;
+  note?: string;
 };
 
 type Profile = {
@@ -48,7 +56,7 @@ type Profile = {
   isDemo: boolean;
 };
 
-type Sheet = null | "bottle" | "nursing" | "diaper" | "profile";
+type Sheet = null | "bottle" | "nursing" | "diaper" | "growth" | "health" | "profile";
 
 const STORAGE_KEY = "numa-baby-v1";
 const bottlePresets = [60, 90, 120, 150];
@@ -189,6 +197,24 @@ function demoData() {
     }
   }
 
+  [
+    { daysAgo: 17, weightGrams: 3180, lengthCm: 50.1, headCm: 34.2 },
+    { daysAgo: 9, weightGrams: 3310, lengthCm: 50.8, headCm: 34.7 },
+    { daysAgo: 1, weightGrams: 3470, lengthCm: 51.5, headCm: 35.1 },
+  ].forEach((measurement, index) => {
+    const started = new Date(now);
+    started.setDate(now.getDate() - measurement.daysAgo);
+    started.setHours(10, 15, 0, 0);
+    activities.push({
+      id: `demo-growth-${index}`,
+      type: "growth",
+      startedAt: started.toISOString(),
+      weightGrams: measurement.weightGrams,
+      lengthCm: measurement.lengthCm,
+      headCm: measurement.headCm,
+    });
+  });
+
   return activities.sort(
     (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
   );
@@ -198,32 +224,57 @@ function activityTitle(activity: Activity) {
   if (activity.type === "bottle") return "Bottle";
   if (activity.type === "nursing") return "Nursing";
   if (activity.type === "sleep") return activity.endedAt ? "Sleep" : "Sleeping now";
+  if (activity.type === "growth") return "Growth check";
+  if (activity.type === "health") return activity.temperatureC ? "Temperature" : "Health note";
   if (activity.diaperKind === "both") return "Wet + dirty diaper";
   return activity.diaperKind === "dirty" ? "Dirty diaper" : "Wet diaper";
 }
 
+function includeNote(detail: string, note?: string) {
+  return note?.trim() ? `${detail} · ${note.trim()}` : detail;
+}
+
 function activityDetail(activity: Activity) {
   if (activity.type === "bottle") {
-    return `${activity.amount ?? 0} ml · ${activity.milkType === "expressed" ? "breast milk" : "formula"}`;
+    return includeNote(
+      `${activity.amount ?? 0} ml · ${activity.milkType === "expressed" ? "breast milk" : "formula"}`,
+      activity.note,
+    );
   }
   if (activity.type === "nursing") {
     const side = activity.side === "left" ? "Left side" : "Right side";
-    return activity.endedAt
+    const detail = activity.endedAt
       ? `${side} · ${formatTime(activity.startedAt)}–${formatTime(activity.endedAt)} · ${humanDuration(minutesBetween(activity.startedAt, activity.endedAt))}`
       : `${side} · started ${formatTime(activity.startedAt)}`;
+    return includeNote(detail, activity.note);
   }
   if (activity.type === "sleep") {
-    return activity.endedAt
+    const detail = activity.endedAt
       ? `${formatTime(activity.startedAt)}–${formatTime(activity.endedAt)} · ${humanDuration(minutesBetween(activity.startedAt, activity.endedAt))}`
       : `Started ${formatTime(activity.startedAt)} · ${timeAgo(activity.startedAt)}`;
+    return includeNote(detail, activity.note);
   }
-  return "Quick logged";
+  if (activity.type === "growth") {
+    const values = [
+      activity.weightGrams ? `${(activity.weightGrams / 1_000).toFixed(2)} kg` : null,
+      activity.lengthCm ? `${activity.lengthCm} cm long` : null,
+      activity.headCm ? `${activity.headCm} cm head` : null,
+    ].filter(Boolean);
+    return includeNote(values.join(" · "), activity.note);
+  }
+  if (activity.type === "health") {
+    const detail = activity.temperatureC ? `${activity.temperatureC.toFixed(1)} °C` : "Note";
+    return includeNote(detail, activity.note);
+  }
+  return includeNote("Quick logged", activity.note);
 }
 
 function ActivityGlyph({ type }: { type: ActivityType }) {
   if (type === "bottle") return <Milk size={19} strokeWidth={2.1} />;
   if (type === "nursing") return <Heart size={19} strokeWidth={2.1} />;
   if (type === "sleep") return <Moon size={19} strokeWidth={2.1} />;
+  if (type === "growth") return <Weight size={19} strokeWidth={2.1} />;
+  if (type === "health") return <Stethoscope size={19} strokeWidth={2.1} />;
   return <Droplet size={19} strokeWidth={2.1} />;
 }
 
@@ -240,6 +291,11 @@ export default function HomePage() {
   const [sheet, setSheet] = useState<Sheet>(null);
   const [bottleAmount, setBottleAmount] = useState(90);
   const [milkType, setMilkType] = useState<"formula" | "expressed">("formula");
+  const [entryNote, setEntryNote] = useState("");
+  const [weightGrams, setWeightGrams] = useState("");
+  const [lengthCm, setLengthCm] = useState("");
+  const [headCm, setHeadCm] = useState("");
+  const [temperatureC, setTemperatureC] = useState("");
   const [logTime, setLogTime] = useState("");
   const [nightMode, setNightMode] = useState(false);
   const [, refreshTimers] = useState(0);
@@ -265,7 +321,18 @@ export default function HomePage() {
             profile: Profile;
             nightMode?: boolean;
           };
-          setActivities(parsed.activities ?? []);
+          const restoredActivities = parsed.activities ?? [];
+          const missingPreviewGrowth =
+            parsed.profile?.isDemo &&
+            !restoredActivities.some((activity) => activity.type === "growth");
+          setActivities(
+            missingPreviewGrowth
+              ? [
+                  ...restoredActivities,
+                  ...demoData().filter((activity) => activity.type === "growth"),
+                ]
+              : restoredActivities,
+          );
           setProfile(parsed.profile);
           setNightMode(Boolean(parsed.nightMode));
         } catch {
@@ -336,6 +403,21 @@ export default function HomePage() {
   const activeTimers = [activeNursing, activeSleep].filter(
     (activity): activity is Activity => Boolean(activity),
   );
+  const growthEntries = useMemo(
+    () =>
+      sortedActivities
+        .filter((activity) => activity.type === "growth" && activity.weightGrams)
+        .sort(
+          (a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime(),
+        ),
+    [sortedActivities],
+  );
+  const latestGrowth = growthEntries[growthEntries.length - 1];
+  const previousGrowth = growthEntries[growthEntries.length - 2];
+  const weightChange =
+    latestGrowth?.weightGrams && previousGrowth?.weightGrams
+      ? latestGrowth.weightGrams - previousGrowth.weightGrams
+      : 0;
 
   const feedingGaps = useMemo(() => {
     const feeds = sortedActivities
@@ -400,6 +482,13 @@ export default function HomePage() {
 
   function openSheet(next: Exclude<Sheet, null>) {
     setLogTime(localDateInput(new Date()));
+    setEntryNote("");
+    if (next === "growth") {
+      setWeightGrams("");
+      setLengthCm("");
+      setHeadCm("");
+    }
+    if (next === "health") setTemperatureC("");
     setSheet(next);
   }
 
@@ -410,6 +499,7 @@ export default function HomePage() {
       startedAt: new Date(logTime || Date.now()).toISOString(),
       amount: bottleAmount,
       milkType,
+      note: entryNote.trim() || undefined,
     };
     addActivity(entry, `${bottleAmount} ml bottle saved`);
     setSheet(null);
@@ -421,6 +511,7 @@ export default function HomePage() {
       type: "nursing",
       startedAt: new Date(logTime || Date.now()).toISOString(),
       side,
+      note: entryNote.trim() || undefined,
     };
     addActivity(entry, `${side === "left" ? "Left" : "Right"} timer started`);
     setSheet(null);
@@ -444,8 +535,68 @@ export default function HomePage() {
       type: "diaper",
       diaperKind: kind,
       startedAt: new Date(logTime || Date.now()).toISOString(),
+      note: entryNote.trim() || undefined,
     };
     addActivity(entry, `${kind === "both" ? "Wet + dirty" : kind === "dirty" ? "Dirty" : "Wet"} diaper saved`);
+    setSheet(null);
+  }
+
+  function saveGrowth() {
+    const weight = Number(weightGrams);
+    const length = lengthCm ? Number(lengthCm) : undefined;
+    const head = headCm ? Number(headCm) : undefined;
+
+    if (!Number.isFinite(weight) || weight < 500 || weight > 30_000) {
+      showToast("Enter a valid weight in grams");
+      return;
+    }
+    if (length !== undefined && (!Number.isFinite(length) || length < 20 || length > 130)) {
+      showToast("Check the length in centimetres");
+      return;
+    }
+    if (head !== undefined && (!Number.isFinite(head) || head < 20 || head > 80)) {
+      showToast("Check the head measurement");
+      return;
+    }
+
+    const entry: Activity = {
+      id: makeId(),
+      type: "growth",
+      startedAt: new Date(logTime || Date.now()).toISOString(),
+      weightGrams: Math.round(weight),
+      lengthCm: length === undefined ? undefined : Math.round(length * 10) / 10,
+      headCm: head === undefined ? undefined : Math.round(head * 10) / 10,
+      note: entryNote.trim() || undefined,
+    };
+    addActivity(entry, `${(entry.weightGrams / 1_000).toFixed(2)} kg saved`);
+    setSheet(null);
+  }
+
+  function saveHealthNote() {
+    const temperature = temperatureC ? Number(temperatureC) : undefined;
+    const note = entryNote.trim();
+
+    if (temperature === undefined && !note) {
+      showToast("Add a temperature or a note");
+      return;
+    }
+    if (
+      temperature !== undefined &&
+      (!Number.isFinite(temperature) || temperature < 30 || temperature > 45)
+    ) {
+      showToast("Check the temperature in °C");
+      return;
+    }
+
+    const entry: Activity = {
+      id: makeId(),
+      type: "health",
+      startedAt: new Date(logTime || Date.now()).toISOString(),
+      temperatureC:
+        temperature === undefined ? undefined : Math.round(temperature * 10) / 10,
+      note: note || undefined,
+    };
+    addActivity(entry, temperature === undefined ? "Health note saved" : "Temperature saved");
     setSheet(null);
   }
 
@@ -622,7 +773,7 @@ export default function HomePage() {
               <div className="quick-section">
                 <div className="mini-heading">
                   <h2>Quick log</h2>
-                  <span>Details are optional</span>
+                  <span>One tap, details when needed</span>
                 </div>
                 <div className="action-grid">
                   {profile.feedingMode !== "breast" && (
@@ -651,6 +802,16 @@ export default function HomePage() {
                     <span className="action-icon"><Moon size={22} /></span>
                     <span><strong>{activeSleep ? "Wake up" : "Sleep"}</strong><small>{activeSleep ? humanDuration(minutesBetween(activeSleep.startedAt)) : "Start timer"}</small></span>
                     {activeSleep ? <Square size={16} fill="currentColor" /> : <Plus size={18} />}
+                  </button>
+                  <button className="action-tile action-growth" onClick={() => openSheet("growth")}>
+                    <span className="action-icon"><Weight size={22} /></span>
+                    <span><strong>Growth</strong><small>Weight & length</small></span>
+                    <Plus size={18} />
+                  </button>
+                  <button className="action-tile action-health" onClick={() => openSheet("health")}>
+                    <span className="action-icon"><Thermometer size={22} /></span>
+                    <span><strong>Health note</strong><small>Temperature or note</small></span>
+                    <Plus size={18} />
                   </button>
                 </div>
               </div>
@@ -704,6 +865,7 @@ export default function HomePage() {
                 <div><span>Typical feed gap</span><strong>{typicalGap ? humanDuration(typicalGap) : "—"}</strong></div>
                 <div><span>Feeds / day</span><strong>{averageFeeds}</strong></div>
                 <div><span>Today’s bottle</span><strong>{bottleMlToday} ml</strong></div>
+                <div><span>Latest weight</span><strong>{latestGrowth?.weightGrams ? `${(latestGrowth.weightGrams / 1_000).toFixed(2)} kg` : "—"}</strong></div>
               </div>
 
               <article className="chart-card">
@@ -753,6 +915,8 @@ export default function HomePage() {
                 </div>
                 <div className="chart-legend"><span><i /> Bottle</span><span><i className="nursing-key" /> Nursing</span></div>
               </article>
+
+              <GrowthChart activities={growthEntries} change={weightChange} onAdd={() => openSheet("growth")} />
 
               <article className="gentle-note">
                 <ShieldCheck size={20} />
@@ -853,6 +1017,7 @@ export default function HomePage() {
                     <button className={milkType === "expressed" ? "selected" : ""} onClick={() => setMilkType("expressed")}>Breast milk</button>
                   </div>
                   <TimeField value={logTime} onChange={setLogTime} />
+                  <NoteField value={entryNote} onChange={setEntryNote} />
                   <button className="primary-button" onClick={saveBottle}>Save {bottleAmount} ml</button>
                 </>
               )}
@@ -865,6 +1030,7 @@ export default function HomePage() {
                     <button onClick={() => startNursing("right")}><span>R</span><strong>Right</strong></button>
                   </div>
                   <TimeField value={logTime} onChange={setLogTime} />
+                  <NoteField value={entryNote} onChange={setEntryNote} />
                   <p className="sheet-footnote">The timer stays active if you close the app.</p>
                 </>
               )}
@@ -878,6 +1044,47 @@ export default function HomePage() {
                     <button onClick={() => saveDiaper("both")}><span className="both-icon"><Droplet size={18} />●</span><strong>Both</strong></button>
                   </div>
                   <TimeField value={logTime} onChange={setLogTime} />
+                  <NoteField value={entryNote} onChange={setEntryNote} />
+                </>
+              )}
+
+              {sheet === "growth" && (
+                <>
+                  <div className="sheet-heading"><span className="sheet-symbol growth-symbol"><Weight size={23} /></span><div><p>Growth check</p><h2>Add measurement</h2></div></div>
+                  <label className="measurement-field measurement-primary">
+                    <span>Weight</span>
+                    <div><input autoFocus inputMode="decimal" type="number" min="500" max="30000" step="1" value={weightGrams} onChange={(event) => setWeightGrams(event.target.value)} placeholder="3500" /><strong>g</strong></div>
+                  </label>
+                  <div className="measurement-row">
+                    <label className="measurement-field">
+                      <span>Length <small>optional</small></span>
+                      <div><input inputMode="decimal" type="number" min="20" max="130" step="0.1" value={lengthCm} onChange={(event) => setLengthCm(event.target.value)} placeholder="51.5" /><strong>cm</strong></div>
+                    </label>
+                    <label className="measurement-field">
+                      <span>Head <small>optional</small></span>
+                      <div><input inputMode="decimal" type="number" min="20" max="80" step="0.1" value={headCm} onChange={(event) => setHeadCm(event.target.value)} placeholder="35.1" /><strong>cm</strong></div>
+                    </label>
+                  </div>
+                  <TimeField value={logTime} onChange={setLogTime} />
+                  <NoteField value={entryNote} onChange={setEntryNote} placeholder="Clinic, home scale, or anything useful" />
+                  <p className="sheet-advice">Measure consistently and use the trend as context for your paediatrician.</p>
+                  <button className="primary-button" onClick={saveGrowth}>Save growth check</button>
+                </>
+              )}
+
+              {sheet === "health" && (
+                <>
+                  <div className="sheet-heading"><span className="sheet-symbol health-symbol"><Thermometer size={23} /></span><div><p>Health log</p><h2>Temperature or note</h2></div></div>
+                  <label className="temperature-field">
+                    <span>Temperature <small>optional</small></span>
+                    <div><input autoFocus inputMode="decimal" type="number" min="30" max="45" step="0.1" value={temperatureC} onChange={(event) => setTemperatureC(event.target.value)} placeholder="36.7" /><strong>°C</strong></div>
+                  </label>
+                  {Number(temperatureC) >= 38 && (
+                    <div className="health-alert" role="alert"><Thermometer size={18} /><p><strong>38 °C or higher</strong> in a baby under 3 months needs urgent medical advice.</p></div>
+                  )}
+                  <NoteField value={entryNote} onChange={setEntryNote} placeholder="Medicine, spit-up, rash, question for the doctor…" />
+                  <TimeField value={logTime} onChange={setLogTime} />
+                  <button className="primary-button" onClick={saveHealthNote}>Save health log</button>
                 </>
               )}
 
@@ -934,6 +1141,72 @@ function ActiveTimerCard({ activity, onStop }: { activity: Activity; onStop: () 
   );
 }
 
+function GrowthChart({
+  activities,
+  change,
+  onAdd,
+}: {
+  activities: Activity[];
+  change: number;
+  onAdd: () => void;
+}) {
+  const visible = activities.slice(-7);
+  const weights = visible.map((activity) => activity.weightGrams ?? 0);
+  const minimum = weights.length ? Math.min(...weights) : 0;
+  const maximum = weights.length ? Math.max(...weights) : 1;
+  const range = Math.max(100, maximum - minimum);
+  const latest = visible[visible.length - 1];
+
+  return (
+    <article className="chart-card growth-card">
+      <div className="chart-title growth-title">
+        <div><span>Growth</span><strong>Measurements over time</strong></div>
+        <button onClick={onAdd}><Plus size={15} /> Add measurement</button>
+      </div>
+
+      {!visible.length ? (
+        <div className="growth-empty">
+          <Weight size={25} />
+          <p>Your baby’s weight trend will appear after the first measurement.</p>
+        </div>
+      ) : (
+        <>
+          <div className="growth-overview">
+            <div>
+              <span>Latest</span>
+              <strong>{((latest.weightGrams ?? 0) / 1_000).toFixed(2)} kg</strong>
+            </div>
+            <div>
+              <span>Since last check</span>
+              <strong className={change < 0 ? "is-negative" : ""}>
+                {activities.length < 2 ? "First check" : `${change > 0 ? "+" : ""}${change} g`}
+              </strong>
+            </div>
+            <div>
+              <span>Length / head</span>
+              <strong>{latest.lengthCm ? `${latest.lengthCm} cm` : "—"} / {latest.headCm ? `${latest.headCm} cm` : "—"}</strong>
+            </div>
+          </div>
+          <div className="growth-bars" aria-label="Recent weight measurements">
+            {visible.map((activity) => {
+              const weight = activity.weightGrams ?? 0;
+              const height = 28 + ((weight - minimum) / range) * 62;
+              return (
+                <div className="growth-column" key={activity.id}>
+                  <strong>{(weight / 1_000).toFixed(2)}</strong>
+                  <div className="growth-track"><i style={{ height: `${height}%` }} /></div>
+                  <span>{new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(activity.startedAt))}</span>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+      <p className="growth-note">Trends are useful context for your paediatrician. A single measurement is not a diagnosis.</p>
+    </article>
+  );
+}
+
 function EmptyState({ text }: { text: string }) {
   return <div className="empty-state"><Baby size={24} /><p>{text}</p></div>;
 }
@@ -947,6 +1220,29 @@ function TimeField({ value, onChange }: { value: string; onChange: (value: strin
     <label className="time-field">
       <span>When</span>
       <input type="datetime-local" value={value} max={localDateInput(new Date())} onChange={(event) => onChange(event.target.value)} />
+    </label>
+  );
+}
+
+function NoteField({
+  value,
+  onChange,
+  placeholder = "Anything worth remembering",
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <label className="note-field">
+      <span>Note <small>optional</small></span>
+      <textarea
+        value={value}
+        maxLength={240}
+        rows={2}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+      />
     </label>
   );
 }

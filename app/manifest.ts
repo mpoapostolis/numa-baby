@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Baby Tracker — Calm, private baby logging",
     short_name: "Baby Tracker",
-    description: "Private, one-handed tracking for feeds, diapers and sleep.",
+    description: "Private, one-handed tracking for feeds, diapers, sleep and growth.",
     start_url: "/",
     display: "standalone",
     background_color: "#f4f7f5",

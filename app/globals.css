@@ -33,7 +33,8 @@ body {
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
 }
 
@@ -42,7 +43,8 @@ button {
 }
 
 button:focus-visible,
-input:focus-visible {
+input:focus-visible,
+textarea:focus-visible {
   outline: 3px solid rgba(91, 126, 85, 0.35);
   outline-offset: 2px;
 }
@@ -646,6 +648,8 @@ input:focus-visible {
 .action-nurse .action-icon { background: var(--peach); }
 .action-diaper .action-icon { background: var(--mint); }
 .action-sleep .action-icon { background: var(--lavender); }
+.action-growth .action-icon { background: #e8efd1; }
+.action-health .action-icon { background: #f7ded7; }
 .action-sleep.is-active { border-color: #aaa5d6; background: color-mix(in srgb, var(--lavender) 22%, var(--surface)); }
 
 .activity-list {
@@ -683,6 +687,8 @@ input:focus-visible {
 .glyph-nursing { background: var(--peach); }
 .glyph-diaper { background: var(--mint); }
 .glyph-sleep { background: var(--lavender); }
+.glyph-growth { background: #e8efd1; }
+.glyph-health { background: #f7ded7; }
 
 .activity-copy {
   min-width: 0;
@@ -793,9 +799,16 @@ input:focus-visible {
   min-height: 78px;
 }
 
+.timeline-list .activity-copy span {
+  overflow: visible;
+  line-height: 1.4;
+  text-overflow: initial;
+  white-space: normal;
+}
+
 .insight-summary {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
   margin-bottom: 11px;
 }
@@ -987,6 +1000,133 @@ input:focus-visible {
 
 .chart-legend .nursing-key {
   background: #ed8e76;
+}
+
+.growth-title button {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-strong);
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.growth-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.growth-overview > div {
+  min-width: 0;
+  padding: 12px;
+  border-radius: 15px;
+  background: color-mix(in srgb, var(--sage) 19%, var(--paper));
+}
+
+.growth-overview span,
+.growth-overview strong {
+  display: block;
+}
+
+.growth-overview span {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.growth-overview strong {
+  margin-top: 6px;
+  overflow: hidden;
+  font-size: 15px;
+  letter-spacing: -0.035em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.growth-overview strong.is-negative {
+  color: #af4d42;
+}
+
+.growth-bars {
+  height: 155px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(35px, 1fr));
+  align-items: end;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 5px 1px 0;
+}
+
+.growth-column {
+  height: 100%;
+  min-width: 35px;
+  display: grid;
+  grid-template-rows: 18px 1fr 20px;
+  align-items: end;
+  gap: 5px;
+  text-align: center;
+}
+
+.growth-column > strong {
+  color: var(--muted);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.growth-column > span {
+  color: var(--muted);
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.growth-track {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 9px 9px 5px 5px;
+  background: color-mix(in srgb, var(--line) 52%, transparent);
+}
+
+.growth-track i {
+  position: absolute;
+  inset: auto 0 0;
+  border-radius: 9px 9px 5px 5px;
+  background: linear-gradient(180deg, var(--sage-strong), var(--sage));
+}
+
+.growth-note {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.growth-empty {
+  min-height: 150px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 9px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.growth-empty p {
+  max-width: 260px;
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 .gentle-note {
@@ -1513,6 +1653,148 @@ input:focus-visible {
   color: var(--ink);
   font-size: 12px;
   text-align: right;
+}
+
+.note-field {
+  display: block;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.note-field > span,
+.measurement-field > span,
+.temperature-field > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.note-field small,
+.measurement-field small,
+.temperature-field small {
+  font-size: 8px;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.note-field textarea {
+  width: 100%;
+  min-height: 54px;
+  resize: vertical;
+  margin-top: 9px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.note-field textarea::placeholder,
+.measurement-field input::placeholder,
+.temperature-field input::placeholder {
+  color: color-mix(in srgb, var(--muted) 54%, transparent);
+}
+
+.measurement-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 9px;
+}
+
+.measurement-field,
+.temperature-field {
+  display: block;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: var(--surface);
+}
+
+.measurement-primary,
+.temperature-field {
+  margin-top: 2px;
+}
+
+.measurement-field > div,
+.temperature-field > div {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin-top: 11px;
+}
+
+.measurement-field input,
+.temperature-field input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+}
+
+.measurement-primary input,
+.temperature-field input {
+  font-size: 34px;
+}
+
+.measurement-field div > strong,
+.temperature-field div > strong {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.growth-symbol {
+  background: #e8efd1;
+}
+
+.health-symbol {
+  background: #f7ded7;
+}
+
+.sheet-advice {
+  margin: 12px 2px 0;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.health-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 10px;
+  padding: 11px 12px;
+  border: 1px solid #e6ada4;
+  border-radius: 14px;
+  background: #fff0ed;
+  color: #713c34;
+}
+
+.health-alert svg {
+  flex: 0 0 auto;
+}
+
+.health-alert p {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.45;
 }
 
 .primary-button {
@@ -2196,6 +2478,14 @@ input:focus-visible {
     gap: 22px;
   }
 
+  .insight-summary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .insights-screen > .growth-card {
+    grid-column: 1 / -1;
+  }
+
   .insights-screen .chart-card {
     min-height: 360px;
     padding: 25px;
@@ -2203,6 +2493,18 @@ input:focus-visible {
 
   .insights-screen .bar-chart {
     height: 250px;
+  }
+
+  .growth-overview > div {
+    padding: 16px;
+  }
+
+  .growth-overview strong {
+    font-size: 19px;
+  }
+
+  .growth-bars {
+    height: 210px;
   }
 
   .more-screen {

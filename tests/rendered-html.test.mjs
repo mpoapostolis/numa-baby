@@ -45,6 +45,9 @@ test("keeps local-first tracking and the desktop workspace in the product source
 
   assert.match(page, /localStorage\.setItem/);
   assert.match(page, /function ActiveTimerCard/);
+  assert.match(page, /function GrowthChart/);
+  assert.match(page, /weightGrams/);
+  assert.match(page, /Temperature or note/);
   assert.match(page, /Started at/);
   assert.match(page, /aria-live="polite"/);
   assert.match(css, /Full desktop workspace/);

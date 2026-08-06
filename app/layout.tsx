@@ -17,7 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "Baby Tracker — Calm, private baby logging",
     description:
-      "A private, local-first baby tracker for feeds, diapers, sleep and gentle insights.",
+      "A private, local-first baby tracker for feeds, diapers, sleep, growth and gentle health notes.",
     applicationName: "Baby Tracker",
     icons: {
       icon: "/icon-192.png",
