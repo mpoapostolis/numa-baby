@@ -42,16 +42,21 @@ test("ships offline assets, security headers, reminders and SPA fallback", async
 });
 
 test("preserves local data compatibility and critical one-handed flows", async () => {
-  const [app, css, packageText] = await Promise.all([
+  const [app, css, packageText, themeInit] = await Promise.all([
     readFile(new URL("src/App.tsx", project), "utf8"),
     readFile(new URL("src/styles.css", project), "utf8"),
     readFile(new URL("package.json", project), "utf8"),
+    readFile(new URL("public/theme-init.js", project), "utf8"),
   ]);
   const packageJson = JSON.parse(packageText);
 
   assert.match(app, /const STORAGE_KEY = "numa-baby-v1"/);
   assert.match(app, /function parseStoredData/);
   assert.match(app, /function persistSnapshot/);
+  assert.match(app, /type BootState = "loading" \| "onboarding" \| "ready" \| "recovery"/);
+  assert.match(app, /onboardingComplete/);
+  assert.match(app, /Start tracking/);
+  assert.doesNotMatch(app, /function demoData|demo-feed-|demo-diaper-|Preview data/);
   assert.match(app, /Notification\.requestPermission/);
   assert.match(app, /registration\.showNotification/);
   assert.match(app, /<form/);
@@ -76,6 +81,10 @@ test("preserves local data compatibility and critical one-handed flows", async (
   assert.match(css, /@media \(min-width: 768px\)/);
   assert.match(css, /@media \(min-width: 1024px\)/);
   assert.match(css, /@media \(min-width: 1440px\)/);
+  assert.match(css, /--shell-header-height: 64px/);
+  assert.match(css, /\.onboarding-layout/);
+  assert.doesNotMatch(css, /\.demo-banner/);
+  assert.match(themeInit, /document\.documentElement\.classList\.toggle\("dark"/);
   assert.doesNotMatch(css, /\.recent-list\s*\{[^}]*grid-template-columns/s);
   assert.match(app, /function EditActivityForm/);
   assert.match(app, /const timelineGroups = useMemo/);

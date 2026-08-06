@@ -98,7 +98,6 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarRail,
-  SidebarSeparator,
   SidebarTrigger,
   useSidebar,
 } from "./components/ui/sidebar";
@@ -132,8 +131,9 @@ type Profile = {
   name: string;
   birthDate: string;
   feedingMode: FeedingMode;
-  isDemo: boolean;
 };
+
+type BootState = "loading" | "onboarding" | "ready" | "recovery";
 
 type ReminderSettings = {
   feedEnabled: boolean;
@@ -144,6 +144,7 @@ type Sheet = null | "bottle" | "nursing" | "diaper" | "growth" | "health" | "pro
 
 const STORAGE_KEY = "numa-baby-v1";
 const RECOVERY_KEY = "numa-baby-v1-recovery";
+const EMPTY_PROFILE: Profile = { name: "", birthDate: "", feedingMode: "mixed" };
 const DEFAULT_REMINDERS: ReminderSettings = { feedEnabled: false, feedIntervalMinutes: 180 };
 const bottlePresets = [60, 90, 120, 150];
 const activityTypes = new Set<ActivityType>([
@@ -160,6 +161,8 @@ type StoredData = {
   profile: Profile;
   nightMode?: boolean;
   reminders?: ReminderSettings;
+  legacyDemo?: boolean;
+  onboardingComplete: boolean;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -190,14 +193,14 @@ function isValidActivity(value: unknown): value is Activity {
   return true;
 }
 
-function isValidProfile(value: unknown): value is Profile {
+function isValidProfile(value: unknown): value is Profile & { isDemo?: boolean } {
   return (
     isRecord(value) &&
     typeof value.name === "string" &&
     value.name.length <= 80 &&
     typeof value.birthDate === "string" &&
     ["mixed", "breast", "bottle"].includes(String(value.feedingMode)) &&
-    typeof value.isDemo === "boolean"
+    (value.isDemo === undefined || typeof value.isDemo === "boolean")
   );
 }
 
@@ -223,11 +226,21 @@ function parseStoredData(value: string): StoredData {
   if (parsed.reminders !== undefined && !isValidReminderSettings(parsed.reminders)) {
     throw new Error("Invalid Baby Tracker reminder preference");
   }
+  if (parsed.onboardingComplete !== undefined && typeof parsed.onboardingComplete !== "boolean") {
+    throw new Error("Invalid Baby Tracker onboarding preference");
+  }
+  const storedProfile = parsed.profile;
   return {
-    profile: parsed.profile,
+    profile: {
+      name: storedProfile.name,
+      birthDate: storedProfile.birthDate,
+      feedingMode: storedProfile.feedingMode,
+    },
     activities: parsed.activities,
     nightMode: parsed.nightMode,
     reminders: parsed.reminders,
+    legacyDemo: storedProfile.isDemo === true,
+    onboardingComplete: parsed.onboardingComplete ?? storedProfile.isDemo === false,
   };
 }
 
@@ -359,90 +372,6 @@ function makeId() {
     : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function demoData() {
-  const now = new Date();
-  const activities: Activity[] = [];
-
-  for (let dayOffset = 6; dayOffset >= 0; dayOffset -= 1) {
-    const day = new Date(now);
-    day.setDate(now.getDate() - dayOffset);
-    const feedHours = [1, 5, 8, 11, 15, 18, 22];
-
-    feedHours.forEach((hour, index) => {
-      const started = new Date(day);
-      started.setHours(hour + ((dayOffset + index) % 2), index % 2 ? 20 : 5, 0, 0);
-      if (started <= now) {
-        activities.push({
-          id: `demo-feed-${dayOffset}-${index}`,
-          type: index % 3 === 1 ? "nursing" : "bottle",
-          startedAt: started.toISOString(),
-          endedAt:
-            index % 3 === 1
-              ? new Date(started.getTime() + (14 + index) * 60_000).toISOString()
-              : undefined,
-          amount: index % 3 === 1 ? undefined : 80 + ((index + dayOffset) % 4) * 10,
-          side: index % 3 === 1 ? (index % 2 ? "left" : "right") : undefined,
-          milkType: index % 3 === 1 ? undefined : index % 2 ? "expressed" : "formula",
-        });
-      }
-    });
-
-    [3, 9, 14, 20].forEach((hour, index) => {
-      const started = new Date(day);
-      started.setHours(hour, 35, 0, 0);
-      if (started <= now) {
-        activities.push({
-          id: `demo-diaper-${dayOffset}-${index}`,
-          type: "diaper",
-          diaperKind: index === 2 ? "both" : index % 2 ? "dirty" : "wet",
-          startedAt: started.toISOString(),
-        });
-      }
-    });
-
-    [
-      { hour: 2, minute: 30, duration: 110 },
-      { hour: 9, minute: 25, duration: 65 },
-      { hour: 13, minute: 5, duration: 80 },
-      { hour: 17, minute: 15, duration: 45 },
-      { hour: 23, minute: 10, duration: 145 },
-    ].forEach((sleep, index) => {
-      const sleepStart = new Date(day);
-      sleepStart.setHours(sleep.hour, sleep.minute + (dayOffset % 3) * 5, 0, 0);
-      if (sleepStart > now) return;
-      const sleepEnd = new Date(sleepStart.getTime() + sleep.duration * 60_000);
-      activities.push({
-        id: `demo-sleep-v2-${dayOffset}-${index}`,
-        type: "sleep",
-        startedAt: sleepStart.toISOString(),
-        endedAt: sleepEnd <= now ? sleepEnd.toISOString() : undefined,
-      });
-    });
-  }
-
-  [
-    { daysAgo: 17, weightGrams: 3180, lengthCm: 50.1, headCm: 34.2 },
-    { daysAgo: 9, weightGrams: 3310, lengthCm: 50.8, headCm: 34.7 },
-    { daysAgo: 1, weightGrams: 3470, lengthCm: 51.5, headCm: 35.1 },
-  ].forEach((measurement, index) => {
-    const started = new Date(now);
-    started.setDate(now.getDate() - measurement.daysAgo);
-    started.setHours(10, 15, 0, 0);
-    activities.push({
-      id: `demo-growth-${index}`,
-      type: "growth",
-      startedAt: started.toISOString(),
-      weightGrams: measurement.weightGrams,
-      lengthCm: measurement.lengthCm,
-      headCm: measurement.headCm,
-    });
-  });
-
-  return activities.sort(
-    (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
-  );
-}
-
 function activityTitle(activity: Activity) {
   if (activity.type === "bottle") return "Bottle";
   if (activity.type === "nursing") return "Nursing";
@@ -502,14 +431,9 @@ function ActivityGlyph({ type }: { type: ActivityType }) {
 }
 
 export default function HomePage() {
-  const [hydrated, setHydrated] = useState(false);
+  const [bootState, setBootState] = useState<BootState>("loading");
   const [activities, setActivities] = useState<Activity[]>([]);
-  const [profile, setProfile] = useState<Profile>({
-    name: "Mia",
-    birthDate: "",
-    feedingMode: "mixed",
-    isDemo: true,
-  });
+  const [profile, setProfile] = useState<Profile>(EMPTY_PROFILE);
   const [activeTab, setActiveTab] = useState<Tab>("today");
   const [sheet, setSheet] = useState<Sheet>(null);
   const [bottleAmount, setBottleAmount] = useState(90);
@@ -534,6 +458,7 @@ export default function HomePage() {
   const [timelineFilter, setTimelineFilter] = useState<"all" | ActivityType>("all");
   const [timelineLimit, setTimelineLimit] = useState(80);
   const [minuteClock, setMinuteClock] = useState(Date.now);
+  const [sidebarDefaultOpen] = useState(() => !document.cookie.split("; ").includes("sidebar_state=false"));
   const importRef = useRef<HTMLInputElement>(null);
   const invalidFieldRef = useRef<HTMLInputElement>(null);
   const sheetTriggerRef = useRef<HTMLElement | null>(null);
@@ -552,7 +477,8 @@ export default function HomePage() {
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", nightMode);
-    return () => document.documentElement.classList.remove("dark");
+    document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+      ?.setAttribute("content", nightMode ? "#171c1a" : "#f7f7f5");
   }, [nightMode]);
 
   useEffect(() => {
@@ -562,28 +488,17 @@ export default function HomePage() {
         if (saved) {
           try {
             const parsed = parseStoredData(saved);
-            const restoredActivities = parsed.activities ?? [];
-            const previewSeed = parsed.profile?.isDemo ? demoData() : [];
-            const missingPreviewGrowth = parsed.profile?.isDemo &&
-              !restoredActivities.some((activity) => activity.type === "growth");
-            const needsPreviewSleepRefresh = parsed.profile?.isDemo &&
-              !restoredActivities.some((activity) => activity.id.startsWith("demo-sleep-v2-"));
-            setActivities(
-              [
-                ...restoredActivities.filter((activity) =>
-                  !(needsPreviewSleepRefresh && activity.type === "sleep" && activity.id.startsWith("demo-sleep-")),
-                ),
-                ...(missingPreviewGrowth
-                  ? previewSeed.filter((activity) => activity.type === "growth")
-                  : []),
-                ...(needsPreviewSleepRefresh
-                  ? previewSeed.filter((activity) => activity.id.startsWith("demo-sleep-v2-"))
-                  : []),
-              ],
-            );
-            setProfile(parsed.profile);
             setNightMode(Boolean(parsed.nightMode));
             setReminders(parsed.reminders ?? DEFAULT_REMINDERS);
+            if (parsed.legacyDemo || !parsed.onboardingComplete) {
+              setActivities([]);
+              setProfile(EMPTY_PROFILE);
+              setBootState("onboarding");
+            } else {
+              setActivities(parsed.activities);
+              setProfile(parsed.profile);
+              setBootState("ready");
+            }
           } catch {
             try {
               window.localStorage.setItem(RECOVERY_KEY, saved);
@@ -591,24 +506,21 @@ export default function HomePage() {
               // The original value remains untouched when recovery storage is unavailable.
             }
             setStorageWarning("Your saved data could not be read. It was not overwritten.");
-            setActivities(demoData());
+            setActivities([]);
+            setProfile(EMPTY_PROFILE);
+            setBootState("recovery");
           }
         } else {
-          const birthday = new Date();
-          birthday.setDate(birthday.getDate() - 18);
-          setProfile({
-            name: "Mia",
-            birthDate: birthday.toISOString().slice(0, 10),
-            feedingMode: "mixed",
-            isDemo: true,
-          });
-          setActivities(demoData());
+          setProfile(EMPTY_PROFILE);
+          setActivities([]);
+          setBootState("onboarding");
         }
       } catch {
         setStorageWarning("This browser is blocking local storage. New entries may not persist.");
-        setActivities(demoData());
+        setActivities([]);
+        setProfile(EMPTY_PROFILE);
+        setBootState("onboarding");
       }
-      setHydrated(true);
       navigator.storage?.persist?.().catch(() => undefined);
     });
 
@@ -617,13 +529,26 @@ export default function HomePage() {
 
   useEffect(() => {
     const syncFromAnotherTab = (event: StorageEvent) => {
-      if (event.key !== STORAGE_KEY || !event.newValue) return;
+      if (event.key !== STORAGE_KEY) return;
+      if (!event.newValue) {
+        setActivities([]);
+        setProfile(EMPTY_PROFILE);
+        setBootState("onboarding");
+        return;
+      }
       try {
         const parsed = parseStoredData(event.newValue);
-        setActivities(parsed.activities);
-        setProfile(parsed.profile);
         setNightMode(Boolean(parsed.nightMode));
         setReminders(parsed.reminders ?? DEFAULT_REMINDERS);
+        if (parsed.legacyDemo || !parsed.onboardingComplete) {
+          setActivities([]);
+          setProfile(EMPTY_PROFILE);
+          setBootState("onboarding");
+        } else {
+          setActivities(parsed.activities);
+          setProfile(parsed.profile);
+          setBootState("ready");
+        }
       } catch {
         setStorageWarning("A change from another tab could not be read. This tab kept its current data.");
       }
@@ -822,11 +747,12 @@ export default function HomePage() {
     nextProfile: Profile = profile,
     nextNightMode: boolean = nightMode,
     nextReminders: ReminderSettings = reminders,
+    nextOnboardingComplete: boolean = bootState === "ready",
   ) {
     try {
       window.localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ activities: nextActivities, profile: nextProfile, nightMode: nextNightMode, reminders: nextReminders }),
+        JSON.stringify({ activities: nextActivities, profile: nextProfile, nightMode: nextNightMode, reminders: nextReminders, onboardingComplete: nextOnboardingComplete }),
       );
       setStorageWarning(null);
       return true;
@@ -840,9 +766,8 @@ export default function HomePage() {
   function addActivity(activity: Activity, message: string) {
     const previous = activities;
     const previousProfile = profile;
-    const nextProfile = profile.isDemo ? { ...profile, isDemo: false } : profile;
-    const currentActivities = profile.isDemo ? [] : activities;
-    const next = [activity, ...currentActivities];
+    const nextProfile = profile;
+    const next = [activity, ...activities];
     if (!persistSnapshot(next, nextProfile)) return false;
     setActivities(next);
     setProfile(nextProfile);
@@ -1108,25 +1033,23 @@ export default function HomePage() {
     return true;
   }
 
-  function startFresh() {
-    const nextProfile = { ...profile, isDemo: false };
-    if (!persistSnapshot([], nextProfile)) return;
-    setActivities([]);
-    setProfile(nextProfile);
-    openSheet("profile");
-    showToast("Demo entries cleared");
-  }
-
   function changeNightMode(enabled: boolean) {
     if (!persistSnapshot(activities, profile, enabled)) return;
     setNightMode(enabled);
   }
 
   function saveProfile(nextProfile: Profile) {
-    const nextActivities = profile.isDemo ? [] : activities;
-    if (!persistSnapshot(nextActivities, nextProfile)) return false;
-    setActivities(nextActivities);
+    if (!persistSnapshot(activities, nextProfile)) return false;
     setProfile(nextProfile);
+    return true;
+  }
+
+  function completeOnboarding(nextProfile: Profile) {
+    if (!persistSnapshot([], nextProfile, nightMode, reminders, true)) return false;
+    setActivities([]);
+    setProfile(nextProfile);
+    setStorageWarning(null);
+    setBootState("ready");
     return true;
   }
 
@@ -1168,7 +1091,7 @@ export default function HomePage() {
   }
 
   function exportData() {
-    const payload = JSON.stringify({ profile, activities, nightMode, reminders, exportedAt: new Date().toISOString() }, null, 2);
+    const payload = JSON.stringify({ profile, activities, nightMode, reminders, onboardingComplete: true, exportedAt: new Date().toISOString() }, null, 2);
     const blob = new Blob([payload], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
@@ -1199,8 +1122,11 @@ export default function HomePage() {
     if (!window.confirm("Reset the unreadable local copy? Download recovery first if you may need it.")) return;
     try {
       window.localStorage.removeItem(STORAGE_KEY);
-      if (!persistSnapshot(activities, profile, nightMode)) return;
-      showToast("Local storage reset. Preview data is ready.");
+      setActivities([]);
+      setProfile(EMPTY_PROFILE);
+      setStorageWarning(null);
+      setBootState("onboarding");
+      showToast("Local copy reset. Start with a clean tracker.");
     } catch {
       showToast("This browser is still blocking local storage");
     }
@@ -1218,28 +1144,33 @@ export default function HomePage() {
     reader.onload = () => {
       try {
         const parsed = parseStoredData(String(reader.result));
-        if (!window.confirm("Replace the current timeline with this backup? This cannot be undone unless you download the current backup first.")) {
+        if (bootState === "ready" && !window.confirm("Replace the current timeline with this backup? This cannot be undone unless you download the current backup first.")) {
           return;
         }
         let recoveryCreated = true;
-        try {
-          window.localStorage.setItem(
-            RECOVERY_KEY,
-            JSON.stringify({ profile, activities, nightMode, reminders }),
-          );
-        } catch {
-          recoveryCreated = false;
+        if (bootState === "ready") {
+          try {
+            window.localStorage.setItem(
+              RECOVERY_KEY,
+              JSON.stringify({ profile, activities, nightMode, reminders, onboardingComplete: true }),
+            );
+          } catch {
+            recoveryCreated = false;
+          }
         }
         if (!recoveryCreated && !window.confirm("This browser cannot create a recovery copy. Restore anyway and replace the current timeline without rollback?")) {
           return;
         }
-        const nextProfile = { ...parsed.profile, isDemo: false };
+        if (parsed.legacyDemo) throw new Error("Preview backups are not importable");
+        const nextProfile = parsed.profile;
         const nextReminders = parsed.reminders ?? DEFAULT_REMINDERS;
-        if (!persistSnapshot(parsed.activities, nextProfile, Boolean(parsed.nightMode), nextReminders)) return;
+        if (!persistSnapshot(parsed.activities, nextProfile, Boolean(parsed.nightMode), nextReminders, true)) return;
         setProfile(nextProfile);
         setActivities(parsed.activities);
         setNightMode(Boolean(parsed.nightMode));
         setReminders(nextReminders);
+        setStorageWarning(null);
+        setBootState("ready");
         showToast("Backup restored");
       } catch {
         showToast("That backup could not be read");
@@ -1250,7 +1181,7 @@ export default function HomePage() {
     event.target.value = "";
   }
 
-  if (!hydrated) {
+  if (bootState === "loading") {
     return (
       <main className="loading-screen" aria-label="Loading Baby Tracker">
         <div className="brand-mark"><Baby size={24} /></div>
@@ -1259,8 +1190,24 @@ export default function HomePage() {
     );
   }
 
+  if (bootState === "onboarding" || bootState === "recovery") {
+    return (
+      <OnboardingScreen
+        mode={bootState}
+        profile={profile}
+        nightMode={nightMode}
+        storageWarning={storageWarning}
+        onNightModeChange={changeNightMode}
+        onComplete={completeOnboarding}
+        onRestore={(event) => importData(event)}
+        onDownloadRecovery={downloadRecovery}
+        onResetRecovery={resetUnreadableData}
+      />
+    );
+  }
+
   return (
-    <SidebarProvider defaultOpen className="numa-shell">
+    <SidebarProvider defaultOpen={sidebarDefaultOpen} className="numa-shell">
       <AppSidebar
         activeTab={activeTab}
         onNavigate={setActiveTab}
@@ -1285,34 +1232,26 @@ export default function HomePage() {
               </span>
             </div>
           </div>
-          <Button className="baby-identity" onClick={() => openSheet("profile")}>
+          <Button variant="ghost" className="baby-identity" onClick={() => openSheet("profile")}>
             <span className="baby-avatar"><Baby size={19} /></span>
             <span>
               <strong>{profile.name}</strong>
-              <small>{profile.isDemo ? "Preview profile" : "Your private log"}</small>
+              <small>Your private log</small>
             </span>
             <ChevronRight size={16} />
           </Button>
         </header>
 
-        {(profile.isDemo || storageWarning) && (
+        {storageWarning && (
           <div className="banner-stack">
-            {profile.isDemo && (
-              <div className="demo-banner">
-                <span><strong>Preview data</strong> — explore the full app</span>
-                <Button onClick={startFresh}>Start fresh</Button>
+            <div className="storage-banner" role="alert">
+              <ShieldCheck size={19} />
+              <span><strong>Local data needs attention.</strong> {storageWarning}</span>
+              <div>
+                <Button onClick={downloadRecovery}>Download recovery</Button>
+                <Button onClick={resetUnreadableData}>Reset local copy</Button>
               </div>
-            )}
-            {storageWarning && (
-              <div className="storage-banner" role="alert">
-                <ShieldCheck size={19} />
-                <span><strong>Local data needs attention.</strong> {storageWarning}</span>
-                <div>
-                  <Button onClick={downloadRecovery}>Download recovery</Button>
-                  <Button onClick={resetUnreadableData}>Reset local copy</Button>
-                </div>
-              </div>
-            )}
+            </div>
           </div>
         )}
 
@@ -1736,7 +1675,7 @@ export default function HomePage() {
                 <Button onClick={() => showToast("Family Pro is next on the roadmap")}>Coming soon</Button>
               </Card>
 
-              <p className="version-note">Baby Tracker preview · Local-first and private</p>
+              <p className="version-note">Baby Tracker · Local-first and private</p>
             </section>
           )}
         </main>
@@ -1905,6 +1844,151 @@ export default function HomePage() {
   );
 }
 
+function OnboardingScreen({
+  mode,
+  profile,
+  nightMode,
+  storageWarning,
+  onNightModeChange,
+  onComplete,
+  onRestore,
+  onDownloadRecovery,
+  onResetRecovery,
+}: {
+  mode: "onboarding" | "recovery";
+  profile: Profile;
+  nightMode: boolean;
+  storageWarning: string | null;
+  onNightModeChange: (enabled: boolean) => void;
+  onComplete: (profile: Profile) => boolean;
+  onRestore: (event: ChangeEvent<HTMLInputElement>) => void;
+  onDownloadRecovery: () => void;
+  onResetRecovery: () => void;
+}) {
+  const [draft, setDraft] = useState(profile);
+  const nameId = useId();
+  const birthDateId = useId();
+  const restoreRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <main className="onboarding-shell">
+      <header className="onboarding-header">
+        <div className="onboarding-brand">
+          <span className="wordmark-mark"><Baby /></span>
+          <span><strong>Baby Tracker</strong><small>Private family log</small></span>
+        </div>
+        <div className="onboarding-theme">
+          {nightMode ? <Moon size={17} /> : <Sun size={17} />}
+          <span>Dark mode</span>
+          <Switch checked={nightMode} onCheckedChange={onNightModeChange} aria-label="Use dark mode" />
+        </div>
+      </header>
+
+      {mode === "recovery" ? (
+        <Card className="recovery-card">
+          <CardHeader>
+            <span className="onboarding-card-icon"><ShieldCheck /></span>
+            <CardTitle>Your local log needs attention</CardTitle>
+            <CardDescription>
+              The saved copy could not be read, so Baby Tracker left it untouched. Download it before starting over, or restore a valid backup.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {storageWarning && <div className="onboarding-alert" role="alert">{storageWarning}</div>}
+            <div className="recovery-actions">
+              <Button onClick={onDownloadRecovery}><Download /> Download recovery</Button>
+              <Button variant="outline" onClick={() => restoreRef.current?.click()}><Upload /> Restore backup</Button>
+              <Button variant="ghost" onClick={onResetRecovery}>Reset and start clean</Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="onboarding-layout">
+          <section className="onboarding-intro" aria-labelledby="onboarding-title">
+            <p className="eyebrow">Private by default</p>
+            <h1 id="onboarding-title">The whole day,<br />without the mental load.</h1>
+            <p>Log feeds, diapers, sleep and growth in seconds. No account, no cloud, no fake data.</p>
+            <div className="onboarding-points">
+              <div><span className="glyph-bottle"><Milk /></span><p><strong>One-tap logging</strong><small>Details only when you need them.</small></p></div>
+              <div><span className="glyph-sleep"><Clock /></span><p><strong>Live timers and patterns</strong><small>See what happened and what may be next.</small></p></div>
+              <div><span className="onboarding-private-icon"><ShieldCheck /></span><p><strong>Only on this device</strong><small>Export a private backup anytime.</small></p></div>
+            </div>
+          </section>
+
+          <Card className="onboarding-card">
+            <CardHeader>
+              <span className="onboarding-card-icon"><Baby /></span>
+              <CardTitle>Set up your baby</CardTitle>
+              <CardDescription>Everything is optional. You can change it later.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form
+                className="onboarding-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  onComplete({ ...draft, name: draft.name.trim() || "Baby" });
+                }}
+              >
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor={nameId}>Name <span className="optional-label">Optional</span></FieldLabel>
+                    <InputGroup>
+                      <InputGroupInput
+                        id={nameId}
+                        autoFocus
+                        maxLength={80}
+                        value={draft.name}
+                        placeholder="Baby’s name"
+                        onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+                      />
+                    </InputGroup>
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor={birthDateId}>Date of birth <span className="optional-label">Optional</span></FieldLabel>
+                    <InputGroup>
+                      <InputGroupInput
+                        id={birthDateId}
+                        type="date"
+                        value={draft.birthDate}
+                        max={new Date().toISOString().slice(0, 10)}
+                        onChange={(event) => setDraft({ ...draft, birthDate: event.target.value })}
+                      />
+                    </InputGroup>
+                  </Field>
+                  <Field>
+                    <FieldLabel>Feeding</FieldLabel>
+                    <ToggleGroup
+                      type="single"
+                      value={draft.feedingMode}
+                      className="segmented three-way"
+                      aria-label="Feeding method"
+                      onValueChange={(value) => value && setDraft({ ...draft, feedingMode: value as FeedingMode })}
+                    >
+                      {(["breast", "bottle", "mixed"] as FeedingMode[]).map((feedingMode) => (
+                        <ToggleGroupItem key={feedingMode} value={feedingMode}>
+                          {feedingMode[0].toUpperCase() + feedingMode.slice(1)}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                    <FieldDescription>This only changes the quick actions you see.</FieldDescription>
+                  </Field>
+                </FieldGroup>
+
+                {storageWarning && <div className="onboarding-alert" role="alert">{storageWarning}</div>}
+                <Button type="submit" size="lg" className="onboarding-primary">Start tracking <ChevronRight /></Button>
+                <Button type="button" variant="ghost" onClick={() => restoreRef.current?.click()}><Upload /> Restore a backup</Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      <Input ref={restoreRef} className="hidden-input" type="file" accept="application/json" onChange={onRestore} />
+      <Toaster theme={nightMode ? "dark" : "light"} position="bottom-center" closeButton />
+    </main>
+  );
+}
+
 function AppSidebar({
   activeTab,
   onNavigate,
@@ -1920,7 +2004,7 @@ function AppSidebar({
   nightMode: boolean;
   onNightModeChange: (enabled: boolean) => void;
 }) {
-  const { setOpenMobile } = useSidebar();
+  const { setOpenMobile, state } = useSidebar();
   const navItems: Array<{ value: Tab; label: string; icon: React.ReactNode }> = [
     { value: "today", label: "Today", icon: <Home /> },
     { value: "timeline", label: "Timeline", icon: <Clock /> },
@@ -1953,7 +2037,6 @@ function AppSidebar({
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarSeparator />
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Workspace</SidebarGroupLabel>
@@ -1978,22 +2061,31 @@ function AppSidebar({
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              size="lg"
-              tooltip={nightMode ? "Use light mode" : "Use dark mode"}
-              onClick={() => onNightModeChange(!nightMode)}
-            >
-              {nightMode ? <Sun /> : <Moon />}
-              <span>{nightMode ? "Light mode" : "Dark mode"}</span>
-            </SidebarMenuButton>
+          <SidebarMenuItem className="sidebar-theme-item">
+            {state === "collapsed" ? (
+              <SidebarMenuButton
+                size="lg"
+                className="sidebar-theme-toggle"
+                tooltip={nightMode ? "Use light mode" : "Use dark mode"}
+                aria-pressed={nightMode}
+                onClick={() => onNightModeChange(!nightMode)}
+              >
+                {nightMode ? <Sun /> : <Moon />}
+                <span>{nightMode ? "Light mode" : "Dark mode"}</span>
+              </SidebarMenuButton>
+            ) : (
+              <div className="sidebar-theme-control">
+                <span>{nightMode ? <Sun /> : <Moon />}<span><strong>Appearance</strong><small>{nightMode ? "Dark" : "Light"} theme</small></span></span>
+                <Switch checked={nightMode} onCheckedChange={onNightModeChange} aria-label="Use dark mode" />
+              </div>
+            )}
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" tooltip="Baby profile" onClick={onProfile}>
+            <SidebarMenuButton size="lg" className="sidebar-profile-button" tooltip="Baby profile" onClick={onProfile}>
               <span className="baby-avatar"><Baby /></span>
               <span className="sidebar-profile-copy">
                 <strong>{profile.name}</strong>
-                <small>{profile.isDemo ? "Preview profile" : "Private profile"}</small>
+                <small>Private profile</small>
               </span>
               <ChevronRight />
             </SidebarMenuButton>
@@ -2518,7 +2610,7 @@ function ProfileForm({ profile, onChange, onDone }: { profile: Profile; onChange
   const birthDateId = useId();
   return (
     <SheetForm onSubmit={() => {
-      if (onChange({ ...draft, name: draft.name.trim() || "Baby", isDemo: false })) onDone();
+      if (onChange({ ...draft, name: draft.name.trim() || "Baby" })) onDone();
     }}>
       <LogDialogHeader icon={<Baby />} eyebrow="Keep it personal" title="Baby profile" description="Used only in this browser to personalise your tracker." />
       <FieldGroup>
