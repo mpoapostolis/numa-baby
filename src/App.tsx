@@ -24,7 +24,7 @@ import {
   Users,
   Weight,
 } from "lucide-react";
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Button } from "./components/ui/button";
 import {
   AlertDialog,
@@ -38,14 +38,70 @@ import {
   AlertDialogTrigger,
 } from "./components/ui/alert-dialog";
 import { Badge } from "./components/ui/badge";
-import { Card } from "./components/ui/card";
-import { Dialog, DialogContent, DialogTitle } from "./components/ui/dialog";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "./components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./components/ui/dialog";
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "./components/ui/field";
 import { Input } from "./components/ui/input";
-import { Label } from "./components/ui/label";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+  InputGroupTextarea,
+} from "./components/ui/input-group";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemMedia,
+  ItemSeparator,
+  ItemTitle,
+} from "./components/ui/item";
+import { ButtonGroup, ButtonGroupText } from "./components/ui/button-group";
 import { Toaster } from "./components/ui/sonner";
+import { Separator } from "./components/ui/separator";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarSeparator,
+  SidebarTrigger,
+  useSidebar,
+} from "./components/ui/sidebar";
 import { Switch } from "./components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "./components/ui/tabs";
-import { Textarea } from "./components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "./components/ui/toggle-group";
 import { toast } from "sonner";
 
@@ -1084,9 +1140,18 @@ export default function HomePage() {
   }
 
   return (
-    <div className="numa-shell">
-      <div className="app-frame">
+    <SidebarProvider defaultOpen>
+      <AppSidebar
+        activeTab={activeTab}
+        onNavigate={setActiveTab}
+        profile={profile}
+        onProfile={() => openSheet("profile")}
+        nightMode={nightMode}
+        onNightModeChange={setNightMode}
+      />
+      <SidebarInset className="app-frame">
         <header className="topbar">
+          <SidebarTrigger className="sidebar-trigger" aria-label="Open navigation" />
           <div className="wordmark" aria-label="Baby Tracker">
             <span className="wordmark-mark"><Baby size={20} /></span>
             <span className="wordmark-copy">
@@ -1162,14 +1227,14 @@ export default function HomePage() {
               )}
 
               <Card className="care-forecast" aria-labelledby="care-forecast-title">
-                <div className="care-forecast-heading">
+                <CardHeader className="care-forecast-heading">
                   <div>
                     <p>From {profile.name}’s rhythm</p>
-                    <h2 id="care-forecast-title">What may be next</h2>
+                    <CardTitle id="care-forecast-title">What may be next</CardTitle>
                   </div>
                   <Badge variant="outline">Calculated on device</Badge>
-                </div>
-                <div className="forecast-grid">
+                </CardHeader>
+                <CardContent className="forecast-grid">
                   <div className="forecast-item forecast-feed">
                     <span className="forecast-icon"><Milk size={21} /></span>
                     <div className="forecast-copy">
@@ -1196,30 +1261,30 @@ export default function HomePage() {
                     </div>
                     <Button variant="outline" size="sm" onClick={toggleSleep}>{activeSleep ? "Stop" : "Start"}</Button>
                   </div>
-                </div>
-                <div className="forecast-guidance">
+                </CardContent>
+                <CardFooter className="forecast-guidance">
                   <span><Clock size={15} /> Patterns, not a schedule — cues and your clinician’s care plan come first.</span>
                   <span><ShieldCheck size={15} /> Safe sleep: back, firm flat surface, clear sleep space.</span>
-                </div>
+                </CardFooter>
               </Card>
 
               <Card className="now-card">
-                <div className="now-card-top">
+                <CardHeader className="now-card-top">
                   <Badge variant="secondary" className="status-pill"><span /> Last feed</Badge>
                   <span className="now-time">{lastFeed ? formatTime(lastFeed.startedAt) : "—"}</span>
-                </div>
-                <div className="now-main">
+                </CardHeader>
+                <CardContent className="now-main">
                   <div>
                     <strong>{timeAgo(lastFeed?.startedAt, minuteClock)}</strong>
                     <p>{lastFeed ? `${activityTitle(lastFeed)} · ${activityDetail(lastFeed)}` : "Log the first feed when it happens."}</p>
                   </div>
                   <Milk size={36} strokeWidth={1.7} />
-                </div>
+                </CardContent>
                 {typicalGap > 0 && (
-                  <div className="usual-row">
+                  <CardFooter className="usual-row">
                     <Clock size={15} />
                     <span>Usual gap from your logs: {humanDuration(typicalGap)}</span>
-                  </div>
+                  </CardFooter>
                 )}
               </Card>
 
@@ -1236,60 +1301,72 @@ export default function HomePage() {
                   <Button onClick={() => setActiveTab("timeline")}>See all <ChevronRight size={15} /></Button>
                 </div>
                 <Card className="activity-list recent-list">
-                  {sortedActivities.slice(0, 6).map((activity) => (
-                    <ActivityRow key={activity.id} activity={activity} onEdit={openEdit} />
-                  ))}
-                  {!sortedActivities.length && <EmptyState text="Your day will appear here as you log it." />}
+                  <CardContent className="activity-list-content">
+                    <ItemGroup>
+                      {sortedActivities.slice(0, 6).map((activity, index) => (
+                        <div role="listitem" key={activity.id}>
+                          {index > 0 && <ItemSeparator />}
+                          <ActivityRow activity={activity} onEdit={openEdit} />
+                        </div>
+                      ))}
+                    </ItemGroup>
+                    {!sortedActivities.length && <EmptyState text="Your day will appear here as you log it." />}
+                  </CardContent>
                 </Card>
               </div>
                 </div>
 
               <Card className="quick-section">
-                <div className="mini-heading">
-                  <h2>Quick log</h2>
-                  <span>One tap, details when needed</span>
-                </div>
-                <div className="action-grid">
+                <CardHeader className="quick-section-header">
+                  <div>
+                    <CardTitle>Quick log</CardTitle>
+                    <CardDescription>One tap now. Details only when you need them.</CardDescription>
+                  </div>
+                  <Badge variant="secondary">Local only</Badge>
+                </CardHeader>
+                <CardContent className="quick-section-content">
+                  <ItemGroup className="action-grid">
                   {profile.feedingMode !== "breast" && (
-                    <Button className="action-tile action-feed" onClick={() => openSheet("bottle")}>
-                      <span className="action-icon"><Milk size={23} /></span>
-                      <span><strong>Bottle</strong><small>Amount</small></span>
-                      <Plus size={18} />
-                    </Button>
+                    <QuickAction
+                      className="action-feed"
+                      title="Bottle"
+                      description="Log amount and milk"
+                      icon={<Milk />}
+                      onClick={() => openSheet("bottle")}
+                    />
                   )}
                   {profile.feedingMode !== "bottle" && (
-                    <Button
-                      className="action-tile action-nurse"
+                    <QuickAction
+                      className="action-nurse"
+                      title={activeNursing ? "Stop nursing" : "Nursing"}
+                      description={activeNursing ? liveDuration(activeNursing.startedAt, minuteClock) : "Start a side timer"}
+                      icon={<Heart />}
                       onClick={activeNursing ? stopNursing : () => openSheet("nursing")}
-                    >
-                      <span className="action-icon"><Heart size={22} /></span>
-                      <span><strong>{activeNursing ? "Stop nursing" : "Nursing"}</strong><small>{activeNursing ? humanDuration(minutesBetween(activeNursing.startedAt, new Date(minuteClock).toISOString())) : "Left or right"}</small></span>
-                      {activeNursing ? <Square size={16} fill="currentColor" /> : <Plus size={18} />}
-                    </Button>
+                      trailing={activeNursing ? <Square fill="currentColor" /> : <Plus />}
+                    />
                   )}
-                  <Button className="action-tile action-diaper" onClick={() => openSheet("diaper")}>
-                    <span className="action-icon"><Droplet size={22} /></span>
-                    <span><strong>Diaper</strong><small>Wet or dirty</small></span>
-                    <Plus size={18} />
-                  </Button>
-                  <Button className={`action-tile action-sleep ${activeSleep ? "is-active" : ""}`} onClick={toggleSleep}>
-                    <span className="action-icon"><Moon size={22} /></span>
-                    <span><strong>{activeSleep ? "Wake up" : "Sleep"}</strong><small>{activeSleep ? humanDuration(minutesBetween(activeSleep.startedAt, new Date(minuteClock).toISOString())) : "Start timer"}</small></span>
-                    {activeSleep ? <Square size={16} fill="currentColor" /> : <Plus size={18} />}
-                  </Button>
-                </div>
-                <div className="secondary-actions" aria-label="Measurements and health">
-                  <Button className="secondary-action action-growth" onClick={() => openSheet("growth")}>
-                    <span className="action-icon"><Weight size={22} /></span>
-                    <span><strong>Growth</strong><small>Weight & length</small></span>
-                    <ChevronRight size={17} />
-                  </Button>
-                  <Button className="secondary-action action-health" onClick={() => openSheet("health")}>
-                    <span className="action-icon"><Thermometer size={22} /></span>
-                    <span><strong>Health note</strong><small>Temperature or note</small></span>
-                    <ChevronRight size={17} />
-                  </Button>
-                </div>
+                  <QuickAction
+                    className="action-diaper"
+                    title="Diaper"
+                    description="Wet, dirty, or both"
+                    icon={<Droplet />}
+                    onClick={() => openSheet("diaper")}
+                  />
+                  <QuickAction
+                    className={`action-sleep ${activeSleep ? "is-active" : ""}`}
+                    title={activeSleep ? "Wake up" : "Sleep"}
+                    description={activeSleep ? liveDuration(activeSleep.startedAt, minuteClock) : "Start sleep timer"}
+                    icon={<Moon />}
+                    onClick={toggleSleep}
+                    trailing={activeSleep ? <Square fill="currentColor" /> : <Plus />}
+                  />
+                  </ItemGroup>
+                  <Separator />
+                  <ItemGroup className="secondary-actions" aria-label="Measurements and health">
+                    <QuickAction className="action-growth" title="Growth" description="Weight, length, head" icon={<Weight />} onClick={() => openSheet("growth")} trailing={<ChevronRight />} />
+                    <QuickAction className="action-health" title="Health note" description="Temperature or note" icon={<Thermometer />} onClick={() => openSheet("health")} trailing={<ChevronRight />} />
+                  </ItemGroup>
+                </CardContent>
               </Card>
 
               </div>
@@ -1335,9 +1412,16 @@ export default function HomePage() {
                       <span>{group.length} {group.length === 1 ? "log" : "logs"}</span>
                     </div>
                     <Card className="activity-list timeline-list">
-                      {group.map((activity) => (
-                        <ActivityRow key={activity.id} activity={activity} onEdit={openEdit} />
-                      ))}
+                      <CardContent className="activity-list-content">
+                        <ItemGroup>
+                          {group.map((activity, index) => (
+                            <div role="listitem" key={activity.id}>
+                              {index > 0 && <ItemSeparator />}
+                              <ActivityRow activity={activity} onEdit={openEdit} />
+                            </div>
+                          ))}
+                        </ItemGroup>
+                      </CardContent>
                     </Card>
                   </section>
                 ))}
@@ -1446,26 +1530,29 @@ export default function HomePage() {
               </Card>
 
               <Card className="settings-group">
-                <h2>Baby profile</h2>
-                <Button className="settings-row" onClick={() => openSheet("profile")}>
-                  <span className="settings-icon"><Baby size={19} /></span>
-                  <span><strong>{profile.name}</strong><small>{profile.feedingMode} feeding</small></span>
-                  <ChevronRight size={17} />
-                </Button>
+                <CardHeader>
+                  <CardTitle>Baby profile</CardTitle>
+                  <CardDescription>The details used to personalise your tracker.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ItemGroup>
+                    <SettingsAction title={profile.name} description={`${profile.feedingMode} feeding`} icon={<Baby />} onClick={() => openSheet("profile")} />
+                  </ItemGroup>
+                </CardContent>
               </Card>
 
               <Card className="settings-group">
-                <h2>Your data</h2>
-                <Button className="settings-row" onClick={exportData}>
-                  <span className="settings-icon"><Download size={19} /></span>
-                  <span><strong>Download private backup</strong><small>JSON file you control</small></span>
-                  <ChevronRight size={17} />
-                </Button>
-                <Button className="settings-row" onClick={() => importRef.current?.click()}>
-                  <span className="settings-icon"><Upload size={19} /></span>
-                  <span><strong>Restore a backup</strong><small>Import from this or another device</small></span>
-                  <ChevronRight size={17} />
-                </Button>
+                <CardHeader>
+                  <CardTitle>Your data</CardTitle>
+                  <CardDescription>Portable backups you own and control.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ItemGroup>
+                    <SettingsAction title="Download private backup" description="JSON file you control" icon={<Download />} onClick={exportData} />
+                    <ItemSeparator />
+                    <SettingsAction title="Restore a backup" description="Import from this or another device" icon={<Upload />} onClick={() => importRef.current?.click()} />
+                  </ItemGroup>
+                </CardContent>
                 <Input ref={importRef} className="hidden-input" type="file" accept="application/json" onChange={importData} />
               </Card>
 
@@ -1513,18 +1600,19 @@ export default function HomePage() {
                 sheetTriggerRef.current?.focus();
               }}
             >
-              <DialogTitle className="sr-only">Log baby activity</DialogTitle>
               <div className="sheet-handle" />
 
               {sheet === "bottle" && (
                 <>
-                  <div className="sheet-heading"><span className="sheet-symbol"><Milk size={23} /></span><div><p>Quick log</p><h2 id="sheet-title">Bottle</h2></div></div>
-                  <Label className="field-label">Amount</Label>
-                  <div className="amount-control">
-                    <Button aria-label="Decrease amount" onClick={() => setBottleAmount((value) => Math.max(10, value - 10))}><Minus size={20} /></Button>
-                    <strong>{bottleAmount}<small>ml</small></strong>
-                    <Button aria-label="Increase amount" onClick={() => setBottleAmount((value) => Math.min(400, value + 10))}><Plus size={20} /></Button>
-                  </div>
+                  <LogDialogHeader icon={<Milk />} eyebrow="Quick log" title="Bottle" description="Record the amount now; adjust details only if needed." />
+                  <Field className="amount-field">
+                    <FieldLabel>Amount</FieldLabel>
+                    <ButtonGroup className="amount-control" aria-label="Bottle amount">
+                      <Button variant="outline" aria-label="Decrease amount" onClick={() => setBottleAmount((value) => Math.max(10, value - 10))}><Minus /></Button>
+                      <ButtonGroupText><strong>{bottleAmount}</strong><span>ml</span></ButtonGroupText>
+                      <Button variant="outline" aria-label="Increase amount" onClick={() => setBottleAmount((value) => Math.min(400, value + 10))}><Plus /></Button>
+                    </ButtonGroup>
+                  </Field>
                   <ToggleGroup type="single" value={String(bottleAmount)} className="preset-row" onValueChange={(value) => value && setBottleAmount(Number(value))}>
                     {bottlePresets.map((amount, index) => <ToggleGroupItem autoFocus={index === 0} data-initial-focus={index === 0 ? "" : undefined} value={String(amount)} aria-label={`${amount} millilitres`} key={amount}>{amount}</ToggleGroupItem>)}
                   </ToggleGroup>
@@ -1534,13 +1622,13 @@ export default function HomePage() {
                   </ToggleGroup>
                   <TimeField value={logTime} onChange={setLogTime} />
                   <NoteField value={entryNote} onChange={setEntryNote} />
-                  <Button className="primary-button sheet-primary" onClick={saveBottle}>Save {bottleAmount} ml</Button>
+                  <DialogFooter><Button className="primary-button sheet-primary" onClick={saveBottle}>Save {bottleAmount} ml</Button></DialogFooter>
                 </>
               )}
 
               {sheet === "nursing" && (
                 <>
-                  <div className="sheet-heading"><span className="sheet-symbol"><Heart size={23} /></span><div><p>Start timer</p><h2 id="sheet-title">Which side?</h2></div></div>
+                  <LogDialogHeader icon={<Heart />} eyebrow="Start timer" title="Which side?" description="The timer keeps running if you close the app." />
                   <ToggleGroup type="single" value={nursingSide} className="side-grid" onValueChange={(value) => value && setNursingSide(value as "left" | "right")}>
                     <ToggleGroupItem autoFocus data-initial-focus value="left"><span>L</span><strong>Left</strong></ToggleGroupItem>
                     <ToggleGroupItem value="right"><span>R</span><strong>Right</strong></ToggleGroupItem>
@@ -1548,13 +1636,13 @@ export default function HomePage() {
                   <TimeField value={logTime} onChange={setLogTime} />
                   <NoteField value={entryNote} onChange={setEntryNote} />
                   <p className="sheet-footnote">The timer stays active if you close the app.</p>
-                  <Button className="primary-button sheet-primary" onClick={() => startNursing(nursingSide)}>Start {nursingSide} timer</Button>
+                  <DialogFooter><Button className="primary-button sheet-primary" onClick={() => startNursing(nursingSide)}>Start {nursingSide} timer</Button></DialogFooter>
                 </>
               )}
 
               {sheet === "diaper" && (
                 <>
-                  <div className="sheet-heading"><span className="sheet-symbol"><Droplet size={23} /></span><div><p>Quick log</p><h2 id="sheet-title">What was it?</h2></div></div>
+                  <LogDialogHeader icon={<Droplet />} eyebrow="Quick log" title="What was it?" description="Choose the closest match and save." />
                   <ToggleGroup type="single" value={diaperKind} className="diaper-grid" onValueChange={(value) => value && setDiaperKind(value as DiaperKind)}>
                     <ToggleGroupItem autoFocus data-initial-focus value="wet"><Droplet size={22} /><strong>Wet</strong></ToggleGroupItem>
                     <ToggleGroupItem value="dirty"><span className="dot-icon">●</span><strong>Dirty</strong></ToggleGroupItem>
@@ -1562,49 +1650,39 @@ export default function HomePage() {
                   </ToggleGroup>
                   <TimeField value={logTime} onChange={setLogTime} />
                   <NoteField value={entryNote} onChange={setEntryNote} />
-                  <Button className="primary-button sheet-primary" onClick={() => saveDiaper(diaperKind)}>Save {diaperKind === "both" ? "wet + dirty" : diaperKind} diaper</Button>
+                  <DialogFooter><Button className="primary-button sheet-primary" onClick={() => saveDiaper(diaperKind)}>Save {diaperKind === "both" ? "wet + dirty" : diaperKind} diaper</Button></DialogFooter>
                 </>
               )}
 
               {sheet === "growth" && (
                 <>
-                  <div className="sheet-heading"><span className="sheet-symbol growth-symbol"><Weight size={23} /></span><div><p>Growth check</p><h2 id="sheet-title">Add measurement</h2></div></div>
-                  <Label className="measurement-field measurement-primary">
-                    <span>Weight</span>
-                      <div><Input ref={invalidFieldRef} autoFocus data-initial-focus inputMode="decimal" type="number" min="500" max="30000" step="1" value={weightGrams} aria-invalid={Boolean(formError)} aria-describedby={formError ? "sheet-error" : undefined} onChange={(event) => { setWeightGrams(event.target.value); setFormError(null); }} placeholder="3500" /><strong>g</strong></div>
-                  </Label>
-                  <div className="measurement-row">
-                    <Label className="measurement-field">
-                      <span>Length <small>optional</small></span>
-                      <div><Input inputMode="decimal" type="number" min="20" max="130" step="0.1" value={lengthCm} onChange={(event) => setLengthCm(event.target.value)} placeholder="51.5" /><strong>cm</strong></div>
-                    </Label>
-                    <Label className="measurement-field">
-                      <span>Head <small>optional</small></span>
-                      <div><Input inputMode="decimal" type="number" min="20" max="80" step="0.1" value={headCm} onChange={(event) => setHeadCm(event.target.value)} placeholder="35.1" /><strong>cm</strong></div>
-                    </Label>
-                  </div>
+                  <LogDialogHeader icon={<Weight />} eyebrow="Growth check" title="Add measurement" description="Record measurements consistently to make the trend useful." />
+                  <FieldGroup className="measurement-fields">
+                    <UnitField label="Weight" value={weightGrams} unit="g" min={500} max={30000} step={1} inputRef={invalidFieldRef} autoFocus invalid={Boolean(formError)} onChange={(value) => { setWeightGrams(value); setFormError(null); }} placeholder="3500" className="measurement-primary" />
+                    <div className="measurement-row">
+                      <UnitField label="Length" optional value={lengthCm} unit="cm" min={20} max={130} step={0.1} onChange={setLengthCm} placeholder="51.5" />
+                      <UnitField label="Head" optional value={headCm} unit="cm" min={20} max={80} step={0.1} onChange={setHeadCm} placeholder="35.1" />
+                    </div>
+                  </FieldGroup>
                   <TimeField value={logTime} onChange={setLogTime} />
                   <NoteField value={entryNote} onChange={setEntryNote} placeholder="Clinic, home scale, or anything useful" />
                   <p className="sheet-advice">Measure consistently and use the trend as context for your paediatrician.</p>
                   <FormError message={formError} />
-                  <Button className="primary-button sheet-primary" onClick={saveGrowth}>Save growth check</Button>
+                  <DialogFooter><Button className="primary-button sheet-primary" onClick={saveGrowth}>Save growth check</Button></DialogFooter>
                 </>
               )}
 
               {sheet === "health" && (
                 <>
-                  <div className="sheet-heading"><span className="sheet-symbol health-symbol"><Thermometer size={23} /></span><div><p>Health log</p><h2 id="sheet-title">Temperature or note</h2></div></div>
-                  <Label className="temperature-field">
-                    <span>Temperature <small>optional</small></span>
-                    <div><Input ref={invalidFieldRef} autoFocus data-initial-focus inputMode="decimal" type="number" min="30" max="45" step="0.1" value={temperatureC} aria-invalid={Boolean(formError)} aria-describedby={formError ? "sheet-error" : undefined} onChange={(event) => { setTemperatureC(event.target.value); setFormError(null); }} placeholder="36.7" /><strong>°C</strong></div>
-                  </Label>
+                  <LogDialogHeader icon={<Thermometer />} eyebrow="Health log" title="Temperature or note" description="Keep a time-stamped note you can refer back to." />
+                  <UnitField label="Temperature" optional value={temperatureC} unit="°C" min={30} max={45} step={0.1} inputRef={invalidFieldRef} autoFocus invalid={Boolean(formError)} onChange={(value) => { setTemperatureC(value); setFormError(null); }} placeholder="36.7" />
                   {Number(temperatureC) >= 38 && (
                     <div className="health-alert" role="alert"><Thermometer size={18} /><p>{babyAgeMonths !== null && babyAgeMonths < 3 ? <><strong>38 °C or higher</strong> in a baby under 3 months needs urgent medical advice.</> : <><strong>Temperature recorded.</strong> If your baby seems unwell or you are concerned, seek medical advice.</>}</p></div>
                   )}
                   <NoteField value={entryNote} onChange={setEntryNote} placeholder="Medicine, spit-up, rash, question for the doctor…" />
                   <TimeField value={logTime} onChange={setLogTime} />
                   <FormError message={formError} />
-                  <Button className="primary-button sheet-primary" onClick={saveHealthNote}>Save health log</Button>
+                  <DialogFooter><Button className="primary-button sheet-primary" onClick={saveHealthNote}>Save health log</Button></DialogFooter>
                 </>
               )}
 
@@ -1657,26 +1735,180 @@ export default function HomePage() {
             </DialogContent>
           )}
         </Dialog>
-      </div>
-    </div>
+      </SidebarInset>
+    </SidebarProvider>
+  );
+}
+
+function AppSidebar({
+  activeTab,
+  onNavigate,
+  profile,
+  onProfile,
+  nightMode,
+  onNightModeChange,
+}: {
+  activeTab: Tab;
+  onNavigate: (tab: Tab) => void;
+  profile: Profile;
+  onProfile: () => void;
+  nightMode: boolean;
+  onNightModeChange: (enabled: boolean) => void;
+}) {
+  const { setOpenMobile } = useSidebar();
+  const navItems: Array<{ value: Tab; label: string; icon: React.ReactNode }> = [
+    { value: "today", label: "Today", icon: <Home /> },
+    { value: "timeline", label: "Timeline", icon: <Clock /> },
+    { value: "insights", label: "Insights", icon: <BarChart3 /> },
+    { value: "more", label: "Settings", icon: <Settings /> },
+  ];
+
+  const navigate = (tab: Tab) => {
+    onNavigate(tab);
+    setOpenMobile(false);
+  };
+
+  return (
+    <Sidebar variant="inset" collapsible="icon" className="numa-sidebar">
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              size="lg"
+              tooltip="Baby Tracker"
+              className="app-sidebar-brand"
+              onClick={() => navigate("today")}
+            >
+              <span className="wordmark-mark"><Baby /></span>
+              <span className="app-sidebar-brand-copy">
+                <strong>Baby Tracker</strong>
+                <small>Private family log</small>
+              </span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+      <SidebarSeparator />
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {navItems.map((item) => (
+                <SidebarMenuItem key={item.value}>
+                  <SidebarMenuButton
+                    size="lg"
+                    tooltip={item.label}
+                    isActive={activeTab === item.value}
+                    onClick={() => navigate(item.value)}
+                  >
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              size="lg"
+              tooltip={nightMode ? "Use light mode" : "Use dark mode"}
+              onClick={() => onNightModeChange(!nightMode)}
+            >
+              {nightMode ? <Sun /> : <Moon />}
+              <span>{nightMode ? "Light mode" : "Dark mode"}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton size="lg" tooltip="Baby profile" onClick={onProfile}>
+              <span className="baby-avatar"><Baby /></span>
+              <span className="sidebar-profile-copy">
+                <strong>{profile.name}</strong>
+                <small>{profile.isDemo ? "Preview profile" : "Private profile"}</small>
+              </span>
+              <ChevronRight />
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+      <SidebarRail />
+    </Sidebar>
   );
 }
 
 function ActivityRow({ activity, onEdit }: { activity: Activity; onEdit: (activity: Activity) => void }) {
   return (
-    <article className="activity-row">
-      <Button className="activity-open" onClick={() => onEdit(activity)} aria-label={`Edit ${activityTitle(activity)} from ${formatTime(activity.startedAt)}`}>
-        <span className={`activity-glyph glyph-${activity.type}`}><ActivityGlyph type={activity.type} /></span>
-        <span className="activity-copy">
-          <strong>{activityTitle(activity)}</strong>
-          <span>{activityDetail(activity)}</span>
-        </span>
-        <span className="activity-meta">
+    <Item asChild size="sm" className="activity-row">
+      <Button variant="ghost" className="activity-open" onClick={() => onEdit(activity)} aria-label={`Edit ${activityTitle(activity)} from ${formatTime(activity.startedAt)}`}>
+        <ItemMedia variant="icon" className={`activity-glyph glyph-${activity.type}`}><ActivityGlyph type={activity.type} /></ItemMedia>
+        <ItemContent className="activity-copy">
+          <ItemTitle>{activityTitle(activity)}</ItemTitle>
+          <ItemDescription>{activityDetail(activity)}</ItemDescription>
+        </ItemContent>
+        <ItemActions className="activity-meta">
           <time dateTime={activity.startedAt}>{formatTime(activity.startedAt)}</time>
-        </span>
-        <span className="activity-row-action" aria-hidden="true"><Pencil size={16} /></span>
+          <Pencil className="activity-row-action" aria-hidden="true" />
+        </ItemActions>
       </Button>
-    </article>
+    </Item>
+  );
+}
+
+function QuickAction({
+  title,
+  description,
+  icon,
+  onClick,
+  className = "",
+  trailing = <Plus />,
+}: {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+  className?: string;
+  trailing?: React.ReactNode;
+}) {
+  return (
+    <Item asChild variant="outline" className={`quick-action ${className}`}>
+      <Button variant="ghost" onClick={onClick}>
+        <ItemMedia variant="icon" className="action-icon">{icon}</ItemMedia>
+        <ItemContent>
+          <ItemTitle>{title}</ItemTitle>
+          <ItemDescription>{description}</ItemDescription>
+        </ItemContent>
+        <ItemActions>{trailing}</ItemActions>
+      </Button>
+    </Item>
+  );
+}
+
+function SettingsAction({
+  title,
+  description,
+  icon,
+  onClick,
+}: {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <Item asChild size="sm" className="settings-action">
+      <Button variant="ghost" onClick={onClick}>
+        <ItemMedia variant="icon">{icon}</ItemMedia>
+        <ItemContent>
+          <ItemTitle>{title}</ItemTitle>
+          <ItemDescription>{description}</ItemDescription>
+        </ItemContent>
+        <ItemActions><ChevronRight /></ItemActions>
+      </Button>
+    </Item>
   );
 }
 
@@ -1817,6 +2049,31 @@ function NavButton({ value, label, icon }: { value: Tab; label: string; icon: Re
   return <TabsTrigger value={value}>{icon}<span>{label}</span></TabsTrigger>;
 }
 
+function LogDialogHeader({
+  icon,
+  eyebrow,
+  title,
+  description,
+  tone = "",
+}: {
+  icon: React.ReactNode;
+  eyebrow: string;
+  title: string;
+  description: string;
+  tone?: string;
+}) {
+  return (
+    <DialogHeader className="log-dialog-header">
+      <span className={`sheet-symbol ${tone}`}>{icon}</span>
+      <div>
+        <span className="dialog-eyebrow">{eyebrow}</span>
+        <DialogTitle>{title}</DialogTitle>
+        <DialogDescription>{description}</DialogDescription>
+      </div>
+    </DialogHeader>
+  );
+}
+
 function TimeField({
   value,
   onChange,
@@ -1832,11 +2089,14 @@ function TimeField({
   error?: boolean;
   autoFocus?: boolean;
 }) {
+  const id = useId();
   return (
-    <Label className="time-field">
-      <span>{label}</span>
-      <Input ref={inputRef} autoFocus={autoFocus} data-initial-focus={autoFocus ? "" : undefined} type="datetime-local" value={value} max={localDateInput(new Date())} aria-invalid={error} aria-describedby={error ? "sheet-error" : undefined} onChange={(event) => onChange(event.target.value)} />
-    </Label>
+    <Field className="time-field" data-invalid={error || undefined}>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <InputGroup>
+        <InputGroupInput id={id} ref={inputRef} autoFocus={autoFocus} data-initial-focus={autoFocus ? "" : undefined} type="datetime-local" value={value} max={localDateInput(new Date())} aria-invalid={error} aria-describedby={error ? "sheet-error" : undefined} onChange={(event) => onChange(event.target.value)} />
+      </InputGroup>
+    </Field>
   );
 }
 
@@ -1849,23 +2109,83 @@ function NoteField({
   onChange: (value: string) => void;
   placeholder?: string;
 }) {
+  const id = useId();
   return (
-    <Label className="note-field">
-      <span>Note <small>optional</small></span>
-      <Textarea
+    <Field className="note-field">
+      <FieldLabel htmlFor={id}>Note <span className="optional-label">Optional</span></FieldLabel>
+      <InputGroup>
+        <InputGroupTextarea
+        id={id}
         value={value}
         maxLength={240}
         rows={2}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
       />
-    </Label>
+      </InputGroup>
+    </Field>
+  );
+}
+
+function UnitField({
+  label,
+  value,
+  onChange,
+  unit,
+  placeholder,
+  min,
+  max,
+  step,
+  optional = false,
+  inputRef,
+  autoFocus = false,
+  invalid = false,
+  className = "",
+}: {
+  label: string;
+  value: string | number;
+  onChange: (value: string) => void;
+  unit: string;
+  placeholder?: string;
+  min: number;
+  max: number;
+  step: number;
+  optional?: boolean;
+  inputRef?: React.Ref<HTMLInputElement>;
+  autoFocus?: boolean;
+  invalid?: boolean;
+  className?: string;
+}) {
+  const id = useId();
+  return (
+    <Field className={`unit-field ${className}`} data-invalid={invalid || undefined}>
+      <FieldLabel htmlFor={id}>{label}{optional && <span className="optional-label">Optional</span>}</FieldLabel>
+      <InputGroup>
+        <InputGroupInput
+          id={id}
+          ref={inputRef}
+          autoFocus={autoFocus}
+          data-initial-focus={autoFocus ? "" : undefined}
+          inputMode="decimal"
+          type="number"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          aria-invalid={invalid}
+          aria-describedby={invalid ? "sheet-error" : undefined}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+        />
+        <InputGroupAddon align="inline-end"><InputGroupText>{unit}</InputGroupText></InputGroupAddon>
+      </InputGroup>
+    </Field>
   );
 }
 
 function FormError({ message }: { message: string | null }) {
   if (!message) return null;
-  return <p className="form-error" id="sheet-error" role="alert">{message}</p>;
+  return <FieldError className="form-error" id="sheet-error">{message}</FieldError>;
 }
 
 type EditActivityFormProps = {
@@ -1932,17 +2252,17 @@ function EditActivityForm({
   const isTimed = activity.type === "nursing" || activity.type === "sleep";
   return (
     <>
-      <div className="sheet-heading">
-        <span className={`sheet-symbol glyph-${activity.type}`}><ActivityGlyph type={activity.type} /></span>
-        <div><p>Edit log</p><h2 id="sheet-title">{activityTitle(activity)}</h2></div>
-      </div>
+      <LogDialogHeader
+        icon={<ActivityGlyph type={activity.type} />}
+        eyebrow="Edit log"
+        title={activityTitle(activity)}
+        description={`${formatTimelineDay(activity.startedAt)} at ${formatTime(activity.startedAt)}`}
+        tone={`glyph-${activity.type}`}
+      />
 
       {activity.type === "bottle" && (
         <>
-          <Label className="measurement-field measurement-primary">
-            <span>Amount</span>
-            <div><Input ref={invalidFieldRef} autoFocus data-initial-focus inputMode="numeric" type="number" min="1" max="1000" step="1" value={bottleAmount} aria-invalid={Boolean(error)} aria-describedby={error ? "sheet-error" : undefined} onChange={(event) => { setBottleAmount(Number(event.target.value)); clearError(); }} /><strong>ml</strong></div>
-          </Label>
+          <UnitField label="Amount" value={bottleAmount} unit="ml" min={1} max={1000} step={1} inputRef={invalidFieldRef} autoFocus invalid={Boolean(error)} onChange={(value) => { setBottleAmount(Number(value)); clearError(); }} className="measurement-primary" />
           <ToggleGroup type="single" value={String(bottleAmount)} className="preset-row" onValueChange={(value) => { if (value) setBottleAmount(Number(value)); clearError(); }}>
             {bottlePresets.map((amount) => <ToggleGroupItem value={String(amount)} aria-label={`${amount} millilitres`} key={amount}>{amount}</ToggleGroupItem>)}
           </ToggleGroup>
@@ -1969,23 +2289,17 @@ function EditActivityForm({
       )}
 
       {activity.type === "growth" && (
-        <>
-          <Label className="measurement-field measurement-primary">
-            <span>Weight</span>
-            <div><Input ref={invalidFieldRef} autoFocus data-initial-focus inputMode="decimal" type="number" min="500" max="30000" step="1" value={weightGrams} aria-invalid={Boolean(error)} aria-describedby={error ? "sheet-error" : undefined} onChange={(event) => { setWeightGrams(event.target.value); clearError(); }} /><strong>g</strong></div>
-          </Label>
+        <FieldGroup className="measurement-fields">
+          <UnitField label="Weight" value={weightGrams} unit="g" min={500} max={30000} step={1} inputRef={invalidFieldRef} autoFocus invalid={Boolean(error)} onChange={(value) => { setWeightGrams(value); clearError(); }} className="measurement-primary" />
           <div className="measurement-row">
-            <Label className="measurement-field"><span>Length <small>optional</small></span><div><Input inputMode="decimal" type="number" min="20" max="130" step="0.1" value={lengthCm} onChange={(event) => { setLengthCm(event.target.value); clearError(); }} /><strong>cm</strong></div></Label>
-            <Label className="measurement-field"><span>Head <small>optional</small></span><div><Input inputMode="decimal" type="number" min="20" max="80" step="0.1" value={headCm} onChange={(event) => { setHeadCm(event.target.value); clearError(); }} /><strong>cm</strong></div></Label>
+            <UnitField label="Length" optional value={lengthCm} unit="cm" min={20} max={130} step={0.1} onChange={(value) => { setLengthCm(value); clearError(); }} />
+            <UnitField label="Head" optional value={headCm} unit="cm" min={20} max={80} step={0.1} onChange={(value) => { setHeadCm(value); clearError(); }} />
           </div>
-        </>
+        </FieldGroup>
       )}
 
       {activity.type === "health" && (
-        <Label className="temperature-field">
-          <span>Temperature <small>optional</small></span>
-          <div><Input ref={invalidFieldRef} autoFocus data-initial-focus inputMode="decimal" type="number" min="30" max="45" step="0.1" value={temperatureC} aria-invalid={Boolean(error)} aria-describedby={error ? "sheet-error" : undefined} onChange={(event) => { setTemperatureC(event.target.value); clearError(); }} placeholder="36.7" /><strong>°C</strong></div>
-        </Label>
+        <UnitField label="Temperature" optional value={temperatureC} unit="°C" min={30} max={45} step={0.1} inputRef={invalidFieldRef} autoFocus invalid={Boolean(error)} onChange={(value) => { setTemperatureC(value); clearError(); }} placeholder="36.7" />
       )}
 
       <div className={isTimed ? "measurement-row edit-time-row" : ""}>
@@ -1994,7 +2308,7 @@ function EditActivityForm({
       </div>
       <NoteField value={note} onChange={(value) => { setNote(value); clearError(); }} />
       <FormError message={error} />
-      <Button className="primary-button sheet-primary" onClick={onSave}>Save changes</Button>
+      <DialogFooter><Button className="primary-button sheet-primary" onClick={onSave}>Save changes</Button></DialogFooter>
 
       <AlertDialog>
         <div className="edit-danger">
@@ -2021,16 +2335,29 @@ function EditActivityForm({
 
 function ProfileForm({ profile, onChange, onDone }: { profile: Profile; onChange: (profile: Profile) => void; onDone: () => void }) {
   const [draft, setDraft] = useState(profile);
+  const nameId = useId();
+  const birthDateId = useId();
   return (
     <>
-      <div className="sheet-heading"><span className="sheet-symbol"><Baby size={23} /></span><div><p>Keep it personal</p><h2 id="sheet-title">Baby profile</h2></div></div>
-      <Label className="text-field"><span>Name</span><Input autoFocus data-initial-focus maxLength={80} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Baby’s name" /></Label>
-      <Label className="text-field"><span>Date of birth</span><Input type="date" value={draft.birthDate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setDraft({ ...draft, birthDate: event.target.value })} /></Label>
-      <Label className="field-label">How are you feeding?</Label>
-      <ToggleGroup type="single" value={draft.feedingMode} className="segmented three-way" aria-label="Feeding method" onValueChange={(value) => value && setDraft({ ...draft, feedingMode: value as FeedingMode })}>
-        {(["breast", "bottle", "mixed"] as FeedingMode[]).map((mode) => <ToggleGroupItem key={mode} value={mode}>{mode[0].toUpperCase() + mode.slice(1)}</ToggleGroupItem>)}
-      </ToggleGroup>
-      <Button className="primary-button sheet-primary" onClick={() => { onChange({ ...draft, name: draft.name.trim() || "Baby", isDemo: false }); onDone(); }}>Save profile</Button>
+      <LogDialogHeader icon={<Baby />} eyebrow="Keep it personal" title="Baby profile" description="Used only in this browser to personalise your tracker." />
+      <FieldGroup>
+        <Field>
+          <FieldLabel htmlFor={nameId}>Name</FieldLabel>
+          <InputGroup><InputGroupInput id={nameId} autoFocus data-initial-focus maxLength={80} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Baby’s name" /></InputGroup>
+        </Field>
+        <Field>
+          <FieldLabel htmlFor={birthDateId}>Date of birth</FieldLabel>
+          <InputGroup><InputGroupInput id={birthDateId} type="date" value={draft.birthDate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setDraft({ ...draft, birthDate: event.target.value })} /></InputGroup>
+        </Field>
+        <Field>
+          <FieldLabel>How are you feeding?</FieldLabel>
+          <ToggleGroup type="single" value={draft.feedingMode} className="segmented three-way" aria-label="Feeding method" onValueChange={(value) => value && setDraft({ ...draft, feedingMode: value as FeedingMode })}>
+            {(["breast", "bottle", "mixed"] as FeedingMode[]).map((mode) => <ToggleGroupItem key={mode} value={mode}>{mode[0].toUpperCase() + mode.slice(1)}</ToggleGroupItem>)}
+          </ToggleGroup>
+          <FieldDescription>This changes which quick actions are shown.</FieldDescription>
+        </Field>
+      </FieldGroup>
+      <DialogFooter><Button className="primary-button sheet-primary" onClick={() => { onChange({ ...draft, name: draft.name.trim() || "Baby", isDemo: false }); onDone(); }}>Save profile</Button></DialogFooter>
     </>
   );
 }
