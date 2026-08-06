@@ -1169,8 +1169,9 @@ export default function HomePage() {
             <section className="screen more-screen" aria-labelledby="more-heading">
               <div className="section-heading">
                 <div>
-                  <p className="eyebrow">Private by design</p>
-                  <h1 id="more-heading">Your tracker</h1>
+                  <p className="eyebrow">Device & data</p>
+                  <h1 id="more-heading">Settings</h1>
+                  <p className="page-subtitle">Profile, privacy and backups in one place.</p>
                 </div>
                 <button className="icon-button" aria-label="Toggle night mode" aria-pressed={nightMode} onClick={() => setNightMode((value) => !value)}>
                   {nightMode ? <Home size={19} /> : <Moon size={19} />}
@@ -1179,7 +1180,7 @@ export default function HomePage() {
 
               <article className="privacy-card">
                 <span><ShieldCheck size={25} /></span>
-                <div><strong>Only on this device</strong><p>No account. No ads. No baby data sent anywhere.</p></div>
+                <div><strong>Private on this device</strong><p>Your baby’s entries stay in this browser. Export a backup anytime.</p></div>
                 <Check size={19} />
               </article>
 
@@ -1208,11 +1209,14 @@ export default function HomePage() {
               </div>
 
               <article className="pro-card">
-                <div className="pro-kicker"><Users size={17} /> Family Pro</div>
-                <h2>One family.<br />One shared timeline.</h2>
-                <p>Encrypted partner sync, shared live timers and automatic backups — without selling your family’s data.</p>
+                <div className="pro-kicker"><Users size={17} /> Planned · Family Pro</div>
+                <h2>Share care.<br />Keep data private.</h2>
+                <p>Encrypted partner sync, shared live timers and automatic backups for the people caring for your baby.</p>
+                <div className="pro-feature-list" aria-label="Family Pro features">
+                  <span>Partner sync</span><span>Live timers</span><span>Auto backup</span>
+                </div>
                 <div className="pro-price"><strong>€19.99</strong><span>once · yours forever</span></div>
-                <button onClick={() => showToast("Family Pro is next on the roadmap")}>Coming next</button>
+                <button onClick={() => showToast("Family Pro is next on the roadmap")}>Coming soon</button>
               </article>
 
               <p className="version-note">Baby Tracker preview · Local-first and private</p>
