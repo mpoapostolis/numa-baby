@@ -1,0 +1,178 @@
+import {
+  Baby,
+  ChevronRight,
+  Clock,
+  Download,
+  Milk,
+  Moon,
+  ShieldCheck,
+  Sun,
+  Upload,
+} from "lucide-react";
+import { ChangeEvent, useId, useRef, useState } from "react";
+import { Button } from "../components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "../components/ui/field";
+import { Input } from "../components/ui/input";
+import { InputGroup, InputGroupInput } from "../components/ui/input-group";
+import { Toaster } from "../components/ui/sonner";
+import { Switch } from "../components/ui/switch";
+import { ToggleGroup, ToggleGroupItem } from "../components/ui/toggle-group";
+import { localDateInput } from "../domain/time";
+import { FeedingMode, Profile } from "../domain/types";
+
+export default function OnboardingScreen({
+  mode,
+  profile,
+  nightMode,
+  storageWarning,
+  onNightModeChange,
+  onComplete,
+  onRestore,
+  onDownloadRecovery,
+  onResetRecovery,
+}: {
+  mode: "onboarding" | "recovery";
+  profile: Profile;
+  nightMode: boolean;
+  storageWarning: string | null;
+  onNightModeChange: (enabled: boolean) => void;
+  onComplete: (profile: Profile) => boolean;
+  onRestore: (event: ChangeEvent<HTMLInputElement>) => void;
+  onDownloadRecovery: () => void;
+  onResetRecovery: () => void;
+}) {
+  const [draft, setDraft] = useState(profile);
+  const nameId = useId();
+  const birthDateId = useId();
+  const restoreRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <main className="onboarding-shell">
+      <header className="onboarding-header">
+        <div className="onboarding-brand">
+          <span className="wordmark-mark"><Baby /></span>
+          <span><strong>Baby Tracker</strong><small>Private family log</small></span>
+        </div>
+        <div className="onboarding-theme">
+          {nightMode ? <Moon size={17} /> : <Sun size={17} />}
+          <span>Dark mode</span>
+          <Switch checked={nightMode} onCheckedChange={onNightModeChange} aria-label="Use dark mode" />
+        </div>
+      </header>
+
+      {mode === "recovery" ? (
+        <Card className="recovery-card">
+          <CardHeader>
+            <span className="onboarding-card-icon"><ShieldCheck /></span>
+            <CardTitle>Your local log needs attention</CardTitle>
+            <CardDescription>
+              The saved copy could not be read, so Baby Tracker left it untouched. Download it before starting over, or restore a valid backup.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {storageWarning && <div className="onboarding-alert" role="alert">{storageWarning}</div>}
+            <div className="recovery-actions">
+              <Button onClick={onDownloadRecovery}><Download /> Download recovery</Button>
+              <Button variant="outline" onClick={() => restoreRef.current?.click()}><Upload /> Restore backup</Button>
+              <Button variant="ghost" onClick={onResetRecovery}>Reset and start clean</Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="onboarding-layout">
+          <section className="onboarding-intro" aria-labelledby="onboarding-title">
+            <p className="eyebrow">Private by default</p>
+            <h1 id="onboarding-title">The whole day,<br />without the mental load.</h1>
+            <p>Log feeds, diapers, sleep and growth in seconds. No account, no cloud, no fake data.</p>
+            <div className="onboarding-points">
+              <div><span className="glyph-bottle"><Milk /></span><p><strong>One-tap logging</strong><small>Details only when you need them.</small></p></div>
+              <div><span className="glyph-sleep"><Clock /></span><p><strong>Live timers and patterns</strong><small>See what happened and what may be next.</small></p></div>
+              <div><span className="onboarding-private-icon"><ShieldCheck /></span><p><strong>Only on this device</strong><small>Export a private backup anytime.</small></p></div>
+            </div>
+          </section>
+
+          <Card className="onboarding-card">
+            <CardHeader>
+              <span className="onboarding-card-icon"><Baby /></span>
+              <CardTitle>Set up your baby</CardTitle>
+              <CardDescription>Everything is optional. You can change it later.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form
+                className="onboarding-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  onComplete({ ...draft, name: draft.name.trim() || "Baby" });
+                }}
+              >
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor={nameId}>Name <span className="optional-label">Optional</span></FieldLabel>
+                    <InputGroup>
+                      <InputGroupInput
+                        id={nameId}
+                        autoFocus
+                        maxLength={80}
+                        value={draft.name}
+                        placeholder="Baby’s name"
+                        onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+                      />
+                    </InputGroup>
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor={birthDateId}>Date of birth <span className="optional-label">Optional</span></FieldLabel>
+                    <InputGroup>
+                      <InputGroupInput
+                        id={birthDateId}
+                        type="date"
+                        value={draft.birthDate}
+                        max={localDateInput(new Date()).slice(0, 10)}
+                        onChange={(event) => setDraft({ ...draft, birthDate: event.target.value })}
+                      />
+                    </InputGroup>
+                  </Field>
+                  <Field>
+                    <FieldLabel>Feeding</FieldLabel>
+                    <ToggleGroup
+                      type="single"
+                      value={draft.feedingMode}
+                      className="segmented three-way"
+                      aria-label="Feeding method"
+                      onValueChange={(value) => value && setDraft({ ...draft, feedingMode: value as FeedingMode })}
+                    >
+                      {(["breast", "bottle", "mixed"] as FeedingMode[]).map((feedingMode) => (
+                        <ToggleGroupItem key={feedingMode} value={feedingMode}>
+                          {feedingMode[0].toUpperCase() + feedingMode.slice(1)}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                    <FieldDescription>This only changes the quick actions you see.</FieldDescription>
+                  </Field>
+                </FieldGroup>
+
+                {storageWarning && <div className="onboarding-alert" role="alert">{storageWarning}</div>}
+                <Button type="submit" size="lg" className="onboarding-primary">Start tracking <ChevronRight /></Button>
+                <Button type="button" variant="ghost" onClick={() => restoreRef.current?.click()}><Upload /> Restore a backup</Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      <Input ref={restoreRef} className="hidden-input" type="file" accept="application/json" onChange={onRestore} />
+      <Toaster theme={nightMode ? "dark" : "light"} position="bottom-center" closeButton />
+    </main>
+  );
+}
