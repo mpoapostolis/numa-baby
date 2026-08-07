@@ -46,12 +46,6 @@
 /* 3am rule: on a phone the log buttons come FIRST — the first tap target
    must sit in the top third, before the clock block. */
 @media (width < 768px) {
-  /* In the narrow desktop rail the row descriptions truncate — the button
-     labels carry the meaning, so the small print stays mobile-only. */
-  .today-dashboard > .log-column .log-copy small {
-    display: none;
-  }
-
   .today-dashboard > .log-column { order: -1; }
 }
 
@@ -170,7 +164,7 @@
 
 .log-copy strong {
   overflow: hidden;
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -285,6 +279,18 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
+}
+
+/* Narrow phones: 2x2 so a label NEVER wraps to a second line. */
+@media (width < 480px) {
+  .day-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 16px;
+  }
+}
+
+.stat-head {
+  white-space: nowrap;
 }
 
 .day-strip > div {
@@ -413,6 +419,12 @@
 
   .today-dashboard > * {
     grid-column: 1;
+  }
+
+  /* In the narrow desktop rail the row descriptions truncate — the button
+     labels carry the meaning there. */
+  .today-dashboard > .log-column .log-copy small {
+    display: none;
   }
 
   .today-dashboard > .log-column {

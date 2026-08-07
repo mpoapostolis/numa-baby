@@ -169,14 +169,14 @@
 }
 
 .activity-copy [data-slot="item-title"] {
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   font-weight: 500;
 }
 
 .activity-copy [data-slot="item-description"] {
   overflow: hidden;
   color: var(--ink-2);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
