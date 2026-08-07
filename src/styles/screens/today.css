@@ -63,33 +63,11 @@
   line-height: 1.45;
 }
 
-.micro-strip {
-  height: 3px;
-  display: flex;
-  overflow: hidden;
-  margin-top: 4px;
-  border-radius: 999px;
-  background: var(--border);
-}
-
-.micro-strip > span {
-  height: 100%;
-  flex: 0 0 auto;
-}
-
-.strip-fill {
-  background: var(--signal);
-}
-
-.strip-over {
-  background: var(--alert);
-}
-
 .micro-caption {
   margin: 0;
-  color: var(--ink-3);
-  font-size: 0.75rem;
-  line-height: 1.4;
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+  line-height: 1.45;
 }
 
 .hearth-stop {
@@ -244,6 +222,21 @@
   min-width: 0;
   display: grid;
   gap: 4px;
+}
+
+/* Sentence-case label with its activity icon — no decoding required. */
+.stat-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.stat-head svg {
+  flex: 0 0 auto;
+  color: var(--ink-3);
 }
 
 .day-strip .t-numeral {

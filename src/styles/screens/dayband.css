@@ -8,15 +8,34 @@
 .day-band-lanes {
   position: relative;
   display: grid;
-  gap: 4px;
-  padding: 8px 0;
+  gap: 6px;
+  padding: 10px 0;
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
 
 .band-lane {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+  height: 12px;
+}
+
+.band-lane-icon {
+  display: inline-flex;
+  justify-content: center;
+  color: var(--ink-3);
+}
+
+.band-track {
   position: relative;
-  height: 8px;
+  height: 100%;
+}
+
+/* Insights' feeds-only bands have no icon gutter. */
+.band-lane:not(:has(.band-lane-icon)) {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .band-dot {
@@ -76,9 +95,41 @@
   translate: -50%;
 }
 
+.band-now i {
+  position: absolute;
+  top: -4px;
+  left: 5px;
+  color: var(--signal);
+  font-size: 0.75rem;
+  font-style: normal;
+  line-height: 1;
+}
+
+.day-band-legend {
+  display: flex;
+  gap: 16px;
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.day-band-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.day-band-legend .band-dot {
+  position: static;
+  translate: none;
+  flex: 0 0 auto;
+}
+
 .day-band-scale {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding-left: var(--band-gutter, 0px);
   color: var(--ink-3);
   font-size: 0.75rem;
   line-height: 1.4;

@@ -279,32 +279,13 @@ export default function TodayScreen({
                   : "Log the first feed when it happens."}
               </p>
               {lastFeed && typicalGap > 0 && (
-                <>
-                  <div className="micro-strip" aria-hidden="true">
-                    {gapOver > 0 ? (
-                      <>
-                        <span
-                          className="strip-fill"
-                          style={{ width: `${(typicalGap / gapElapsed) * 100}%` }}
-                        />
-                        <span
-                          className="strip-over"
-                          style={{ width: `${(gapOver / gapElapsed) * 100}%` }}
-                        />
-                      </>
-                    ) : (
-                      <span
-                        className="strip-fill"
-                        style={{ width: `${(gapElapsed / typicalGap) * 100}%` }}
-                      />
-                    )}
-                  </div>
-                  <p className="micro-caption">
-                    {gapOver > 0
-                      ? `${humanDuration(gapOver)} past the usual ${humanDuration(typicalGap)} gap`
-                      : `Usual gap between longer feeds: ${humanDuration(typicalGap)}`}
-                  </p>
-                </>
+                // One plain sentence — an unlabelled progress bar here read as
+                // "what is this?" instead of information.
+                <p className="micro-caption">
+                  {gapOver > 0
+                    ? `${humanDuration(gapOver)} past the usual ${humanDuration(typicalGap)} gap`
+                    : `Usually feeds every ${humanDuration(typicalGap)}`}
+                </p>
               )}
             </div>
           )}
@@ -344,11 +325,9 @@ export default function TodayScreen({
               <span className="action-icon"><Milk /></span>
               <div className="log-copy">
                 <strong>Bottle</strong>
-                <small>
-                  {lastBottle?.amount
-                    ? `Repeat ${lastBottle.milkType === "expressed" ? "breast milk" : "formula"}`
-                    : "Set the amount once"}
-                </small>
+                {lastBottle?.amount && (
+                  <small>{lastBottle.milkType === "expressed" ? "Breast milk" : "Formula"} · one tap</small>
+                )}
               </div>
               <div className="log-actions">
                 {lastBottle?.amount ? (
@@ -359,12 +338,12 @@ export default function TodayScreen({
                       onClick={quickLogBottle}
                       aria-label={`Log ${lastBottle.amount} millilitres of ${lastBottle.milkType === "expressed" ? "breast milk" : "formula"} now`}
                     >
-                      {lastBottle.amount} ml
+                      Log {lastBottle.amount} ml
                     </Button>
-                    <Button variant="outline" onClick={() => onOpenSheet("bottle")}>Details</Button>
+                    <Button variant="outline" onClick={() => onOpenSheet("bottle")}>Change</Button>
                   </>
                 ) : (
-                  <Button variant="outline" onClick={() => onOpenSheet("bottle")}>Set amount</Button>
+                  <Button variant="outline" onClick={() => onOpenSheet("bottle")}>Log a bottle</Button>
                 )}
               </div>
             </div>
@@ -408,7 +387,6 @@ export default function TodayScreen({
             <span className="action-icon"><Droplet /></span>
             <div className="log-copy">
               <strong>Diaper</strong>
-              <small>Save the exact change</small>
             </div>
             <div className="log-actions">
               <Button variant="outline" onClick={() => quickLogDiaper("wet")}>Wet</Button>
@@ -458,26 +436,33 @@ export default function TodayScreen({
 
         <div className="day-strip" aria-label="Today's summary">
           <div>
+            <span className="stat-head"><Milk size={14} aria-hidden="true" /> Feeds today</span>
             <span className="figure t-numeral">
               {feedsToday.length > 0 ? feedsToday.length : <span className="is-zero">—</span>}
             </span>
-            <span className="t-label">feeds</span>
           </div>
           <div>
+            <span className="stat-head"><Milk size={14} aria-hidden="true" /> Bottle total</span>
             <span className="figure t-numeral">
-              {bottleMlToday > 0 ? bottleMlToday : <span className="is-zero">—</span>}
+              {bottleMlToday > 0 ? (
+                <>
+                  {bottleMlToday}
+                  <span className="unit">ml</span>
+                </>
+              ) : (
+                <span className="is-zero">—</span>
+              )}
             </span>
-            <span className="t-label">ml logged</span>
           </div>
           <div>
+            <span className="stat-head"><Droplet size={14} aria-hidden="true" /> Diapers</span>
             <span className="figure t-numeral">
               {diapersToday > 0 ? diapersToday : <span className="is-zero">—</span>}
             </span>
-            <span className="t-label">diapers</span>
           </div>
           <div>
+            <span className="stat-head"><Moon size={14} aria-hidden="true" /> Sleep today</span>
             <span className="figure t-numeral"><DurationFigure minutes={sleepMinutesToday} /></span>
-            <span className="t-label">sleep</span>
           </div>
         </div>
 
