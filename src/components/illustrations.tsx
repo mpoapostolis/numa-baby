@@ -63,6 +63,44 @@ export function LittleBottle({ size = 104, ...props }: IllustrationProps) {
   );
 }
 
+// The baby herself: a round face fast asleep — one curl on top, closed
+// arc eyes, the smallest smile, blush dots in the nursing rose. Sized for
+// chips (22-26px renders), so unlike the large-format illustrations the
+// stroke is 6/96 — about 1.4px on screen, matching the lucide glyph weight
+// beside it — and the blush dots are big enough to survive the downscale.
+export function BabyFace({ size = 24, ...props }: IllustrationProps) {
+  return (
+    <svg {...frame(size, { strokeWidth: 6, ...props })}>
+      <circle cx="48" cy="54" r="26" />
+      <path d="M48 28c0-6 4-10 9-9-4 1-5 4-4 7" />
+      <path d="M36 52q4 4 8 0" />
+      <path d="M52 52q4 4 8 0" />
+      <path d="M44 64q4 3.5 8 0" />
+      <circle cx="32" cy="60" r="4.5" fill="var(--glyph-nursing)" stroke="none" />
+      <circle cx="64" cy="60" r="4.5" fill="var(--glyph-nursing)" stroke="none" />
+    </svg>
+  );
+}
+
+// Two four-point stars in the signal amber. A garnish, never a headline.
+export function TinyStars({ size = 20, ...props }: IllustrationProps) {
+  return (
+    <svg
+      viewBox="0 0 48 48"
+      width={size}
+      height={size}
+      role="img"
+      aria-hidden
+      fill="var(--signal)"
+      stroke="none"
+      {...props}
+    >
+      <path d="M17 6l2.4 6.2 6.2 2.4-6.2 2.4-2.4 6.2-2.4-6.2-6.2-2.4 6.2-2.4z" />
+      <path d="M33 26l1.7 4.3 4.3 1.7-4.3 1.7-1.7 4.3-1.7-4.3-4.3-1.7 4.3-1.7z" />
+    </svg>
+  );
+}
+
 // A sprout on a baseline, with two data points on their way up.
 export function SproutChart({ size = 104, ...props }: IllustrationProps) {
   return (

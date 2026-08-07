@@ -1,4 +1,5 @@
-import { Baby, BarChart3, ChevronRight, Clock, Home, Settings } from "lucide-react";
+import { BarChart3, ChevronRight, Clock, Home, Ruler, Settings } from "lucide-react";
+import { BabyFace } from "./illustrations";
 import {
   Sidebar,
   SidebarContent,
@@ -31,6 +32,7 @@ export function AppSidebar({
     { value: "today", label: "Today", icon: <Home /> },
     { value: "timeline", label: "Timeline", icon: <Clock /> },
     { value: "insights", label: "Insights", icon: <BarChart3 /> },
+    { value: "guide", label: "Growth guide", icon: <Ruler /> },
     { value: "more", label: "Settings", icon: <Settings /> },
   ];
 
@@ -51,7 +53,7 @@ export function AppSidebar({
               className="app-sidebar-brand"
               onClick={() => navigate("today")}
             >
-              <span className="wordmark-mark"><Baby /></span>
+              <span className="wordmark-mark"><BabyFace /></span>
               <span className="app-sidebar-brand-copy">
                 <strong>Baby Tracker</strong>
                 <small>Private family log</small>
@@ -88,7 +90,7 @@ export function AppSidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" className="sidebar-profile-button" tooltip="Baby profile" aria-label="Baby profile" onClick={onProfile}>
-              <span className="baby-avatar"><Baby /></span>
+              <span className="baby-avatar"><BabyFace /></span>
               <span className="sidebar-profile-copy">
                 <strong>{profile.name}</strong>
                 <small>Private profile</small>

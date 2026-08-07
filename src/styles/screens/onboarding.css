@@ -185,6 +185,33 @@
   grid-row: 1 / span 2;
 }
 
+/* "Set up your baby" gets the face in the same rose circle as the shell
+   chips, plus two amber stars riding the corner. Box stays 40px. */
+.onboarding-baby-icon {
+  position: relative;
+  border: 1px solid color-mix(in oklch, var(--glyph-nursing) 22%, var(--border));
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--glyph-nursing) 12%, var(--card));
+  color: color-mix(in oklch, var(--glyph-nursing) 45%, var(--foreground));
+}
+
+.dark .onboarding-baby-icon {
+  background: color-mix(in oklch, var(--glyph-nursing) 20%, var(--card));
+}
+
+.onboarding-baby-icon svg:first-child {
+  width: 26px;
+  height: 26px;
+}
+
+.onboarding-baby-icon svg:last-child {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  width: 16px;
+  height: 16px;
+}
+
 .onboarding-form {
   display: grid;
   gap: 16px;

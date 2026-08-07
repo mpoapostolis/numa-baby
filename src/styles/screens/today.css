@@ -1,5 +1,6 @@
 /* Today screen — status line, Hearth clock, log column, day strip, DayBand. */
 @import "./dayband.css";
+@import "./companion.css";
 
 .today-screen {
   container-type: inline-size;
@@ -30,6 +31,13 @@
   font-size: 0.8125rem;
 }
 
+/* "Mia · 3 weeks" — the age rides along at meta weight, never competing
+   with the name. */
+.status-age {
+  color: var(--ink-3);
+  font-weight: 400;
+}
+
 .today-dashboard {
   display: grid;
   gap: 24px;
@@ -50,6 +58,34 @@
 
 .hearth-figure {
   margin: 0;
+}
+
+/* Idle Hearth: text keeps its column, a quiet illustration keeps watch on
+   the right — moon at night, bottle by day. [1fr auto] so the figure's
+   baseline never moves; hidden on very narrow phones. */
+.hearth-idle {
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 16px;
+  align-items: start;
+}
+
+.hearth-copy {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.hearth-ambient {
+  align-self: center;
+  line-height: 0;
+  color: var(--ink-2);
+  opacity: 0.9;
+}
+
+@media (width < 420px) {
+  .hearth-ambient {
+    display: none;
+  }
 }
 
 /* First-run welcome: illustration instead of an em-dash figure. */
@@ -274,6 +310,18 @@
 .next-up {
   display: grid;
   gap: 16px;
+}
+
+/* Forecast rows swap the lucide glyph for a full-bleed illustration: same
+   40px footprint, no chip wash — the drawing is the chip. */
+.log-row .action-icon.forecast-illustration {
+  background: transparent;
+  color: var(--ink-2);
+}
+
+.action-icon.forecast-illustration svg {
+  width: 40px;
+  height: 40px;
 }
 
 .care-notes {

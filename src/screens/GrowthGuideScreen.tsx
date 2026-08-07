@@ -1,5 +1,6 @@
-import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ExternalLink, ShieldCheck } from "lucide-react";
 import { Button } from "../components/ui/button";
+import { SproutChart } from "../components/illustrations";
 import {
   MAX_REFERENCE_MONTHS,
   WEEKLY_GAIN_BANDS,
@@ -21,7 +22,7 @@ const kg = (value: number) => value.toFixed(1);
 type GrowthGuideScreenProps = {
   profile: Profile;
   latestGrowth?: Activity;
-  onBack: () => void;
+  onBack?: () => void;
 };
 
 // Fractional age drives the interpolated band — a 24-day-old must not be
@@ -69,6 +70,30 @@ function RangeBar({ range, weightKg }: { range: WeightPercentiles; weightKg?: nu
   );
 }
 
+// Named sources — every figure on this screen traces to one of these.
+const GUIDE_SOURCES = [
+  {
+    name: "WHO Child Growth Standards — weight-for-age",
+    url: "https://www.who.int/tools/child-growth-standards/standards/weight-for-age",
+    note: "The percentile tables behind the reference band (retrieved 7 Aug 2026).",
+  },
+  {
+    name: "CDC — WHO growth chart data files",
+    url: "https://www.cdc.gov/growthcharts/who-data-files.htm",
+    note: "Independent republication used to cross-check every value.",
+  },
+  {
+    name: "AAP · HealthyChildren.org",
+    url: "https://www.healthychildren.org/English/ages-stages/baby/Pages/default.aspx",
+    note: "Typical newborn weight loss, regain and gain patterns.",
+  },
+  {
+    name: "NHS — Your baby's weight and height",
+    url: "https://www.nhs.uk/baby/babys-development/height-weight-and-reviews/baby-height-and-weight/",
+    note: "Weighing guidance and when to talk to a professional.",
+  },
+];
+
 export default function GrowthGuideScreen({ profile, latestGrowth, onBack }: GrowthGuideScreenProps) {
   const name = profile.name.trim() || "Baby";
   const exactAge = fractionalAgeMonths(profile.birthDate);
@@ -81,9 +106,11 @@ export default function GrowthGuideScreen({ profile, latestGrowth, onBack }: Gro
     <section className="screen growth-guide-screen" aria-labelledby="growth-guide-heading">
       <div className="section-heading">
         <div>
-          <Button variant="ghost" size="sm" className="guide-back" onClick={onBack}>
-            <ArrowLeft size={16} /> Insights
-          </Button>
+          {onBack && (
+            <Button variant="ghost" size="sm" className="guide-back" onClick={onBack}>
+              <ArrowLeft size={16} /> Insights
+            </Button>
+          )}
           <p className="eyebrow">Reference ranges</p>
           <h1 id="growth-guide-heading">Growth guide</h1>
         </div>
@@ -102,8 +129,13 @@ export default function GrowthGuideScreen({ profile, latestGrowth, onBack }: Gro
 
       {age !== null && range !== null ? (
         <div className="surface-card guide-range-card">
+          <span className="guide-range-art" aria-hidden="true"><SproutChart size={72} /></span>
           <p className="t-label">{ageHeading(age)}</p>
-          <h2>Reference weights span {kg(range.p3)} to {kg(range.p97)} kg.</h2>
+          <h2 className="guide-range-figure figure">
+            {kg(range.p3)}–{kg(range.p97)}
+            <span className="unit">kg</span>
+          </h2>
+          <p className="t-meta guide-range-sub">Typical weight range at this age (WHO P3–P97)</p>
           {exactAge !== null && exactAge > MAX_REFERENCE_MONTHS && (
             <p className="t-meta">The WHO table covers the first 24 months, shown here at 24 months.</p>
           )}
@@ -199,6 +231,21 @@ export default function GrowthGuideScreen({ profile, latestGrowth, onBack }: Gro
             <p>Noticeably fewer wet nappies alongside irritability, unusual sleepiness or reduced feeding — seek care the same day.</p>
             <span className="guide-authority">NHS</span>
           </li>
+        </ul>
+      </div>
+
+      <div className="surface-card guide-sources">
+        <p className="t-label">Sources</p>
+        <ul className="guide-source-list">
+          {GUIDE_SOURCES.map((source) => (
+            <li key={source.url}>
+              <a href={source.url} target="_blank" rel="noreferrer noopener">
+                {source.name}
+                <ExternalLink size={13} aria-hidden="true" />
+              </a>
+              <p className="t-meta">{source.note}</p>
+            </li>
+          ))}
         </ul>
       </div>
 

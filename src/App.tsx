@@ -4,6 +4,7 @@ import {
   ChevronRight,
   Clock,
   Home,
+  Ruler,
   Settings,
   ShieldCheck,
   Stethoscope,
@@ -20,6 +21,7 @@ import {
 } from "./components/ui/sidebar";
 import { Toaster } from "./components/ui/sonner";
 import { AppSidebar } from "./components/AppSidebar";
+import { BabyFace } from "./components/illustrations";
 import { LogSheet } from "./components/LogSheet";
 import OnboardingScreen from "./screens/OnboardingScreen";
 import SettingsScreen from "./screens/SettingsScreen";
@@ -42,15 +44,13 @@ const bottomNavItems: Array<{ value: Tab; label: string; icon: React.ReactNode }
   { value: "today", label: "Today", icon: <Home size={20} /> },
   { value: "timeline", label: "Timeline", icon: <Clock size={20} /> },
   { value: "insights", label: "Insights", icon: <BarChart3 size={20} /> },
+  { value: "guide", label: "Guide", icon: <Ruler size={20} /> },
   { value: "more", label: "Settings", icon: <Settings size={20} /> },
 ];
 
 export default function HomePage() {
   const [debugMode] = useState(() => new URLSearchParams(window.location.search).has("debug"));
   const [activeTab, setActiveTab] = useState<Tab>("today");
-  // The Growth guide renders in place of the Insights content — one entry
-  // point (the growth figure), a back button, no extra nav tab.
-  const [guideOpen, setGuideOpen] = useState(false);
   const [sheet, setSheet] = useState<Sheet>(null);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [nursingInitialMode, setNursingInitialMode] = useState<"timer" | "manual">("timer");
@@ -136,7 +136,6 @@ export default function HomePage() {
   // Every navigation leaves the guide, so returning to Insights later starts
   // at the Insights content — never a stale sub-screen.
   const navigateTo = useCallback((tab: Tab) => {
-    setGuideOpen(false);
     setActiveTab(tab);
   }, []);
 
@@ -202,11 +201,15 @@ export default function HomePage() {
             <SidebarTrigger className="sidebar-trigger" aria-label="Open navigation" />
             <Separator orientation="vertical" className="topbar-separator" />
             <span className="topbar-page-title">
-              {activeTab === "more" ? "Settings" : activeTab[0].toUpperCase() + activeTab.slice(1)}
+              {activeTab === "more"
+                ? "Settings"
+                : activeTab === "guide"
+                  ? "Growth guide"
+                  : activeTab[0].toUpperCase() + activeTab.slice(1)}
             </span>
           </div>
           <Button variant="ghost" className="baby-identity" aria-label="Baby profile" onClick={() => openSheet("profile")}>
-            <span className="baby-avatar"><Baby size={19} /></span>
+            <span className="baby-avatar"><BabyFace size={22} /></span>
             <span>
               <strong>{profile.name}</strong>
               <small>Your private log</small>
@@ -278,19 +281,17 @@ export default function HomePage() {
 
           {activeTab === "insights" && (
             <Suspense fallback={null}>
-              {guideOpen ? (
-                <GrowthGuideScreen
-                  profile={profile}
-                  latestGrowth={stats.latestGrowth}
-                  onBack={() => setGuideOpen(false)}
-                />
-              ) : (
-                <InsightsScreen
-                  stats={stats}
-                  onAddGrowth={() => openSheet("growth")}
-                  onOpenGuide={() => setGuideOpen(true)}
-                />
-              )}
+              <InsightsScreen
+                stats={stats}
+                onAddGrowth={() => openSheet("growth")}
+                onOpenGuide={() => navigateTo("guide")}
+              />
+            </Suspense>
+          )}
+
+          {activeTab === "guide" && (
+            <Suspense fallback={null}>
+              <GrowthGuideScreen profile={profile} latestGrowth={stats.latestGrowth} />
             </Suspense>
           )}
 

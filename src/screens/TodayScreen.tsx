@@ -18,10 +18,9 @@ import { ActivityRow } from "../components/ActivityRow";
 import { DayBand } from "../components/DayBand";
 import { EmptyState } from "../components/EmptyState";
 import { LittleBottle, SleepyMoon } from "../components/illustrations";
-import { activityDetail, activityTitle } from "../domain/activityDisplay";
+import { BabyCompanion, CompanionMood } from "../components/BabyCompanion";
 import { makeId } from "../domain/id";
 import {
-  forecastRange,
   forecastRelative,
   formatTime,
   humanDuration,
@@ -37,6 +36,40 @@ const statusDateFormat = new Intl.DateTimeFormat("en", {
   month: "long",
   day: "numeric",
 });
+
+// The Hearth meta line stays short: the last feed at a glance, not the full
+// timeline entry — ranges and edit affordances live in Recent and Timeline.
+function lastFeedSummary(feed: Activity) {
+  if (feed.type === "bottle") {
+    return `Bottle · ${feed.amount ?? 0} ml`;
+  }
+  const side = feed.side === "left" ? "left" : "right";
+  return feed.endedAt
+    ? `Nursing · ${side} · ${humanDuration(minutesBetween(feed.startedAt, feed.endedAt))}`
+    : `Nursing · ${side}`;
+}
+
+// "3 weeks" / "2 months" for the status line: weeks under 8, calendar
+// months after, plain days in the first week. Null when there is no
+// (usable) birth date — the line simply stays as it was.
+function formatBabyAge(birthDate: string | undefined, now: number): string | null {
+  if (!birthDate) return null;
+  const birth = new Date(birthDate);
+  const birthMs = birth.getTime();
+  if (Number.isNaN(birthMs) || birthMs > now) return null;
+  const days = Math.floor((now - birthMs) / 86_400_000);
+  const weeks = Math.floor(days / 7);
+  if (days === 0) return "born today";
+  if (weeks < 1) return days === 1 ? "1 day" : `${days} days`;
+  if (weeks < 8) return weeks === 1 ? "1 week" : `${weeks} weeks`;
+  const at = new Date(now);
+  const months =
+    (at.getFullYear() - birth.getFullYear()) * 12 +
+    (at.getMonth() - birth.getMonth()) -
+    (at.getDate() < birth.getDate() ? 1 : 0);
+  if (months < 2) return `${weeks} weeks`;
+  return `${months} months`;
+}
 
 // Display figure with unit demotion: digits speak, units recede.
 function DurationFigure({ minutes }: { minutes: number }) {
@@ -181,12 +214,8 @@ export default function TodayScreen({
     activeSleep,
     activeNursing,
     activeTimers,
-    feedingGaps,
     typicalGap,
-    wakeGaps,
-    feedSpread,
     nextFeedAt,
-    sleepSpread,
     nextSleepAt,
     feedWindowPassed,
     sleepWindowPassed,
@@ -258,10 +287,29 @@ export default function TodayScreen({
     onAdd(entry, "Sleep timer started");
   }
 
+  const babyAge = formatBabyAge(profile.birthDate, minuteClock);
+  // The companion mirrors the real baby from the data already logged:
+  // sleeping timer → asleep; close to (or past) the usual feed gap → eyeing
+  // the bottle; fed within the hour → content; otherwise simply awake.
+  const companionMood: CompanionMood = activeSleep
+    ? "sleeping"
+    : activeNursing
+      ? "feeding"
+      : !lastFeed
+        ? "awake"
+        : gapOver > 0 || (nextFeedAt !== null && nextFeedAt - minuteClock < 30 * 60_000)
+          ? "hungry"
+          : gapElapsed < 60
+            ? "content"
+            : "awake";
+
   return (
     <section className="screen today-screen" aria-labelledby="today-heading">
       <header className="status-line">
-        <h1 id="today-heading" className="t-title-2">{profile.name}</h1>
+        <h1 id="today-heading" className="t-title-2">
+          {profile.name}
+          {babyAge && <span className="status-age t-meta"> · {babyAge}</span>}
+        </h1>
         <span className="status-date">{statusDateFormat.format(new Date(minuteClock))}</span>
       </header>
 
@@ -278,23 +326,26 @@ export default function TodayScreen({
               <p className="t-meta">Log the first feed when it happens — one tap on the right.</p>
             </div>
           ) : (
-            <div className="hearth-clock">
-              <span className="t-label">Since last feed</span>
-              <p className="figure hearth-figure t-display">
-                <GapFigure startedAt={lastFeed.startedAt} now={minuteClock} />
-              </p>
-              <p className="hearth-meta">
-                {`${activityTitle(lastFeed)} · ${activityDetail(lastFeed)}`}
-              </p>
-              {typicalGap > 0 && (
-                // One plain sentence — an unlabelled progress bar here read as
-                // "what is this?" instead of information.
-                <p className="micro-caption">
-                  {gapOver > 0
-                    ? `${humanDuration(gapOver)} past the usual ${humanDuration(typicalGap)} gap`
-                    : `Usually feeds every ${humanDuration(typicalGap)}`}
+            <div className="hearth-clock hearth-idle">
+              <div className="hearth-copy">
+                <span className="t-label">Since last feed</span>
+                <p className="figure hearth-figure t-display">
+                  <GapFigure startedAt={lastFeed.startedAt} now={minuteClock} />
                 </p>
-              )}
+                <p className="hearth-meta">{lastFeedSummary(lastFeed)}</p>
+                {typicalGap > 0 && (
+                  // One plain sentence — an unlabelled progress bar here read as
+                  // "what is this?" instead of information.
+                  <p className="micro-caption">
+                    {gapOver > 0
+                      ? `${humanDuration(gapOver)} past the usual ${humanDuration(typicalGap)} gap`
+                      : `Usually feeds every ${humanDuration(typicalGap)}`}
+                  </p>
+                )}
+              </div>
+              <span className="hearth-ambient" aria-hidden="true">
+                <BabyCompanion mood={companionMood} size={96} />
+              </span>
             </div>
           )}
 
@@ -315,14 +366,14 @@ export default function TodayScreen({
               <div className="log-copy">
                 <span>Next likely feed</span>
                 <strong>
-                  {nextFeedAt ? forecastRelative(nextFeedAt, minuteClock) : "Learning the pattern"}
+                  {nextFeedAt ? forecastRelative(nextFeedAt, minuteClock) : "Still learning the rhythm"}
                 </strong>
                 <small>
                   {nextFeedAt
                     ? feedWindowPassed
-                      ? `Based on ${feedingGaps.length} recent gaps`
-                      : `${forecastRange(nextFeedAt, feedSpread)} · based on ${feedingGaps.length} recent gaps`
-                    : "Log a few more feeds spaced 20 minutes to 8 hours apart"}
+                      ? "Follow the cues — whenever works"
+                      : `around ${formatTime(new Date(nextFeedAt).toISOString())}`
+                    : "A few more feeds and the pattern appears"}
                 </small>
               </div>
               <Button variant="outline" onClick={() => onOpenSheet(forecastFeedSheet)}>Log</Button>
@@ -486,6 +537,7 @@ export default function TodayScreen({
           day={new Date(minuteClock)}
           activities={sortedActivities}
           now={minuteClock}
+          mode="rolling"
         />
 
         <div className="next-up">
@@ -494,18 +546,19 @@ export default function TodayScreen({
               plain "Start sleep" action above stays available regardless. */}
           {!activeSleep && sortedActivities.some((activity) => activity.type === "sleep") && (
             <div className="log-row action-sleep">
-              <span className="action-icon"><Moon /></span>
+              {/* 40px render needs a heavier stroke than the 88px+ frames: 4/96 ≈ 1.7px on screen. */}
+              <span className="action-icon forecast-illustration"><SleepyMoon size={40} strokeWidth={4} /></span>
               <div className="log-copy">
                 <span>Next likely sleep</span>
                 <strong>
-                  {nextSleepAt ? forecastRelative(nextSleepAt, minuteClock) : "Learning the pattern"}
+                  {nextSleepAt ? forecastRelative(nextSleepAt, minuteClock) : "Still learning the rhythm"}
                 </strong>
                 <small>
                   {nextSleepAt
                     ? sleepWindowPassed
-                      ? `Based on ${wakeGaps.length} recent wake windows`
-                      : `${forecastRange(nextSleepAt, sleepSpread)} · based on ${wakeGaps.length} recent wake windows`
-                    : "Log a few more complete sleeps to estimate a window"}
+                      ? "Follow the cues — whenever works"
+                      : `around ${formatTime(new Date(nextSleepAt).toISOString())}`
+                    : "A few more sleeps and the pattern appears"}
                 </small>
               </div>
               <div className="log-actions">

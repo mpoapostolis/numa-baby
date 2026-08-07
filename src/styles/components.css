@@ -86,7 +86,9 @@
   }
 }
 
-/* Activity glyphs: hue lives in the icon stroke only, chips stay neutral. */
+/* Activity glyphs: the icon keeps the full glyph hue; the chip behind it
+   takes a soft wash of the same hue (--glyph-wash: 10% light / 16% night)
+   over --card — colour returns to the daily rows without ever shouting. */
 .action-icon,
 .activity-glyph {
   width: 40px;
@@ -95,7 +97,7 @@
   display: grid;
   place-items: center;
   border: 0;
-  border-radius: var(--radius-md);
+  border-radius: 12px;
   background: var(--muted);
   color: var(--ink-2);
 }
@@ -108,31 +110,37 @@
 
 .action-feed .action-icon,
 .glyph-bottle {
+  background: color-mix(in oklch, var(--glyph-bottle) var(--glyph-wash), var(--card));
   color: var(--glyph-bottle);
 }
 
 .action-nurse .action-icon,
 .glyph-nursing {
+  background: color-mix(in oklch, var(--glyph-nursing) var(--glyph-wash), var(--card));
   color: var(--glyph-nursing);
 }
 
 .action-diaper .action-icon,
 .glyph-diaper {
+  background: color-mix(in oklch, var(--glyph-diaper) var(--glyph-wash), var(--card));
   color: var(--glyph-diaper);
 }
 
 .action-sleep .action-icon,
 .glyph-sleep {
+  background: color-mix(in oklch, var(--glyph-sleep) var(--glyph-wash), var(--card));
   color: var(--glyph-sleep);
 }
 
 .action-growth .action-icon,
 .glyph-growth {
+  background: color-mix(in oklch, var(--glyph-growth) var(--glyph-wash), var(--card));
   color: var(--glyph-growth);
 }
 
 .action-health .action-icon,
 .glyph-health {
+  background: color-mix(in oklch, var(--glyph-health) var(--glyph-wash), var(--card));
   color: var(--glyph-health);
 }
 

@@ -2,15 +2,20 @@ import { Droplet, Milk, Moon, Stethoscope } from "lucide-react";
 import { formatTime, humanDuration, isSameDay, minutesOnDay } from "../domain/time";
 import { Activity } from "../domain/types";
 
-// 24-hour band with labelled lanes, one hue per activity: bottle dots are
-// filled blue, nursing dots are rose rings, diaper marks are teal squares and
-// sleep spans are violet bars — the same glyph hues used on the log rows, so
-// the chart needs no decoding. Empty days render nothing (screens own their
-// empty states). The sleep lane is sourced from minutesOnDay overlap — never
-// isSameDay on startedAt — so an overnight 23:00→06:00 sleep renders on both
-// days it touches.
+// Multi-lane activity band, one hue per activity: bottle dots are filled blue,
+// nursing dots are rose rings, diaper marks are teal squares and sleep spans
+// are violet bars — the same glyph hues used on the log rows, so the chart
+// needs no decoding. Two windows:
+//   mode="rolling" (Today) — the LAST 24 HOURS ending at `now`, which sits at
+//   the right edge. At 00:30 the band still shows yesterday's whole rhythm
+//   instead of an almost-empty calendar day.
+//   mode="day" (history) — a fixed calendar day.
+// Empty windows render nothing (screens own their empty states). Sleep is
+// included by overlap — never isSameDay on startedAt — so an overnight
+// 23:00→06:00 sleep renders wherever it belongs.
 
 const DAY_MS = 86_400_000;
+const HOUR_MS = 3_600_000;
 const CLUSTER_MS = 20 * 60_000; // feeds closer than this get nudged apart
 const NUDGE_PX = [0, -3, 3];
 
@@ -18,15 +23,31 @@ type DayBandProps = {
   day: Date;
   activities: Activity[];
   now: number;
+  mode?: "day" | "rolling";
   feedsOnly?: boolean;
   className?: string;
 };
 
-export function DayBand({ day, activities, now, feedsOnly = false, className = "" }: DayBandProps) {
+export function DayBand({
+  day,
+  activities,
+  now,
+  mode = "day",
+  feedsOnly = false,
+  className = "",
+}: DayBandProps) {
+  const rolling = mode === "rolling";
   const dayStart = new Date(day);
   dayStart.setHours(0, 0, 0, 0);
-  const startMs = dayStart.getTime();
-  const pct = (ms: number) => Math.min(100, Math.max(0, ((ms - startMs) / DAY_MS) * 100));
+  const startMs = rolling ? now - DAY_MS : dayStart.getTime();
+  const endMs = rolling ? now : dayStart.getTime() + DAY_MS;
+  const span = endMs - startMs;
+  const pct = (ms: number) => Math.min(100, Math.max(0, ((ms - startMs) / span) * 100));
+  const inWindow = (value: string) => {
+    const ms = new Date(value).getTime();
+    return ms >= startMs && ms < endMs;
+  };
+  const includePoint = (value: string) => (rolling ? inWindow(value) : isSameDay(value, day));
 
   const feeds: Activity[] = [];
   const diapers: Activity[] = [];
@@ -35,19 +56,24 @@ export function DayBand({ day, activities, now, feedsOnly = false, className = "
   let sleepMinutes = 0;
   for (const activity of activities) {
     if (activity.type === "bottle" || activity.type === "nursing") {
-      if (isSameDay(activity.startedAt, day)) feeds.push(activity);
+      if (includePoint(activity.startedAt)) feeds.push(activity);
       continue;
     }
     if (feedsOnly) continue;
     if (activity.type === "sleep") {
-      const minutes = minutesOnDay(activity, day, now);
+      const sleepStart = new Date(activity.startedAt).getTime();
+      const sleepEnd = activity.endedAt ? new Date(activity.endedAt).getTime() : now;
+      const overlap = Math.min(sleepEnd, endMs) - Math.max(sleepStart, startMs);
+      const minutes = rolling
+        ? Math.max(0, Math.round(overlap / 60_000))
+        : minutesOnDay(activity, day, now);
       if (minutes > 0) {
         sleeps.push(activity);
         sleepMinutes += minutes;
       }
       continue;
     }
-    if (!isSameDay(activity.startedAt, day)) continue;
+    if (!includePoint(activity.startedAt)) continue;
     if (activity.type === "diaper") diapers.push(activity);
     else marks.push(activity);
   }
@@ -70,7 +96,26 @@ export function DayBand({ day, activities, now, feedsOnly = false, className = "
     previousMs = ms;
   }
 
-  const isToday = now >= startMs && now < startMs + DAY_MS;
+  const showNow = rolling || (now >= startMs && now < endMs);
+  const nowPct = rolling ? 100 : pct(now);
+
+  // Clock ticks: every 6 hours in day mode; in rolling mode, the round
+  // 6-o'clock hours that fall inside the sliding window (skipping any tick
+  // that would crowd the edges).
+  const ticks: Array<{ pct: number; label: string }> = [];
+  if (rolling) {
+    const firstTick = new Date(startMs);
+    firstTick.setMinutes(0, 0, 0);
+    firstTick.setHours(Math.ceil(firstTick.getHours() / 6) * 6);
+    for (let ms = firstTick.getTime(); ms < endMs; ms += 6 * HOUR_MS) {
+      const p = pct(ms);
+      if (p < 4 || p > 93) continue;
+      ticks.push({ pct: p, label: String(new Date(ms).getHours()).padStart(2, "0") });
+    }
+  } else {
+    ticks.push({ pct: 0, label: "00" }, { pct: 25, label: "06" }, { pct: 50, label: "12" }, { pct: 75, label: "18" });
+  }
+
   const parts = [`${feeds.length} ${feeds.length === 1 ? "feed" : "feeds"}`];
   if (!feedsOnly) {
     parts.push(`${diapers.length} ${diapers.length === 1 ? "diaper" : "diapers"}`);
@@ -86,15 +131,15 @@ export function DayBand({ day, activities, now, feedsOnly = false, className = "
     <div
       className={`day-band ${className}`.trim()}
       role="img"
-      aria-label={`24-hour overview: ${parts.join(", ")}.`}
+      aria-label={`${rolling ? "Last 24 hours" : "24-hour overview"}: ${parts.join(", ")}.`}
       style={{ "--band-gutter": feedsOnly ? "0px" : "24px" } as React.CSSProperties}
     >
       <div className="day-band-lanes">
-        {[25, 50, 75].map((stop) => (
+        {ticks.map((tick) => (
           <span
-            key={stop}
+            key={tick.label + tick.pct}
             className="band-grid"
-            style={{ left: `calc(var(--band-gutter) + (100% - var(--band-gutter)) * ${stop / 100})` }}
+            style={{ left: `calc(var(--band-gutter) + (100% - var(--band-gutter)) * ${tick.pct / 100})` }}
           />
         ))}
         <div className="band-lane lane-feed">
@@ -137,7 +182,7 @@ export function DayBand({ day, activities, now, feedsOnly = false, className = "
                   const from = Math.max(new Date(activity.startedAt).getTime(), startMs);
                   const to = Math.min(
                     activity.endedAt ? new Date(activity.endedAt).getTime() : now,
-                    startMs + DAY_MS,
+                    endMs,
                   );
                   return (
                     <span
@@ -169,21 +214,33 @@ export function DayBand({ day, activities, now, feedsOnly = false, className = "
             )}
           </>
         )}
-        {isToday && (
+        {showNow && (
           <span
-            className="band-now"
-            style={{ left: `calc(var(--band-gutter) + (100% - var(--band-gutter)) * ${pct(now) / 100})` }}
+            className={rolling ? "band-now is-edge" : "band-now"}
+            style={{ left: `calc(var(--band-gutter) + (100% - var(--band-gutter)) * ${nowPct / 100})` }}
           >
             <i>now</i>
           </span>
         )}
       </div>
-      <div className="day-band-scale">
-        <span>00</span>
-        <span>06</span>
-        <span>12</span>
-        <span>18</span>
-      </div>
+      {rolling ? (
+        <div className="day-band-scale is-rolling">
+          {ticks.map((tick) => (
+            <span
+              key={tick.label + tick.pct}
+              style={{ left: `calc(var(--band-gutter) + (100% - var(--band-gutter)) * ${tick.pct / 100})` }}
+            >
+              {tick.label}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <div className="day-band-scale">
+          {ticks.map((tick) => (
+            <span key={tick.label}>{tick.label}</span>
+          ))}
+        </div>
+      )}
       {!feedsOnly && (
         <p className="day-band-legend">
           {hasBottle && <span><i className="key-swatch key-bottle" /> Bottle</span>}

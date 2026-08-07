@@ -5,7 +5,7 @@
 export type ActivityType = "bottle" | "nursing" | "diaper" | "sleep" | "growth" | "health";
 export type DiaperKind = "wet" | "dirty" | "both";
 export type FeedingMode = "mixed" | "breast" | "bottle";
-export type Tab = "today" | "timeline" | "insights" | "more";
+export type Tab = "today" | "timeline" | "insights" | "guide" | "more";
 
 export type Activity = {
   id: string;

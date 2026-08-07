@@ -1,0 +1,74 @@
+/* BabyCompanion — slow, small, lullaby motion. Every keyframe here is stilled
+   by the global prefers-reduced-motion block in base.css. */
+
+.baby-companion {
+  color: color-mix(in oklch, var(--glyph-nursing) 45%, var(--foreground));
+}
+
+/* Awake: a blink every six seconds. */
+.baby-companion.is-awake .companion-eyes {
+  transform-origin: 58px 63px;
+  animation: companion-blink 6s infinite;
+}
+
+@keyframes companion-blink {
+  0%, 93%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.12); }
+  97% { transform: scaleY(1); }
+}
+
+/* Sleeping: the whole body breathes; z's take turns glowing. */
+.baby-companion.is-sleeping .companion-body {
+  transform-origin: 58px 70px;
+  animation: companion-breathe 5s ease-in-out infinite alternate;
+}
+
+@keyframes companion-breathe {
+  from { transform: scale(1); }
+  to { transform: scale(1.025); }
+}
+
+.baby-companion .z {
+  animation: companion-zzz 4s ease-in-out infinite;
+}
+
+.baby-companion .z-2 {
+  animation-delay: 2s;
+}
+
+@keyframes companion-zzz {
+  0%, 100% { opacity: 0.25; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-2px); }
+}
+
+/* Content: the little heart floats off and returns. */
+.baby-companion .companion-heart {
+  animation: companion-heart 4s ease-in-out infinite;
+}
+
+@keyframes companion-heart {
+  0%, 100% { opacity: 0; transform: translateY(4px); }
+  30%, 60% { opacity: 1; transform: translateY(0); }
+  90% { opacity: 0; transform: translateY(-6px); }
+}
+
+/* Hungry: the dreamed-of bottle bobs gently. */
+.baby-companion .companion-bubble {
+  animation: companion-bob 2.8s ease-in-out infinite;
+}
+
+@keyframes companion-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2.5px); }
+}
+
+/* Feeding: the bottle sways in, unhurried. */
+.baby-companion .companion-feed-bottle {
+  transform-origin: 90px 70px;
+  animation: companion-sway 3.5s ease-in-out infinite alternate;
+}
+
+@keyframes companion-sway {
+  from { transform: rotate(-2deg); }
+  to { transform: rotate(2.5deg); }
+}

@@ -182,3 +182,22 @@
   font-size: 0.75rem;
   line-height: 1.4;
 }
+
+/* Rolling window: clock labels sit under their sliding tick positions. */
+.day-band-scale.is-rolling {
+  display: block;
+  position: relative;
+  height: 1.1rem;
+  padding-left: 0;
+}
+
+.day-band-scale.is-rolling span {
+  position: absolute;
+  translate: -50%;
+}
+
+/* In the rolling window "now" hugs the right edge; keep its label inside. */
+.band-now.is-edge i {
+  right: 5px;
+  left: auto;
+}

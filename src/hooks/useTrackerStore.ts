@@ -58,7 +58,14 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
   }
 
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
+    // Boot must not depend on the tab being visible: requestAnimationFrame
+    // never fires in an occluded tab (background PWA launch, hidden preview),
+    // which would pin the app on the splash screen. A timeout fallback races
+    // it; whichever runs first wins.
+    let booted = false;
+    const boot = () => {
+      if (booted) return;
+      booted = true;
       if (debugMode) {
         // The fixture lives in its own lazy chunk: a preview session downloads
         // it on demand, a real session never ships it at all.
@@ -123,9 +130,14 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
         applyLoadedState({ activities: [], profile: EMPTY_PROFILE, bootState: "onboarding" });
       }
       navigator.storage?.persist?.().catch(() => undefined);
-    });
+    };
+    const frame = window.requestAnimationFrame(boot);
+    const fallback = window.setTimeout(boot, 120);
 
-    return () => window.cancelAnimationFrame(frame);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(fallback);
+    };
   }, [debugMode]);
 
   useEffect(() => {

@@ -91,6 +91,8 @@
   --glyph-sleep: oklch(0.5 0.09 280);
   --glyph-growth: oklch(0.55 0.09 100);
   --glyph-health: oklch(0.52 0.11 14);
+  /* Soft-tint strength for pastel activity chips: hue washes over --card. */
+  --glyph-wash: 10%;
   --danger-soft: color-mix(in oklch, var(--alert) 8%, var(--background));
   --shadow-card: none;
   --shadow-dialog: 0 16px 48px -24px oklch(0.2 0.01 250 / 0.25);
@@ -124,6 +126,7 @@
   --glyph-sleep: oklch(0.73 0.09 280);
   --glyph-growth: oklch(0.73 0.09 100);
   --glyph-health: oklch(0.73 0.09 14);
+  --glyph-wash: 16%;
   --danger-soft: color-mix(in oklch, var(--alert) 12%, var(--background));
   --shadow-dialog: none;
   color-scheme: dark;

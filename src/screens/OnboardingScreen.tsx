@@ -1,5 +1,4 @@
 import {
-  Baby,
   Check,
   ChevronRight,
   Clock,
@@ -11,6 +10,7 @@ import {
   Upload,
 } from "lucide-react";
 import { ChangeEvent, useId, useRef, useState } from "react";
+import { BabyFace, TinyStars } from "../components/illustrations";
 import { Button } from "../components/ui/button";
 import {
   Card,
@@ -63,7 +63,7 @@ export default function OnboardingScreen({
     <main className="onboarding-shell">
       <header className="onboarding-header">
         <div className="onboarding-brand">
-          <span className="wordmark-mark"><Baby /></span>
+          <span className="wordmark-mark"><BabyFace /></span>
           <span><strong>Baby Tracker</strong><small>Private family log</small></span>
         </div>
         <div className="onboarding-theme">
@@ -106,7 +106,7 @@ export default function OnboardingScreen({
 
           <Card className="onboarding-card">
             <CardHeader>
-              <span className="onboarding-card-icon"><Baby /></span>
+              <span className="onboarding-card-icon onboarding-baby-icon"><BabyFace /><TinyStars /></span>
               <CardTitle asChild><h2>Set up your baby</h2></CardTitle>
               <CardDescription>Everything is optional. You can change it later.</CardDescription>
             </CardHeader>
