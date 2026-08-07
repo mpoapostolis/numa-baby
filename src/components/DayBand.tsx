@@ -16,6 +16,9 @@ import { Activity } from "../domain/types";
 
 const DAY_MS = 86_400_000;
 const HOUR_MS = 3_600_000;
+// Marks logged within the last 45s settle in with a one-shot animation; once
+// the window lapses the class drops with no visual change (end state = rest).
+const SETTLE_MS = 45_000;
 const CLUSTER_MS = 20 * 60_000; // feeds closer than this get nudged apart
 const NUDGE_PX = [0, -3, 3];
 
@@ -48,6 +51,7 @@ export function DayBand({
     return ms >= startMs && ms < endMs;
   };
   const includePoint = (value: string) => (rolling ? inWindow(value) : isSameDay(value, day));
+  const isFresh = (value: string) => now - new Date(value).getTime() < SETTLE_MS;
 
   const feeds: Activity[] = [];
   const diapers: Activity[] = [];
@@ -148,7 +152,9 @@ export function DayBand({
             {sortedFeeds.map((activity) => (
               <span
                 key={activity.id}
-                className={activity.type === "nursing" ? "band-dot is-nursing" : "band-dot is-bottle"}
+                className={`${activity.type === "nursing" ? "band-dot is-nursing" : "band-dot is-bottle"}${
+                  isFresh(activity.startedAt) ? " is-new" : ""
+                }`}
                 title={`${activity.type === "nursing" ? "Nursing" : "Bottle"} · ${formatTime(activity.startedAt)}`}
                 style={
                   {
@@ -168,7 +174,7 @@ export function DayBand({
                 {diapers.map((activity) => (
                   <span
                     key={activity.id}
-                    className="band-square"
+                    className={`band-square${isFresh(activity.startedAt) ? " is-new" : ""}`}
                     title={`Diaper · ${formatTime(activity.startedAt)}`}
                     style={{ left: `${pct(new Date(activity.startedAt).getTime())}%` }}
                   />
@@ -187,7 +193,11 @@ export function DayBand({
                   return (
                     <span
                       key={activity.id}
-                      className={activity.endedAt ? "band-span" : "band-span is-open"}
+                      className={
+                        activity.endedAt
+                          ? `band-span${isFresh(activity.endedAt) ? " is-just-closed" : ""}`
+                          : "band-span is-open"
+                      }
                       title={`Sleep · ${formatTime(activity.startedAt)}–${
                         activity.endedAt ? formatTime(activity.endedAt) : "now"
                       }`}
@@ -204,7 +214,7 @@ export function DayBand({
                   {marks.map((activity) => (
                     <span
                       key={activity.id}
-                      className="band-mark"
+                      className={`band-mark${isFresh(activity.startedAt) ? " is-new" : ""}`}
                       title={`${activity.type === "growth" ? "Growth" : "Health"} · ${formatTime(activity.startedAt)}`}
                       style={{ left: `${pct(new Date(activity.startedAt).getTime())}%` }}
                     />

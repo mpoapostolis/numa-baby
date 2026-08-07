@@ -10,7 +10,7 @@ import {
   Upload,
 } from "lucide-react";
 import { ChangeEvent, useId, useRef, useState } from "react";
-import { BabyFace, TinyStars } from "../components/illustrations";
+import { BabyFace, NurseryScene, TinyStars } from "../components/illustrations";
 import { Button } from "../components/ui/button";
 import {
   Card,
@@ -94,6 +94,7 @@ export default function OnboardingScreen({
       ) : (
         <div className="onboarding-layout">
           <section className="onboarding-intro" aria-labelledby="onboarding-title">
+            <NurseryScene className="onboarding-scene" />
             <p className="eyebrow">Private by default</p>
             <h1 id="onboarding-title">The whole day,<br />without the mental load.</h1>
             <p>Log feeds, diapers, sleep and growth in seconds. No account, no cloud, no fake data.</p>

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   ChevronRight,
   Clock,
@@ -221,6 +222,11 @@ export default function TodayScreen({
     sleepWindowPassed,
   } = stats;
 
+  // The companion notices the moment a completed care entry lands: the entry
+  // id keys a one-shot heart on the drawn baby. Timer starts don't count —
+  // the reaction is for finished care, not a running stopwatch.
+  const [reactionKey, setReactionKey] = useState<string | null>(null);
+
   const forecastFeedSheet: "bottle" | "nursing" = profile.feedingMode === "breast"
     ? "nursing"
     : profile.feedingMode === "bottle"
@@ -245,7 +251,7 @@ export default function TodayScreen({
       amount: lastBottle.amount,
       milkType: lastBottle.milkType ?? "formula",
     };
-    onAdd(entry, `${lastBottle.amount} ml bottle saved`);
+    if (onAdd(entry, `${lastBottle.amount} ml bottle saved`)) setReactionKey(entry.id);
   }
 
   function quickStartNursing(side: "left" | "right") {
@@ -271,7 +277,11 @@ export default function TodayScreen({
       diaperKind: kind,
       startedAt: new Date().toISOString(),
     };
-    onAdd(entry, `${kind === "both" ? "Wet + dirty" : kind === "dirty" ? "Dirty" : "Wet"} diaper saved`);
+    if (
+      onAdd(entry, `${kind === "both" ? "Wet + dirty" : kind === "dirty" ? "Dirty" : "Wet"} diaper saved`)
+    ) {
+      setReactionKey(entry.id);
+    }
   }
 
   function toggleSleep() {
@@ -344,7 +354,7 @@ export default function TodayScreen({
                 )}
               </div>
               <span className="hearth-ambient" aria-hidden="true">
-                <BabyCompanion mood={companionMood} size={96} />
+                <BabyCompanion mood={companionMood} size={96} reactionKey={reactionKey} />
               </span>
             </div>
           )}

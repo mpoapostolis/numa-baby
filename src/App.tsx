@@ -1,5 +1,4 @@
 import {
-  Baby,
   BarChart3,
   ChevronRight,
   Clock,
@@ -20,7 +19,7 @@ import {
 } from "./components/ui/sidebar";
 import { Toaster } from "./components/ui/sonner";
 import { AppSidebar } from "./components/AppSidebar";
-import { BabyFace } from "./components/illustrations";
+import { BabyFace, SleepingBaby } from "./components/illustrations";
 import { LogSheet } from "./components/LogSheet";
 import OnboardingScreen from "./screens/OnboardingScreen";
 import SettingsScreen from "./screens/SettingsScreen";
@@ -165,7 +164,7 @@ export default function HomePage() {
   if (bootState === "loading") {
     return (
       <main className="loading-screen" aria-label="Loading Baby Tracker">
-        <div className="brand-mark"><Baby size={24} /></div>
+        <SleepingBaby size={64} aria-hidden="true" />
         <span>Baby Tracker</span>
       </main>
     );

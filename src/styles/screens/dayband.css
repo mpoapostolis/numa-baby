@@ -110,6 +110,40 @@
   rotate: 45deg;
 }
 
+/* The newest mark (< 45s old) settles into place: a one-shot scale from
+   slightly large to rest. Only the individual `scale` property animates —
+   position lives in `translate`/`rotate`, so nothing shifts. When the window
+   lapses and the class drops, the computed style is already scale 1. */
+.band-dot.is-new,
+.band-square.is-new,
+.band-mark.is-new {
+  animation: band-settle 350ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes band-settle {
+  from { scale: 1.35; }
+  to { scale: 1; }
+}
+
+/* A sleep just ended (< 45s): the signal hatch has swapped away with
+   `.is-open`, and the resting lavender fill breathes up in its place. One
+   playthrough between existing token endpoints, permanently still after —
+   no gradient is ever animated. */
+.band-span.is-just-closed {
+  animation: band-close 450ms ease-out both;
+}
+
+@keyframes band-close {
+  from {
+    border-color: var(--signal);
+    background-color: transparent;
+  }
+  to {
+    border-color: var(--glyph-sleep);
+    background-color: color-mix(in oklch, var(--glyph-sleep) 25%, transparent);
+  }
+}
+
 .band-now {
   position: absolute;
   top: 0;

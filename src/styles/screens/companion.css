@@ -52,6 +52,19 @@
   90% { opacity: 0; transform: translateY(-6px); }
 }
 
+/* Noticing a fresh log: one heart lifts off the cheek and fades. One
+   playthrough per entry (the React key remount restarts it); fill-mode both
+   ends at opacity 0, so nothing lingers and nothing needs cleanup. */
+.companion-react {
+  animation: companion-notice 450ms ease-out both;
+}
+
+@keyframes companion-notice {
+  0% { opacity: 0; translate: 0 3px; }
+  35% { opacity: 1; translate: 0 0; }
+  100% { opacity: 0; translate: 0 -4px; }
+}
+
 /* Hungry: the dreamed-of bottle bobs gently. */
 .baby-companion .companion-bubble {
   animation: companion-bob 2.8s ease-in-out infinite;

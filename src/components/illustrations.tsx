@@ -101,6 +101,104 @@ export function TinyStars({ size = 20, ...props }: IllustrationProps) {
   );
 }
 
+// The splash mark: the BabyFace fast asleep under one amber star. Static on
+// purpose — a still sleeping face on a two-second splash is calmer than any
+// animation. Rendered at 64px, so the stroke is 3/96 — about 2px on screen,
+// the same pen weight as the rest of the illustration language.
+export function SleepingBaby({ size = 64, style, ...props }: IllustrationProps) {
+  return (
+    <svg
+      {...frame(size, {
+        strokeWidth: 3,
+        style: {
+          color: "color-mix(in oklch, var(--glyph-nursing) 45%, var(--foreground))",
+          ...style,
+        },
+        ...props,
+      })}
+    >
+      <circle cx="48" cy="54" r="26" />
+      <path d="M48 28c0-6 4-10 9-9-4 1-5 4-4 7" />
+      <path d="M35 52.5q3.5 2.5 7 0" />
+      <path d="M54 52.5q3.5 2.5 7 0" />
+      <path d="M44 64q4 3.5 8 0" />
+      <circle cx="32" cy="60" r="4" fill="var(--glyph-nursing)" opacity="0.55" stroke="none" />
+      <circle cx="64" cy="60" r="4" fill="var(--glyph-nursing)" opacity="0.55" stroke="none" />
+      <path
+        d="M76 16l2.2 5.8 5.8 2.2-5.8 2.2-2.2 5.8-2.2-5.8-5.8-2.2 5.8-2.2z"
+        fill="var(--signal)"
+        stroke="none"
+      />
+    </svg>
+  );
+}
+
+// Nursery at night — the onboarding hero. The companion's own sleeping face
+// (same circle, curl, blush and asleep-arc eyes as BabyCompanion, at 80%)
+// rests on one blanket arc that doubles as the ground line; the SleepyMoon
+// crescent keeps watch at half size, a ghosted LittleBottle waits on the
+// blanket, and two z's drift on the lullaby loop defined in onboarding.css.
+export function NurseryScene({ style, ...props }: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 200 140"
+      width={180}
+      height={126}
+      role="img"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{
+        color: "color-mix(in oklch, var(--glyph-nursing) 45%, var(--foreground))",
+        ...style,
+      }}
+      {...props}
+    >
+      {/* the blanket doubles as the ground line */}
+      <path d="M10 118Q100 106 190 118" />
+      {/* baby head resting on the blanket — companion geometry at 80% */}
+      <circle cx="62" cy="89" r="24" />
+      <path d="M62 65c0-5 3-7.5 7-6.5-3 1.5-4 4-3 6.5" />
+      <circle cx="38.5" cy="89" r="2.8" />
+      <path d="M50 87.5q3.5 2.5 7 0" />
+      <path d="M67 87.5q3.5 2.5 7 0" />
+      <path d="M58 98h8" />
+      <circle cx="50.5" cy="95.5" r="2.4" fill="var(--glyph-nursing)" opacity="0.55" stroke="none" />
+      <circle cx="73.5" cy="95.5" r="2.4" fill="var(--glyph-nursing)" opacity="0.55" stroke="none" />
+      {/* two z's — looped by onboarding.css, never by companion.css */}
+      <g stroke="var(--glyph-sleep)">
+        <path className="z z-1" d="M84 52h7l-7 8h7" />
+        <path className="z z-2" d="M96 38h5l-5 6h5" />
+      </g>
+      {/* SleepyMoon crescent at half size, upper-right (4/2 stroke compensates the scale) */}
+      <g transform="translate(132 9) scale(0.5)" strokeWidth={4}>
+        <path d="M56 22A30 30 0 1 0 56 74A28 28 0 0 1 56 22Z" />
+      </g>
+      {/* exactly two stars: one signal, one sleep */}
+      <path
+        d="M126 12l2.2 5.8 5.8 2.2-5.8 2.2-2.2 5.8-2.2-5.8-5.8-2.2 5.8-2.2z"
+        fill="var(--signal)"
+        stroke="none"
+      />
+      <path
+        d="M184 50l1.6 4.2 4.2 1.6-4.2 1.6-1.6 4.2-1.6-4.2-4.2-1.6 4.2-1.6z"
+        fill="var(--glyph-sleep)"
+        stroke="none"
+      />
+      {/* the bottle waits on the blanket line, ghosted */}
+      <g transform="translate(102 71) scale(0.55)" strokeWidth={3.6} opacity="0.4">
+        <path d="M34 22c0-6 4-10 8-10s8 4 8 10" />
+        <rect x="30" y="22" width="24" height="8" rx="3" />
+        <rect x="27" y="30" width="30" height="46" rx="9" />
+        <path d="M33 44h8M33 54h8M33 64h8" stroke="var(--signal)" />
+      </g>
+    </svg>
+  );
+}
+
 // A sprout on a baseline, with two data points on their way up.
 export function SproutChart({ size = 104, ...props }: IllustrationProps) {
   return (

@@ -14,6 +14,9 @@ type BabyCompanionProps = {
   mood: CompanionMood;
   size?: number;
   className?: string;
+  /** Id of the entry just saved; each new key replays a one-shot heart near
+      the cheek — the companion noticing the care that was logged. */
+  reactionKey?: string | null;
 };
 
 function Head() {
@@ -92,7 +95,12 @@ function Bottle({ x, y, scale = 1 }: { x: number; y: number; scale?: number }) {
   );
 }
 
-export function BabyCompanion({ mood, size = 112, className = "" }: BabyCompanionProps) {
+export function BabyCompanion({
+  mood,
+  size = 112,
+  className = "",
+  reactionKey = null,
+}: BabyCompanionProps) {
   return (
     <svg
       className={`baby-companion is-${mood} ${className}`.trim()}
@@ -156,6 +164,20 @@ export function BabyCompanion({ mood, size = 112, className = "" }: BabyCompanio
               <Bottle x={89} y={10} scale={0.85} />
             </g>
           </>
+        )}
+
+        {/* The moment a log lands: one heart rises off the cheek and fades.
+            The React key remount replays the animation per entry — no timers,
+            no effects. Never rendered while sleeping (never wake the baby). */}
+        {reactionKey !== null && mood !== "sleeping" && (
+          <g key={reactionKey} className="companion-react">
+            <path
+              d="M88 40c-2-3-6-2-6 1 0 2 3 4 6 6 3-2 6-4 6-6 0-3-4-4-6-1Z"
+              transform="translate(-4 24)"
+              fill="var(--glyph-nursing)"
+              stroke="none"
+            />
+          </g>
         )}
 
         {mood === "feeding" && (

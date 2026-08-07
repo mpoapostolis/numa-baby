@@ -575,13 +575,27 @@
   white-space: nowrap;
 }
 
+/* Selection settles: the check breathes in (200ms), deselect is a quiet
+   300ms fade in place. Plain animation/transition — stilled by base.css. */
 .choice-check {
   color: var(--signal);
   opacity: 0;
+  transition: opacity 300ms ease;
 }
 
 [data-slot="toggle-group-item"][data-state="on"] .choice-check {
   opacity: 1;
+  animation: check-in 200ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes check-in {
+  from {
+    scale: 0.6;
+  }
+
+  to {
+    scale: 1;
+  }
 }
 
 [data-slot="toggle-group-item"][data-state="on"] .choice-copy strong {
@@ -645,6 +659,7 @@
   color: var(--ink-2);
   font-size: 0.75rem;
   font-weight: 600;
+  transition: background-color 300ms ease, color 300ms ease;
 }
 
 .side-grid [data-slot="toggle-group-item"][data-state="on"] .side-letter {
@@ -825,6 +840,109 @@
   border-radius: var(--radius-md);
   font-size: 0.8125rem;
   font-weight: 500;
+}
+
+/* ONE press recipe — quick down (90ms), slow release (300ms). The 300ms base
+   also softens every existing hover flip on these selectors for free.
+   Plain transitions — stilled by the reduced-motion block in base.css. */
+[data-slot="button"],
+[data-slot="toggle-group-item"],
+.activity-open,
+.log-row-secondary,
+.bottom-nav-item {
+  transition:
+    transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    background-color 300ms ease,
+    border-color 300ms ease,
+    color 300ms ease;
+}
+
+[data-slot="button"]:active,
+[data-slot="toggle-group-item"]:active,
+.activity-open:active,
+.log-row-secondary:active,
+.bottom-nav-item:active {
+  transition-duration: 90ms;
+  transform: scale(0.985);
+}
+
+/* Press wash only where nothing else fills the control — selected toggles
+   keep their signal-quiet fill (the scale alone is the press there), and
+   button variants keep their own fills. */
+.activity-open:active,
+.log-row-secondary:active,
+[data-slot="toggle-group-item"][data-state="off"]:active {
+  background-color: color-mix(in oklch, var(--muted) 55%, transparent);
+}
+
+/* Sheet feel: unhurried rise, quicker goodbye. Keyframes animate `transform`
+   only — centering rides the separate `translate` property (tw v4 utilities /
+   the mobile override above), so nothing shifts sideways. Radix waits for the
+   closed animation before unmounting. Stilled by base.css reduced-motion. */
+.bottom-sheet[data-state="open"] {
+  animation: dialog-in 300ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.bottom-sheet[data-state="closed"] {
+  animation: dialog-out 200ms ease-in both;
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes dialog-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes sheet-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+@media (width < 768px) {
+  .bottom-sheet[data-state="open"] {
+    animation: sheet-in 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .bottom-sheet[data-state="closed"] {
+    animation: sheet-out 240ms ease-in both;
+  }
 }
 
 /* The erase action reads as what it is — quiet until you look at it. */

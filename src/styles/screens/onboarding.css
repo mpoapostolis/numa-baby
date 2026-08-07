@@ -79,6 +79,50 @@
   max-width: 560px;
 }
 
+/* Nursery at night — the screen's one ambient illustration. One-time
+   fade-up entrance; only the z's keep drifting. Both are plain CSS
+   animations, so the global reduced-motion block stills them. */
+.onboarding-scene {
+  display: block;
+  width: 180px;
+  height: auto;
+  margin-bottom: 12px;
+  animation: onboarding-scene-in 450ms ease-out both;
+}
+
+@keyframes onboarding-scene-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+/* The z's carry their own copy of the companion's lullaby loop — this
+   screen must not depend on companion.css being loaded. */
+.onboarding-scene .z {
+  animation: onboarding-zzz 4s ease-in-out infinite;
+}
+
+.onboarding-scene .z-2 {
+  animation-delay: 2s;
+}
+
+@keyframes onboarding-zzz {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
 /* The one marketing moment: the display role. */
 .onboarding-intro h1 {
   margin: 8px 0 16px;
@@ -268,6 +312,10 @@
 
   .onboarding-theme > span {
     display: none;
+  }
+
+  .onboarding-scene {
+    width: 140px;
   }
 
   .onboarding-layout {
