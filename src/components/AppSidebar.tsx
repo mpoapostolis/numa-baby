@@ -71,6 +71,7 @@ export function AppSidebar({
                     size="lg"
                     tooltip={item.label}
                     aria-label={item.label}
+                    aria-current={activeTab === item.value ? "page" : undefined}
                     isActive={activeTab === item.value}
                     onClick={() => navigate(item.value)}
                   >

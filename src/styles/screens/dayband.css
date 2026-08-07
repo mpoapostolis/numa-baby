@@ -1,0 +1,85 @@
+/* DayBand — 24-hour multi-lane strip shared by Today and Insights. */
+
+.day-band {
+  display: grid;
+  gap: 4px;
+}
+
+.day-band-lanes {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.band-lane {
+  position: relative;
+  height: 8px;
+}
+
+.band-dot {
+  position: absolute;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--ink-2);
+  translate: -50% -50%;
+}
+
+.band-dot.is-hollow {
+  border: 1px solid var(--ink-2);
+  background: var(--background);
+}
+
+.band-tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--ink-3);
+  translate: -50%;
+}
+
+.band-span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 4px;
+  background: var(--border-strong);
+}
+
+/* In-progress sleep: 45° hatch — the only "happening now" mark in the band. */
+.band-span.is-open {
+  background: repeating-linear-gradient(45deg, var(--signal) 0 3px, transparent 3px 7px);
+}
+
+.band-mark {
+  position: absolute;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  background: var(--ink-3);
+  translate: -50% -50%;
+  rotate: 45deg;
+}
+
+.band-now {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--signal);
+  translate: -50%;
+}
+
+.day-band-scale {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  color: var(--ink-3);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}

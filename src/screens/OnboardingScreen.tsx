@@ -1,5 +1,6 @@
 import {
   Baby,
+  Check,
   ChevronRight,
   Clock,
   Download,
@@ -76,7 +77,7 @@ export default function OnboardingScreen({
         <Card className="recovery-card">
           <CardHeader>
             <span className="onboarding-card-icon"><ShieldCheck /></span>
-            <CardTitle>Your local log needs attention</CardTitle>
+            <CardTitle asChild><h1>Your local log needs attention</h1></CardTitle>
             <CardDescription>
               The saved copy could not be read, so Baby Tracker left it untouched. Download it before starting over, or restore a valid backup.
             </CardDescription>
@@ -106,7 +107,7 @@ export default function OnboardingScreen({
           <Card className="onboarding-card">
             <CardHeader>
               <span className="onboarding-card-icon"><Baby /></span>
-              <CardTitle>Set up your baby</CardTitle>
+              <CardTitle asChild><h2>Set up your baby</h2></CardTitle>
               <CardDescription>Everything is optional. You can change it later.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -155,6 +156,7 @@ export default function OnboardingScreen({
                       {(["breast", "bottle", "mixed"] as FeedingMode[]).map((feedingMode) => (
                         <ToggleGroupItem key={feedingMode} value={feedingMode}>
                           {feedingMode[0].toUpperCase() + feedingMode.slice(1)}
+                          <Check className="choice-check" />
                         </ToggleGroupItem>
                       ))}
                     </ToggleGroup>

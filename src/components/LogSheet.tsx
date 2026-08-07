@@ -365,14 +365,14 @@ export function LogSheet({
               <Button type="button" variant="outline" aria-label="Increase amount" onClick={() => setDraft((current) => ({ ...current, bottleAmount: Math.min(400, current.bottleAmount + 10) }))}><Plus /></Button>
             </ButtonGroup>
           </Field>
-          <ToggleGroup type="single" value={String(draft.bottleAmount)} className="preset-row" onValueChange={(value) => value && patch({ bottleAmount: Number(value) })}>
+          <ToggleGroup type="single" value={String(draft.bottleAmount)} className="preset-row" aria-label="Preset amounts" onValueChange={(value) => value && patch({ bottleAmount: Number(value) })}>
             {bottlePresets.map((amount, index) => <ToggleGroupItem autoFocus={index === 0} data-initial-focus={index === 0 ? "" : undefined} value={String(amount)} aria-label={`${amount} millilitres`} key={amount}>{amount}</ToggleGroupItem>)}
           </ToggleGroup>
           <Field className="choice-field">
             <FieldLabel>Milk</FieldLabel>
-            <ToggleGroup type="single" value={draft.milkType} className="segmented" onValueChange={(value) => value && patch({ milkType: value as "formula" | "expressed" })}>
-              <ToggleGroupItem value="formula">Formula</ToggleGroupItem>
-              <ToggleGroupItem value="expressed">Breast milk</ToggleGroupItem>
+            <ToggleGroup type="single" value={draft.milkType} className="segmented" aria-label="Milk type" onValueChange={(value) => value && patch({ milkType: value as "formula" | "expressed" })}>
+              <ToggleGroupItem value="formula">Formula<Check className="choice-check" /></ToggleGroupItem>
+              <ToggleGroupItem value="expressed">Breast milk<Check className="choice-check" /></ToggleGroupItem>
             </ToggleGroup>
           </Field>
           <TimeField value={draft.logTime} onChange={(value) => patch({ logTime: value })} />
@@ -436,10 +436,10 @@ export function LogSheet({
           <LogDialogHeader icon={<Droplet />} eyebrow="Quick log" title="What was it?" description="Choose the closest match and save." />
           <Field className="choice-field">
             <FieldLabel>Diaper type</FieldLabel>
-            <ToggleGroup type="single" value={draft.diaperKind} className="diaper-grid" onValueChange={(value) => value && patch({ diaperKind: value as DiaperKind })}>
-              <ToggleGroupItem autoFocus data-initial-focus value="wet"><Droplet size={22} /><strong>Wet</strong></ToggleGroupItem>
-              <ToggleGroupItem value="dirty"><span className="dot-icon">●</span><strong>Dirty</strong></ToggleGroupItem>
-              <ToggleGroupItem value="both"><span className="both-icon"><Droplet size={18} />●</span><strong>Both</strong></ToggleGroupItem>
+            <ToggleGroup type="single" value={draft.diaperKind} className="diaper-grid" aria-label="Diaper type" onValueChange={(value) => value && patch({ diaperKind: value as DiaperKind })}>
+              <ToggleGroupItem autoFocus data-initial-focus value="wet"><Droplet size={22} /><strong>Wet</strong><Check className="choice-check" /></ToggleGroupItem>
+              <ToggleGroupItem value="dirty"><span className="dot-icon">●</span><strong>Dirty</strong><Check className="choice-check" /></ToggleGroupItem>
+              <ToggleGroupItem value="both"><span className="both-icon"><Droplet size={18} />●</span><strong>Both</strong><Check className="choice-check" /></ToggleGroupItem>
             </ToggleGroup>
           </Field>
           <TimeField value={draft.logTime} onChange={(value) => patch({ logTime: value })} />
@@ -491,31 +491,31 @@ export function LogSheet({
           {editing.type === "bottle" && (
             <>
               <UnitField {...numericFieldProps("amount")} value={draft.bottleAmount} inputRef={invalidFieldRef} autoFocus invalid={Boolean(formError)} onChange={(value) => { patch({ bottleAmount: Number(value) }); setFormError(null); }} className="measurement-primary" />
-              <ToggleGroup type="single" value={String(draft.bottleAmount)} className="preset-row" onValueChange={(value) => { if (value) patch({ bottleAmount: Number(value) }); setFormError(null); }}>
+              <ToggleGroup type="single" value={String(draft.bottleAmount)} className="preset-row" aria-label="Preset amounts" onValueChange={(value) => { if (value) patch({ bottleAmount: Number(value) }); setFormError(null); }}>
                 {bottlePresets.map((amount) => <ToggleGroupItem value={String(amount)} aria-label={`${amount} millilitres`} key={amount}>{amount}</ToggleGroupItem>)}
               </ToggleGroup>
               <Field className="choice-field">
                 <FieldLabel>Milk</FieldLabel>
-                <ToggleGroup type="single" value={draft.milkType} className="segmented" onValueChange={(value) => value && patch({ milkType: value as "formula" | "expressed" })}>
-                  <ToggleGroupItem value="formula">Formula</ToggleGroupItem>
-                  <ToggleGroupItem value="expressed">Breast milk</ToggleGroupItem>
+                <ToggleGroup type="single" value={draft.milkType} className="segmented" aria-label="Milk type" onValueChange={(value) => value && patch({ milkType: value as "formula" | "expressed" })}>
+                  <ToggleGroupItem value="formula">Formula<Check className="choice-check" /></ToggleGroupItem>
+                  <ToggleGroupItem value="expressed">Breast milk<Check className="choice-check" /></ToggleGroupItem>
                 </ToggleGroup>
               </Field>
             </>
           )}
 
           {editing.type === "nursing" && (
-            <ToggleGroup type="single" value={draft.nursingSide} className="side-grid" onValueChange={(value) => value && patch({ nursingSide: value as "left" | "right" })}>
+            <ToggleGroup type="single" value={draft.nursingSide} className="side-grid" aria-label="Nursing side" onValueChange={(value) => value && patch({ nursingSide: value as "left" | "right" })}>
               <ToggleGroupItem autoFocus data-initial-focus value="left"><span className="side-letter">L</span><span className="choice-copy"><strong>Left side</strong><small>Left breast</small></span><Check className="choice-check" /></ToggleGroupItem>
               <ToggleGroupItem value="right"><span className="side-letter">R</span><span className="choice-copy"><strong>Right side</strong><small>Right breast</small></span><Check className="choice-check" /></ToggleGroupItem>
             </ToggleGroup>
           )}
 
           {editing.type === "diaper" && (
-            <ToggleGroup type="single" value={draft.diaperKind} className="diaper-grid" onValueChange={(value) => value && patch({ diaperKind: value as DiaperKind })}>
-              <ToggleGroupItem autoFocus data-initial-focus value="wet"><Droplet size={22} /><strong>Wet</strong></ToggleGroupItem>
-              <ToggleGroupItem value="dirty"><span className="dot-icon">●</span><strong>Dirty</strong></ToggleGroupItem>
-              <ToggleGroupItem value="both"><span className="both-icon"><Droplet size={18} />●</span><strong>Both</strong></ToggleGroupItem>
+            <ToggleGroup type="single" value={draft.diaperKind} className="diaper-grid" aria-label="Diaper type" onValueChange={(value) => value && patch({ diaperKind: value as DiaperKind })}>
+              <ToggleGroupItem autoFocus data-initial-focus value="wet"><Droplet size={22} /><strong>Wet</strong><Check className="choice-check" /></ToggleGroupItem>
+              <ToggleGroupItem value="dirty"><span className="dot-icon">●</span><strong>Dirty</strong><Check className="choice-check" /></ToggleGroupItem>
+              <ToggleGroupItem value="both"><span className="both-icon"><Droplet size={18} />●</span><strong>Both</strong><Check className="choice-check" /></ToggleGroupItem>
             </ToggleGroup>
           )}
 
@@ -600,7 +600,7 @@ function ProfileForm({ profile, onChange, onDone }: { profile: Profile; onChange
         <Field>
           <FieldLabel>How are you feeding?</FieldLabel>
           <ToggleGroup type="single" value={draft.feedingMode} className="segmented three-way" aria-label="Feeding method" onValueChange={(value) => value && setDraft({ ...draft, feedingMode: value as FeedingMode })}>
-            {(["breast", "bottle", "mixed"] as FeedingMode[]).map((mode) => <ToggleGroupItem key={mode} value={mode}>{mode[0].toUpperCase() + mode.slice(1)}</ToggleGroupItem>)}
+            {(["breast", "bottle", "mixed"] as FeedingMode[]).map((mode) => <ToggleGroupItem key={mode} value={mode}>{mode[0].toUpperCase() + mode.slice(1)}<Check className="choice-check" /></ToggleGroupItem>)}
           </ToggleGroup>
           <FieldDescription>This changes which quick actions are shown.</FieldDescription>
         </Field>

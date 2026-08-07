@@ -1,0 +1,419 @@
+/* Insights screen — figure-caption charts on the shared card chrome. */
+
+.insights-screen {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.insights-screen > .section-heading,
+.insights-screen > .insight-summary,
+.insights-screen > .growth-card,
+.insights-screen > .gentle-note {
+  grid-column: 1 / -1;
+}
+
+.insights-screen > .section-heading {
+  margin-bottom: 0;
+}
+
+/* Summary tiles: numeral + label, zeros as em-dashes. */
+.insight-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+}
+
+.insight-summary > div {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  padding: 16px;
+}
+
+.insight-summary > div + div {
+  border-left: 1px solid var(--border);
+}
+
+.insight-summary .is-empty {
+  color: var(--ink-3);
+}
+
+/* Figure-caption pattern: numbered kicker, one-sentence takeaway, chart, source. */
+.insight-figure {
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.insight-figure figcaption {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.insight-figure figcaption > div {
+  display: grid;
+  gap: 4px;
+}
+
+.insight-figure figcaption p,
+.insight-figure figcaption h2 {
+  margin: 0;
+}
+
+.insight-figure figcaption button {
+  min-height: 44px;
+  flex: 0 0 auto;
+}
+
+.figure-source {
+  margin: auto 0 0;
+  color: var(--ink-3);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+/* Bottle volume bars — --signal marks today, the dashed line is the median. */
+.bar-chart {
+  display: grid;
+  gap: 8px;
+}
+
+.bar-plot {
+  position: relative;
+  height: 220px;
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  align-items: end;
+  gap: 12px;
+}
+
+.bar-median {
+  position: absolute;
+  right: 0;
+  left: 0;
+  border-top: 1px dashed var(--border-strong);
+}
+
+.bar-column {
+  position: relative;
+  height: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.bar-value {
+  position: absolute;
+  left: 50%;
+  color: var(--ink-3);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  white-space: nowrap;
+  translate: -50%;
+}
+
+.bar-fill {
+  width: min(28px, 70%);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: var(--ink-3);
+}
+
+.bar-fill.is-today {
+  background: var(--signal);
+}
+
+.bar-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 12px;
+  color: var(--ink-3);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+/* Feeding rhythm — seven mini day bands on a true 24h scale. */
+.rhythm-plot {
+  display: grid;
+  gap: 8px;
+}
+
+.rhythm-axis {
+  position: relative;
+  height: 17px;
+  /* Left offset = the 32px rhythm-row label column + its 8px gap. */
+  margin-left: calc(32px + 8px);
+  color: var(--ink-3);
+  font-size: 0.75rem;
+}
+
+/* Labels pinned to 0/25/50/75/100% so they line up with the gridlines. */
+.rhythm-axis span {
+  position: absolute;
+  top: 0;
+  translate: -50%;
+}
+
+.rhythm-axis span:nth-child(1) {
+  left: 0;
+  translate: 0;
+}
+
+.rhythm-axis span:nth-child(2) {
+  left: 25%;
+}
+
+.rhythm-axis span:nth-child(3) {
+  left: 50%;
+}
+
+.rhythm-axis span:nth-child(4) {
+  left: 75%;
+}
+
+.rhythm-axis span:nth-child(5) {
+  left: 100%;
+  translate: -100%;
+}
+
+.rhythm-chart {
+  display: grid;
+  gap: 8px;
+}
+
+.rhythm-row {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.rhythm-row > small {
+  color: var(--ink-3);
+  font-size: 0.75rem;
+}
+
+.rhythm-line {
+  position: relative;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  background-color: var(--muted);
+  background-image: linear-gradient(to right, transparent calc(25% - 1px), var(--border-strong) 25%, transparent calc(25% + 1px), transparent calc(50% - 1px), var(--border-strong) 50%, transparent calc(50% + 1px), transparent calc(75% - 1px), var(--border-strong) 75%, transparent calc(75% + 1px));
+}
+
+/* Bottle = filled, nursing = hollow — one series color, never a second hue. */
+.feed-dot {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--ink-3);
+  box-shadow: 0 0 0 1px var(--card);
+  translate: -50% -50%;
+}
+
+.feed-dot.nursing-dot {
+  border: 2px solid var(--ink-3);
+  background: var(--card);
+}
+
+.rhythm-row.is-today .feed-dot {
+  background: var(--signal);
+}
+
+.rhythm-row.is-today .nursing-dot {
+  border-color: var(--signal);
+  background: var(--card);
+}
+
+.chart-legend {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  color: var(--ink-3);
+  font-size: 0.75rem;
+}
+
+.chart-legend span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.chart-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--ink-3);
+}
+
+.chart-legend .nursing-key {
+  border: 2px solid var(--ink-3);
+  background: var(--card);
+}
+
+/* Growth. */
+.growth-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+}
+
+.growth-overview > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+}
+
+.growth-overview > div + div {
+  border-left: 1px solid var(--border);
+}
+
+.growth-overview span {
+  color: var(--ink-3);
+  font-size: 0.75rem;
+}
+
+.growth-overview strong {
+  overflow: hidden;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.growth-line-chart {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.growth-line-chart svg {
+  width: 100%;
+  min-width: 560px;
+  height: auto;
+}
+
+.growth-gridline {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+
+.growth-line {
+  fill: none;
+  stroke: var(--signal);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+
+.growth-point {
+  fill: var(--signal);
+  stroke: var(--card);
+  stroke-width: 4;
+}
+
+.growth-value {
+  fill: var(--foreground);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.growth-date {
+  fill: var(--ink-3);
+  font-size: 0.75rem;
+}
+
+.growth-empty {
+  min-height: 150px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 24px;
+  color: var(--ink-2);
+  text-align: center;
+}
+
+.growth-empty p {
+  max-width: 360px;
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
+.growth-note {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.gentle-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  color: var(--ink-2);
+}
+
+.gentle-note p {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+@media (min-width: 768px) {
+  .insights-screen {
+    gap: 32px;
+  }
+
+  .insight-summary > div {
+    padding: 24px;
+  }
+}
+
+@media (width < 768px) {
+  .insights-screen {
+    grid-template-columns: 1fr;
+  }
+
+  .insight-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .insight-summary > div:nth-child(3) {
+    border-left: 0;
+  }
+
+  .insight-summary > div:nth-child(n + 3) {
+    border-top: 1px solid var(--border);
+  }
+
+  .bar-plot {
+    gap: 8px;
+  }
+
+  .bar-days {
+    gap: 8px;
+  }
+
+  .growth-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .growth-overview > div + div {
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+}

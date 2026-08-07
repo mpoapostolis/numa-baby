@@ -18,7 +18,6 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "./components/ui/sidebar";
-import { Tabs, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { Toaster } from "./components/ui/sonner";
 import { AppSidebar } from "./components/AppSidebar";
 import { LogSheet } from "./components/LogSheet";
@@ -37,6 +36,13 @@ const InsightsScreen = lazy(() => import("./screens/InsightsScreen"));
 // A future-dated feed from a restored backup must never arm a timer that wraps
 // the 32-bit setTimeout ceiling and fires instantly.
 const MAX_REMINDER_DELAY_MS = 24 * 60 * 60_000;
+
+const bottomNavItems: Array<{ value: Tab; label: string; icon: React.ReactNode }> = [
+  { value: "today", label: "Today", icon: <Home size={20} /> },
+  { value: "timeline", label: "Timeline", icon: <Clock size={20} /> },
+  { value: "insights", label: "Insights", icon: <BarChart3 size={20} /> },
+  { value: "more", label: "Settings", icon: <Settings size={20} /> },
+];
 
 export default function HomePage() {
   const [debugMode] = useState(() => new URLSearchParams(window.location.search).has("debug"));
@@ -87,7 +93,7 @@ export default function HomePage() {
   useEffect(() => {
     document.documentElement.classList.toggle("dark", nightMode);
     document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
-      ?.setAttribute("content", nightMode ? "#171c1a" : "#f7f7f5");
+      ?.setAttribute("content", nightMode ? "#1d1a15" : "#f7f6f2");
   }, [nightMode]);
 
   const stats = useActivityStats(activities, profile, minuteClock);
@@ -188,7 +194,7 @@ export default function HomePage() {
               {activeTab === "more" ? "Settings" : activeTab[0].toUpperCase() + activeTab.slice(1)}
             </span>
           </div>
-          <Button variant="ghost" className="baby-identity" onClick={() => openSheet("profile")}>
+          <Button variant="ghost" className="baby-identity" aria-label="Baby profile" onClick={() => openSheet("profile")}>
             <span className="baby-avatar"><Baby size={19} /></span>
             <span>
               <strong>{profile.name}</strong>
@@ -283,16 +289,20 @@ export default function HomePage() {
           )}
         </main>
 
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as Tab)} asChild>
-          <nav className="bottom-nav" aria-label="Primary navigation">
-            <TabsList className="bottom-nav-list" aria-label="Primary navigation views">
-              <TabsTrigger value="today"><Home size={20} /><span>Today</span></TabsTrigger>
-              <TabsTrigger value="timeline"><Clock size={20} /><span>Timeline</span></TabsTrigger>
-              <TabsTrigger value="insights"><BarChart3 size={20} /><span>Insights</span></TabsTrigger>
-              <TabsTrigger value="more"><Settings size={20} /><span>Settings</span></TabsTrigger>
-            </TabsList>
-          </nav>
-        </Tabs>
+        <nav className="bottom-nav" aria-label="Primary navigation">
+          {bottomNavItems.map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              className="bottom-nav-item"
+              aria-current={activeTab === item.value ? "page" : undefined}
+              onClick={() => setActiveTab(item.value)}
+            >
+              {item.icon}
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </nav>
 
         <Toaster
           theme={nightMode ? "dark" : "light"}

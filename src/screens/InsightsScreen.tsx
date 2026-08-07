@@ -1,14 +1,22 @@
-import { Clock, Milk, ShieldCheck } from "lucide-react";
-import { Card } from "../components/ui/card";
+import { ShieldCheck } from "lucide-react";
 import { GrowthChart } from "../components/GrowthChart";
 import { activityTitle } from "../domain/activityDisplay";
-import { formatShortDay, formatTime, humanDuration } from "../domain/time";
+import { formatShortDay, formatTime, humanDuration, median } from "../domain/time";
 import { ActivityStats } from "../hooks/useActivityStats";
 
 type InsightsScreenProps = {
   stats: ActivityStats;
   onAddGrowth: () => void;
 };
+
+// Unit-demoted duration: "2h 15m" with the letters receding (spec rule 4).
+function DurationFigure({ minutes }: { minutes: number }) {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours === 0) return <>{mins}<span className="unit">m</span></>;
+  if (mins === 0) return <>{hours}<span className="unit">h</span></>;
+  return <>{hours}<span className="unit">h</span> {mins}<span className="unit">m</span></>;
+}
 
 export default function InsightsScreen({ stats, onAddGrowth }: InsightsScreenProps) {
   const {
@@ -22,6 +30,15 @@ export default function InsightsScreen({ stats, onAddGrowth }: InsightsScreenPro
     weightChange,
   } = stats;
 
+  const showBottles = weekly.some((day) => day.ml > 0);
+  const weekFeeds = weekly.reduce((sum, day) => sum + day.feeds.length, 0);
+  const weekBottles = weekly.reduce(
+    (sum, day) => sum + day.feeds.filter((feed) => feed.type === "bottle").length,
+    0,
+  );
+  const medianMl = median(weekly.filter((day) => day.ml > 0).map((day) => day.ml));
+  const todayIndex = weekly.length - 1;
+
   return (
     <section className="screen insights-screen" aria-labelledby="insights-heading">
       <div className="section-heading">
@@ -31,69 +48,138 @@ export default function InsightsScreen({ stats, onAddGrowth }: InsightsScreenPro
         </div>
       </div>
 
-      <Card size="sm" className="insight-summary">
-        <div><span>Typical feed gap</span><strong>{typicalGap ? humanDuration(typicalGap) : "—"}</strong></div>
-        <div><span>Feeds / day</span><strong>{averageFeeds === null ? "—" : averageFeeds}</strong></div>
-        <div><span>Today’s bottle</span><strong>{bottleMlToday} ml</strong></div>
-        <div><span>Latest weight</span><strong>{latestGrowth?.weightGrams ? `${(latestGrowth.weightGrams / 1_000).toFixed(2)} kg` : "—"}</strong></div>
-      </Card>
+      <div className="insight-summary">
+        <div>
+          {typicalGap ? (
+            <strong className="t-numeral figure"><DurationFigure minutes={typicalGap} /></strong>
+          ) : (
+            <strong className="t-numeral is-empty">—</strong>
+          )}
+          <span className="t-label">Typical feed gap</span>
+        </div>
+        <div>
+          {averageFeeds ? (
+            <strong className="t-numeral">{averageFeeds.toFixed(1)}</strong>
+          ) : (
+            <strong className="t-numeral is-empty">—</strong>
+          )}
+          <span className="t-label">Feeds / day</span>
+        </div>
+        <div>
+          {bottleMlToday > 0 ? (
+            <strong className="t-numeral figure">{bottleMlToday} <span className="unit">ml</span></strong>
+          ) : (
+            <strong className="t-numeral is-empty">—</strong>
+          )}
+          <span className="t-label">Today’s bottle</span>
+        </div>
+        <div>
+          {latestGrowth?.weightGrams ? (
+            <strong className="t-numeral figure">
+              {(latestGrowth.weightGrams / 1_000).toFixed(2)} <span className="unit">kg</span>
+            </strong>
+          ) : (
+            <strong className="t-numeral is-empty">—</strong>
+          )}
+          <span className="t-label">Latest weight</span>
+        </div>
+      </div>
 
-      {weekly.some((day) => day.ml > 0) && (
-        <Card size="sm" className="chart-card">
-          <div className="chart-title">
-            <div><span>Bottle volume</span><strong>Daily total in ml</strong></div>
-            <Milk size={19} />
-          </div>
+      {showBottles && (
+        <figure className="chart-card insight-figure">
+          <figcaption>
+            <div>
+              <p className="t-label">Fig. 1 · Bottle volume</p>
+              <h2>Most bottle days land around {medianMl} ml.</h2>
+            </div>
+          </figcaption>
           <div className="bar-chart" aria-label="Bottle volume for the last seven days">
-            {weekly.map((day) => (
-              <div className="bar-column" key={day.date.toISOString()}>
-                <span className="bar-value">{day.ml || ""}</span>
-                <div className="bar-track">
-                  <div className="bar-fill" style={{ height: day.ml > 0 ? `${Math.max(4, (day.ml / maxMl) * 100)}%` : "0%" }} />
+            <div className="bar-plot">
+              <div className="bar-median" style={{ bottom: `${(medianMl / maxMl) * 100}%` }} />
+              {weekly.map((day, index) => (
+                <div className="bar-column" key={day.date.toISOString()}>
+                  {day.ml > 0 && (
+                    <span
+                      className="bar-value"
+                      style={{ bottom: `calc(${(day.ml / maxMl) * 100}% + 4px)` }}
+                    >
+                      {day.ml}
+                    </span>
+                  )}
+                  <div
+                    className={index === todayIndex ? "bar-fill is-today" : "bar-fill"}
+                    style={{ height: `${(day.ml / maxMl) * 100}%` }}
+                  />
                 </div>
+              ))}
+            </div>
+            <div className="bar-days">
+              {weekly.map((day) => (
+                <span key={day.date.toISOString()}>{formatShortDay(day.date)}</span>
+              ))}
+            </div>
+          </div>
+          <p className="figure-source">
+            From {weekBottles} logged {weekBottles === 1 ? "bottle" : "bottles"} · on this device
+          </p>
+        </figure>
+      )}
+
+      <figure className="chart-card rhythm-card insight-figure">
+        <figcaption>
+          <div>
+            <p className="t-label">Fig. {showBottles ? 2 : 1} · Feeding rhythm</p>
+            <h2>
+              {typicalGap
+                ? `Feeds usually arrive about ${humanDuration(typicalGap)} apart.`
+                : "Each day’s feeds on a 24-hour line."}
+            </h2>
+          </div>
+        </figcaption>
+        <div className="rhythm-plot">
+          <div className="rhythm-axis"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
+          <div className="rhythm-chart">
+            {weekly.map((day, index) => (
+              <div
+                className={index === todayIndex ? "rhythm-row is-today" : "rhythm-row"}
+                key={day.date.toISOString()}
+              >
                 <small>{formatShortDay(day.date)}</small>
+                <div className="rhythm-line">
+                  {day.feeds.map((feed) => {
+                    const date = new Date(feed.startedAt);
+                    const hour = date.getHours() + date.getMinutes() / 60;
+                    return (
+                      <span
+                        className={`feed-dot ${feed.type === "nursing" ? "nursing-dot" : ""}`}
+                        key={feed.id}
+                        style={{ left: `${(hour / 24) * 100}%` }}
+                        title={`${activityTitle(feed)} at ${formatTime(feed.startedAt)}`}
+                      />
+                    );
+                  })}
+                </div>
               </div>
             ))}
           </div>
-        </Card>
-      )}
-
-      <Card size="sm" className="chart-card rhythm-card">
-        <div className="chart-title">
-          <div><span>Feeding rhythm</span><strong>When feeds happened</strong></div>
-          <Clock size={19} />
-        </div>
-        <div className="rhythm-axis"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
-        <div className="rhythm-chart">
-          {weekly.map((day) => (
-            <div className="rhythm-row" key={day.date.toISOString()}>
-              <small>{formatShortDay(day.date)}</small>
-              <div className="rhythm-line">
-                {day.feeds.map((feed) => {
-                  const date = new Date(feed.startedAt);
-                  const hour = date.getHours() + date.getMinutes() / 60;
-                  return (
-                    <span
-                      className={`feed-dot ${feed.type === "nursing" ? "nursing-dot" : ""}`}
-                      key={feed.id}
-                      style={{ left: `${(hour / 24) * 100}%` }}
-                      title={`${activityTitle(feed)} at ${formatTime(feed.startedAt)}`}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          ))}
         </div>
         <div className="chart-legend"><span><i /> Bottle</span><span><i className="nursing-key" /> Nursing</span></div>
-      </Card>
+        <p className="figure-source">
+          From {weekFeeds} logged {weekFeeds === 1 ? "feed" : "feeds"} · on this device
+        </p>
+      </figure>
 
-      <GrowthChart activities={growthEntries} change={weightChange} onAdd={onAddGrowth} />
+      <GrowthChart
+        activities={growthEntries}
+        change={weightChange}
+        figure={showBottles ? 3 : 2}
+        onAdd={onAddGrowth}
+      />
 
-      <Card className="gentle-note">
+      <div className="gentle-note">
         <ShieldCheck size={20} />
         <p><strong>Useful, not judgmental.</strong> Baby Tracker summarizes what you logged. It never scores your parenting or replaces medical advice.</p>
-      </Card>
+      </div>
     </section>
   );
 }

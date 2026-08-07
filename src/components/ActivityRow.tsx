@@ -5,7 +5,6 @@ import {
   Item,
   ItemActions,
   ItemContent,
-  ItemDescription,
   ItemMedia,
   ItemTitle,
 } from "./ui/item";
@@ -25,11 +24,13 @@ export const ActivityRow = memo(function ActivityRow({
 }) {
   return (
     <Item asChild size="sm" className="activity-row">
-      <Button variant="ghost" className="activity-open" onClick={() => onEdit(activity)} aria-label={`Edit ${activityTitle(activity)} from ${formatTime(activity.startedAt)}`}>
+      <Button variant="ghost" className="activity-open" onClick={() => onEdit(activity)}>
+        <span className="sr-only">Edit </span>
         <ItemMedia variant="icon" className={`activity-glyph glyph-${activity.type}`}><ActivityGlyph type={activity.type} /></ItemMedia>
         <ItemContent className="activity-copy">
           <ItemTitle>{activityTitle(activity)}</ItemTitle>
-          <ItemDescription>{activityDetail(activity)}</ItemDescription>
+          {/* Rendered as a span, not ItemDescription: no <p> inside a button. */}
+          <span data-slot="item-description">{activityDetail(activity)}</span>
         </ItemContent>
         <ItemActions className="activity-meta">
           <time dateTime={activity.startedAt}>{formatTime(activity.startedAt)}</time>

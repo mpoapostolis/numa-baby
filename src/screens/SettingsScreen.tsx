@@ -76,7 +76,7 @@ export default function SettingsScreen({
 
       <Card className="settings-group appearance-settings">
         <CardHeader>
-          <CardTitle>Appearance</CardTitle>
+          <CardTitle asChild><h2>Appearance</h2></CardTitle>
           <CardDescription>Choose the theme that is easiest on your eyes.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -88,7 +88,7 @@ export default function SettingsScreen({
             onValueChange={(value) => value && onNightModeChange(value === "dark")}
           >
             <ToggleGroupItem value="light"><Sun /><span><strong>Light</strong><small>Bright and clear</small></span></ToggleGroupItem>
-            <ToggleGroupItem value="dark"><Moon /><span><strong>Dark</strong><small>Calm at night</small></span></ToggleGroupItem>
+            <ToggleGroupItem value="dark"><Moon /><span><strong>Night</strong><small>Warm and dim for 3am</small></span></ToggleGroupItem>
           </ToggleGroup>
         </CardContent>
       </Card>
@@ -101,7 +101,7 @@ export default function SettingsScreen({
 
       <Card className="settings-group">
         <CardHeader>
-          <CardTitle>Baby profile</CardTitle>
+          <CardTitle asChild><h2>Baby profile</h2></CardTitle>
           <CardDescription>The details used to personalise your tracker.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -113,11 +113,11 @@ export default function SettingsScreen({
 
       <Card className="settings-group reminder-settings">
         <CardHeader>
-          <CardTitle>Care reminders</CardTitle>
+          <CardTitle asChild><h2>Care reminders</h2></CardTitle>
           <CardDescription>Reminders only fire while Baby Tracker is open on this device. Don’t rely on them as an alarm.</CardDescription>
         </CardHeader>
         <CardContent>
-          <ItemGroup>
+          <ItemGroup role="group" aria-label="Care reminder settings">
             <Item size="sm" className="reminder-row">
               <ItemMedia variant="icon" className="glyph-bottle"><Bell /></ItemMedia>
               <ItemContent>
@@ -143,10 +143,11 @@ export default function SettingsScreen({
               <>
                 <ItemSeparator />
                 <div className="reminder-options">
-                  <span>Remind after</span>
+                  <span className="field-label">Remind after</span>
                   <ToggleGroup
                     type="single"
                     value={String(reminders.feedIntervalMinutes)}
+                    className="segmented three-way"
                     aria-label="Feed reminder interval"
                     onValueChange={(value) => value && onFeedIntervalChange(Number(value))}
                   >
@@ -164,7 +165,7 @@ export default function SettingsScreen({
 
       <Card className="settings-group">
         <CardHeader>
-          <CardTitle>Your data</CardTitle>
+          <CardTitle asChild><h2>Your data</h2></CardTitle>
           <CardDescription>Portable backups you own and control.</CardDescription>
         </CardHeader>
         <CardContent>

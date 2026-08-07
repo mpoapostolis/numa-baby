@@ -1,0 +1,259 @@
+/* Onboarding + recovery. First-run setup: one screen, no preview state. */
+
+.onboarding-shell {
+  min-height: 100svh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.onboarding-shell + .pwa-toast {
+  display: none;
+}
+
+.onboarding-header {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: max(8px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) 8px max(24px, env(safe-area-inset-left));
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+}
+
+.onboarding-brand,
+.onboarding-theme,
+.onboarding-brand > span:last-child {
+  display: flex;
+  align-items: center;
+}
+
+.onboarding-brand {
+  gap: 8px;
+}
+
+.onboarding-brand > span:last-child {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.onboarding-brand strong {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.onboarding-brand small {
+  color: var(--ink-3);
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+.onboarding-theme {
+  min-height: 44px;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--background);
+  color: var(--ink-2);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.onboarding-layout {
+  width: min(100%, 1120px);
+  margin: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(380px, 440px);
+  align-items: center;
+  gap: clamp(48px, 6vw, 64px);
+  padding: 48px 32px 64px;
+}
+
+.onboarding-intro {
+  max-width: 560px;
+}
+
+/* The one marketing moment: the display role. */
+.onboarding-intro h1 {
+  margin: 8px 0 16px;
+  font-size: 2.75rem;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.onboarding-intro > p:not(.eyebrow) {
+  max-width: 520px;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.onboarding-points {
+  max-width: 520px;
+  display: grid;
+  gap: 4px;
+  margin-top: 24px;
+}
+
+.onboarding-points > div {
+  min-height: 64px;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.onboarding-points > div:last-child {
+  border-bottom: 0;
+}
+
+.onboarding-points > div > span,
+.onboarding-card-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: var(--muted);
+}
+
+.onboarding-points svg,
+.onboarding-card-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.onboarding-private-icon,
+.onboarding-card-icon {
+  color: var(--signal);
+}
+
+.onboarding-points p {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.onboarding-points strong {
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.onboarding-points small {
+  color: var(--ink-2);
+  font-size: 0.75rem;
+}
+
+.onboarding-card,
+.recovery-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--card);
+  box-shadow: var(--shadow-dialog);
+}
+
+.dark .onboarding-card,
+.dark .recovery-card {
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.04);
+}
+
+.onboarding-card > [data-slot="card-header"],
+.recovery-card > [data-slot="card-header"] {
+  grid-template-columns: 40px minmax(0, 1fr);
+  column-gap: 12px;
+}
+
+.onboarding-card [data-slot="card-title"],
+.onboarding-card [data-slot="card-description"],
+.recovery-card [data-slot="card-title"],
+.recovery-card [data-slot="card-description"] {
+  grid-column: 2;
+}
+
+.onboarding-card-icon {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+}
+
+.onboarding-form {
+  display: grid;
+  gap: 16px;
+}
+
+.onboarding-form [data-slot="field-group"] {
+  gap: 16px;
+}
+
+.onboarding-form [data-slot="field"] {
+  gap: 8px;
+}
+
+.onboarding-form [data-slot="input-group"] {
+  min-height: 56px;
+  background: var(--background);
+}
+
+.onboarding-primary {
+  width: 100%;
+  min-height: 56px;
+  margin-top: 4px;
+}
+
+.onboarding-alert {
+  padding: 8px 12px;
+  border: 1px solid color-mix(in oklch, var(--alert) 28%, var(--border));
+  border-radius: var(--radius-md);
+  background: var(--danger-soft);
+  color: var(--foreground);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.recovery-card {
+  width: min(calc(100% - 32px), 560px);
+  margin: auto;
+}
+
+.recovery-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.recovery-actions [data-slot="button"] {
+  min-height: 48px;
+}
+
+@media (width < 768px) {
+  .onboarding-header {
+    padding-right: max(16px, env(safe-area-inset-right));
+    padding-left: max(16px, env(safe-area-inset-left));
+  }
+
+  .onboarding-theme > span {
+    display: none;
+  }
+
+  .onboarding-layout {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    padding: 32px 16px 48px;
+  }
+
+  .onboarding-points {
+    margin-top: 24px;
+  }
+
+  .onboarding-card {
+    width: 100%;
+  }
+}

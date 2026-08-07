@@ -1,6 +1,5 @@
 import { Plus, Weight } from "lucide-react";
 import { Button } from "./ui/button";
-import { Card } from "./ui/card";
 import { Activity } from "../domain/types";
 
 // Hoisted like the formatters in domain/time.ts — constructing Intl per point
@@ -11,10 +10,12 @@ const tableDateFormat = new Intl.DateTimeFormat("en", { dateStyle: "medium" });
 export function GrowthChart({
   activities,
   change,
+  figure,
   onAdd,
 }: {
   activities: Activity[];
   change: number;
+  figure: number;
   onAdd: () => void;
 }) {
   const visible = activities.slice(-7);
@@ -33,12 +34,25 @@ export function GrowthChart({
     return { activity, weight, x, y };
   });
 
+  const takeaway = !visible.length
+    ? "Measurements over time"
+    : activities.length < 2
+      ? `${((latest.weightGrams ?? 0) / 1_000).toFixed(2)} kg at the first check.`
+      : change > 0
+        ? `Up ${change} g since the last check.`
+        : change < 0
+          ? `Down ${Math.abs(change)} g since the last check.`
+          : "Steady since the last check.";
+
   return (
-    <Card className="chart-card growth-card">
-      <div className="chart-title growth-title">
-        <div><span>Growth</span><strong>Measurements over time</strong></div>
-        <Button onClick={onAdd}><Plus size={15} /> Add measurement</Button>
-      </div>
+    <figure className="chart-card growth-card insight-figure">
+      <figcaption>
+        <div>
+          <p className="t-label">Fig. {figure} · Growth</p>
+          <h2>{takeaway}</h2>
+        </div>
+        <Button variant="outline" onClick={onAdd}><Plus size={15} /> Add measurement</Button>
+      </figcaption>
 
       {!visible.length ? (
         <div className="growth-empty">
@@ -92,9 +106,12 @@ export function GrowthChart({
               ))}
             </tbody>
           </table>
+          <p className="figure-source">
+            From {activities.length} logged {activities.length === 1 ? "measurement" : "measurements"} · on this device
+          </p>
         </>
       )}
       <p className="growth-note">Trends are useful context for your paediatrician. A single measurement is not a diagnosis.</p>
-    </Card>
+    </figure>
   );
 }

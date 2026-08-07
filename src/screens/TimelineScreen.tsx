@@ -51,27 +51,29 @@ export default function TimelineScreen({
         </div>
         <Badge variant="outline" className="count-badge">{filteredTimeline.length} logs</Badge>
       </div>
-      <ToggleGroup
-        type="single"
-        value={filter}
-        className="filter-row"
-        aria-label="Filter timeline"
-        onValueChange={(value) => {
-          if (!value) return;
-          onFilterChange(value as "all" | ActivityType);
-        }}
-      >
-        {(["all", "bottle", "nursing", "diaper", "sleep", "growth", "health"] as const).map((option) => (
-          <ToggleGroupItem
-            key={option}
-            value={option}
-            aria-label={`Show ${option} logs`}
-          >
-            {option === "all" ? "All" : option[0].toUpperCase() + option.slice(1)}
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
-      <div className="timeline-date"><span>Latest first</span><span>Open any entry to correct its details</span></div>
+      <div className="timeline-controls">
+        <ToggleGroup
+          type="single"
+          value={filter}
+          className="filter-row"
+          aria-label="Filter timeline"
+          onValueChange={(value) => {
+            if (!value) return;
+            onFilterChange(value as "all" | ActivityType);
+          }}
+        >
+          {(["all", "bottle", "nursing", "diaper", "sleep", "growth", "health"] as const).map((option) => (
+            <ToggleGroupItem
+              key={option}
+              value={option}
+              aria-label={`Show ${option} logs`}
+            >
+              {option === "all" ? "All" : option[0].toUpperCase() + option.slice(1)}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+        <div className="timeline-date"><span>Latest first</span><span>Open any entry to correct its details</span></div>
+      </div>
       <div className="timeline-groups">
         {timelineGroups.map((group) => (
           <section className="timeline-day" key={new Date(group[0].startedAt).toDateString()}>
@@ -93,10 +95,16 @@ export default function TimelineScreen({
             </Card>
           </section>
         ))}
-        {!filteredTimeline.length && <EmptyState text="No matching logs yet." />}
+        {!filteredTimeline.length && (
+          <Card size="sm" className="activity-list timeline-list">
+            <CardContent className="activity-list-content">
+              <EmptyState text="No matching logs yet." />
+            </CardContent>
+          </Card>
+        )}
       </div>
       {filteredTimeline.length > limit && (
-        <Button className="load-more" onClick={onShowMore}>
+        <Button variant="outline" className="load-more" onClick={onShowMore}>
           Show more entries
         </Button>
       )}

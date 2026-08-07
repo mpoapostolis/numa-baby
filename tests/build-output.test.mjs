@@ -19,6 +19,7 @@ test("builds a complete installable application shell", async () => {
   assert.equal(manifest.id, "/");
   assert.equal(manifest.display, "standalone");
   assert.ok(manifest.icons.length >= 2);
+  assert.ok(manifest.icons.some((icon) => icon.purpose?.includes("maskable")));
 });
 
 test("ships offline assets, security headers, reminders and SPA fallback", async () => {

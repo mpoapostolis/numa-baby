@@ -1,0 +1,236 @@
+/* Settings screen. */
+
+.more-screen {
+  display: grid;
+  gap: 24px;
+}
+
+.more-screen > .section-heading {
+  margin-bottom: 0;
+}
+
+.appearance-options {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.appearance-options [data-slot="toggle-group-item"] {
+  min-width: 0;
+  min-height: 64px;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: center;
+  justify-content: stretch;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  text-align: left;
+  white-space: normal;
+}
+
+.appearance-options [data-slot="toggle-group-item"] > svg {
+  width: 36px;
+  height: 36px;
+  padding: 8px;
+  border-radius: var(--radius-md);
+  background: var(--muted);
+  color: var(--ink-2);
+}
+
+.appearance-options [data-slot="toggle-group-item"] > span {
+  min-width: 0;
+  display: grid;
+  gap: 0;
+}
+
+.appearance-options strong {
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.appearance-options small {
+  color: var(--ink-3);
+  font-size: 0.75rem;
+}
+
+.appearance-options [data-slot="toggle-group-item"][data-state="on"] {
+  border-color: color-mix(in oklch, var(--signal) 52%, var(--border));
+  background: var(--signal-quiet);
+  color: var(--accent-foreground);
+  box-shadow: none;
+}
+
+.appearance-options [data-slot="toggle-group-item"][data-state="on"] > svg {
+  background: var(--signal);
+  color: var(--primary-foreground);
+}
+
+.reminder-row {
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  text-align: left;
+}
+
+.reminder-row [data-slot="item-title"] {
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.reminder-row [data-slot="item-description"] {
+  color: var(--ink-2);
+  font-size: 0.75rem;
+}
+
+.reminder-options {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.reminder-options p {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.settings-action-list {
+  gap: 0;
+}
+
+.settings-action-list [data-slot="item-separator"] {
+  width: auto;
+  margin: 0 12px;
+}
+
+.settings-action {
+  width: 100%;
+  min-height: 56px;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 20px;
+  align-items: center;
+  justify-content: stretch;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  text-align: left;
+  white-space: normal;
+  transform: none;
+}
+
+.settings-action-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.settings-action-icon > svg {
+  width: 18px;
+  height: 18px;
+}
+
+.settings-action-copy {
+  min-width: 0;
+  display: grid;
+  gap: 0;
+  line-height: 1.25;
+}
+
+.settings-action-copy strong {
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-action-copy small {
+  overflow: hidden;
+  color: var(--ink-2);
+  font-size: 0.75rem;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-action-chevron {
+  width: 17px;
+  height: 17px;
+  color: var(--ink-2);
+  transition: translate 140ms ease, color 140ms ease;
+}
+
+.settings-action:active {
+  background: var(--signal-quiet);
+  transform: none;
+}
+
+.privacy-card {
+  min-height: 92px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+}
+
+.privacy-card > span {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: var(--muted);
+  color: var(--signal);
+}
+
+.privacy-card strong {
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.privacy-card p {
+  margin: 4px 0 0;
+  color: var(--ink-2);
+  font-size: 0.75rem;
+}
+
+.privacy-card > svg {
+  color: var(--signal);
+}
+
+.version-note {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .settings-action:hover {
+    border-color: var(--border);
+    background: color-mix(in oklch, var(--muted) 68%, transparent);
+  }
+
+  .settings-action:hover .settings-action-chevron {
+    color: var(--foreground);
+    translate: 2px 0;
+  }
+}
+
+@media (min-width: 768px) {
+  .more-screen {
+    gap: 32px;
+  }
+}
