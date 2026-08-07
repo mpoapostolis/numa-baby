@@ -42,12 +42,13 @@ test("ships offline assets, security headers, reminders and SPA fallback", async
 });
 
 test("preserves local data compatibility and critical one-handed flows", async () => {
-  const [app, css, packageText, themeInit, sidebar] = await Promise.all([
+  const [app, css, packageText, themeInit, sidebar, buttonGroup] = await Promise.all([
     readFile(new URL("src/App.tsx", project), "utf8"),
     readFile(new URL("src/styles.css", project), "utf8"),
     readFile(new URL("package.json", project), "utf8"),
     readFile(new URL("public/theme-init.js", project), "utf8"),
     readFile(new URL("src/components/ui/sidebar.tsx", project), "utf8"),
+    readFile(new URL("src/components/ui/button-group.tsx", project), "utf8"),
   ]);
   const packageJson = JSON.parse(packageText);
 
@@ -63,6 +64,8 @@ test("preserves local data compatibility and critical one-handed flows", async (
   assert.match(app, /<form/);
   assert.match(app, /nursingEntryMode/);
   assert.match(app, /value="manual"/);
+  assert.match(app, /Entry method/);
+  assert.match(app, /sheet-footer-note/);
   assert.match(app, /function saveNursing/);
   assert.match(app, /endedAt/);
   assert.match(app, /function quickLogBottle/);
@@ -108,6 +111,8 @@ test("preserves local data compatibility and critical one-handed flows", async (
   assert.match(app, /function EditActivityForm/);
   assert.match(app, /const timelineGroups = useMemo/);
   assert.match(css, /\.secondary-actions/);
+  assert.match(css, /\.nursing-mode \[data-slot="toggle-group-item"\]\[data-state="on"\]/);
+  assert.match(buttonGroup, /data-slot="button-group-text"/);
   for (const dependency of [
     "radix-ui",
     "shadcn",

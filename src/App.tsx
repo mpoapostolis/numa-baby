@@ -1965,10 +1965,13 @@ export default function HomePage() {
                   <ToggleGroup type="single" value={String(bottleAmount)} className="preset-row" onValueChange={(value) => value && setBottleAmount(Number(value))}>
                     {bottlePresets.map((amount, index) => <ToggleGroupItem autoFocus={index === 0} data-initial-focus={index === 0 ? "" : undefined} value={String(amount)} aria-label={`${amount} millilitres`} key={amount}>{amount}</ToggleGroupItem>)}
                   </ToggleGroup>
-                  <ToggleGroup type="single" value={milkType} className="segmented" onValueChange={(value) => value && setMilkType(value as "formula" | "expressed")}>
-                    <ToggleGroupItem value="formula">Formula</ToggleGroupItem>
-                    <ToggleGroupItem value="expressed">Breast milk</ToggleGroupItem>
-                  </ToggleGroup>
+                  <Field className="choice-field">
+                    <FieldLabel>Milk</FieldLabel>
+                    <ToggleGroup type="single" value={milkType} className="segmented" onValueChange={(value) => value && setMilkType(value as "formula" | "expressed")}>
+                      <ToggleGroupItem value="formula">Formula</ToggleGroupItem>
+                      <ToggleGroupItem value="expressed">Breast milk</ToggleGroupItem>
+                    </ToggleGroup>
+                  </Field>
                   <TimeField value={logTime} onChange={setLogTime} />
                   <NoteField value={entryNote} onChange={setEntryNote} />
                   <DialogFooter><Button type="submit" className="primary-button sheet-primary">Save {bottleAmount} ml</Button></DialogFooter>
@@ -1978,21 +1981,32 @@ export default function HomePage() {
               {sheet === "nursing" && (
                 <SheetForm onSubmit={saveNursing}>
                   <LogDialogHeader icon={<Heart />} eyebrow="Nursing" title="Log a nursing session" description="Start a live timer or add a completed session." />
-                  <ToggleGroup
-                    type="single"
-                    value={nursingEntryMode}
-                    className="segmented nursing-mode"
-                    aria-label="Nursing entry method"
-                    onValueChange={(value) => value && changeNursingEntryMode(value as "timer" | "manual")}
-                  >
-                    <ToggleGroupItem autoFocus data-initial-focus value="timer"><Clock /> Timer</ToggleGroupItem>
-                    <ToggleGroupItem value="manual"><Pencil /> Manual</ToggleGroupItem>
-                  </ToggleGroup>
+                  <Field className="choice-field">
+                    <FieldLabel>Entry method</FieldLabel>
+                    <ToggleGroup
+                      type="single"
+                      value={nursingEntryMode}
+                      className="segmented nursing-mode"
+                      aria-label="Nursing entry method"
+                      onValueChange={(value) => value && changeNursingEntryMode(value as "timer" | "manual")}
+                    >
+                      <ToggleGroupItem autoFocus={nursingEntryMode === "timer"} data-initial-focus={nursingEntryMode === "timer" ? "" : undefined} value="timer">
+                        <span className="choice-icon"><Clock /></span>
+                        <span className="choice-copy"><strong>Timer</strong><small>Starts now</small></span>
+                        <Check className="choice-check" />
+                      </ToggleGroupItem>
+                      <ToggleGroupItem autoFocus={nursingEntryMode === "manual"} data-initial-focus={nursingEntryMode === "manual" ? "" : undefined} value="manual">
+                        <span className="choice-icon"><Pencil /></span>
+                        <span className="choice-copy"><strong>Manual</strong><small>Past session</small></span>
+                        <Check className="choice-check" />
+                      </ToggleGroupItem>
+                    </ToggleGroup>
+                  </Field>
                   <Field className="nursing-side-field">
                     <FieldLabel>Side</FieldLabel>
                     <ToggleGroup type="single" value={nursingSide} className="side-grid" aria-label="Nursing side" onValueChange={(value) => value && setNursingSide(value as "left" | "right")}>
-                      <ToggleGroupItem value="left"><span>L</span><strong>Left</strong></ToggleGroupItem>
-                      <ToggleGroupItem value="right"><span>R</span><strong>Right</strong></ToggleGroupItem>
+                      <ToggleGroupItem value="left"><span className="side-letter">L</span><span className="choice-copy"><strong>Left side</strong><small>Left breast</small></span><Check className="choice-check" /></ToggleGroupItem>
+                      <ToggleGroupItem value="right"><span className="side-letter">R</span><span className="choice-copy"><strong>Right side</strong><small>Right breast</small></span><Check className="choice-check" /></ToggleGroupItem>
                     </ToggleGroup>
                   </Field>
                   {nursingEntryMode === "timer" ? (
@@ -2005,8 +2019,8 @@ export default function HomePage() {
                   )}
                   <NoteField value={entryNote} onChange={setEntryNote} />
                   <FormError message={formError} />
-                  <p className="sheet-footnote">{nursingEntryMode === "timer" ? "The timer stays active if you close the app." : "The completed session will be added directly to the timeline."}</p>
                   <DialogFooter>
+                    <p className="sheet-footer-note">{nursingEntryMode === "timer" ? "The timer stays active if you close the app." : "The completed session will be added directly to the timeline."}</p>
                     <Button type="submit" className="primary-button sheet-primary">
                       {nursingEntryMode === "timer" ? `Start ${nursingSide} timer` : `Save ${nursingSide} session`}
                     </Button>
@@ -2017,11 +2031,14 @@ export default function HomePage() {
               {sheet === "diaper" && (
                 <SheetForm onSubmit={() => saveDiaper(diaperKind)}>
                   <LogDialogHeader icon={<Droplet />} eyebrow="Quick log" title="What was it?" description="Choose the closest match and save." />
-                  <ToggleGroup type="single" value={diaperKind} className="diaper-grid" onValueChange={(value) => value && setDiaperKind(value as DiaperKind)}>
-                    <ToggleGroupItem autoFocus data-initial-focus value="wet"><Droplet size={22} /><strong>Wet</strong></ToggleGroupItem>
-                    <ToggleGroupItem value="dirty"><span className="dot-icon">●</span><strong>Dirty</strong></ToggleGroupItem>
-                    <ToggleGroupItem value="both"><span className="both-icon"><Droplet size={18} />●</span><strong>Both</strong></ToggleGroupItem>
-                  </ToggleGroup>
+                  <Field className="choice-field">
+                    <FieldLabel>Diaper type</FieldLabel>
+                    <ToggleGroup type="single" value={diaperKind} className="diaper-grid" onValueChange={(value) => value && setDiaperKind(value as DiaperKind)}>
+                      <ToggleGroupItem autoFocus data-initial-focus value="wet"><Droplet size={22} /><strong>Wet</strong></ToggleGroupItem>
+                      <ToggleGroupItem value="dirty"><span className="dot-icon">●</span><strong>Dirty</strong></ToggleGroupItem>
+                      <ToggleGroupItem value="both"><span className="both-icon"><Droplet size={18} />●</span><strong>Both</strong></ToggleGroupItem>
+                    </ToggleGroup>
+                  </Field>
                   <TimeField value={logTime} onChange={setLogTime} />
                   <NoteField value={entryNote} onChange={setEntryNote} />
                   <DialogFooter><Button type="submit" className="primary-button sheet-primary">Save {diaperKind === "both" ? "wet + dirty" : diaperKind} diaper</Button></DialogFooter>
@@ -2809,17 +2826,20 @@ function EditActivityForm({
           <ToggleGroup type="single" value={String(bottleAmount)} className="preset-row" onValueChange={(value) => { if (value) setBottleAmount(Number(value)); clearError(); }}>
             {bottlePresets.map((amount) => <ToggleGroupItem value={String(amount)} aria-label={`${amount} millilitres`} key={amount}>{amount}</ToggleGroupItem>)}
           </ToggleGroup>
-          <ToggleGroup type="single" value={milkType} className="segmented" onValueChange={(value) => value && setMilkType(value as "formula" | "expressed")}>
-            <ToggleGroupItem value="formula">Formula</ToggleGroupItem>
-            <ToggleGroupItem value="expressed">Breast milk</ToggleGroupItem>
-          </ToggleGroup>
+          <Field className="choice-field">
+            <FieldLabel>Milk</FieldLabel>
+            <ToggleGroup type="single" value={milkType} className="segmented" onValueChange={(value) => value && setMilkType(value as "formula" | "expressed")}>
+              <ToggleGroupItem value="formula">Formula</ToggleGroupItem>
+              <ToggleGroupItem value="expressed">Breast milk</ToggleGroupItem>
+            </ToggleGroup>
+          </Field>
         </>
       )}
 
       {activity.type === "nursing" && (
         <ToggleGroup type="single" value={nursingSide} className="side-grid" onValueChange={(value) => value && setNursingSide(value as "left" | "right")}>
-          <ToggleGroupItem autoFocus data-initial-focus value="left"><span>L</span><strong>Left</strong></ToggleGroupItem>
-          <ToggleGroupItem value="right"><span>R</span><strong>Right</strong></ToggleGroupItem>
+          <ToggleGroupItem autoFocus data-initial-focus value="left"><span className="side-letter">L</span><span className="choice-copy"><strong>Left side</strong><small>Left breast</small></span><Check className="choice-check" /></ToggleGroupItem>
+          <ToggleGroupItem value="right"><span className="side-letter">R</span><span className="choice-copy"><strong>Right side</strong><small>Right breast</small></span><Check className="choice-check" /></ToggleGroupItem>
         </ToggleGroup>
       )}
 
