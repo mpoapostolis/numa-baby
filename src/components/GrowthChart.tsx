@@ -12,11 +12,13 @@ export function GrowthChart({
   change,
   figure,
   onAdd,
+  onOpenGuide,
 }: {
   activities: Activity[];
   change: number;
   figure: number;
   onAdd: () => void;
+  onOpenGuide: () => void;
 }) {
   const visible = activities.slice(-7);
   const weights = visible.map((activity) => activity.weightGrams ?? 0);
@@ -112,6 +114,7 @@ export function GrowthChart({
         </>
       )}
       <p className="growth-note">Trends are useful context for your paediatrician. A single measurement is not a diagnosis.</p>
+      <button type="button" className="guide-entry" onClick={onOpenGuide}>What’s typical at this age?</button>
     </figure>
   );
 }

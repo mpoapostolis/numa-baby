@@ -88,6 +88,9 @@ export function parseStoredData(value: string): StoredData {
       name: storedProfile.name,
       birthDate: storedProfile.birthDate,
       feedingMode: storedProfile.feedingMode,
+      // Tolerant on purpose: an absent or unrecognised value simply means the
+      // growth guide falls back to its combined girls-and-boys envelope.
+      sex: storedProfile.sex === "girl" || storedProfile.sex === "boy" ? storedProfile.sex : undefined,
     },
     activities,
     nightMode: typeof parsed.nightMode === "boolean" ? parsed.nightMode : undefined,

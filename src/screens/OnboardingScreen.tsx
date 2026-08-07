@@ -145,6 +145,21 @@ export default function OnboardingScreen({
                     </InputGroup>
                   </Field>
                   <Field>
+                    <FieldLabel>Girl or boy <span className="optional-label">Optional</span></FieldLabel>
+                    <ToggleGroup
+                      type="single"
+                      value={draft.sex ?? "skip"}
+                      className="segmented three-way"
+                      aria-label="Girl or boy"
+                      onValueChange={(value) => value && setDraft({ ...draft, sex: value === "girl" || value === "boy" ? value : undefined })}
+                    >
+                      <ToggleGroupItem value="girl">Girl<Check className="choice-check" /></ToggleGroupItem>
+                      <ToggleGroupItem value="boy">Boy<Check className="choice-check" /></ToggleGroupItem>
+                      <ToggleGroupItem value="skip">Skip<Check className="choice-check" /></ToggleGroupItem>
+                    </ToggleGroup>
+                    <FieldDescription>Used only for the growth guide’s reference ranges.</FieldDescription>
+                  </Field>
+                  <Field>
                     <FieldLabel>Feeding</FieldLabel>
                     <ToggleGroup
                       type="single"

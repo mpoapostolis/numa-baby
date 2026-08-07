@@ -32,6 +32,7 @@ import { useTrackerStore } from "./hooks/useTrackerStore";
 // The chart-heavy screens load on first visit; Today never pays for them.
 const TimelineScreen = lazy(() => import("./screens/TimelineScreen"));
 const InsightsScreen = lazy(() => import("./screens/InsightsScreen"));
+const GrowthGuideScreen = lazy(() => import("./screens/GrowthGuideScreen"));
 
 // A future-dated feed from a restored backup must never arm a timer that wraps
 // the 32-bit setTimeout ceiling and fires instantly.
@@ -47,6 +48,9 @@ const bottomNavItems: Array<{ value: Tab; label: string; icon: React.ReactNode }
 export default function HomePage() {
   const [debugMode] = useState(() => new URLSearchParams(window.location.search).has("debug"));
   const [activeTab, setActiveTab] = useState<Tab>("today");
+  // The Growth guide renders in place of the Insights content — one entry
+  // point (the growth figure), a back button, no extra nav tab.
+  const [guideOpen, setGuideOpen] = useState(false);
   const [sheet, setSheet] = useState<Sheet>(null);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [nursingInitialMode, setNursingInitialMode] = useState<"timer" | "manual">("timer");
@@ -129,6 +133,13 @@ export default function HomePage() {
     return () => window.clearTimeout(timer);
   }, [feedReminderTargetAt, lastFeed?.id, notificationPermission, reminders.feedEnabled]);
 
+  // Every navigation leaves the guide, so returning to Insights later starts
+  // at the Insights content — never a stale sub-screen.
+  const navigateTo = useCallback((tab: Tab) => {
+    setGuideOpen(false);
+    setActiveTab(tab);
+  }, []);
+
   function openSheet(next: Exclude<Sheet, null>, nursingMode: "timer" | "manual" = "timer") {
     sheetTriggerRef.current = document.activeElement instanceof HTMLElement
       ? document.activeElement
@@ -181,7 +192,7 @@ export default function HomePage() {
     <SidebarProvider defaultOpen={sidebarDefaultOpen} className="numa-shell">
       <AppSidebar
         activeTab={activeTab}
-        onNavigate={setActiveTab}
+        onNavigate={navigateTo}
         profile={profile}
         onProfile={() => openSheet("profile")}
       />
@@ -245,7 +256,7 @@ export default function HomePage() {
               onOpenSheet={openSheet}
               onManualNursing={() => openSheet("nursing", "manual")}
               onEdit={openEdit}
-              onSeeTimeline={() => setActiveTab("timeline")}
+              onSeeTimeline={() => navigateTo("timeline")}
             />
           )}
 
@@ -267,7 +278,19 @@ export default function HomePage() {
 
           {activeTab === "insights" && (
             <Suspense fallback={null}>
-              <InsightsScreen stats={stats} onAddGrowth={() => openSheet("growth")} />
+              {guideOpen ? (
+                <GrowthGuideScreen
+                  profile={profile}
+                  latestGrowth={stats.latestGrowth}
+                  onBack={() => setGuideOpen(false)}
+                />
+              ) : (
+                <InsightsScreen
+                  stats={stats}
+                  onAddGrowth={() => openSheet("growth")}
+                  onOpenGuide={() => setGuideOpen(true)}
+                />
+              )}
             </Suspense>
           )}
 
@@ -296,7 +319,7 @@ export default function HomePage() {
               type="button"
               className="bottom-nav-item"
               aria-current={activeTab === item.value ? "page" : undefined}
-              onClick={() => setActiveTab(item.value)}
+              onClick={() => navigateTo(item.value)}
             >
               {item.icon}
               <span>{item.label}</span>

@@ -27,6 +27,9 @@ export type Profile = {
   name: string;
   birthDate: string;
   feedingMode: FeedingMode;
+  // Optional, only read by the growth guide's reference ranges. Absent means
+  // "not set" and the guide shows the combined girls-and-boys envelope.
+  sex?: "girl" | "boy";
 };
 
 export type BootState = "loading" | "onboarding" | "ready" | "recovery";

@@ -1,0 +1,243 @@
+/* Growth guide — WHO reference ranges on the shared card chrome. Hairlines
+   and neutral ink only; the baby's own marker is the single --signal element. */
+
+.growth-guide-screen {
+  display: grid;
+  gap: 24px;
+}
+
+.growth-guide-screen > .section-heading {
+  margin-bottom: 0;
+}
+
+.guide-back {
+  margin-left: -10px;
+  margin-bottom: 4px;
+  color: var(--ink-2);
+}
+
+.growth-guide-screen .surface-card {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.growth-guide-screen .surface-card h2,
+.growth-guide-screen .surface-card p {
+  margin: 0;
+}
+
+/* Disclaimer first — a card, not a footnote. */
+.guide-disclaimer {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  color: var(--ink-2);
+}
+
+.guide-disclaimer > svg {
+  margin-top: 2px;
+}
+
+.guide-disclaimer h2 {
+  margin-bottom: 4px;
+  color: var(--foreground);
+}
+
+/* Range bar: P3–P97 band on a hairline, P50 tick, latest weight as a dot. */
+.range-bar {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.range-track {
+  position: relative;
+  height: 32px;
+}
+
+.range-track::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  border-top: 1px solid var(--border);
+}
+
+.range-band {
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--muted);
+}
+
+.range-median {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  width: 1px;
+  background: var(--ink-3);
+  translate: -50%;
+}
+
+.range-marker {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--signal);
+  box-shadow: 0 0 0 2px var(--card);
+  translate: -50% -50%;
+}
+
+.range-scale {
+  position: relative;
+  height: 34px;
+  color: var(--ink-3);
+  font-size: 0.75rem;
+  font-feature-settings: "tnum" 1;
+}
+
+.range-scale span {
+  position: absolute;
+  top: 0;
+  display: grid;
+  justify-items: center;
+  white-space: nowrap;
+  translate: -50%;
+}
+
+.range-scale span:first-child {
+  translate: 0;
+}
+
+.range-scale span:last-child {
+  translate: -100%;
+}
+
+.range-scale em {
+  font-size: 0.6875rem;
+  font-style: normal;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+
+.guide-latest {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+}
+
+.guide-latest-dot {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--signal);
+}
+
+/* Guidance rows: statement left, named authority right — hairline separated. */
+.guide-rows {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  list-style: none;
+}
+
+.guide-rows li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+}
+
+.guide-rows li + li {
+  border-top: 1px solid var(--border);
+}
+
+.guide-rows li p {
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.guide-authority {
+  flex: 0 0 auto;
+  color: var(--ink-3);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.guide-intro {
+  color: var(--ink-2);
+}
+
+/* Full 0–24 month table when no birth date is set. */
+.guide-table-scroll {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.guide-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  font-feature-settings: "tnum" 1;
+}
+
+.guide-table th,
+.guide-table td {
+  padding: 8px 8px 8px 0;
+  text-align: left;
+}
+
+.guide-table thead th {
+  color: var(--ink-3);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.guide-table tbody th {
+  color: var(--ink-2);
+  font-weight: 400;
+}
+
+.guide-table tbody th,
+.guide-table tbody td {
+  border-top: 1px solid var(--border);
+}
+
+/* Quiet entry link on the Insights growth figure. */
+.guide-entry {
+  justify-self: start;
+  align-self: start;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--signal);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+@media (min-width: 768px) {
+  .growth-guide-screen {
+    gap: 32px;
+  }
+
+  .growth-guide-screen .surface-card {
+    padding: 24px;
+  }
+}

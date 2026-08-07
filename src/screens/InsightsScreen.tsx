@@ -7,6 +7,7 @@ import { ActivityStats } from "../hooks/useActivityStats";
 type InsightsScreenProps = {
   stats: ActivityStats;
   onAddGrowth: () => void;
+  onOpenGuide: () => void;
 };
 
 // Unit-demoted duration: "2h 15m" with the letters receding (spec rule 4).
@@ -18,7 +19,7 @@ function DurationFigure({ minutes }: { minutes: number }) {
   return <>{hours}<span className="unit">h</span> {mins}<span className="unit">m</span></>;
 }
 
-export default function InsightsScreen({ stats, onAddGrowth }: InsightsScreenProps) {
+export default function InsightsScreen({ stats, onAddGrowth, onOpenGuide }: InsightsScreenProps) {
   const {
     typicalGap,
     averageFeeds,
@@ -174,6 +175,7 @@ export default function InsightsScreen({ stats, onAddGrowth }: InsightsScreenPro
         change={weightChange}
         figure={showBottles ? 3 : 2}
         onAdd={onAddGrowth}
+        onOpenGuide={onOpenGuide}
       />
 
       <div className="gentle-note">

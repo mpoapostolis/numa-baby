@@ -598,6 +598,15 @@ function ProfileForm({ profile, onChange, onDone }: { profile: Profile; onChange
           <InputGroup><InputGroupInput id={birthDateId} type="date" value={draft.birthDate} max={localDateInput(new Date()).slice(0, 10)} onChange={(event) => setDraft({ ...draft, birthDate: event.target.value })} /></InputGroup>
         </Field>
         <Field>
+          <FieldLabel>Girl or boy</FieldLabel>
+          <ToggleGroup type="single" value={draft.sex ?? "skip"} className="segmented three-way" aria-label="Girl or boy" onValueChange={(value) => value && setDraft({ ...draft, sex: value === "girl" || value === "boy" ? value : undefined })}>
+            <ToggleGroupItem value="girl">Girl<Check className="choice-check" /></ToggleGroupItem>
+            <ToggleGroupItem value="boy">Boy<Check className="choice-check" /></ToggleGroupItem>
+            <ToggleGroupItem value="skip">Skip<Check className="choice-check" /></ToggleGroupItem>
+          </ToggleGroup>
+          <FieldDescription>Used only for the growth guide’s reference ranges.</FieldDescription>
+        </Field>
+        <Field>
           <FieldLabel>How are you feeding?</FieldLabel>
           <ToggleGroup type="single" value={draft.feedingMode} className="segmented three-way" aria-label="Feeding method" onValueChange={(value) => value && setDraft({ ...draft, feedingMode: value as FeedingMode })}>
             {(["breast", "bottle", "mixed"] as FeedingMode[]).map((mode) => <ToggleGroupItem key={mode} value={mode}>{mode[0].toUpperCase() + mode.slice(1)}<Check className="choice-check" /></ToggleGroupItem>)}
