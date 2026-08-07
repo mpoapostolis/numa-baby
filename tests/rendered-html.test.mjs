@@ -79,6 +79,8 @@ test("preserves local data compatibility and critical one-handed flows", async (
   assert.match(app, /URLSearchParams\(window\.location\.search\)\.has\("debug"\)/);
   assert.match(app, /Fake data only/);
   assert.match(app, /appearance-options/);
+  assert.match(app, /className="settings-action"/);
+  assert.doesNotMatch(app, /<Item asChild size="sm" className="settings-action">/);
   assert.match(app, /saveDiaper\(diaperKind\)/);
   assert.match(app, /<Tabs value=\{activeTab\}/);
   assert.match(app, /<ToggleGroup type="single"/);
@@ -111,6 +113,7 @@ test("preserves local data compatibility and critical one-handed flows", async (
   assert.match(app, /function EditActivityForm/);
   assert.match(app, /const timelineGroups = useMemo/);
   assert.match(css, /\.secondary-actions/);
+  assert.match(css, /\.settings-action\s*\{[^}]*grid-template-columns/s);
   assert.match(css, /\.nursing-mode \[data-slot="toggle-group-item"\]\[data-state="on"\]/);
   assert.match(buttonGroup, /data-slot="button-group-text"/);
   for (const dependency of [

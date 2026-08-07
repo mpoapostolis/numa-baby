@@ -1833,7 +1833,7 @@ export default function HomePage() {
                   <CardDescription>The details used to personalise your tracker.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ItemGroup>
+                  <ItemGroup className="settings-action-list" role="group" aria-label="Baby profile settings">
                     <SettingsAction title={profile.name} description={`${profile.feedingMode} feeding`} icon={<Baby />} onClick={() => openSheet("profile")} />
                   </ItemGroup>
                 </CardContent>
@@ -1896,10 +1896,10 @@ export default function HomePage() {
                   <CardDescription>Portable backups you own and control.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ItemGroup>
-                    <SettingsAction title="Download private backup" description="JSON file you control" icon={<Download />} onClick={exportData} />
+                  <ItemGroup className="settings-action-list" role="group" aria-label="Backup actions">
+                    <SettingsAction title="Download private backup" description="Save a private copy to this device" icon={<Download />} onClick={exportData} />
                     <ItemSeparator />
-                    <SettingsAction title="Restore a backup" description="Import from this or another device" icon={<Upload />} onClick={() => importRef.current?.click()} />
+                    <SettingsAction title="Restore a backup" description="Choose a backup file from any device" icon={<Upload />} onClick={() => importRef.current?.click()} />
                   </ItemGroup>
                 </CardContent>
                 <Input ref={importRef} className="hidden-input" type="file" accept="application/json" onChange={importData} />
@@ -2445,16 +2445,11 @@ function SettingsAction({
   onClick: () => void;
 }) {
   return (
-    <Item asChild size="sm" className="settings-action">
-      <Button variant="ghost" onClick={onClick}>
-        <ItemMedia variant="icon">{icon}</ItemMedia>
-        <ItemContent>
-          <ItemTitle>{title}</ItemTitle>
-          <ItemDescription>{description}</ItemDescription>
-        </ItemContent>
-        <ItemActions><ChevronRight /></ItemActions>
-      </Button>
-    </Item>
+    <Button variant="ghost" className="settings-action" onClick={onClick}>
+      <span className="settings-action-icon" aria-hidden="true">{icon}</span>
+      <span className="settings-action-copy"><strong>{title}</strong><small>{description}</small></span>
+      <ChevronRight className="settings-action-chevron" aria-hidden="true" />
+    </Button>
   );
 }
 

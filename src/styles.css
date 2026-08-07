@@ -1020,8 +1020,7 @@ body {
 }
 
 .action-icon,
-.activity-glyph,
-.settings-action [data-slot="item-media"] {
+.activity-glyph {
   width: 40px;
   height: 40px;
   flex: 0 0 40px;
@@ -1034,8 +1033,7 @@ body {
 }
 
 .action-icon svg,
-.activity-glyph svg,
-.settings-action [data-slot="item-media"] svg {
+.activity-glyph svg {
   width: 19px;
   height: 19px;
 }
@@ -1817,7 +1815,6 @@ body {
   color: var(--primary-foreground);
 }
 
-.settings-action > button,
 .reminder-row {
   width: 100%;
   min-height: 64px;
@@ -1826,22 +1823,91 @@ body {
   text-align: left;
 }
 
-.settings-action [data-slot="item-title"],
 .reminder-row [data-slot="item-title"] {
   font-size: 0.8125rem;
   font-weight: 620;
 }
 
-.settings-action [data-slot="item-description"],
 .reminder-row [data-slot="item-description"] {
   color: var(--muted-foreground);
   font-size: 0.75rem;
 }
 
-.settings-action [data-slot="item-actions"] svg {
-  width: 16px;
-  height: 16px;
+.settings-action-list {
+  gap: 0;
+}
+
+.settings-action-list [data-slot="item-separator"] {
+  width: auto;
+  margin: 0 12px;
+}
+
+.settings-action {
+  width: 100%;
+  min-height: 68px;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 20px;
+  align-items: center;
+  justify-content: stretch;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  text-align: left;
+  white-space: normal;
+  transform: none;
+}
+
+.settings-action-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.settings-action-icon > svg {
+  width: 18px;
+  height: 18px;
+}
+
+.settings-action-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  line-height: 1.25;
+}
+
+.settings-action-copy strong {
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: 0.8125rem;
+  font-weight: 660;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-action-copy small {
+  overflow: hidden;
   color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 450;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-action-chevron {
+  width: 17px;
+  height: 17px;
+  color: var(--muted-foreground);
+  transition: translate 140ms ease, color 140ms ease;
+}
+
+.settings-action:active {
+  background: var(--accent);
+  transform: none;
 }
 
 .reminder-options {
@@ -2115,9 +2181,18 @@ body {
     background: color-mix(in oklch, var(--card) 96%, var(--accent));
   }
 
-  .activity-open:hover,
-  .settings-action > button:hover {
+  .activity-open:hover {
     background: var(--muted);
+  }
+
+  .settings-action:hover {
+    border-color: color-mix(in oklch, var(--primary) 14%, var(--border));
+    background: color-mix(in oklch, var(--muted) 68%, transparent);
+  }
+
+  .settings-action:hover .settings-action-chevron {
+    color: var(--foreground);
+    translate: 2px 0;
   }
 }
 
