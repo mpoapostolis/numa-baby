@@ -226,6 +226,14 @@
   white-space: nowrap;
 }
 
+/* The sidebar owns the profile on desktop — one "Mia" affordance per
+   viewport, so the chip is mobile-only chrome. */
+@media (width >= 768px) {
+  .baby-identity {
+    display: none;
+  }
+}
+
 .baby-identity {
   min-width: 0;
   min-height: 48px;
