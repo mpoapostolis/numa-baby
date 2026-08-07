@@ -582,6 +582,9 @@ export default function HomePage() {
   const lastFeed = sortedActivities.find(
     (activity) => activity.type === "bottle" || activity.type === "nursing",
   );
+  const lastBottle = sortedActivities.find(
+    (activity) => activity.type === "bottle" && activity.amount && activity.milkType,
+  );
   const feedReminderTargetAt = lastFeed
     ? new Date(lastFeed.startedAt).getTime() + reminders.feedIntervalMinutes * 60_000
     : null;
@@ -913,6 +916,21 @@ export default function HomePage() {
     if (addActivity(entry, `${bottleAmount} ml bottle saved`)) setSheet(null);
   }
 
+  function quickLogBottle() {
+    if (!lastBottle?.amount) {
+      openSheet("bottle");
+      return;
+    }
+    const entry: Activity = {
+      id: makeId(),
+      type: "bottle",
+      startedAt: new Date().toISOString(),
+      amount: lastBottle.amount,
+      milkType: lastBottle.milkType ?? "formula",
+    };
+    addActivity(entry, `${lastBottle.amount} ml bottle saved`);
+  }
+
   function changeNursingEntryMode(mode: "timer" | "manual") {
     setNursingEntryMode(mode);
     setFormError(null);
@@ -951,6 +969,22 @@ export default function HomePage() {
     if (addActivity(entry, message)) setSheet(null);
   }
 
+  function quickStartNursing(side: "left" | "right") {
+    if (activeNursing) return;
+    const entry: Activity = {
+      id: makeId(),
+      type: "nursing",
+      startedAt: new Date().toISOString(),
+      side,
+    };
+    addActivity(entry, `${side === "left" ? "Left" : "Right"} timer started`);
+  }
+
+  function openManualNursing() {
+    openSheet("nursing");
+    changeNursingEntryMode("manual");
+  }
+
   function stopNursing() {
     if (!activeNursing) return;
     const nextActivities = activities.map((activity) =>
@@ -972,6 +1006,16 @@ export default function HomePage() {
       note: entryNote.trim() || undefined,
     };
     if (addActivity(entry, `${kind === "both" ? "Wet + dirty" : kind === "dirty" ? "Dirty" : "Wet"} diaper saved`)) setSheet(null);
+  }
+
+  function quickLogDiaper(kind: DiaperKind) {
+    const entry: Activity = {
+      id: makeId(),
+      type: "diaper",
+      diaperKind: kind,
+      startedAt: new Date().toISOString(),
+    };
+    addActivity(entry, `${kind === "both" ? "Wet + dirty" : kind === "dirty" ? "Dirty" : "Wet"} diaper saved`);
   }
 
   function saveGrowth() {
@@ -1408,48 +1452,71 @@ export default function HomePage() {
               <Card size="sm" className="quick-section">
                 <CardHeader className="quick-section-header">
                   <div>
-                    <CardTitle>Quick log</CardTitle>
-                    <CardDescription>One tap now. Details only when you need them.</CardDescription>
+                    <CardTitle>Log now</CardTitle>
+                    <CardDescription>Tap the exact action. Undo is always available.</CardDescription>
                   </div>
                   <CardAction><Badge variant="secondary">Private</Badge></CardAction>
                 </CardHeader>
                 <CardContent className="quick-section-content">
-                  <ItemGroup className="action-grid">
+                  <div className="instant-grid" aria-label="One-tap baby care logging">
                   {profile.feedingMode !== "breast" && (
-                    <QuickAction
+                    <InstantLogCard
                       className="action-feed"
                       title="Bottle"
-                      description="Log amount and milk"
+                      description={lastBottle?.amount ? `Repeat ${lastBottle.milkType === "expressed" ? "breast milk" : "formula"}` : "Set the amount once"}
                       icon={<Milk />}
-                      onClick={() => openSheet("bottle")}
-                    />
+                    >
+                      {lastBottle?.amount ? (
+                        <>
+                          <Button size="sm" onClick={quickLogBottle} aria-label={`Log ${lastBottle.amount} millilitres of ${lastBottle.milkType === "expressed" ? "breast milk" : "formula"} now`}>
+                            {lastBottle.amount} ml
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => openSheet("bottle")}>Details</Button>
+                        </>
+                      ) : (
+                        <Button size="sm" onClick={() => openSheet("bottle")}>Set amount</Button>
+                      )}
+                    </InstantLogCard>
                   )}
                   {profile.feedingMode !== "bottle" && (
-                    <QuickAction
+                    <InstantLogCard
                       className="action-nurse"
-                      title={activeNursing ? "Stop nursing" : "Nursing"}
-                      description={activeNursing ? liveDuration(activeNursing.startedAt, minuteClock) : "Start a side timer"}
+                      title={activeNursing ? "Nursing now" : "Nursing"}
+                      description={activeNursing ? `${activeNursing.side === "left" ? "Left" : "Right"} · ${liveDuration(activeNursing.startedAt, minuteClock)}` : "Start a side timer"}
                       icon={<Heart />}
-                      onClick={activeNursing ? stopNursing : () => openSheet("nursing")}
-                      trailing={activeNursing ? <Square fill="currentColor" /> : <Plus />}
-                    />
+                    >
+                      {activeNursing ? (
+                        <Button size="sm" className="instant-stop" onClick={stopNursing}><Square fill="currentColor" /> Stop</Button>
+                      ) : (
+                        <>
+                          <Button size="sm" onClick={() => quickStartNursing("left")}>Left</Button>
+                          <Button size="sm" onClick={() => quickStartNursing("right")}>Right</Button>
+                          <Button size="sm" variant="outline" onClick={openManualNursing} aria-label="Add a completed nursing session manually">Past</Button>
+                        </>
+                      )}
+                    </InstantLogCard>
                   )}
-                  <QuickAction
+                  <InstantLogCard
                     className="action-diaper"
                     title="Diaper"
-                    description="Wet, dirty, or both"
+                    description="Save the exact change"
                     icon={<Droplet />}
-                    onClick={() => openSheet("diaper")}
-                  />
-                  <QuickAction
+                  >
+                    <Button size="sm" onClick={() => quickLogDiaper("wet")}>Wet</Button>
+                    <Button size="sm" onClick={() => quickLogDiaper("dirty")}>Dirty</Button>
+                    <Button size="sm" variant="outline" onClick={() => quickLogDiaper("both")}>Both</Button>
+                  </InstantLogCard>
+                  <InstantLogCard
                     className={`action-sleep ${activeSleep ? "is-active" : ""}`}
-                    title={activeSleep ? "Wake up" : "Sleep"}
-                    description={activeSleep ? liveDuration(activeSleep.startedAt, minuteClock) : "Start sleep timer"}
+                    title={activeSleep ? "Sleeping now" : "Sleep"}
+                    description={activeSleep ? liveDuration(activeSleep.startedAt, minuteClock) : "Start a sleep timer"}
                     icon={<Moon />}
-                    onClick={toggleSleep}
-                    trailing={activeSleep ? <Square fill="currentColor" /> : <Plus />}
-                  />
-                  </ItemGroup>
+                  >
+                    <Button size="sm" className={activeSleep ? "instant-stop" : ""} onClick={toggleSleep}>
+                      {activeSleep ? <><Square fill="currentColor" /> Wake up</> : "Start sleep"}
+                    </Button>
+                  </InstantLogCard>
+                  </div>
                   <Separator />
                   <ItemGroup className="secondary-actions" aria-label="Measurements and health">
                     <QuickAction className="action-growth" title="Growth" description="Weight, length, head" icon={<Weight />} onClick={() => openSheet("growth")} trailing={<ChevronRight />} />
@@ -2171,6 +2238,33 @@ function ActivityRow({ activity, onEdit }: { activity: Activity; onEdit: (activi
         </ItemActions>
       </Button>
     </Item>
+  );
+}
+
+function InstantLogCard({
+  title,
+  description,
+  icon,
+  children,
+  className = "",
+}: {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={`instant-card ${className}`} aria-label={title}>
+      <div className="instant-card-heading">
+        <span className="action-icon">{icon}</span>
+        <span>
+          <strong>{title}</strong>
+          <small>{description}</small>
+        </span>
+      </div>
+      <div className="instant-card-actions">{children}</div>
+    </section>
   );
 }
 

@@ -898,6 +898,87 @@ body {
   gap: 8px;
 }
 
+.instant-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.instant-card {
+  min-width: 0;
+  min-height: 132px;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+}
+
+.instant-card.is-active {
+  border-color: color-mix(in oklch, var(--primary) 42%, var(--border));
+  background: color-mix(in oklch, var(--card) 94%, var(--accent));
+}
+
+.instant-card-heading {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.instant-card-heading > span:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.instant-card-heading strong,
+.instant-card-heading small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.instant-card-heading strong {
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.instant-card-heading small {
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+}
+
+.instant-card-actions {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+
+.instant-card-actions [data-slot="button"] {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  gap: 5px;
+  padding: 0 6px;
+  font-size: 0.6875rem;
+  font-weight: 650;
+}
+
+.instant-card-actions [data-slot="button"] svg {
+  width: 12px;
+  height: 12px;
+}
+
+.instant-card-actions .instant-stop {
+  background: var(--foreground);
+  color: var(--background);
+}
+
 .quick-action {
   min-width: 0;
   min-height: 76px;
@@ -2313,7 +2394,8 @@ body {
     padding-left: 12px;
   }
 
-  .action-grid {
+  .action-grid,
+  .instant-grid {
     grid-template-columns: 1fr;
   }
 
