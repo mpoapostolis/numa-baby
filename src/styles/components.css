@@ -816,3 +816,24 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ONE button recipe — every shadcn button in the app shares height, radius,
+   type and border. Variants change fill, never shape. */
+[data-slot="button"] {
+  min-height: 44px;
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+/* The erase action reads as what it is — quiet until you look at it. */
+.settings-action-danger .settings-action-copy strong {
+  color: var(--alert);
+}
+
+.settings-action-danger .settings-action-icon {
+  border-color: color-mix(in oklch, var(--alert) 25%, var(--border));
+  background: color-mix(in oklch, var(--alert) 10%, var(--card));
+  color: var(--alert);
+}

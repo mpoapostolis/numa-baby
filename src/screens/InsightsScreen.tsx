@@ -1,5 +1,7 @@
 import { ShieldCheck } from "lucide-react";
+import { EmptyState } from "../components/EmptyState";
 import { GrowthChart } from "../components/GrowthChart";
+import { LittleBottle } from "../components/illustrations";
 import { activityTitle } from "../domain/activityDisplay";
 import { formatShortDay, formatTime, humanDuration, median } from "../domain/time";
 import { ActivityStats } from "../hooks/useActivityStats";
@@ -137,6 +139,12 @@ export default function InsightsScreen({ stats, onAddGrowth, onOpenGuide }: Insi
             </h2>
           </div>
         </figcaption>
+        {weekFeeds === 0 ? (
+          <EmptyState
+            illustration={<LittleBottle size={80} />}
+            text="No feeds logged yet — the week's rhythm will draw itself here."
+          />
+        ) : (
         <div className="rhythm-plot">
           <div className="rhythm-axis"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
           <div className="rhythm-chart">
@@ -164,7 +172,10 @@ export default function InsightsScreen({ stats, onAddGrowth, onOpenGuide }: Insi
             ))}
           </div>
         </div>
-        <div className="chart-legend"><span><i /> Bottle</span><span><i className="nursing-key" /> Nursing</span></div>
+        )}
+        {weekFeeds > 0 && (
+          <div className="chart-legend"><span><i /> Bottle</span><span><i className="nursing-key" /> Nursing</span></div>
+        )}
         <p className="figure-source">
           From {weekFeeds} logged {weekFeeds === 1 ? "feed" : "feeds"} · on this device
         </p>

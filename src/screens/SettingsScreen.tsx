@@ -1,13 +1,4 @@
-import {
-  Baby,
-  Bell,
-  Check,
-  Download,
-  Moon,
-  ShieldCheck,
-  Sun,
-  Upload,
-} from "lucide-react";
+import { Baby, Bell, Check, Download, Moon, ShieldCheck, Sun, Trash2, Upload } from "lucide-react";
 import { ChangeEvent, useRef } from "react";
 import {
   Card,
@@ -46,6 +37,7 @@ type SettingsScreenProps = {
   onExport: () => void;
   onImport: (event: ChangeEvent<HTMLInputElement>) => void;
   onOpenProfile: () => void;
+  onEraseAll: () => void;
 };
 
 export default function SettingsScreen({
@@ -61,6 +53,7 @@ export default function SettingsScreen({
   onExport,
   onImport,
   onOpenProfile,
+  onEraseAll,
 }: SettingsScreenProps) {
   const importRef = useRef<HTMLInputElement>(null);
 
@@ -173,6 +166,14 @@ export default function SettingsScreen({
             <SettingsAction title="Download backup" description="Plain, readable JSON — cloud-synced folders will copy it" icon={<Download />} onClick={onExport} />
             <ItemSeparator />
             <SettingsAction title="Restore a backup" description="Choose a backup file from any device" icon={<Upload />} onClick={() => importRef.current?.click()} />
+            <ItemSeparator />
+            <SettingsAction
+              className="settings-action-danger"
+              title="Erase everything and start over"
+              description="Deletes every entry on this device — download a backup first"
+              icon={<Trash2 />}
+              onClick={onEraseAll}
+            />
           </ItemGroup>
         </CardContent>
         <Input ref={importRef} className="hidden-input" type="file" accept="application/json" onChange={onImport} />

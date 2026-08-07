@@ -279,12 +279,12 @@
 }
 
 /* 3. Day strip: four stats, no internal borders, hairline above. */
+/* The hearth's bottom hairline already divides — no second rule above the
+   stats, no dead band of empty space between two lines. */
 .day-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
 }
 
 .day-strip > div {

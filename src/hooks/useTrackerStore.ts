@@ -446,6 +446,31 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     setRecoveredNotice(null);
   }
 
+  // Deliberate, confirmed, total erase — the only way back to onboarding.
+  function eraseAllData() {
+    const count = persistedStateRef.current.activities.length;
+    const name = persistedStateRef.current.profile.name.trim() || "your baby";
+    if (
+      !window.confirm(
+        `Erase all of ${name}'s data from this device? ${count} ${count === 1 ? "entry" : "entries"} will be deleted. Download a backup first if you may ever need it — this cannot be undone.`,
+      )
+    ) return;
+    try {
+      window.localStorage.removeItem(STORAGE_KEY);
+      window.localStorage.removeItem(RECOVERY_KEY);
+      applyLoadedState({
+        activities: [],
+        profile: EMPTY_PROFILE,
+        reminders: DEFAULT_REMINDERS,
+        bootState: "onboarding",
+      });
+      setStorageWarning(null);
+      showToast("Everything erased. Starting fresh.");
+    } catch {
+      showToast("This browser blocked the erase. Nothing was changed.");
+    }
+  }
+
   return {
     bootState,
     activities,
@@ -468,5 +493,6 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     downloadRecovery,
     resetUnreadableData,
     dismissRecoveredNotice,
+    eraseAllData,
   };
 }

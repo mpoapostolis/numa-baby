@@ -233,6 +233,7 @@ export function DayBand({
               {tick.label}
             </span>
           ))}
+          <span className="scale-now" style={{ left: "100%" }}>now</span>
         </div>
       ) : (
         <div className="day-band-scale">

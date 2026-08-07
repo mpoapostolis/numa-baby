@@ -17,8 +17,9 @@
   background: var(--background);
 }
 
+/* The shadcn container already draws the single border-r — a second
+   border-right here rendered as an ugly double vertical line. */
 .numa-sidebar [data-sidebar="sidebar"] {
-  border-right: 1px solid var(--sidebar-border);
   background: var(--sidebar);
 }
 
@@ -209,10 +210,6 @@
   min-height: 44px;
   border: 1px solid var(--border);
   background: var(--card);
-}
-
-.topbar-separator {
-  height: 24px;
 }
 
 .topbar-page-title {
@@ -488,7 +485,6 @@
 
   /* The drawer duplicates the bottom nav on phones — the trigger goes away. */
   .sidebar-trigger,
-  .topbar-separator,
   .baby-identity > span:nth-child(2),
   .baby-identity > svg {
     display: none;

@@ -129,6 +129,18 @@
   line-height: 1;
 }
 
+/* Rolling mode: the line is enough — its label lives in the scale row where
+   it can never clip against the container edge. */
+.band-now.is-edge i {
+  display: none;
+}
+
+.day-band-scale.is-rolling .scale-now {
+  translate: -100%;
+  color: var(--signal);
+  font-weight: 500;
+}
+
 .day-band-legend {
   display: flex;
   flex-wrap: wrap;

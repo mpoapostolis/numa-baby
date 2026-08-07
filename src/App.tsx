@@ -13,7 +13,6 @@ import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner";
 import { Button } from "./components/ui/button";
 import { Dialog, DialogContent } from "./components/ui/dialog";
-import { Separator } from "./components/ui/separator";
 import {
   SidebarInset,
   SidebarProvider,
@@ -92,6 +91,7 @@ export default function HomePage() {
     downloadRecovery,
     resetUnreadableData,
     dismissRecoveredNotice,
+    eraseAllData,
   } = useTrackerStore({ debugMode, showToast, onNotificationPermission: setNotificationPermission });
 
   useEffect(() => {
@@ -199,7 +199,6 @@ export default function HomePage() {
         <header className="topbar">
           <div className="topbar-start">
             <SidebarTrigger className="sidebar-trigger" aria-label="Open navigation" />
-            <Separator orientation="vertical" className="topbar-separator" />
             <span className="topbar-page-title">
               {activeTab === "more"
                 ? "Settings"
@@ -309,6 +308,7 @@ export default function HomePage() {
               onExport={exportData}
               onImport={importData}
               onOpenProfile={() => openSheet("profile")}
+              onEraseAll={eraseAllData}
             />
           )}
         </main>
