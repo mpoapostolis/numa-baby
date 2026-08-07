@@ -69,6 +69,9 @@ test("preserves local data compatibility and critical one-handed flows", async (
   assert.match(app, /function quickStartNursing/);
   assert.match(app, /function quickLogDiaper/);
   assert.match(app, /Undo is always available/);
+  assert.match(app, /Start left/);
+  assert.match(app, /Start right/);
+  assert.match(app, /Add past session/);
   assert.match(app, /saveDiaper\(diaperKind\)/);
   assert.match(app, /<Tabs value=\{activeTab\}/);
   assert.match(app, /<ToggleGroup type="single"/);

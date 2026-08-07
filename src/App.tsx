@@ -1481,17 +1481,17 @@ export default function HomePage() {
                   {profile.feedingMode !== "bottle" && (
                     <InstantLogCard
                       className="action-nurse"
-                      title={activeNursing ? "Nursing now" : "Nursing"}
-                      description={activeNursing ? `${activeNursing.side === "left" ? "Left" : "Right"} · ${liveDuration(activeNursing.startedAt, minuteClock)}` : "Start a side timer"}
+                      title={activeNursing ? "Nursing now" : "Nursing timer"}
+                      description={activeNursing ? `${activeNursing.side === "left" ? "Left" : "Right"} · ${liveDuration(activeNursing.startedAt, minuteClock)}` : "Choose a side to start instantly"}
                       icon={<Heart />}
                     >
                       {activeNursing ? (
                         <Button size="sm" className="instant-stop" onClick={stopNursing}><Square fill="currentColor" /> Stop</Button>
                       ) : (
                         <>
-                          <Button size="sm" onClick={() => quickStartNursing("left")}>Left</Button>
-                          <Button size="sm" onClick={() => quickStartNursing("right")}>Right</Button>
-                          <Button size="sm" variant="outline" onClick={openManualNursing} aria-label="Add a completed nursing session manually">Past</Button>
+                          <Button size="sm" onClick={() => quickStartNursing("left")} aria-label="Start nursing timer on the left side">Start left</Button>
+                          <Button size="sm" onClick={() => quickStartNursing("right")} aria-label="Start nursing timer on the right side">Start right</Button>
+                          <Button size="sm" variant="outline" onClick={openManualNursing} aria-label="Add a completed nursing session manually"><Clock /> Add past session</Button>
                         </>
                       )}
                     </InstantLogCard>

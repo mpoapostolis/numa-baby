@@ -901,6 +901,7 @@ body {
 .instant-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-flow: dense;
   gap: 8px;
 }
 
@@ -977,6 +978,37 @@ body {
 .instant-card-actions .instant-stop {
   background: var(--foreground);
   color: var(--background);
+}
+
+.instant-card.action-nurse {
+  min-height: 168px;
+  grid-column: 1 / -1;
+}
+
+.action-nurse .instant-card-actions {
+  grid-auto-flow: row;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.action-nurse .instant-card-actions [data-slot="button"] {
+  min-height: 44px;
+  font-size: 0.75rem;
+}
+
+.action-nurse .instant-card-actions [data-slot="button"]:last-child {
+  grid-column: 1 / -1;
+}
+
+.instant-card.action-sleep {
+  min-height: 92px;
+  grid-template-columns: minmax(0, 1fr) 116px;
+  grid-template-rows: 1fr;
+  align-items: center;
+  grid-column: 1 / -1;
+}
+
+.action-sleep .instant-card-actions {
+  grid-auto-flow: row;
 }
 
 .quick-action {
