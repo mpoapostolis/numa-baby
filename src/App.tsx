@@ -97,7 +97,7 @@ export default function HomePage() {
   useEffect(() => {
     document.documentElement.classList.toggle("dark", nightMode);
     document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
-      ?.setAttribute("content", nightMode ? "#1d1a15" : "#f7f6f2");
+      ?.setAttribute("content", nightMode ? "#0b0c0e" : "#f7f6f2");
   }, [nightMode]);
 
   const stats = useActivityStats(activities, profile, minuteClock);

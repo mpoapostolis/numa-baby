@@ -1,5 +1,6 @@
-import { Plus, Weight } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Button } from "./ui/button";
+import { SproutChart } from "./illustrations";
 import { Activity } from "../domain/types";
 
 // Hoisted like the formatters in domain/time.ts — constructing Intl per point
@@ -58,7 +59,7 @@ export function GrowthChart({
 
       {!visible.length ? (
         <div className="growth-empty">
-          <Weight size={25} />
+          <SproutChart size={96} />
           <p>Your baby’s weight trend will appear after the first measurement.</p>
         </div>
       ) : (

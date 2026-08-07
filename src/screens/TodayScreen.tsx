@@ -17,6 +17,7 @@ import { ActivityGlyph } from "../components/ActivityGlyph";
 import { ActivityRow } from "../components/ActivityRow";
 import { DayBand } from "../components/DayBand";
 import { EmptyState } from "../components/EmptyState";
+import { LittleBottle, SleepyMoon } from "../components/illustrations";
 import { activityDetail, activityTitle } from "../domain/activityDisplay";
 import { makeId } from "../domain/id";
 import {
@@ -170,6 +171,7 @@ export default function TodayScreen({
 }: TodayScreenProps) {
   const {
     sortedActivities,
+    todayActivities,
     feedsToday,
     bottleMlToday,
     diapersToday,
@@ -267,18 +269,24 @@ export default function TodayScreen({
         <div className="hearth">
           {activeNursing ? (
             <NursingHearth activity={activeNursing} onStop={stopNursing} />
+          ) : !lastFeed ? (
+            // First run: no em-dash figure pretending to be data — a calm
+            // welcome instead.
+            <div className="hearth-clock hearth-empty">
+              <LittleBottle className="hearth-illustration" />
+              <p className="t-title-2">Ready when you are</p>
+              <p className="t-meta">Log the first feed when it happens — one tap on the right.</p>
+            </div>
           ) : (
             <div className="hearth-clock">
               <span className="t-label">Since last feed</span>
               <p className="figure hearth-figure t-display">
-                <GapFigure startedAt={lastFeed?.startedAt} now={minuteClock} />
+                <GapFigure startedAt={lastFeed.startedAt} now={minuteClock} />
               </p>
               <p className="hearth-meta">
-                {lastFeed
-                  ? `${activityTitle(lastFeed)} · ${activityDetail(lastFeed)}`
-                  : "Log the first feed when it happens."}
+                {`${activityTitle(lastFeed)} · ${activityDetail(lastFeed)}`}
               </p>
-              {lastFeed && typicalGap > 0 && (
+              {typicalGap > 0 && (
                 // One plain sentence — an unlabelled progress bar here read as
                 // "what is this?" instead of information.
                 <p className="micro-caption">
@@ -299,7 +307,10 @@ export default function TodayScreen({
             />
           ))}
 
-          {!activeNursing && (
+          {/* With zero feeds there is no pattern to forecast — the row waits
+              for the first feed instead of announcing "Learning the pattern"
+              over an empty tracker. */}
+          {!activeNursing && lastFeed && (
             <div className="hearth-foot">
               <div className="log-copy">
                 <span>Next likely feed</span>
@@ -434,6 +445,9 @@ export default function TodayScreen({
           </Button>
         </div>
 
+        {/* Stats only once there is something to count — four em-dashes on a
+            fresh install read as breakage, not calm. */}
+        {(todayActivities.length > 0 || sleepMinutesToday > 0) && (
         <div className="day-strip" aria-label="Today's summary">
           <div>
             <span className="stat-head"><Milk size={14} aria-hidden="true" /> Feeds today</span>
@@ -465,6 +479,7 @@ export default function TodayScreen({
             <span className="figure t-numeral"><DurationFigure minutes={sleepMinutesToday} /></span>
           </div>
         </div>
+        )}
 
         <DayBand
           className="today-band"
@@ -474,7 +489,10 @@ export default function TodayScreen({
         />
 
         <div className="next-up">
-          {!activeSleep && (
+          {/* Same rule as the feed forecast: no "Learning the pattern" over an
+              empty tracker — the row waits for the first logged sleep. The
+              plain "Start sleep" action above stays available regardless. */}
+          {!activeSleep && sortedActivities.some((activity) => activity.type === "sleep") && (
             <div className="log-row action-sleep">
               <span className="action-icon"><Moon /></span>
               <div className="log-copy">
@@ -516,7 +534,12 @@ export default function TodayScreen({
                   </div>
                 ))}
               </ItemGroup>
-              {!sortedActivities.length && <EmptyState text="Your day will appear here as you log it." />}
+              {!sortedActivities.length && (
+                <EmptyState
+                  illustration={<SleepyMoon />}
+                  text="Your day will appear here as you log it."
+                />
+              )}
             </CardContent>
           </Card>
         </div>

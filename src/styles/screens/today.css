@@ -52,6 +52,27 @@
   margin: 0;
 }
 
+/* First-run welcome: illustration instead of an em-dash figure. */
+.hearth-empty {
+  justify-items: center;
+  gap: 4px;
+  padding: 16px 0 8px;
+  text-align: center;
+}
+
+.hearth-empty .hearth-illustration {
+  margin-bottom: 8px;
+  color: var(--ink-2);
+}
+
+.hearth-empty p {
+  margin: 0;
+}
+
+.hearth-empty .t-meta {
+  max-width: 320px;
+}
+
 .hearth-live-label {
   color: var(--signal);
 }

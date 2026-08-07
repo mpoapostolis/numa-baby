@@ -1,8 +1,10 @@
-/* DayBand — 24-hour multi-lane strip shared by Today and Insights. */
+/* DayBand — 24-hour multi-lane strip shared by Today and Insights.
+   Color = activity: marks reuse the per-activity glyph hues, so the blue
+   dots read as bottles the same way the blue bottle icon does on log rows. */
 
 .day-band {
   display: grid;
-  gap: 4px;
+  gap: 6px;
 }
 
 .day-band-lanes {
@@ -14,19 +16,34 @@
   border-bottom: 1px solid var(--border);
 }
 
+/* Light vertical gridlines at 06 / 12 / 18 anchor marks to the clock. */
+.band-grid {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border);
+  translate: -50%;
+}
+
 .band-lane {
   display: grid;
   grid-template-columns: 20px minmax(0, 1fr);
   align-items: center;
   gap: 4px;
-  height: 12px;
+  height: 16px;
 }
 
 .band-lane-icon {
   display: inline-flex;
   justify-content: center;
-  color: var(--ink-3);
 }
+
+/* Lane icons inherit their activity hue so icon and marks match. */
+.lane-feed .band-lane-icon { color: var(--glyph-bottle); }
+.lane-diaper .band-lane-icon { color: var(--glyph-diaper); }
+.lane-sleep .band-lane-icon { color: var(--glyph-sleep); }
+.lane-mark .band-lane-icon { color: var(--ink-3); }
 
 .band-track {
   position: relative;
@@ -38,49 +55,56 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
+/* Feed dots — clustered feeds get a ±3px vertical nudge via --dot-nudge. */
 .band-dot {
   position: absolute;
   top: 50%;
-  width: 7px;
-  height: 7px;
+  width: 10px;
+  height: 10px;
   border-radius: 999px;
-  background: var(--ink-2);
-  translate: -50% -50%;
+  translate: -50% calc(-50% + var(--dot-nudge, 0px));
 }
 
-.band-dot.is-hollow {
-  border: 1px solid var(--ink-2);
+.band-dot.is-bottle {
+  background: var(--glyph-bottle);
+}
+
+.band-dot.is-nursing {
+  border: 2px solid var(--glyph-nursing);
   background: var(--background);
 }
 
-.band-tick {
+.band-square {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  border-radius: 999px;
-  background: var(--ink-3);
-  translate: -50%;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--glyph-diaper);
+  translate: -50% -50%;
 }
 
 .band-span {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  border-radius: 4px;
-  background: var(--border-strong);
+  top: 50%;
+  height: 10px;
+  border: 1px solid var(--glyph-sleep);
+  border-radius: 5px;
+  background: color-mix(in oklch, var(--glyph-sleep) 25%, transparent);
+  translate: 0 -50%;
 }
 
 /* In-progress sleep: 45° hatch — the only "happening now" mark in the band. */
 .band-span.is-open {
+  border-color: var(--signal);
   background: repeating-linear-gradient(45deg, var(--signal) 0 3px, transparent 3px 7px);
 }
 
 .band-mark {
   position: absolute;
   top: 50%;
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   background: var(--ink-3);
   translate: -50% -50%;
   rotate: 45deg;
@@ -107,7 +131,8 @@
 
 .day-band-legend {
   display: flex;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 4px 16px;
   margin: 0;
   color: var(--ink-3);
   font-size: 0.75rem;
@@ -120,10 +145,33 @@
   gap: 6px;
 }
 
-.day-band-legend .band-dot {
-  position: static;
-  translate: none;
+.key-swatch {
   flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+}
+
+.key-bottle {
+  border-radius: 999px;
+  background: var(--glyph-bottle);
+}
+
+.key-nursing {
+  border: 2px solid var(--glyph-nursing);
+  border-radius: 999px;
+  background: var(--background);
+}
+
+.key-diaper {
+  border-radius: 3px;
+  background: var(--glyph-diaper);
+}
+
+.key-sleep {
+  width: 16px;
+  border: 1px solid var(--glyph-sleep);
+  border-radius: 5px;
+  background: color-mix(in oklch, var(--glyph-sleep) 25%, transparent);
 }
 
 .day-band-scale {

@@ -98,31 +98,32 @@
   font-synthesis: none;
 }
 
-/* Night — warm hue 62, luminance-capped: no surface above L 0.20
-   (dialogs 0.215 max), no text above L 0.80, chroma <= 0.08 except --alert. */
+/* Night — "dark room, warm lamp": neutral charcoal surfaces (chroma <= 0.006,
+   hue ~255), near-neutral warm-white text; ALL warmth lives in the amber accent.
+   Caps: no surface above L 0.22 (dialogs 0.22 max), no pure white. */
 .dark {
-  --background: oklch(0.148 0.01 62);
-  --foreground: oklch(0.8 0.012 76);
-  --card: oklch(0.178 0.012 62);
-  --popover: oklch(0.215 0.014 62);
-  --ink-2: oklch(0.68 0.014 70);
-  --ink-3: oklch(0.56 0.012 68);
-  --border: oklch(0.26 0.012 64);
-  --border-strong: oklch(0.32 0.012 64);
-  --muted: oklch(0.2 0.012 62);
-  --signal: oklch(0.68 0.07 70);
-  --signal-quiet: oklch(0.24 0.03 66);
-  --alert: oklch(0.64 0.13 27);
-  --primary-foreground: oklch(0.148 0.01 62);
-  --destructive-foreground: oklch(0.8 0.012 76);
-  --accent-foreground: oklch(0.78 0.04 70);
-  --sidebar: oklch(0.165 0.011 62);
-  --glyph-bottle: oklch(0.72 0.09 232);
-  --glyph-nursing: oklch(0.72 0.09 22);
-  --glyph-diaper: oklch(0.72 0.09 168);
-  --glyph-sleep: oklch(0.72 0.09 280);
-  --glyph-growth: oklch(0.72 0.09 100);
-  --glyph-health: oklch(0.72 0.09 14);
+  --background: oklch(0.155 0.005 255);
+  --foreground: oklch(0.84 0.008 80);
+  --card: oklch(0.19 0.005 255);
+  --popover: oklch(0.22 0.005 255);
+  --ink-2: oklch(0.7 0.008 80);
+  --ink-3: oklch(0.61 0.006 80);
+  --border: oklch(0.28 0.005 255);
+  --border-strong: oklch(0.34 0.005 255);
+  --muted: oklch(0.22 0.005 255);
+  --signal: oklch(0.7 0.09 70);
+  --signal-quiet: oklch(0.25 0.035 70);
+  --alert: oklch(0.66 0.14 27);
+  --primary-foreground: oklch(0.155 0.005 255);
+  --destructive-foreground: oklch(0.84 0.008 80);
+  --accent-foreground: oklch(0.8 0.05 70);
+  --sidebar: oklch(0.17 0.005 255);
+  --glyph-bottle: oklch(0.73 0.09 232);
+  --glyph-nursing: oklch(0.73 0.09 22);
+  --glyph-diaper: oklch(0.73 0.09 168);
+  --glyph-sleep: oklch(0.73 0.09 280);
+  --glyph-growth: oklch(0.73 0.09 100);
+  --glyph-health: oklch(0.73 0.09 14);
   --danger-soft: color-mix(in oklch, var(--alert) 12%, var(--background));
   --shadow-dialog: none;
   color-scheme: dark;
