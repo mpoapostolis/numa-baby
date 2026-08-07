@@ -72,6 +72,10 @@ test("preserves local data compatibility and critical one-handed flows", async (
   assert.match(app, /Start left/);
   assert.match(app, /Start right/);
   assert.match(app, /Add past session/);
+  assert.match(app, /function debugPreviewData/);
+  assert.match(app, /URLSearchParams\(window\.location\.search\)\.has\("debug"\)/);
+  assert.match(app, /Fake data only/);
+  assert.match(app, /appearance-options/);
   assert.match(app, /saveDiaper\(diaperKind\)/);
   assert.match(app, /<Tabs value=\{activeTab\}/);
   assert.match(app, /<ToggleGroup type="single"/);

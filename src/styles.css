@@ -644,44 +644,6 @@ body {
   height: 18px;
 }
 
-.sidebar-theme-control {
-  min-height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 6px 9px;
-  color: var(--sidebar-foreground);
-}
-
-.sidebar-theme-control > span {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 11px;
-}
-
-.sidebar-theme-control > span > svg {
-  width: 18px;
-  height: 18px;
-  color: var(--muted-foreground);
-}
-
-.sidebar-theme-control > span > span {
-  display: grid;
-  gap: 1px;
-}
-
-.sidebar-theme-control strong {
-  font-size: 0.8125rem;
-  font-weight: 560;
-}
-
-.sidebar-theme-control small {
-  color: var(--muted-foreground);
-  font-size: 0.6875rem;
-}
-
 .sidebar-profile-button {
   background: transparent;
 }
@@ -1739,25 +1701,6 @@ body {
   line-height: 1.55;
 }
 
-.theme-switch {
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 6px 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--card);
-}
-
-.theme-switch > span {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.75rem;
-  font-weight: 560;
-}
-
 .privacy-card {
   min-height: 92px;
   display: grid;
@@ -1813,6 +1756,65 @@ body {
 
 .settings-group [data-slot="card-content"] {
   padding: 0 10px 10px;
+}
+
+.appearance-options {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.appearance-options [data-slot="toggle-group-item"] {
+  min-width: 0;
+  min-height: 68px;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: center;
+  justify-content: stretch;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  text-align: left;
+}
+
+.appearance-options [data-slot="toggle-group-item"] > svg {
+  width: 36px;
+  height: 36px;
+  padding: 9px;
+  border-radius: 10px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+
+.appearance-options [data-slot="toggle-group-item"] > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.appearance-options strong {
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.appearance-options small {
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+}
+
+.appearance-options [data-slot="toggle-group-item"][data-state="on"] {
+  border-color: color-mix(in oklch, var(--primary) 52%, var(--border));
+  background: var(--accent);
+  color: var(--accent-foreground);
+  box-shadow: 0 0 0 2px color-mix(in oklch, var(--primary) 12%, transparent);
+}
+
+.appearance-options [data-slot="toggle-group-item"][data-state="on"] > svg {
+  background: var(--primary);
+  color: var(--primary-foreground);
 }
 
 .settings-action > button,
@@ -2309,10 +2311,6 @@ body {
     padding: 14px;
   }
 
-  .theme-switch {
-    display: none;
-  }
-
   .bottom-nav {
     position: fixed;
     right: 0;
@@ -2482,6 +2480,57 @@ body {
   z-index: 30;
   padding: 12px 24px 0;
   background: var(--background);
+}
+
+.debug-banner {
+  width: min(100%, 1320px);
+  min-height: 58px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 12px 9px 14px;
+  border: 1px solid color-mix(in oklch, var(--primary) 30%, var(--border));
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklch, var(--card) 92%, var(--accent));
+}
+
+.debug-banner > span {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.debug-banner > span > svg {
+  width: 20px;
+  height: 20px;
+  color: var(--primary);
+}
+
+.debug-banner > span > span {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.debug-banner strong {
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.debug-banner small {
+  overflow: hidden;
+  color: var(--muted-foreground);
+  font-size: 0.6875rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.debug-banner [data-slot="button"] {
+  min-height: 38px;
+  flex: 0 0 auto;
 }
 
 .storage-banner {

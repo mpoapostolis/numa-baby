@@ -372,6 +372,105 @@ function makeId() {
     : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+function debugPreviewData(): { profile: Profile; activities: Activity[] } {
+  const now = new Date();
+  const birthDate = new Date(now);
+  birthDate.setDate(now.getDate() - 24);
+  const activities: Activity[] = [];
+
+  for (let dayOffset = 6; dayOffset >= 0; dayOffset -= 1) {
+    const day = new Date(now);
+    day.setDate(now.getDate() - dayOffset);
+
+    [1, 5, 8, 11, 15, 18, 22].forEach((hour, index) => {
+      const started = new Date(day);
+      started.setHours(hour + ((dayOffset + index) % 2), index % 2 ? 20 : 5, 0, 0);
+      if (started > now) return;
+      const nursing = index % 3 === 1;
+      activities.push({
+        id: `debug-feed-${dayOffset}-${index}`,
+        type: nursing ? "nursing" : "bottle",
+        startedAt: started.toISOString(),
+        endedAt: nursing ? new Date(started.getTime() + (14 + index) * 60_000).toISOString() : undefined,
+        amount: nursing ? undefined : 80 + ((index + dayOffset) % 4) * 10,
+        side: nursing ? (index % 2 ? "left" : "right") : undefined,
+        milkType: nursing ? undefined : index % 2 ? "expressed" : "formula",
+      });
+    });
+
+    [3, 9, 14, 20].forEach((hour, index) => {
+      const started = new Date(day);
+      started.setHours(hour, 35, 0, 0);
+      if (started > now) return;
+      activities.push({
+        id: `debug-diaper-${dayOffset}-${index}`,
+        type: "diaper",
+        diaperKind: index === 2 ? "both" : index % 2 ? "dirty" : "wet",
+        startedAt: started.toISOString(),
+      });
+    });
+
+    [
+      { hour: 2, minute: 30, duration: 110 },
+      { hour: 9, minute: 25, duration: 65 },
+      { hour: 13, minute: 5, duration: 80 },
+      { hour: 17, minute: 15, duration: 45 },
+      { hour: 23, minute: 10, duration: 145 },
+    ].forEach((sleep, index) => {
+      const started = new Date(day);
+      started.setHours(sleep.hour, sleep.minute + (dayOffset % 3) * 5, 0, 0);
+      const ended = new Date(started.getTime() + sleep.duration * 60_000);
+      if (started > now || ended > now) return;
+      activities.push({
+        id: `debug-sleep-${dayOffset}-${index}`,
+        type: "sleep",
+        startedAt: started.toISOString(),
+        endedAt: ended.toISOString(),
+      });
+    });
+  }
+
+  [
+    { daysAgo: 17, weightGrams: 3180, lengthCm: 50.1, headCm: 34.2 },
+    { daysAgo: 9, weightGrams: 3310, lengthCm: 50.8, headCm: 34.7 },
+    { daysAgo: 1, weightGrams: 3470, lengthCm: 51.5, headCm: 35.1 },
+  ].forEach((measurement, index) => {
+    const started = new Date(now);
+    started.setDate(now.getDate() - measurement.daysAgo);
+    started.setHours(10, 15, 0, 0);
+    activities.push({
+      id: `debug-growth-${index}`,
+      type: "growth",
+      startedAt: started.toISOString(),
+      weightGrams: measurement.weightGrams,
+      lengthCm: measurement.lengthCm,
+      headCm: measurement.headCm,
+    });
+  });
+
+  const healthTime = new Date(now);
+  healthTime.setDate(now.getDate() - 1);
+  healthTime.setHours(18, 40, 0, 0);
+  activities.push({
+    id: "debug-health-0",
+    type: "health",
+    startedAt: healthTime.toISOString(),
+    temperatureC: 36.8,
+    note: "Routine evening check",
+  });
+
+  return {
+    profile: {
+      name: "Mia",
+      birthDate: birthDate.toISOString().slice(0, 10),
+      feedingMode: "mixed",
+    },
+    activities: activities.sort(
+      (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
+    ),
+  };
+}
+
 function activityTitle(activity: Activity) {
   if (activity.type === "bottle") return "Bottle";
   if (activity.type === "nursing") return "Nursing";
@@ -431,6 +530,7 @@ function ActivityGlyph({ type }: { type: ActivityType }) {
 }
 
 export default function HomePage() {
+  const [debugMode] = useState(() => new URLSearchParams(window.location.search).has("debug"));
   const [bootState, setBootState] = useState<BootState>("loading");
   const [activities, setActivities] = useState<Activity[]>([]);
   const [profile, setProfile] = useState<Profile>(EMPTY_PROFILE);
@@ -484,6 +584,16 @@ export default function HomePage() {
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
+      if (debugMode) {
+        const preview = debugPreviewData();
+        setActivities(preview.activities);
+        setProfile(preview.profile);
+        setNightMode(false);
+        setReminders(DEFAULT_REMINDERS);
+        setStorageWarning(null);
+        setBootState("ready");
+        return;
+      }
       try {
         const saved = window.localStorage.getItem(STORAGE_KEY);
         if (saved) {
@@ -526,9 +636,10 @@ export default function HomePage() {
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, []);
+  }, [debugMode]);
 
   useEffect(() => {
+    if (debugMode) return;
     const syncFromAnotherTab = (event: StorageEvent) => {
       if (event.key !== STORAGE_KEY) return;
       if (!event.newValue) {
@@ -556,7 +667,7 @@ export default function HomePage() {
     };
     window.addEventListener("storage", syncFromAnotherTab);
     return () => window.removeEventListener("storage", syncFromAnotherTab);
-  }, []);
+  }, [debugMode]);
 
   const sortedActivities = useMemo(
     () =>
@@ -753,6 +864,10 @@ export default function HomePage() {
     nextReminders: ReminderSettings = reminders,
     nextOnboardingComplete: boolean = bootState === "ready",
   ) {
+    if (debugMode) {
+      setStorageWarning(null);
+      return true;
+    }
     try {
       window.localStorage.setItem(
         STORAGE_KEY,
@@ -1113,6 +1228,12 @@ export default function HomePage() {
     setNightMode(enabled);
   }
 
+  function exitDebugPreview() {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("debug");
+    window.location.replace(url.toString());
+  }
+
   function saveProfile(nextProfile: Profile) {
     if (!persistSnapshot(activities, nextProfile)) return false;
     setProfile(nextProfile);
@@ -1223,7 +1344,7 @@ export default function HomePage() {
           return;
         }
         let recoveryCreated = true;
-        if (bootState === "ready") {
+        if (bootState === "ready" && !debugMode) {
           try {
             window.localStorage.setItem(
               RECOVERY_KEY,
@@ -1288,8 +1409,6 @@ export default function HomePage() {
         onNavigate={setActiveTab}
         profile={profile}
         onProfile={() => openSheet("profile")}
-        nightMode={nightMode}
-        onNightModeChange={changeNightMode}
       />
       <SidebarInset className="app-frame">
         <header className="topbar">
@@ -1316,6 +1435,15 @@ export default function HomePage() {
             <ChevronRight size={16} />
           </Button>
         </header>
+
+        {debugMode && (
+          <div className="banner-stack">
+            <div className="debug-banner" role="status">
+              <span><Stethoscope /><span><strong>Debug preview</strong><small>Fake data only · your saved tracker is untouched</small></span></span>
+              <Button variant="outline" size="sm" onClick={exitDebugPreview}>Exit preview</Button>
+            </div>
+          </div>
+        )}
 
         {storageWarning && (
           <div className="banner-stack">
@@ -1672,11 +1800,26 @@ export default function HomePage() {
                   <h1 id="more-heading">Settings</h1>
                   <p className="page-subtitle">Profile, privacy and backups in one place.</p>
                 </div>
-                <div className="theme-switch">
-                  <span>{nightMode ? <Moon size={17} /> : <Sun size={17} />} Dark mode</span>
-                  <Switch checked={nightMode} onCheckedChange={changeNightMode} aria-label="Use night mode" />
-                </div>
               </div>
+
+              <Card className="settings-group appearance-settings">
+                <CardHeader>
+                  <CardTitle>Appearance</CardTitle>
+                  <CardDescription>Choose the theme that is easiest on your eyes.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ToggleGroup
+                    type="single"
+                    value={nightMode ? "dark" : "light"}
+                    className="appearance-options"
+                    aria-label="Application appearance"
+                    onValueChange={(value) => value && changeNightMode(value === "dark")}
+                  >
+                    <ToggleGroupItem value="light"><Sun /><span><strong>Light</strong><small>Bright and clear</small></span></ToggleGroupItem>
+                    <ToggleGroupItem value="dark"><Moon /><span><strong>Dark</strong><small>Calm at night</small></span></ToggleGroupItem>
+                  </ToggleGroup>
+                </CardContent>
+              </Card>
 
               <Card className="privacy-card">
                 <span><ShieldCheck size={25} /></span>
@@ -2117,17 +2260,13 @@ function AppSidebar({
   onNavigate,
   profile,
   onProfile,
-  nightMode,
-  onNightModeChange,
 }: {
   activeTab: Tab;
   onNavigate: (tab: Tab) => void;
   profile: Profile;
   onProfile: () => void;
-  nightMode: boolean;
-  onNightModeChange: (enabled: boolean) => void;
 }) {
-  const { isMobile, setOpenMobile, state } = useSidebar();
+  const { setOpenMobile } = useSidebar();
   const navItems: Array<{ value: Tab; label: string; icon: React.ReactNode }> = [
     { value: "today", label: "Today", icon: <Home /> },
     { value: "timeline", label: "Timeline", icon: <Clock /> },
@@ -2186,26 +2325,6 @@ function AppSidebar({
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
-          <SidebarMenuItem className="sidebar-theme-item">
-            {state === "collapsed" && !isMobile ? (
-              <SidebarMenuButton
-                size="lg"
-                className="sidebar-theme-toggle"
-                tooltip={nightMode ? "Use light mode" : "Use dark mode"}
-                aria-label={nightMode ? "Use light mode" : "Use dark mode"}
-                aria-pressed={nightMode}
-                onClick={() => onNightModeChange(!nightMode)}
-              >
-                {nightMode ? <Sun /> : <Moon />}
-                <span>{nightMode ? "Light mode" : "Dark mode"}</span>
-              </SidebarMenuButton>
-            ) : (
-              <div className="sidebar-theme-control">
-                <span>{nightMode ? <Sun /> : <Moon />}<span><strong>Appearance</strong><small>{nightMode ? "Dark" : "Light"} theme</small></span></span>
-                <Switch checked={nightMode} onCheckedChange={onNightModeChange} aria-label="Use dark mode" />
-              </div>
-            )}
-          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" className="sidebar-profile-button" tooltip="Baby profile" aria-label="Baby profile" onClick={onProfile}>
               <span className="baby-avatar"><Baby /></span>
