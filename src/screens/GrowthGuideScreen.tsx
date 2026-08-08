@@ -107,8 +107,14 @@ export default function GrowthGuideScreen({ profile, latestGrowth, onBack }: Gro
       <div className="section-heading">
         <div>
           {onBack && (
-            <Button variant="ghost" size="sm" className="guide-back" onClick={onBack}>
-              <ArrowLeft size={16} /> Insights
+            <Button
+              variant="ghost"
+              size="sm"
+              className="guide-back"
+              aria-label="Back to Insights"
+              onClick={onBack}
+            >
+              <ArrowLeft size={16} aria-hidden="true" /> Insights
             </Button>
           )}
           <p className="eyebrow">Reference ranges</p>
@@ -130,11 +136,11 @@ export default function GrowthGuideScreen({ profile, latestGrowth, onBack }: Gro
       {age !== null && range !== null ? (
         <div className="surface-card guide-range-card">
           <span className="guide-range-art" aria-hidden="true"><SproutChart size={72} /></span>
-          <p className="t-label">{ageHeading(age)}</p>
-          <h2 className="guide-range-figure figure">
+          <h2 className="t-label">{ageHeading(age)}</h2>
+          <p className="guide-range-figure figure">
             {kg(range.p3)}–{kg(range.p97)}
             <span className="unit">kg</span>
-          </h2>
+          </p>
           <p className="t-meta guide-range-sub">Typical weight range at this age (WHO P3–P97)</p>
           {exactAge !== null && exactAge > MAX_REFERENCE_MONTHS && (
             <p className="t-meta">The WHO table covers the first 24 months, shown here at 24 months.</p>
@@ -143,7 +149,7 @@ export default function GrowthGuideScreen({ profile, latestGrowth, onBack }: Gro
           {latestGrowth && latestKg !== undefined && (
             <p className="guide-latest">
               <span className="guide-latest-dot" aria-hidden="true" />
-              {name}’s latest: {latestKg.toFixed(2)} kg ({latestDateFormat.format(new Date(latestGrowth.startedAt))})
+              {name}’s latest: <span className="guide-latest-value">{latestKg.toFixed(2)} kg</span> ({latestDateFormat.format(new Date(latestGrowth.startedAt))})
             </p>
           )}
           {!profile.sex && <p className="t-meta">Range shown covers girls and boys.</p>}
@@ -178,7 +184,7 @@ export default function GrowthGuideScreen({ profile, latestGrowth, onBack }: Gro
       )}
 
       <div className="surface-card guide-section">
-        <p className="t-label">Typical pattern</p>
+        <h2 className="t-label">Typical pattern</h2>
         <ul className="guide-rows">
           <li>
             <p>Many newborns lose some weight in the first days, then regain it — most are back to birth weight by two weeks, nearly all by three.</p>
@@ -204,27 +210,27 @@ export default function GrowthGuideScreen({ profile, latestGrowth, onBack }: Gro
             <span className="guide-authority">NHS</span>
           </li>
         </ul>
-        <p className="t-meta">These are population averages, not targets. A baby tracking a lower centile gains less than one on a higher centile — steadiness is the point.</p>
+        <p className="t-meta">These are population averages, not targets. A baby growing along a lower line on the chart gains less than one on a higher line — steadiness is the point.</p>
       </div>
 
       <div className="surface-card guide-section">
-        <p className="t-label">When to ask your paediatrician</p>
+        <h2 className="t-label">When to ask your paediatrician</h2>
         <p className="t-body guide-intro">Trust your instincts — reach out whenever you’re unsure. These are the moments the guidance names for a check-in:</p>
         <ul className="guide-rows">
-          <li>
-            <p>Not back to birth weight by three weeks of age.</p>
-            <span className="guide-authority">NHS · NICE</span>
-          </li>
           <li>
             <p>At two weeks, still under birth weight or gaining less than about 150 g a week.</p>
             <span className="guide-authority">AAP</span>
           </li>
           <li>
-            <p>After the first week, fewer than six wet nappies a day, or urine that is dark or specked with red.</p>
+            <p>Not back to birth weight by three weeks of age.</p>
+            <span className="guide-authority">NHS · NICE</span>
+          </li>
+          <li>
+            <p>After the first week, fewer than six wet nappies a day, or urine that is dark or has reddish-orange marks in it.</p>
             <span className="guide-authority">AAP</span>
           </li>
           <li>
-            <p>Weight drifting across more than one centile line on their chart, in either direction.</p>
+            <p>Weight drifting across more than one line on their growth chart, in either direction.</p>
             <span className="guide-authority">NHS</span>
           </li>
           <li>
@@ -235,7 +241,7 @@ export default function GrowthGuideScreen({ profile, latestGrowth, onBack }: Gro
       </div>
 
       <div className="surface-card guide-sources">
-        <p className="t-label">Sources</p>
+        <h2 className="t-label">Sources</h2>
         <ul className="guide-source-list">
           {GUIDE_SOURCES.map((source) => (
             <li key={source.url}>

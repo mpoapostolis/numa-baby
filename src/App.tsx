@@ -16,6 +16,7 @@ import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "./components/ui/sidebar";
 import { Toaster } from "./components/ui/sonner";
 import { AppSidebar } from "./components/AppSidebar";
@@ -45,6 +46,26 @@ const bottomNavItems: Array<{ value: Tab; label: string; icon: React.ReactNode }
   { value: "guide", label: "Guide", icon: <Ruler size={20} /> },
   { value: "more", label: "Settings", icon: <Settings size={20} /> },
 ];
+
+// One fallback for every lazy screen: visible loading, announced to SR.
+const screenFallback = (
+  <div className="screen loading-screen screen-fallback" role="status" aria-label="Loading">
+    <SleepingBaby size={48} aria-hidden="true" />
+  </div>
+);
+
+// The trigger's name must survive both states; SidebarTrigger alone can't
+// know them, so this tiny wrapper reads the provider.
+function NavTrigger() {
+  const { open, openMobile, isMobile } = useSidebar();
+  return (
+    <SidebarTrigger
+      className="sidebar-trigger"
+      aria-label="Toggle navigation"
+      aria-expanded={isMobile ? openMobile : open}
+    />
+  );
+}
 
 export default function HomePage() {
   const [debugMode] = useState(() => new URLSearchParams(window.location.search).has("debug"));
@@ -94,9 +115,15 @@ export default function HomePage() {
   } = useTrackerStore({ debugMode, showToast, onNotificationPermission: setNotificationPermission });
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", nightMode);
+    // Theme changes swap every surface color at once — transitions would
+    // smear a cream flash across the dark room. Suppress them for the swap.
+    const root = document.documentElement;
+    root.classList.add("theme-switching");
+    root.classList.toggle("dark", nightMode);
+    const settle = window.setTimeout(() => root.classList.remove("theme-switching"), 50);
     document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
-      ?.setAttribute("content", nightMode ? "#0b0c0e" : "#f7f6f2");
+      ?.setAttribute("content", nightMode ? "#120c0f" : "#fdf5f2");
+    return () => window.clearTimeout(settle);
   }, [nightMode]);
 
   const stats = useActivityStats(activities, profile, minuteClock);
@@ -197,20 +224,18 @@ export default function HomePage() {
       <SidebarInset className="app-frame">
         <header className="topbar">
           <div className="topbar-start">
-            <SidebarTrigger className="sidebar-trigger" aria-label="Open navigation" />
+            <NavTrigger />
             <span className="topbar-page-title">
               {activeTab === "more"
                 ? "Settings"
-                : activeTab === "guide"
-                  ? "Growth guide"
-                  : activeTab[0].toUpperCase() + activeTab.slice(1)}
+                : activeTab[0].toUpperCase() + activeTab.slice(1)}
             </span>
           </div>
           <Button variant="ghost" className="baby-identity" aria-label="Baby profile" onClick={() => openSheet("profile")}>
             <span className="baby-avatar"><BabyFace size={22} /></span>
             <span>
               <strong>{profile.name}</strong>
-              <small>Your private log</small>
+              <small>Baby profile</small>
             </span>
             <ChevronRight size={16} />
           </Button>
@@ -229,7 +254,7 @@ export default function HomePage() {
           <div className="banner-stack">
             <div className="storage-banner" role="alert">
               <ShieldCheck size={19} />
-              <span><strong>Local data needs attention.</strong> {storageWarning}</span>
+              <span><strong>Back up your entries.</strong> {storageWarning}</span>
               <div>
                 <Button onClick={exportData}>Download backup</Button>
               </div>
@@ -239,7 +264,7 @@ export default function HomePage() {
 
         {recoveredNotice && (
           <div className="banner-stack">
-            <div className="debug-banner" role="status">
+            <div className="debug-banner" role="alert">
               <span><ShieldCheck /><span><strong>Some entries were skipped</strong><small>{recoveredNotice}</small></span></span>
               <Button variant="outline" size="sm" onClick={dismissRecoveredNotice}>OK</Button>
             </div>
@@ -262,7 +287,7 @@ export default function HomePage() {
           )}
 
           {activeTab === "timeline" && (
-            <Suspense fallback={null}>
+            <Suspense fallback={screenFallback}>
               <TimelineScreen
                 activities={sortedActivities}
                 filter={timelineFilter}
@@ -278,7 +303,7 @@ export default function HomePage() {
           )}
 
           {activeTab === "insights" && (
-            <Suspense fallback={null}>
+            <Suspense fallback={screenFallback}>
               <InsightsScreen
                 stats={stats}
                 onAddGrowth={() => openSheet("growth")}
@@ -288,7 +313,7 @@ export default function HomePage() {
           )}
 
           {activeTab === "guide" && (
-            <Suspense fallback={null}>
+            <Suspense fallback={screenFallback}>
               <GrowthGuideScreen profile={profile} latestGrowth={stats.latestGrowth} />
             </Suspense>
           )}

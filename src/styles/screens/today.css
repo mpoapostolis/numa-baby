@@ -18,9 +18,18 @@
   border-bottom: 1px solid var(--border);
 }
 
+/* Name and age share the line but never fight: the name ellipsizes, the
+   time-sensitive age always survives. */
 .status-line h1 {
-  overflow: hidden;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
   margin: 0;
+}
+
+.status-name {
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -34,8 +43,10 @@
 /* "Mia · 3 weeks" — the age rides along at meta weight, never competing
    with the name. */
 .status-age {
+  flex: 0 0 auto;
   color: var(--ink-3);
   font-weight: 400;
+  white-space: pre;
 }
 
 .today-dashboard {
@@ -43,10 +54,20 @@
   gap: 24px;
 }
 
-/* 3am rule: on a phone the log buttons come FIRST — the first tap target
-   must sit in the top third, before the clock block. */
-@media (width < 768px) {
-  .today-dashboard > .log-column { order: -1; }
+/* Left column (hearth, stats, band, next-up, recent) travels as one cell so
+   the desktop grid never grows phantom row tracks. */
+.today-main {
+  display: grid;
+  gap: 24px;
+}
+
+/* 3am rule: in any single-column rendering the log buttons come FIRST — the
+   first tap target must sit in the top third, before the clock block.
+   Except while a timer runs: then the live figure and its Stop button ARE
+   the 3am state, and they stay on top. Same 720px threshold as the
+   two-column layout below. */
+@container (width < 720px) {
+  .today-dashboard:not(.has-live) > .log-column { order: -1; }
 }
 
 /* 2. Hearth clock: no card, sits on paper, hairline below. */
@@ -88,9 +109,24 @@
   opacity: 0.9;
 }
 
-@media (width < 420px) {
+/* Small phones keep the ambient — it scales down instead of vanishing on
+   375-412px hardware (the SVG scales via viewBox). */
+@media (width < 400px) {
+  .hearth-ambient svg {
+    width: 72px;
+    height: 72px;
+  }
+}
+
+/* True edge cases only: drop the ambient and give its column back. */
+@media (width < 340px) {
   .hearth-ambient {
     display: none;
+  }
+
+  .hearth-idle {
+    grid-template-columns: minmax(0, 1fr);
+    column-gap: 0;
   }
 }
 
@@ -173,16 +209,12 @@
 .log-copy small {
   overflow: hidden;
   color: var(--ink-3);
-  font-size: 0.75rem;
-  line-height: 1.35;
+  font-size: 0.8125rem;
+  line-height: 1.45;
 }
 
-.log-copy > span {
-  overflow: hidden;
-  color: var(--ink-2);
-  font-size: 0.75rem;
-  line-height: 1.35;
-}
+/* Kickers ("Next likely feed/sleep") carry the t-label role in the markup —
+   no bespoke third size here. */
 
 .log-row .log-copy small {
   text-overflow: ellipsis;
@@ -232,6 +264,14 @@
   color: var(--accent-foreground);
 }
 
+/* The quiet fill defeats the outline variant's layered hover, so the most-
+   used control gets its own — a touch more signal folded into the wash. */
+@media (hover: hover) and (pointer: fine) {
+  .log-actions .log-quiet:hover {
+    background: color-mix(in oklch, var(--signal) 14%, var(--signal-quiet));
+  }
+}
+
 .log-row.is-stacked {
   flex-wrap: wrap;
 }
@@ -244,6 +284,29 @@
 
 .is-stacked .log-actions .span-full {
   grid-column: 1 / -1;
+}
+
+/* 320px-class phones: the diaper and bottle rows wrap their buttons under
+   the title instead of crushing it to an ellipsis. */
+@media (width < 360px) {
+  .log-row.action-diaper,
+  .log-row.action-feed {
+    flex-wrap: wrap;
+  }
+
+  .action-diaper .log-actions,
+  .action-feed .log-actions {
+    flex: 1 0 100%;
+    display: grid;
+  }
+
+  .action-diaper .log-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .action-feed .log-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 /* Live timers rendered as rows (active sleep, orphaned sessions). */
@@ -259,12 +322,6 @@
   justify-content: flex-start;
   padding: 4px 8px;
   text-align: left;
-}
-
-.log-row-secondary .action-icon {
-  width: 36px;
-  height: 36px;
-  flex-basis: 36px;
 }
 
 .log-row-secondary .log-chevron {
@@ -359,7 +416,8 @@
 
 .care-notes svg {
   flex: 0 0 auto;
-  margin-top: 2px;
+  /* Optical centering against the first text line — derived, not a magic px. */
+  margin-top: calc((1lh - 15px) / 2);
   color: var(--ink-3);
 }
 
@@ -381,11 +439,12 @@
   margin: 0;
 }
 
+/* Ghost variant supplies fill + hover; only size and optical alignment
+   live here (the -8px lets the label sit flush with the card edge). */
 .mini-heading > [data-slot="button"] {
   min-height: 44px;
+  margin-right: -8px;
   padding: 0 8px;
-  background: transparent;
-  color: var(--ink-2);
   font-size: 0.8125rem;
 }
 
@@ -397,41 +456,36 @@
   margin: 0;
 }
 
-/* Desktop: two columns with a 1px column rule; log column stays put. */
-@container (min-width: 960px) {
+/* Two columns once the container itself can afford them (~720px — with the
+   sidebar open a 1024px viewport yields roughly this): hearth + rail, a
+   fixed two-cell grid, the divider carried by the rail's own border. */
+@container (min-width: 720px) {
   .today-dashboard {
-    position: relative;
-    grid-template-columns: minmax(0, 1fr) 320px;
-    column-gap: 48px;
-    row-gap: 32px;
+    grid-template-columns: minmax(0, 1.6fr) minmax(240px, 320px);
+    column-gap: 32px;
     align-items: start;
   }
 
-  .today-dashboard::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    right: 344px;
-    bottom: 0;
-    width: 1px;
-    background: var(--border);
-  }
-
-  .today-dashboard > * {
+  .today-main {
     grid-column: 1;
+    grid-row: 1;
+    gap: 32px;
   }
 
-  /* In the narrow desktop rail the row descriptions truncate — the button
-     labels carry the meaning there. */
-  .today-dashboard > .log-column .log-copy small {
+  /* In the narrow rail most row descriptions truncate — the button labels
+     carry the meaning. The bottle row keeps its "Breast milk / Formula"
+     line: it names what the one-tap log will record. */
+  .today-dashboard > .log-column .log-row:not(.action-feed) .log-copy small {
     display: none;
   }
 
   .today-dashboard > .log-column {
     grid-column: 2;
-    grid-row: 1 / span 5;
+    grid-row: 1;
     position: sticky;
     top: 24px;
+    border-left: 1px solid var(--border);
+    padding-left: 32px;
   }
 
   .hearth-stop {

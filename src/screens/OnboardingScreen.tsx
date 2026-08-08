@@ -57,6 +57,9 @@ export default function OnboardingScreen({
   const [draft, setDraft] = useState(profile);
   const nameId = useId();
   const birthDateId = useId();
+  const nightModeId = useId();
+  const sexLabelId = useId();
+  const feedingLabelId = useId();
   const restoreRef = useRef<HTMLInputElement>(null);
 
   return (
@@ -66,38 +69,40 @@ export default function OnboardingScreen({
           <span className="wordmark-mark"><BabyFace /></span>
           <span><strong>Baby Tracker</strong><small>Private family log</small></span>
         </div>
-        <div className="onboarding-theme">
+        <label className="onboarding-theme" htmlFor={nightModeId}>
           {nightMode ? <Moon size={17} /> : <Sun size={17} />}
-          <span>Dark mode</span>
-          <Switch checked={nightMode} onCheckedChange={onNightModeChange} aria-label="Use dark mode" />
-        </div>
+          <span>Night mode</span>
+          <Switch id={nightModeId} checked={nightMode} onCheckedChange={onNightModeChange} aria-label="Use night mode" />
+        </label>
       </header>
 
       {mode === "recovery" ? (
-        <Card className="recovery-card">
-          <CardHeader>
-            <span className="onboarding-card-icon"><ShieldCheck /></span>
-            <CardTitle asChild><h1>Your local log needs attention</h1></CardTitle>
-            <CardDescription>
-              The saved copy could not be read, so Baby Tracker left it untouched. Download it before starting over, or restore a valid backup.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {storageWarning && <div className="onboarding-alert" role="alert">{storageWarning}</div>}
-            <div className="recovery-actions">
-              <Button onClick={onDownloadRecovery}><Download /> Download recovery</Button>
-              <Button variant="outline" onClick={() => restoreRef.current?.click()}><Upload /> Restore backup</Button>
-              <Button variant="ghost" onClick={onResetRecovery}>Reset and start clean</Button>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="recovery-region">
+          <Card className="recovery-card">
+            <CardHeader>
+              <span className="onboarding-card-icon"><ShieldCheck /></span>
+              <CardTitle asChild><h1>Your local log needs attention</h1></CardTitle>
+              <CardDescription>
+                The saved copy could not be read, so Baby Tracker left it untouched. Download it before starting over, or restore a valid backup.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {storageWarning && <div className="onboarding-alert" role="alert">{storageWarning}</div>}
+              <div className="recovery-actions">
+                <Button onClick={onDownloadRecovery}><Download /> Download the saved copy</Button>
+                <Button variant="outline" onClick={() => restoreRef.current?.click()}><Upload /> Restore a backup</Button>
+                <Button variant="ghost" onClick={onResetRecovery}>Reset and start clean</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       ) : (
         <div className="onboarding-layout">
           <section className="onboarding-intro" aria-labelledby="onboarding-title">
             <NurseryScene className="onboarding-scene" />
             <p className="eyebrow">Private by default</p>
             <h1 id="onboarding-title">The whole day,<br />without the mental load.</h1>
-            <p>Log feeds, diapers, sleep and growth in seconds. No account, no cloud, no fake data.</p>
+            <p>Log feeds, diapers, sleep and growth in seconds. No account, no cloud — everything stays on this device.</p>
             <div className="onboarding-points">
               <div><span className="glyph-bottle"><Milk /></span><p><strong>One-tap logging</strong><small>Details only when you need them.</small></p></div>
               <div><span className="glyph-sleep"><Clock /></span><p><strong>Live timers and patterns</strong><small>See what happened and what may be next.</small></p></div>
@@ -146,12 +151,12 @@ export default function OnboardingScreen({
                     </InputGroup>
                   </Field>
                   <Field>
-                    <FieldLabel>Girl or boy <span className="optional-label">Optional</span></FieldLabel>
+                    <FieldLabel asChild><span id={sexLabelId}>Girl or boy <span className="optional-label">Optional</span></span></FieldLabel>
                     <ToggleGroup
                       type="single"
                       value={draft.sex ?? "skip"}
                       className="segmented three-way"
-                      aria-label="Girl or boy"
+                      aria-labelledby={sexLabelId}
                       onValueChange={(value) => value && setDraft({ ...draft, sex: value === "girl" || value === "boy" ? value : undefined })}
                     >
                       <ToggleGroupItem value="girl">Girl<Check className="choice-check" /></ToggleGroupItem>
@@ -161,12 +166,12 @@ export default function OnboardingScreen({
                     <FieldDescription>Used only for the growth guide’s reference ranges.</FieldDescription>
                   </Field>
                   <Field>
-                    <FieldLabel>Feeding</FieldLabel>
+                    <FieldLabel asChild><span id={feedingLabelId}>Feeding</span></FieldLabel>
                     <ToggleGroup
                       type="single"
                       value={draft.feedingMode}
                       className="segmented three-way"
-                      aria-label="Feeding method"
+                      aria-labelledby={feedingLabelId}
                       onValueChange={(value) => value && setDraft({ ...draft, feedingMode: value as FeedingMode })}
                     >
                       {(["breast", "bottle", "mixed"] as FeedingMode[]).map((feedingMode) => (

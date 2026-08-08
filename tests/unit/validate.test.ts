@@ -125,8 +125,8 @@ describe("validateDraft", () => {
     const field = NUMERIC_FIELDS[name];
     expect(draftFor(name, field.min).ok).toBe(true);
     expect(draftFor(name, field.max).ok).toBe(true);
-    expect(draftFor(name, field.min - field.step)).toEqual({ ok: false, message: numericFieldError(name) });
-    expect(draftFor(name, field.max + field.step)).toEqual({ ok: false, message: numericFieldError(name) });
+    expect(draftFor(name, field.min - field.step)).toEqual({ ok: false, message: numericFieldError(name), field: name });
+    expect(draftFor(name, field.max + field.step)).toEqual({ ok: false, message: numericFieldError(name), field: name });
   });
 
   it("keeps the historical error copy byte for byte", () => {
@@ -139,7 +139,7 @@ describe("validateDraft", () => {
 
   it("rejects an invalid or future start unless the path clamps", () => {
     expect(validateDraft({ type: "diaper", start: "2026-08-07T13:00", note: "" }))
-      .toEqual({ ok: false, message: "Choose a valid start time that is not in the future." });
+      .toEqual({ ok: false, message: "Choose a valid start time that is not in the future.", field: "start" });
     const clamped = validateDraft({ type: "diaper", start: "2026-08-07T13:00", note: "" }, { clampTime: true });
     expect(clamped.ok && clamped.value.startedAt).toBe(new Date().toISOString());
   });
@@ -147,9 +147,9 @@ describe("validateDraft", () => {
   it("requires and validates an end time when asked to", () => {
     const message = "The end time must be after the start and not in the future.";
     expect(validateDraft({ type: "nursing", start, end: "", note: "" }, { requireEnd: true }))
-      .toEqual({ ok: false, message });
+      .toEqual({ ok: false, message, field: "end" });
     expect(validateDraft({ type: "nursing", start, end: start, note: "" }, { requireEnd: true }))
-      .toEqual({ ok: false, message });
+      .toEqual({ ok: false, message, field: "end" });
     const equalAllowed = validateDraft({ type: "nursing", start, end: start, note: "" }, { allowEqualEnd: true });
     expect(equalAllowed.ok).toBe(true);
   });
@@ -163,7 +163,7 @@ describe("validateDraft", () => {
 
   it("requires a temperature or a note on a health draft", () => {
     expect(validateDraft({ type: "health", start, temperatureC: "", note: "  " }))
-      .toEqual({ ok: false, message: "Add a temperature or a note." });
+      .toEqual({ ok: false, message: "Add a temperature or a note.", field: "temperatureC" });
     const noteOnly = validateDraft({ type: "health", start, temperatureC: "", note: "Slept well" });
     expect(noteOnly.ok && noteOnly.value.note).toBe("Slept well");
   });

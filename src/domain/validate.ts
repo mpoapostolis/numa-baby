@@ -149,9 +149,13 @@ export type ValidatedDraft = {
   note?: string;
 };
 
+// Which form field a failed draft belongs to, so the sheet can paint and
+// focus only the input that actually failed.
+export type DraftErrorField = "start" | "end" | NumericFieldName;
+
 export type DraftOutcome =
   | { ok: true; value: ValidatedDraft }
-  | { ok: false; message: string };
+  | { ok: false; message: string; field: DraftErrorField };
 
 type DraftOptions = {
   // Quick-log sheets bind no error UI to their time field: the start silently
@@ -164,8 +168,8 @@ type DraftOptions = {
   requireEnd?: boolean;
 };
 
-function fail(message: string): DraftOutcome {
-  return { ok: false, message };
+function fail(message: string, field: DraftErrorField): DraftOutcome {
+  return { ok: false, message, field };
 }
 
 function draftNumberError(name: NumericFieldName, value: number) {
@@ -185,15 +189,15 @@ export function validateDraft(draft: ActivityDraft, options: DraftOptions = {}):
   } else {
     const start = new Date(draft.start);
     const startError = invalidStartMessage(start);
-    if (startError) return fail(startError);
+    if (startError) return fail(startError, "start");
     value.startedAt = start.toISOString();
     if (options.requireEnd && !draft.end) {
-      return fail("The end time must be after the start and not in the future.");
+      return fail("The end time must be after the start and not in the future.", "end");
     }
     if (draft.end) {
       const end = new Date(draft.end);
       const endError = invalidEndMessage(start, end, { allowEqual: options.allowEqualEnd });
-      if (endError) return fail(endError);
+      if (endError) return fail(endError, "end");
       value.endedAt = end.toISOString();
     }
   }
@@ -206,9 +210,9 @@ export function validateDraft(draft: ActivityDraft, options: DraftOptions = {}):
         clampToBounds("amount", typeof amount === "number" && Number.isFinite(amount) ? amount : DEFAULT_BOTTLE_ML),
       );
     } else {
-      if (typeof amount !== "number") return fail(numericFieldError("amount"));
+      if (typeof amount !== "number") return fail(numericFieldError("amount"), "amount");
       const amountError = draftNumberError("amount", amount);
-      if (amountError) return fail(amountError);
+      if (amountError) return fail(amountError, "amount");
       value.amount = roundToStep("amount", amount);
     }
   }
@@ -218,14 +222,14 @@ export function validateDraft(draft: ActivityDraft, options: DraftOptions = {}):
     const length = draft.lengthCm ? Number(draft.lengthCm) : undefined;
     const head = draft.headCm ? Number(draft.headCm) : undefined;
     const weightError = draftNumberError("weightGrams", weight);
-    if (weightError) return fail(weightError);
+    if (weightError) return fail(weightError, "weightGrams");
     if (length !== undefined) {
       const lengthError = draftNumberError("lengthCm", length);
-      if (lengthError) return fail(lengthError);
+      if (lengthError) return fail(lengthError, "lengthCm");
     }
     if (head !== undefined) {
       const headError = draftNumberError("headCm", head);
-      if (headError) return fail(headError);
+      if (headError) return fail(headError, "headCm");
     }
     value.weightGrams = roundToStep("weightGrams", weight);
     value.lengthCm = length === undefined ? undefined : roundToStep("lengthCm", length);
@@ -235,11 +239,11 @@ export function validateDraft(draft: ActivityDraft, options: DraftOptions = {}):
   if (draft.type === "health") {
     const temperature = draft.temperatureC ? Number(draft.temperatureC) : undefined;
     if (temperature === undefined && !value.note) {
-      return fail("Add a temperature or a note.");
+      return fail("Add a temperature or a note.", "temperatureC");
     }
     if (temperature !== undefined) {
       const temperatureError = draftNumberError("temperatureC", temperature);
-      if (temperatureError) return fail(temperatureError);
+      if (temperatureError) return fail(temperatureError, "temperatureC");
       value.temperatureC = roundToStep("temperatureC", temperature);
     }
   }

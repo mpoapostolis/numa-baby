@@ -30,14 +30,21 @@
   border-radius: 999px;
   background: var(--card);
   color: var(--ink-2);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
 }
 
 .filter-row [data-slot="toggle-group-item"][data-state="on"] {
-  border-color: color-mix(in oklch, var(--signal) 48%, var(--border));
+  border-color: color-mix(in oklch, var(--signal) 40%, var(--border));
   background: var(--signal-quiet);
-  color: var(--accent-foreground);
+  color: var(--signal);
   box-shadow: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .filter-row [data-slot="toggle-group-item"]:hover:not([data-state="on"]) {
+    background: var(--muted);
+    color: var(--foreground);
+  }
 }
 
 .timeline-date,
@@ -49,9 +56,9 @@
 }
 
 .timeline-date {
-  margin: 0 4px;
+  margin: 0;
   color: var(--ink-2);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
 }
 
 .timeline-groups {
@@ -70,13 +77,13 @@
   top: 0;
   z-index: 5;
   min-height: 32px;
-  padding: 8px 4px;
+  padding: 8px 0;
   background: var(--background);
 }
 
 .timeline-day-heading h2 {
   margin: 0;
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: 0.75rem;
   font-weight: 500;
   letter-spacing: 0.07em;
@@ -85,8 +92,8 @@
 }
 
 .timeline-day-heading span {
-  color: var(--ink-3);
-  font-size: 0.75rem;
+  color: var(--ink-2);
+  font-size: 0.8125rem;
 }
 
 /* 56px rows separated by hairlines only — no stacked gaps. */
@@ -113,6 +120,14 @@
   width: min(100%, 320px);
   min-height: 44px;
   justify-self: center;
+}
+
+/* Filtered-empty recovery: a real 44px button centred under the empty state. */
+.timeline-clear-filter {
+  min-height: 44px;
+  width: min(100%, 320px);
+  margin: 0 auto 16px;
+  display: flex;
 }
 
 @media (width < 768px) {

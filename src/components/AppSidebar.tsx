@@ -32,7 +32,7 @@ export function AppSidebar({
     { value: "today", label: "Today", icon: <Home /> },
     { value: "timeline", label: "Timeline", icon: <Clock /> },
     { value: "insights", label: "Insights", icon: <BarChart3 /> },
-    { value: "guide", label: "Growth guide", icon: <Ruler /> },
+    { value: "guide", label: "Guide", icon: <Ruler /> },
     { value: "more", label: "Settings", icon: <Settings /> },
   ];
 
@@ -93,7 +93,7 @@ export function AppSidebar({
               <span className="baby-avatar"><BabyFace /></span>
               <span className="sidebar-profile-copy">
                 <strong>{profile.name}</strong>
-                <small>Private profile</small>
+                <small>Baby profile</small>
               </span>
               <ChevronRight />
             </SidebarMenuButton>

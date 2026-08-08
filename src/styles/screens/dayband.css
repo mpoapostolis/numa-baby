@@ -4,14 +4,14 @@
 
 .day-band {
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 
 .day-band-lanes {
   position: relative;
   display: grid;
-  gap: 6px;
-  padding: 10px 0;
+  gap: 8px;
+  padding: 8px 0;
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }

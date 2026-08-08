@@ -1,4 +1,8 @@
-/* Numa design tokens — "Quiet Instrument, Warm Night" (W3). */
+/* Numa design tokens — "Petal & Porcelain (Powder Nursery)" (W4).
+   Warmth lives in every neutral (rose-family hues 16–55, whisper chroma);
+   rose itself is a ROLE: it marks only what the mother chose or should
+   press. Data speaks in the six activity hues. Night is the same room
+   with the lamp dimmed: hue 345 surfaces, luminous powder-rose signal. */
 
 @theme inline {
   --color-background: var(--background);
@@ -35,48 +39,55 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --font-heading: var(--font-sans);
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
-  --radius-sm: 6px;
-  --radius-md: 8px;
+  /* Cradle radii — one step rounder than W3, never pill except deliberate
+     circles (avatar, side-letter, sheet-handle). Glyph chips stay 12px. */
+  --radius-sm: 8px;
+  --radius-md: 10px;
   --radius-lg: var(--radius);
-  --radius-xl: 14px;
-  --radius-2xl: 14px;
-  --radius-3xl: 14px;
-  --radius-4xl: 14px;
+  --radius-xl: 20px;
+  --radius-2xl: 20px;
+  --radius-3xl: 20px;
+  --radius-4xl: 20px;
 }
 
-/* Light — barely-warm paper, ink-blue signal. */
+/* Light — porcelain cream paper, petal-rose signal. Elevation is warmth-of-
+   white (muted 0.958 → bg 0.976 → card 0.993), never a shade or a shadow. */
 :root {
-  --radius: 10px;
-  --background: oklch(0.985 0.004 82);
-  --foreground: oklch(0.22 0.008 250);
-  --card: oklch(1 0 0);
+  --radius: 14px;
+  --background: oklch(0.976 0.01 45);
+  --foreground: oklch(0.275 0.022 20);
+  --card: oklch(0.993 0.004 55);
   --card-foreground: var(--foreground);
-  --popover: oklch(1 0 0);
+  --popover: oklch(0.993 0.004 55);
   --popover-foreground: var(--foreground);
-  --ink-2: oklch(0.44 0.006 250);
-  --ink-3: oklch(0.575 0.005 250);
-  --border: oklch(0.915 0.004 250);
-  --border-strong: oklch(0.86 0.005 250);
-  --signal: oklch(0.52 0.11 236);
-  --signal-quiet: oklch(0.94 0.02 236);
-  --alert: oklch(0.52 0.16 27);
+  --ink-2: oklch(0.455 0.024 18);
+  --ink-3: oklch(0.54 0.022 16);
+  --border: oklch(0.912 0.014 35);
+  --border-strong: oklch(0.856 0.018 30);
+  --signal: oklch(0.505 0.125 356);
+  --signal-quiet: oklch(0.938 0.03 356);
+  --alert: oklch(0.505 0.155 30);
   --primary: var(--signal);
-  --primary-foreground: oklch(0.985 0.004 82);
+  --primary-foreground: oklch(0.985 0.008 40);
   --secondary: var(--muted);
   --secondary-foreground: var(--ink-2);
-  --muted: oklch(0.962 0.005 82);
+  --muted: oklch(0.958 0.01 48);
   --muted-foreground: var(--ink-2);
   --accent: var(--signal-quiet);
-  --accent-foreground: oklch(0.36 0.07 236);
+  --accent-foreground: oklch(0.37 0.09 356);
   --destructive: var(--alert);
-  --destructive-foreground: oklch(0.985 0.004 82);
+  --destructive-foreground: oklch(0.985 0.008 40);
   --input: var(--border-strong);
   --ring: var(--signal);
+  /* Chart reservation: chart-1/--signal belongs to Mia's own series and the
+     "now" mark ONLY. Reference geometry (WHO bands, medians, gridlines)
+     stays --ink-3 / --border-strong. Activity splits use glyph hues, so
+     night re-tints ride the var() references — no separate night set. */
   --chart-1: var(--signal);
-  --chart-2: var(--ink-3);
-  --chart-3: var(--ink-3);
-  --chart-4: var(--ink-3);
-  --chart-5: var(--ink-3);
+  --chart-2: var(--glyph-bottle);
+  --chart-3: var(--glyph-diaper);
+  --chart-4: var(--glyph-growth);
+  --chart-5: var(--glyph-sleep);
   --sidebar: var(--background);
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--signal);
@@ -85,48 +96,58 @@
   --sidebar-accent-foreground: var(--accent-foreground);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--signal);
-  --glyph-bottle: oklch(0.5 0.1 232);
-  --glyph-nursing: oklch(0.54 0.11 22);
-  --glyph-diaper: oklch(0.48 0.09 168);
-  --glyph-sleep: oklch(0.5 0.09 280);
-  --glyph-growth: oklch(0.55 0.09 100);
-  --glyph-health: oklch(0.52 0.11 14);
-  /* Soft-tint strength for pastel activity chips: hue washes over --card. */
-  --glyph-wash: 10%;
+  /* Six activity pigments — CONTRACT (do not drift): light row sits at
+     L 0.49–0.53, C 0.08–0.11; distinct hues, one hand's paintbox. Any edit
+     must stay in band AND clear >=4.6:1 over its own wash chip. */
+  --glyph-bottle: oklch(0.5 0.09 240);    /* dusty blue   */
+  --glyph-nursing: oklch(0.53 0.105 5);   /* true blush   */
+  --glyph-diaper: oklch(0.49 0.08 160);   /* sage         */
+  --glyph-sleep: oklch(0.51 0.09 295);    /* lavender     */
+  --glyph-growth: oklch(0.515 0.095 85);  /* honey        */
+  --glyph-health: oklch(0.53 0.11 25);    /* coral        */
+  /* Blush wash for pastel activity chips: hue over --card. */
+  --glyph-wash: 12%;
   --danger-soft: color-mix(in oklch, var(--alert) 8%, var(--background));
   --shadow-card: none;
-  --shadow-dialog: 0 16px 48px -24px oklch(0.2 0.01 250 / 0.25);
+  --shadow-dialog: 0 16px 48px -24px oklch(0.32 0.04 20 / 0.28);
   color-scheme: light;
   font-synthesis: none;
 }
 
-/* Night — "dark room, warm lamp": neutral charcoal surfaces (chroma <= 0.006,
-   hue ~255), near-neutral warm-white text; ALL warmth lives in the amber accent.
-   Caps: no surface above L 0.22 (dialogs 0.22 max), no pure white. */
+/* Night — "rose nightlight", designed first, not an inversion. Surfaces are
+   plum-mauve charcoal (hue 345, C 0.012–0.016 — the same rose family as
+   daytime, dimmed); text is lamp-warmed cream; the signal is a luminous
+   powder rose carrying dark plum text on fills. Caps kept: no surface above
+   L 0.228, no pure white, depth only via the existing inset top highlight. */
 .dark {
-  --background: oklch(0.155 0.005 255);
-  --foreground: oklch(0.84 0.008 80);
-  --card: oklch(0.19 0.005 255);
-  --popover: oklch(0.22 0.005 255);
-  --ink-2: oklch(0.7 0.008 80);
-  --ink-3: oklch(0.61 0.006 80);
-  --border: oklch(0.28 0.005 255);
-  --border-strong: oklch(0.34 0.005 255);
-  --muted: oklch(0.22 0.005 255);
-  --signal: oklch(0.7 0.09 70);
-  --signal-quiet: oklch(0.25 0.035 70);
-  --alert: oklch(0.66 0.14 27);
-  --primary-foreground: oklch(0.155 0.005 255);
-  --destructive-foreground: oklch(0.84 0.008 80);
-  --accent-foreground: oklch(0.8 0.05 70);
-  --sidebar: oklch(0.17 0.005 255);
-  --glyph-bottle: oklch(0.73 0.09 232);
-  --glyph-nursing: oklch(0.73 0.09 22);
-  --glyph-diaper: oklch(0.73 0.09 168);
-  --glyph-sleep: oklch(0.73 0.09 280);
-  --glyph-growth: oklch(0.73 0.09 100);
-  --glyph-health: oklch(0.73 0.09 14);
-  --glyph-wash: 16%;
+  --background: oklch(0.165 0.012 345);
+  --foreground: oklch(0.855 0.015 40);
+  --card: oklch(0.198 0.013 345);
+  --popover: oklch(0.228 0.014 345);
+  --ink-2: oklch(0.715 0.016 30);
+  --ink-3: oklch(0.625 0.015 25);
+  --border: oklch(0.285 0.015 345);
+  /* Interactive field/toggle borders need WCAG 1.4.11 3:1 on card, popover
+     and muted (sheets); 0.52 clears all three. --border stays decorative. */
+  --border-strong: oklch(0.52 0.016 345);
+  --edge-highlight: oklch(1 0 0 / 0.04);
+  --muted: oklch(0.228 0.013 345);
+  --signal: oklch(0.77 0.1 8);
+  --signal-quiet: oklch(0.262 0.038 5);
+  --alert: oklch(0.685 0.135 26);
+  --primary-foreground: oklch(0.165 0.012 345);
+  --destructive-foreground: oklch(0.165 0.012 345);
+  --accent-foreground: oklch(0.835 0.055 10);
+  --sidebar: oklch(0.18 0.012 345);
+  /* Night row CONTRACT: L 0.755–0.78, C 0.075–0.085 — moonlit pastels,
+     one register, nothing shouts. Same >=4.6:1-on-wash rule applies. */
+  --glyph-bottle: oklch(0.755 0.08 235);
+  --glyph-nursing: oklch(0.775 0.085 8);
+  --glyph-diaper: oklch(0.76 0.075 160);
+  --glyph-sleep: oklch(0.76 0.08 295);
+  --glyph-growth: oklch(0.78 0.085 85);
+  --glyph-health: oklch(0.765 0.085 25);
+  --glyph-wash: 18%;
   --danger-soft: color-mix(in oklch, var(--alert) 12%, var(--background));
   --shadow-dialog: none;
   color-scheme: dark;

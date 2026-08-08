@@ -47,5 +47,5 @@ export function activityDetail(activity: Activity) {
     const detail = activity.temperatureC ? `${activity.temperatureC.toFixed(1)} °C` : "Note";
     return includeNote(detail, activity.note);
   }
-  return includeNote("Quick logged", activity.note);
+  return activity.note?.trim() ?? "";
 }

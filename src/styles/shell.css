@@ -150,8 +150,8 @@
 [data-state="collapsed"] .numa-sidebar [data-sidebar="header"],
 [data-state="collapsed"] .numa-sidebar [data-sidebar="content"],
 [data-state="collapsed"] .numa-sidebar [data-sidebar="footer"] {
-  padding-right: 8px;
-  padding-left: 8px;
+  padding-right: 6px;
+  padding-left: 6px;
 }
 
 [data-state="collapsed"] .numa-sidebar [data-sidebar="menu-item"] {
@@ -159,10 +159,11 @@
   justify-content: center;
 }
 
+/* 44px keeps the rail's primary nav on the touch floor; marks stay 34px. */
 [data-state="collapsed"] .numa-sidebar [data-sidebar="menu-button"] {
-  width: 40px !important;
-  height: 40px !important;
-  min-height: 40px !important;
+  width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
   justify-content: center;
   gap: 0;
   padding: 0 !important;
@@ -172,12 +173,6 @@
 [data-state="collapsed"] .numa-sidebar [data-sidebar="menu-button"] > span:not(.wordmark-mark):not(.baby-avatar),
 [data-state="collapsed"] .numa-sidebar .sidebar-profile-button > svg:last-child {
   display: none;
-}
-
-[data-state="collapsed"] .numa-sidebar .wordmark-mark,
-[data-state="collapsed"] .numa-sidebar .baby-avatar {
-  width: 32px;
-  height: 32px;
 }
 
 .topbar {
@@ -190,7 +185,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: env(safe-area-inset-top) max(24px, env(safe-area-inset-right)) 0 max(24px, env(safe-area-inset-left));
+  padding: env(safe-area-inset-top) max(clamp(16px, 4vw, 32px), env(safe-area-inset-right)) 0 max(clamp(16px, 4vw, 32px), env(safe-area-inset-left));
   border-bottom: 1px solid var(--border);
   background: color-mix(in oklch, var(--card) 92%, transparent);
   box-shadow: none;
@@ -273,7 +268,7 @@
   padding: 24px clamp(16px, 4vw, 32px) 48px;
   padding-right: max(clamp(16px, 4vw, 32px), env(safe-area-inset-right));
   padding-left: max(clamp(16px, 4vw, 32px), env(safe-area-inset-left));
-  scroll-padding-top: 24px;
+  scroll-padding-top: 48px;
 }
 
 /* ONE content width for every screen — Today, Timeline, Insights and Settings
@@ -330,6 +325,20 @@
   text-align: center;
 }
 
+/* Lazy-screen fallback: same idiom as boot, sized to the content well and
+   revealed after 150ms so fast chunk loads never flash it. */
+.screen-fallback {
+  min-height: 60vh;
+  opacity: 0;
+  animation: fallback-reveal 200ms ease 150ms forwards;
+}
+
+@keyframes fallback-reveal {
+  to {
+    opacity: 1;
+  }
+}
+
 .brand-mark {
   width: 48px;
   height: 48px;
@@ -359,7 +368,7 @@
 }
 
 .debug-banner {
-  width: min(100%, 1320px);
+  width: min(100%, 1140px);
   min-height: 56px;
   margin: 0 auto;
   display: flex;
@@ -392,9 +401,9 @@
 }
 
 .debug-banner strong {
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   font-weight: 500;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .debug-banner small {
@@ -412,7 +421,7 @@
 }
 
 .storage-banner {
-  width: min(100%, 1320px);
+  width: min(100%, 1140px);
   min-height: 56px;
   margin: 0 auto;
   display: grid;
@@ -455,7 +464,12 @@
   border-radius: var(--radius-lg);
   background: var(--popover);
   box-shadow: var(--shadow-dialog);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.dark .pwa-toast {
+  box-shadow: inset 0 1px 0 var(--edge-highlight);
 }
 
 .pwa-toast > div {
@@ -468,7 +482,7 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .numa-sidebar [data-sidebar="menu-button"]:hover {
+  .numa-sidebar [data-sidebar="menu-button"]:not([data-active="true"]):hover {
     background: color-mix(in oklch, var(--sidebar-accent) 64%, transparent);
   }
 }
@@ -476,11 +490,6 @@
 @media (width < 768px) {
   .numa-shell {
     --shell-header-height: 58px;
-  }
-
-  .topbar {
-    padding-right: max(12px, env(safe-area-inset-right));
-    padding-left: max(12px, env(safe-area-inset-left));
   }
 
   /* The drawer duplicates the bottom nav on phones — the trigger goes away. */
@@ -516,7 +525,7 @@
   .storage-banner > div {
     grid-column: 1 / -1;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
 
   .bottom-nav {
@@ -545,7 +554,7 @@
     padding: 0;
     border: 0;
     background: none;
-    color: var(--ink-3);
+    color: var(--ink-2);
     font-size: 0.75rem;
     font-weight: 500;
     line-height: 1.4;

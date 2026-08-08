@@ -22,6 +22,7 @@ export const ActivityRow = memo(function ActivityRow({
   activity: Activity;
   onEdit: (activity: Activity) => void;
 }) {
+  const detail = activityDetail(activity);
   return (
     <Item asChild size="sm" className="activity-row">
       <Button variant="ghost" className="activity-open" onClick={() => onEdit(activity)}>
@@ -30,7 +31,7 @@ export const ActivityRow = memo(function ActivityRow({
         <ItemContent className="activity-copy">
           <ItemTitle>{activityTitle(activity)}</ItemTitle>
           {/* Rendered as a span, not ItemDescription: no <p> inside a button. */}
-          <span data-slot="item-description">{activityDetail(activity)}</span>
+          {detail && <span data-slot="item-description">{detail}</span>}
         </ItemContent>
         <ItemActions className="activity-meta">
           <time dateTime={activity.startedAt}>{formatTime(activity.startedAt)}</time>

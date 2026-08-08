@@ -1,5 +1,6 @@
 import { Plus } from "lucide-react";
 import { Button } from "./ui/button";
+import { EmptyState } from "./EmptyState";
 import { SproutChart } from "./illustrations";
 import { Activity } from "../domain/types";
 
@@ -58,10 +59,10 @@ export function GrowthChart({
       </figcaption>
 
       {!visible.length ? (
-        <div className="growth-empty">
-          <SproutChart size={96} />
-          <p>Your baby’s weight trend will appear after the first measurement.</p>
-        </div>
+        <EmptyState
+          illustration={<SproutChart size={96} />}
+          text="Your baby’s weight trend will appear after the first measurement."
+        />
       ) : (
         <>
           <div className="growth-overview">

@@ -1,12 +1,10 @@
 import {
   Baby,
   Check,
-  Clock,
   Droplet,
   Heart,
   Milk,
   Minus,
-  Pencil,
   Plus,
   Thermometer,
   Trash2,
@@ -39,7 +37,7 @@ import { activityTitle } from "../domain/activityDisplay";
 import { DEFAULT_BOTTLE_ML, numericFieldProps } from "../domain/activitySchema";
 import { makeId } from "../domain/id";
 import { formatTime, formatTimelineDay, localDateInput } from "../domain/time";
-import { validateDraft } from "../domain/validate";
+import { DraftErrorField, validateDraft } from "../domain/validate";
 import { Activity, DiaperKind, FeedingMode, Profile, Sheet } from "../domain/types";
 import { ActivityGlyph } from "./ActivityGlyph";
 import { TemperatureAdvice } from "./TemperatureAdvice";
@@ -54,11 +52,15 @@ import {
 
 const bottlePresets = [60, 90, 120, 150];
 
+// A failed save carries the field it belongs to, so only that field is
+// painted invalid and receives focus.
+type SheetError = { message: string; field: DraftErrorField };
+
 // Every value a sheet form can edit, owned by LogSheet itself. The component
 // is mounted with a key per open, so these initialisers re-run every time a
 // sheet opens — a stale amount can never leak from an abandoned edit.
 type SheetDraft = {
-  bottleAmount: number;
+  bottleAmount: string;
   milkType: "formula" | "expressed";
   note: string;
   weightGrams: string;
@@ -83,7 +85,7 @@ function initialSheetDraft(
   const now = new Date();
   const base: SheetDraft = {
     // Seed from the last saved bottle, clamped to the stepper's own range.
-    bottleAmount: Math.min(400, Math.max(10, lastBottle?.amount ?? DEFAULT_BOTTLE_ML)),
+    bottleAmount: String(Math.min(400, Math.max(10, lastBottle?.amount ?? DEFAULT_BOTTLE_ML))),
     milkType: lastBottle?.milkType ?? "formula",
     note: "",
     weightGrams: "",
@@ -101,7 +103,7 @@ function initialSheetDraft(
       ...base,
       // The bottle seeds are gated on the type — editing a diaper must not
       // carry a bottle amount into the draft.
-      bottleAmount: editing.type === "bottle" ? editing.amount ?? DEFAULT_BOTTLE_ML : base.bottleAmount,
+      bottleAmount: editing.type === "bottle" ? String(editing.amount ?? DEFAULT_BOTTLE_ML) : base.bottleAmount,
       milkType: editing.type === "bottle" ? editing.milkType ?? "formula" : base.milkType,
       note: editing.note ?? "",
       weightGrams: editing.weightGrams ? String(editing.weightGrams) : "",
@@ -164,17 +166,34 @@ export function LogSheet({
   const [draft, setDraft] = useState<SheetDraft>(() =>
     initialSheetDraft(sheet, editing, initialNursingMode, lastBottle),
   );
-  const [formError, setFormError] = useState<string | null>(null);
-  const invalidFieldRef = useRef<HTMLInputElement>(null);
+  const [formError, setFormError] = useState<SheetError | null>(null);
+  // One ref per failable field, so the error can land focus on the exact
+  // input it names instead of whichever field happened to hold the ref.
+  const startRef = useRef<HTMLInputElement>(null);
+  const endRef = useRef<HTMLInputElement>(null);
+  const amountRef = useRef<HTMLInputElement>(null);
+  const weightRef = useRef<HTMLInputElement>(null);
+  const lengthRef = useRef<HTMLInputElement>(null);
+  const headRef = useRef<HTMLInputElement>(null);
+  const temperatureRef = useRef<HTMLInputElement>(null);
   const isTimed = editing ? editing.type === "nursing" || editing.type === "sleep" : false;
 
   function patch(partial: Partial<SheetDraft>) {
     setDraft((current) => ({ ...current, ...partial }));
   }
 
-  function showFormError(message: string) {
-    setFormError(message);
-    window.requestAnimationFrame(() => invalidFieldRef.current?.focus());
+  function showFormError(error: SheetError) {
+    setFormError(error);
+    const refs: Record<DraftErrorField, React.RefObject<HTMLInputElement | null>> = {
+      start: startRef,
+      end: endRef,
+      amount: amountRef,
+      weightGrams: weightRef,
+      lengthCm: lengthRef,
+      headCm: headRef,
+      temperatureC: temperatureRef,
+    };
+    window.requestAnimationFrame(() => refs[error.field].current?.focus());
   }
 
   function changeNursingEntryMode(mode: "timer" | "manual") {
@@ -192,7 +211,7 @@ export function LogSheet({
     // Clamp to the storage schema's own bounds — persisting an amount that
     // isValidActivity rejects would strand the whole store behind recovery.
     const outcome = validateDraft(
-      { type: "bottle", start: draft.logTime, amount: draft.bottleAmount, note: draft.note },
+      { type: "bottle", start: draft.logTime, amount: Number(draft.bottleAmount), note: draft.note },
       { clampTime: true, clampAmount: true },
     );
     if (!outcome.ok) return;
@@ -209,7 +228,7 @@ export function LogSheet({
 
   function saveNursing() {
     if (draft.nursingEntryMode === "timer" && activeNursing) {
-      showFormError("A nursing timer is already running. Stop it before starting another.");
+      showFormError({ message: "A nursing timer is already running. Stop it before starting another.", field: "start" });
       return;
     }
     const outcome = validateDraft(
@@ -222,7 +241,7 @@ export function LogSheet({
       { requireEnd: draft.nursingEntryMode === "manual" },
     );
     if (!outcome.ok) {
-      showFormError(outcome.message);
+      showFormError(outcome);
       return;
     }
 
@@ -258,7 +277,7 @@ export function LogSheet({
       { clampTime: true },
     );
     if (!outcome.ok) {
-      showFormError(outcome.message);
+      showFormError(outcome);
       return;
     }
 
@@ -280,7 +299,7 @@ export function LogSheet({
       { clampTime: true },
     );
     if (!outcome.ok) {
-      showFormError(outcome.message);
+      showFormError(outcome);
       return;
     }
 
@@ -302,7 +321,7 @@ export function LogSheet({
         type: editing.type,
         start: draft.logTime,
         end: timed ? draft.endTime : undefined,
-        amount: draft.bottleAmount,
+        amount: draft.bottleAmount.trim() === "" ? undefined : Number(draft.bottleAmount),
         weightGrams: draft.weightGrams,
         lengthCm: draft.lengthCm,
         headCm: draft.headCm,
@@ -312,7 +331,7 @@ export function LogSheet({
       { allowEqualEnd: true },
     );
     if (!outcome.ok) {
-      showFormError(outcome.message);
+      showFormError(outcome);
       return;
     }
 
@@ -330,7 +349,7 @@ export function LogSheet({
         (activity) => activity.type === next.type && !activity.endedAt && activity.id !== next.id,
       )
     ) {
-      showFormError(`Another ${next.type} timer is already running. Stop it first.`);
+      showFormError({ message: `Another ${next.type} timer is already running. Stop it first.`, field: "end" });
       return;
     }
 
@@ -360,14 +379,17 @@ export function LogSheet({
           <Field className="amount-field">
             <FieldLabel>Amount</FieldLabel>
             <ButtonGroup className="amount-control" aria-label="Bottle amount">
-              <Button type="button" variant="outline" aria-label="Decrease amount" onClick={() => setDraft((current) => ({ ...current, bottleAmount: Math.max(10, current.bottleAmount - 10) }))}><Minus /></Button>
-              <ButtonGroupText><strong>{draft.bottleAmount}</strong><span>ml</span></ButtonGroupText>
-              <Button type="button" variant="outline" aria-label="Increase amount" onClick={() => setDraft((current) => ({ ...current, bottleAmount: Math.min(400, current.bottleAmount + 10) }))}><Plus /></Button>
+              <Button type="button" variant="outline" aria-label="Decrease amount" disabled={Number(draft.bottleAmount) <= 10} onClick={() => setDraft((current) => ({ ...current, bottleAmount: String(Math.max(10, (Number(current.bottleAmount) || 10) - 10)) }))}><Minus /></Button>
+              <ButtonGroupText role="status" aria-live="polite" aria-atomic="true"><strong>{draft.bottleAmount}</strong><span>ml</span></ButtonGroupText>
+              <Button type="button" variant="outline" aria-label="Increase amount" disabled={Number(draft.bottleAmount) >= 400} onClick={() => setDraft((current) => ({ ...current, bottleAmount: String(Math.min(400, (Number(current.bottleAmount) || 0) + 10)) }))}><Plus /></Button>
             </ButtonGroup>
+            <ToggleGroup type="single" value={draft.bottleAmount} className="preset-row" aria-label="Preset amounts" onValueChange={(value) => value && patch({ bottleAmount: value })}>
+              {bottlePresets.map((amount, index) => {
+                const focused = amount === Number(draft.bottleAmount) || (index === 0 && !bottlePresets.includes(Number(draft.bottleAmount)));
+                return <ToggleGroupItem autoFocus={focused} data-initial-focus={focused ? "" : undefined} value={String(amount)} aria-label={`${amount} millilitres`} key={amount}>{amount}</ToggleGroupItem>;
+              })}
+            </ToggleGroup>
           </Field>
-          <ToggleGroup type="single" value={String(draft.bottleAmount)} className="preset-row" aria-label="Preset amounts" onValueChange={(value) => value && patch({ bottleAmount: Number(value) })}>
-            {bottlePresets.map((amount, index) => <ToggleGroupItem autoFocus={index === 0} data-initial-focus={index === 0 ? "" : undefined} value={String(amount)} aria-label={`${amount} millilitres`} key={amount}>{amount}</ToggleGroupItem>)}
-          </ToggleGroup>
           <Field className="choice-field">
             <FieldLabel>Milk</FieldLabel>
             <ToggleGroup type="single" value={draft.milkType} className="segmented" aria-label="Milk type" onValueChange={(value) => value && patch({ milkType: value as "formula" | "expressed" })}>
@@ -389,41 +411,33 @@ export function LogSheet({
             <ToggleGroup
               type="single"
               value={draft.nursingEntryMode}
-              className="segmented nursing-mode"
+              className="segmented"
               aria-label="Nursing entry method"
               onValueChange={(value) => value && changeNursingEntryMode(value as "timer" | "manual")}
             >
-              <ToggleGroupItem autoFocus={draft.nursingEntryMode === "timer"} data-initial-focus={draft.nursingEntryMode === "timer" ? "" : undefined} value="timer">
-                <span className="choice-icon"><Clock /></span>
-                <span className="choice-copy"><strong>Timer</strong><small>Starts now</small></span>
-                <Check className="choice-check" />
-              </ToggleGroupItem>
-              <ToggleGroupItem autoFocus={draft.nursingEntryMode === "manual"} data-initial-focus={draft.nursingEntryMode === "manual" ? "" : undefined} value="manual">
-                <span className="choice-icon"><Pencil /></span>
-                <span className="choice-copy"><strong>Manual</strong><small>Past session</small></span>
-                <Check className="choice-check" />
-              </ToggleGroupItem>
+              <ToggleGroupItem autoFocus={draft.nursingEntryMode === "timer"} data-initial-focus={draft.nursingEntryMode === "timer" ? "" : undefined} value="timer">Timer<Check className="choice-check" /></ToggleGroupItem>
+              <ToggleGroupItem autoFocus={draft.nursingEntryMode === "manual"} data-initial-focus={draft.nursingEntryMode === "manual" ? "" : undefined} value="manual">Past session<Check className="choice-check" /></ToggleGroupItem>
             </ToggleGroup>
           </Field>
           <Field className="nursing-side-field">
             <FieldLabel>Side</FieldLabel>
             <ToggleGroup type="single" value={draft.nursingSide} className="side-grid" aria-label="Nursing side" onValueChange={(value) => value && patch({ nursingSide: value as "left" | "right" })}>
-              <ToggleGroupItem value="left"><span className="side-letter">L</span><span className="choice-copy"><strong>Left side</strong><small>Left breast</small></span><Check className="choice-check" /></ToggleGroupItem>
-              <ToggleGroupItem value="right"><span className="side-letter">R</span><span className="choice-copy"><strong>Right side</strong><small>Right breast</small></span><Check className="choice-check" /></ToggleGroupItem>
+              <ToggleGroupItem value="left"><span className="side-letter">L</span><span className="choice-copy"><strong>Left</strong></span><Check className="choice-check" /></ToggleGroupItem>
+              <ToggleGroupItem value="right"><span className="side-letter">R</span><span className="choice-copy"><strong>Right</strong></span><Check className="choice-check" /></ToggleGroupItem>
             </ToggleGroup>
           </Field>
           {draft.nursingEntryMode === "timer" ? (
-            <TimeField value={draft.logTime} label="Started" inputRef={invalidFieldRef} error={Boolean(formError)} onChange={(value) => { patch({ logTime: value }); setFormError(null); }} />
+            <TimeField value={draft.logTime} label="Started" inputRef={startRef} error={formError?.field === "start"} onChange={(value) => { patch({ logTime: value }); setFormError(null); }} />
           ) : (
             <div className="measurement-row nursing-time-row">
-              <TimeField value={draft.logTime} label="Started" inputRef={invalidFieldRef} error={Boolean(formError)} onChange={(value) => { patch({ logTime: value }); setFormError(null); }} />
-              <TimeField value={draft.endTime} label="Ended" error={Boolean(formError)} onChange={(value) => { patch({ endTime: value }); setFormError(null); }} />
+              <TimeField value={draft.logTime} label="Started" inputRef={startRef} error={formError?.field === "start"} onChange={(value) => { patch({ logTime: value }); setFormError(null); }} />
+              <TimeField value={draft.endTime} label="Ended" inputRef={endRef} error={formError?.field === "end"} onChange={(value) => { patch({ endTime: value }); setFormError(null); }} />
             </div>
           )}
           <NoteField value={draft.note} onChange={(value) => patch({ note: value })} />
-          <FormError message={formError} />
+          <FormError message={formError?.message ?? null} />
           <DialogFooter>
-            <p className="sheet-footer-note">{draft.nursingEntryMode === "timer" ? "The timer stays active if you close the app." : "The completed session will be added directly to the timeline."}</p>
+            <p className="sheet-footer-note">{draft.nursingEntryMode === "timer" ? "The timer stays active if you close the app." : "This session saves straight to your timeline."}</p>
             <Button type="submit" className="primary-button sheet-primary">
               {draft.nursingEntryMode === "timer" ? `Start ${draft.nursingSide} timer` : `Save ${draft.nursingSide} session`}
             </Button>
@@ -433,13 +447,13 @@ export function LogSheet({
 
       {sheet === "diaper" && (
         <SheetForm onSubmit={() => saveDiaper(draft.diaperKind)}>
-          <LogDialogHeader icon={<Droplet />} eyebrow="Quick log" title="What was it?" description="Choose the closest match and save." />
+          <LogDialogHeader icon={<Droplet />} eyebrow="Quick log" title="Diaper" description="Choose the closest match and save." />
           <Field className="choice-field">
             <FieldLabel>Diaper type</FieldLabel>
             <ToggleGroup type="single" value={draft.diaperKind} className="diaper-grid" aria-label="Diaper type" onValueChange={(value) => value && patch({ diaperKind: value as DiaperKind })}>
               <ToggleGroupItem autoFocus data-initial-focus value="wet"><Droplet size={22} /><strong>Wet</strong><Check className="choice-check" /></ToggleGroupItem>
-              <ToggleGroupItem value="dirty"><span className="dot-icon">●</span><strong>Dirty</strong><Check className="choice-check" /></ToggleGroupItem>
-              <ToggleGroupItem value="both"><span className="both-icon"><Droplet size={18} />●</span><strong>Both</strong><Check className="choice-check" /></ToggleGroupItem>
+              <ToggleGroupItem value="dirty"><span className="dot-icon" aria-hidden="true">●</span><strong>Dirty</strong><Check className="choice-check" /></ToggleGroupItem>
+              <ToggleGroupItem value="both"><span className="both-icon" aria-hidden="true"><Droplet size={18} />●</span><strong>Both</strong><Check className="choice-check" /></ToggleGroupItem>
             </ToggleGroup>
           </Field>
           <TimeField value={draft.logTime} onChange={(value) => patch({ logTime: value })} />
@@ -450,18 +464,18 @@ export function LogSheet({
 
       {sheet === "growth" && (
         <SheetForm onSubmit={saveGrowth}>
-          <LogDialogHeader icon={<Weight />} eyebrow="Growth check" title="Add measurement" description="Record measurements consistently to make the trend useful." />
+          <LogDialogHeader icon={<Weight />} eyebrow="Growth check" title="Add measurement" description="Weight now, length and head if you have them." />
           <FieldGroup className="measurement-fields">
-            <UnitField {...numericFieldProps("weightGrams")} value={draft.weightGrams} inputRef={invalidFieldRef} autoFocus invalid={Boolean(formError)} onChange={(value) => { patch({ weightGrams: value }); setFormError(null); }} placeholder="3500" className="measurement-primary" />
+            <UnitField {...numericFieldProps("weightGrams")} value={draft.weightGrams} inputRef={weightRef} autoFocus invalid={formError?.field === "weightGrams"} onChange={(value) => { patch({ weightGrams: value }); setFormError(null); }} placeholder="3500" className="measurement-primary" />
             <div className="measurement-row">
-              <UnitField {...numericFieldProps("lengthCm")} optional value={draft.lengthCm} onChange={(value) => patch({ lengthCm: value })} placeholder="51.5" />
-              <UnitField {...numericFieldProps("headCm")} optional value={draft.headCm} onChange={(value) => patch({ headCm: value })} placeholder="35.1" />
+              <UnitField {...numericFieldProps("lengthCm")} optional value={draft.lengthCm} inputRef={lengthRef} invalid={formError?.field === "lengthCm"} onChange={(value) => { patch({ lengthCm: value }); setFormError(null); }} placeholder="51.5" />
+              <UnitField {...numericFieldProps("headCm")} optional value={draft.headCm} inputRef={headRef} invalid={formError?.field === "headCm"} onChange={(value) => { patch({ headCm: value }); setFormError(null); }} placeholder="35.1" />
             </div>
           </FieldGroup>
           <TimeField value={draft.logTime} onChange={(value) => patch({ logTime: value })} />
           <NoteField value={draft.note} onChange={(value) => patch({ note: value })} placeholder="Clinic, home scale, or anything useful" />
           <p className="sheet-advice">Measure consistently and use the trend as context for your paediatrician.</p>
-          <FormError message={formError} />
+          <FormError message={formError?.message ?? null} />
           <DialogFooter><Button type="submit" className="primary-button sheet-primary">Save growth check</Button></DialogFooter>
         </SheetForm>
       )}
@@ -469,11 +483,11 @@ export function LogSheet({
       {sheet === "health" && (
         <SheetForm onSubmit={saveHealthNote}>
           <LogDialogHeader icon={<Thermometer />} eyebrow="Health log" title="Temperature or note" description="Keep a time-stamped note you can refer back to." />
-          <UnitField {...numericFieldProps("temperatureC")} optional value={draft.temperatureC} inputRef={invalidFieldRef} autoFocus invalid={Boolean(formError)} onChange={(value) => { patch({ temperatureC: value }); setFormError(null); }} placeholder="36.7" />
+          <UnitField {...numericFieldProps("temperatureC")} optional value={draft.temperatureC} inputRef={temperatureRef} autoFocus invalid={formError?.field === "temperatureC"} onChange={(value) => { patch({ temperatureC: value }); setFormError(null); }} placeholder="36.7" />
           <TemperatureAdvice value={draft.temperatureC} ageMonths={babyAgeMonths} />
-          <NoteField value={draft.note} onChange={(value) => patch({ note: value })} placeholder="Medicine, spit-up, rash, question for the doctor…" />
           <TimeField value={draft.logTime} onChange={(value) => patch({ logTime: value })} />
-          <FormError message={formError} />
+          <NoteField value={draft.note} onChange={(value) => { patch({ note: value }); setFormError(null); }} placeholder="Medicine, spit-up, rash, question for the doctor…" />
+          <FormError message={formError?.message ?? null} />
           <DialogFooter><Button type="submit" className="primary-button sheet-primary">Save health log</Button></DialogFooter>
         </SheetForm>
       )}
@@ -490,10 +504,12 @@ export function LogSheet({
 
           {editing.type === "bottle" && (
             <>
-              <UnitField {...numericFieldProps("amount")} value={draft.bottleAmount} inputRef={invalidFieldRef} autoFocus invalid={Boolean(formError)} onChange={(value) => { patch({ bottleAmount: Number(value) }); setFormError(null); }} className="measurement-primary" />
-              <ToggleGroup type="single" value={String(draft.bottleAmount)} className="preset-row" aria-label="Preset amounts" onValueChange={(value) => { if (value) patch({ bottleAmount: Number(value) }); setFormError(null); }}>
-                {bottlePresets.map((amount) => <ToggleGroupItem value={String(amount)} aria-label={`${amount} millilitres`} key={amount}>{amount}</ToggleGroupItem>)}
-              </ToggleGroup>
+              <Field className="amount-field">
+                <UnitField {...numericFieldProps("amount")} value={draft.bottleAmount} inputRef={amountRef} autoFocus invalid={formError?.field === "amount"} onChange={(value) => { patch({ bottleAmount: value }); setFormError(null); }} className="measurement-primary" />
+                <ToggleGroup type="single" value={draft.bottleAmount} className="preset-row" aria-label="Preset amounts" onValueChange={(value) => { if (value) patch({ bottleAmount: value }); setFormError(null); }}>
+                  {bottlePresets.map((amount) => <ToggleGroupItem value={String(amount)} aria-label={`${amount} millilitres`} key={amount}>{amount}</ToggleGroupItem>)}
+                </ToggleGroup>
+              </Field>
               <Field className="choice-field">
                 <FieldLabel>Milk</FieldLabel>
                 <ToggleGroup type="single" value={draft.milkType} className="segmented" aria-label="Milk type" onValueChange={(value) => value && patch({ milkType: value as "formula" | "expressed" })}>
@@ -505,44 +521,49 @@ export function LogSheet({
           )}
 
           {editing.type === "nursing" && (
-            <ToggleGroup type="single" value={draft.nursingSide} className="side-grid" aria-label="Nursing side" onValueChange={(value) => value && patch({ nursingSide: value as "left" | "right" })}>
-              <ToggleGroupItem autoFocus data-initial-focus value="left"><span className="side-letter">L</span><span className="choice-copy"><strong>Left side</strong><small>Left breast</small></span><Check className="choice-check" /></ToggleGroupItem>
-              <ToggleGroupItem value="right"><span className="side-letter">R</span><span className="choice-copy"><strong>Right side</strong><small>Right breast</small></span><Check className="choice-check" /></ToggleGroupItem>
-            </ToggleGroup>
+            <Field className="nursing-side-field">
+              <FieldLabel>Side</FieldLabel>
+              <ToggleGroup type="single" value={draft.nursingSide} className="side-grid" aria-label="Nursing side" onValueChange={(value) => value && patch({ nursingSide: value as "left" | "right" })}>
+                <ToggleGroupItem autoFocus data-initial-focus value="left"><span className="side-letter">L</span><span className="choice-copy"><strong>Left</strong></span><Check className="choice-check" /></ToggleGroupItem>
+                <ToggleGroupItem value="right"><span className="side-letter">R</span><span className="choice-copy"><strong>Right</strong></span><Check className="choice-check" /></ToggleGroupItem>
+              </ToggleGroup>
+            </Field>
           )}
 
           {editing.type === "diaper" && (
-            <ToggleGroup type="single" value={draft.diaperKind} className="diaper-grid" aria-label="Diaper type" onValueChange={(value) => value && patch({ diaperKind: value as DiaperKind })}>
-              <ToggleGroupItem autoFocus data-initial-focus value="wet"><Droplet size={22} /><strong>Wet</strong><Check className="choice-check" /></ToggleGroupItem>
-              <ToggleGroupItem value="dirty"><span className="dot-icon">●</span><strong>Dirty</strong><Check className="choice-check" /></ToggleGroupItem>
-              <ToggleGroupItem value="both"><span className="both-icon"><Droplet size={18} />●</span><strong>Both</strong><Check className="choice-check" /></ToggleGroupItem>
-            </ToggleGroup>
+            <Field className="choice-field">
+              <FieldLabel>Diaper type</FieldLabel>
+              <ToggleGroup type="single" value={draft.diaperKind} className="diaper-grid" aria-label="Diaper type" onValueChange={(value) => value && patch({ diaperKind: value as DiaperKind })}>
+                <ToggleGroupItem autoFocus data-initial-focus value="wet"><Droplet size={22} /><strong>Wet</strong><Check className="choice-check" /></ToggleGroupItem>
+                <ToggleGroupItem value="dirty"><span className="dot-icon" aria-hidden="true">●</span><strong>Dirty</strong><Check className="choice-check" /></ToggleGroupItem>
+                <ToggleGroupItem value="both"><span className="both-icon" aria-hidden="true"><Droplet size={18} />●</span><strong>Both</strong><Check className="choice-check" /></ToggleGroupItem>
+              </ToggleGroup>
+            </Field>
           )}
 
           {editing.type === "growth" && (
             <FieldGroup className="measurement-fields">
-              <UnitField {...numericFieldProps("weightGrams")} value={draft.weightGrams} inputRef={invalidFieldRef} autoFocus invalid={Boolean(formError)} onChange={(value) => { patch({ weightGrams: value }); setFormError(null); }} className="measurement-primary" />
+              <UnitField {...numericFieldProps("weightGrams")} value={draft.weightGrams} inputRef={weightRef} autoFocus invalid={formError?.field === "weightGrams"} onChange={(value) => { patch({ weightGrams: value }); setFormError(null); }} className="measurement-primary" />
               <div className="measurement-row">
-                <UnitField {...numericFieldProps("lengthCm")} optional value={draft.lengthCm} onChange={(value) => { patch({ lengthCm: value }); setFormError(null); }} />
-                <UnitField {...numericFieldProps("headCm")} optional value={draft.headCm} onChange={(value) => { patch({ headCm: value }); setFormError(null); }} />
+                <UnitField {...numericFieldProps("lengthCm")} optional value={draft.lengthCm} inputRef={lengthRef} invalid={formError?.field === "lengthCm"} onChange={(value) => { patch({ lengthCm: value }); setFormError(null); }} />
+                <UnitField {...numericFieldProps("headCm")} optional value={draft.headCm} inputRef={headRef} invalid={formError?.field === "headCm"} onChange={(value) => { patch({ headCm: value }); setFormError(null); }} />
               </div>
             </FieldGroup>
           )}
 
           {editing.type === "health" && (
             <>
-              <UnitField {...numericFieldProps("temperatureC")} optional value={draft.temperatureC} inputRef={invalidFieldRef} autoFocus invalid={Boolean(formError)} onChange={(value) => { patch({ temperatureC: value }); setFormError(null); }} placeholder="36.7" />
+              <UnitField {...numericFieldProps("temperatureC")} optional value={draft.temperatureC} inputRef={temperatureRef} autoFocus invalid={formError?.field === "temperatureC"} onChange={(value) => { patch({ temperatureC: value }); setFormError(null); }} placeholder="36.7" />
               <TemperatureAdvice value={draft.temperatureC} ageMonths={babyAgeMonths} />
             </>
           )}
 
           <div className={isTimed ? "measurement-row edit-time-row" : ""}>
-            <TimeField value={draft.logTime} label={isTimed ? "Started" : "When"} autoFocus={editing.type === "sleep"} inputRef={editing.type === "sleep" || editing.type === "nursing" || editing.type === "diaper" ? invalidFieldRef : undefined} error={Boolean(formError)} onChange={(value) => { patch({ logTime: value }); setFormError(null); }} />
-            {isTimed && <TimeField value={draft.endTime} label="Ended (leave empty if running)" error={Boolean(formError)} onChange={(value) => { patch({ endTime: value }); setFormError(null); }} />}
+            <TimeField value={draft.logTime} label={isTimed ? "Started" : "When"} autoFocus={editing.type === "sleep"} inputRef={startRef} error={formError?.field === "start"} onChange={(value) => { patch({ logTime: value }); setFormError(null); }} />
+            {isTimed && <TimeField value={draft.endTime} label="Ended" description="Leave empty if still going." inputRef={endRef} error={formError?.field === "end"} onChange={(value) => { patch({ endTime: value }); setFormError(null); }} />}
           </div>
           <NoteField value={draft.note} onChange={(value) => { patch({ note: value }); setFormError(null); }} />
-          <FormError message={formError} />
-          <DialogFooter><Button type="submit" className="primary-button sheet-primary">Save changes</Button></DialogFooter>
+          <FormError message={formError?.message ?? null} />
 
           <AlertDialog>
             <div className="edit-danger">
@@ -565,6 +586,8 @@ export function LogSheet({
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+
+          <DialogFooter><Button type="submit" className="primary-button sheet-primary">Save changes</Button></DialogFooter>
         </SheetForm>
       )}
 

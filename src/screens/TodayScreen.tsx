@@ -138,7 +138,7 @@ function NursingHearth({ activity, onStop }: { activity: Activity; onStop: () =>
       <p className="figure hearth-figure t-display">{liveDuration(activity.startedAt, now)}</p>
       <p className="hearth-meta">Started {formatTime(activity.startedAt)}</p>
       <Button className="hearth-stop" onClick={onStop} aria-label="Stop nursing timer">
-        <Square size={14} fill="currentColor" /> Stop
+        <Square size={14} fill="currentColor" aria-hidden="true" /> Stop
       </Button>
     </div>
   );
@@ -173,7 +173,7 @@ function TimerRow({
       </div>
       <div className="log-actions">
         <Button onClick={onStop} aria-label={`Stop ${isSleep ? "sleep" : "nursing"} timer`}>
-          <Square size={14} fill="currentColor" /> {isSleep ? "Wake up" : "Stop"}
+          <Square size={14} fill="currentColor" aria-hidden="true" /> {isSleep ? "Wake up" : "Stop"}
         </Button>
       </div>
     </div>
@@ -262,7 +262,7 @@ export default function TodayScreen({
       startedAt: new Date().toISOString(),
       side,
     };
-    onAdd(entry, `${side === "left" ? "Left" : "Right"} timer started`);
+    onAdd(entry, `Nursing started · ${side} side`);
   }
 
   function stopNursing() {
@@ -317,84 +317,193 @@ export default function TodayScreen({
     <section className="screen today-screen" aria-labelledby="today-heading">
       <header className="status-line">
         <h1 id="today-heading" className="t-title-2">
-          {profile.name}
+          <span className="status-name">{profile.name}</span>
           {babyAge && <span className="status-age t-meta"> · {babyAge}</span>}
         </h1>
         <span className="status-date">{statusDateFormat.format(new Date(minuteClock))}</span>
       </header>
 
-      <div className="today-dashboard">
-        <div className="hearth">
-          {activeNursing ? (
-            <NursingHearth activity={activeNursing} onStop={stopNursing} />
-          ) : !lastFeed ? (
-            // First run: no em-dash figure pretending to be data — a calm
-            // welcome instead.
-            <div className="hearth-clock hearth-empty">
-              <LittleBottle className="hearth-illustration" />
-              <p className="t-title-2">Ready when you are</p>
-              <p className="t-meta">Log the first feed when it happens — one tap on the right.</p>
-            </div>
-          ) : (
-            <div className="hearth-clock hearth-idle">
-              <div className="hearth-copy">
-                <span className="t-label">Since last feed</span>
-                <p className="figure hearth-figure t-display">
-                  <GapFigure startedAt={lastFeed.startedAt} now={minuteClock} />
-                </p>
-                <p className="hearth-meta">{lastFeedSummary(lastFeed)}</p>
-                {typicalGap > 0 && (
-                  // One plain sentence — an unlabelled progress bar here read as
-                  // "what is this?" instead of information.
-                  <p className="micro-caption">
-                    {gapOver > 0
-                      ? `${humanDuration(gapOver)} past the usual ${humanDuration(typicalGap)} gap`
-                      : `Usually feeds every ${humanDuration(typicalGap)}`}
-                  </p>
-                )}
+      <div className={`today-dashboard${activeTimers.length > 0 ? " has-live" : ""}`}>
+        <div className="today-main">
+          <div className="hearth">
+            {activeNursing ? (
+              <NursingHearth activity={activeNursing} onStop={stopNursing} />
+            ) : !lastFeed ? (
+              // First run: no em-dash figure pretending to be data — a calm
+              // welcome instead.
+              <div className="hearth-clock hearth-empty">
+                <LittleBottle className="hearth-illustration" />
+                <p className="t-title-2">Ready when you are</p>
+                <p className="t-meta">Log the first feed when it happens — one tap on Bottle or Nursing.</p>
               </div>
-              <span className="hearth-ambient" aria-hidden="true">
-                <BabyCompanion mood={companionMood} size={96} reactionKey={reactionKey} />
+            ) : (
+              <div className="hearth-clock hearth-idle">
+                <div className="hearth-copy">
+                  <span className="t-label">Since last feed</span>
+                  <p className="figure hearth-figure t-display">
+                    <GapFigure startedAt={lastFeed.startedAt} now={minuteClock} />
+                  </p>
+                  <p className="hearth-meta">{lastFeedSummary(lastFeed)}</p>
+                  {typicalGap > 0 && (
+                    // One plain sentence — an unlabelled progress bar here read as
+                    // "what is this?" instead of information.
+                    <p className="micro-caption">
+                      {gapOver > 0
+                        ? `${humanDuration(gapOver)} past the usual ${humanDuration(typicalGap)} gap`
+                        : `Usually feeds every ${humanDuration(typicalGap)}`}
+                    </p>
+                  )}
+                </div>
+                <span className="hearth-ambient" aria-hidden="true">
+                  <BabyCompanion mood={companionMood} size={96} reactionKey={reactionKey} />
+                </span>
+              </div>
+            )}
+
+            {secondaryTimers.map((timer) => (
+              <TimerRow
+                key={timer.id}
+                activity={timer}
+                now={minuteClock}
+                onStop={() => onStopTimer(timer.id)}
+              />
+            ))}
+
+            {/* With zero feeds there is no pattern to forecast — the row waits
+                for the first feed instead of announcing "Learning the pattern"
+                over an empty tracker. */}
+            {!activeNursing && lastFeed && (
+              <div className="hearth-foot">
+                <div className="log-copy">
+                  <span className="t-label">Next likely feed</span>
+                  <strong>
+                    {nextFeedAt ? forecastRelative(nextFeedAt, minuteClock) : "Still learning the rhythm"}
+                  </strong>
+                  <small>
+                    {nextFeedAt
+                      ? feedWindowPassed
+                        ? "Follow the cues — whenever works"
+                        : `around ${formatTime(new Date(nextFeedAt).toISOString())}`
+                      : "A few more feeds and the rhythm appears"}
+                  </small>
+                </div>
+                <Button variant="outline" onClick={() => onOpenSheet(forecastFeedSheet)} aria-label="Log a feed">Log</Button>
+              </div>
+            )}
+          </div>
+
+          {/* Stats only once there is something to count — four em-dashes on a
+              fresh install read as breakage, not calm. */}
+          {(todayActivities.length > 0 || sleepMinutesToday > 0) && (
+          <section className="day-strip" aria-label="Today's summary">
+            <div>
+              <span className="stat-head"><Milk size={14} aria-hidden="true" /> Feeds today</span>
+              <span className="figure t-numeral">
+                {feedsToday.length > 0 ? feedsToday.length : <span className="is-zero">—</span>}
               </span>
             </div>
-          )}
-
-          {secondaryTimers.map((timer) => (
-            <TimerRow
-              key={timer.id}
-              activity={timer}
-              now={minuteClock}
-              onStop={() => onStopTimer(timer.id)}
-            />
-          ))}
-
-          {/* With zero feeds there is no pattern to forecast — the row waits
-              for the first feed instead of announcing "Learning the pattern"
-              over an empty tracker. */}
-          {!activeNursing && lastFeed && (
-            <div className="hearth-foot">
-              <div className="log-copy">
-                <span>Next likely feed</span>
-                <strong>
-                  {nextFeedAt ? forecastRelative(nextFeedAt, minuteClock) : "Still learning the rhythm"}
-                </strong>
-                <small>
-                  {nextFeedAt
-                    ? feedWindowPassed
-                      ? "Follow the cues — whenever works"
-                      : `around ${formatTime(new Date(nextFeedAt).toISOString())}`
-                    : "A few more feeds and the pattern appears"}
-                </small>
-              </div>
-              <Button variant="outline" onClick={() => onOpenSheet(forecastFeedSheet)}>Log</Button>
+            <div>
+              <span className="stat-head"><Milk size={14} aria-hidden="true" /> Bottle total</span>
+              <span className="figure t-numeral">
+                {bottleMlToday > 0 ? (
+                  <>
+                    {bottleMlToday}
+                    <span className="unit">ml</span>
+                  </>
+                ) : (
+                  <span className="is-zero">—</span>
+                )}
+              </span>
             </div>
+            <div>
+              <span className="stat-head"><Droplet size={14} aria-hidden="true" /> Diapers</span>
+              <span className="figure t-numeral">
+                {diapersToday > 0 ? diapersToday : <span className="is-zero">—</span>}
+              </span>
+            </div>
+            <div>
+              <span className="stat-head"><Moon size={14} aria-hidden="true" /> Sleep today</span>
+              <span className="figure t-numeral"><DurationFigure minutes={sleepMinutesToday} /></span>
+            </div>
+          </section>
           )}
+
+          <DayBand
+            className="today-band"
+            day={new Date(minuteClock)}
+            activities={sortedActivities}
+            now={minuteClock}
+            mode="rolling"
+          />
+
+          <div className="next-up">
+            {/* Same rule as the feed forecast: no "Learning the pattern" over an
+                empty tracker — the row waits for the first logged sleep. The
+                plain "Start sleep" action above stays available regardless. */}
+            {!activeSleep && sortedActivities.some((activity) => activity.type === "sleep") && (
+              <div className="log-row action-sleep">
+                {/* 40px render needs a heavier stroke than the 88px+ frames: 4/96 ≈ 1.7px on screen. */}
+                <span className="action-icon forecast-illustration"><SleepyMoon size={40} strokeWidth={4} /></span>
+                <div className="log-copy">
+                  <span className="t-label">Next likely sleep</span>
+                  <strong>
+                    {nextSleepAt ? forecastRelative(nextSleepAt, minuteClock) : "Still learning the rhythm"}
+                  </strong>
+                  <small>
+                    {nextSleepAt
+                      ? sleepWindowPassed
+                        ? "Follow the cues — whenever works"
+                        : `around ${formatTime(new Date(nextSleepAt).toISOString())}`
+                      : "A few more sleeps and the rhythm appears"}
+                  </small>
+                </div>
+                <div className="log-actions">
+                  <Button variant="outline" onClick={toggleSleep} aria-label="Start sleep timer">Start</Button>
+                </div>
+              </div>
+            )}
+            <div className="care-notes">
+              <p><Clock size={15} aria-hidden="true" /> Patterns, not a schedule — follow the cues and your paediatrician’s advice.</p>
+              <p><ShieldCheck size={15} aria-hidden="true" /> Safe sleep: back, firm flat surface, clear sleep space.</p>
+            </div>
+          </div>
+
+          <div className="recent-section">
+            <div className="mini-heading">
+              <h2>Recent</h2>
+              <Button variant="ghost" onClick={onSeeTimeline}>See all <ChevronRight size={15} aria-hidden="true" /></Button>
+            </div>
+            <Card size="sm" className="activity-list recent-list">
+              <CardContent className="activity-list-content">
+                {sortedActivities.length > 0 && (
+                  <ItemGroup>
+                    {sortedActivities.slice(0, 6).map((activity, index) => (
+                      <div role="listitem" key={activity.id}>
+                        {index > 0 && <ItemSeparator />}
+                        <ActivityRow activity={activity} onEdit={onEdit} />
+                      </div>
+                    ))}
+                  </ItemGroup>
+                )}
+                {/* While the hearth's first-run scene is showing, Recent stays
+                    text-only — one ambient illustration per screen. */}
+                {!sortedActivities.length &&
+                  (lastFeed ? (
+                    <EmptyState text="Your day will appear here as you log it." />
+                  ) : (
+                    <div className="empty-state">
+                      <p>Your day will appear here as you log it.</p>
+                    </div>
+                  ))}
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
-        <div className="log-column" aria-label="One-tap baby care logging">
+        <section className="log-column" aria-label="One-tap baby care logging">
           {profile.feedingMode !== "breast" && (
             <div className="log-row action-feed">
-              <span className="action-icon"><Milk /></span>
+              <span className="action-icon" aria-hidden="true"><Milk /></span>
               <div className="log-copy">
                 <strong>Bottle</strong>
                 {lastBottle?.amount && (
@@ -412,7 +521,7 @@ export default function TodayScreen({
                     >
                       Log {lastBottle.amount} ml
                     </Button>
-                    <Button variant="outline" onClick={() => onOpenSheet("bottle")}>Change</Button>
+                    <Button variant="outline" onClick={() => onOpenSheet("bottle")} aria-label="Change bottle amount">Change</Button>
                   </>
                 ) : (
                   <Button variant="outline" onClick={() => onOpenSheet("bottle")}>Log a bottle</Button>
@@ -423,7 +532,7 @@ export default function TodayScreen({
 
           {profile.feedingMode !== "bottle" && !activeNursing && (
             <div className="log-row action-nurse is-stacked">
-              <span className="action-icon"><Heart /></span>
+              <span className="action-icon" aria-hidden="true"><Heart /></span>
               <div className="log-copy">
                 <strong>Nursing timer</strong>
                 <small>Choose a side to start instantly</small>
@@ -449,27 +558,27 @@ export default function TodayScreen({
                   onClick={onManualNursing}
                   aria-label="Add a completed nursing session manually"
                 >
-                  <Clock /> Add past session
+                  <Clock aria-hidden="true" /> Add past session
                 </Button>
               </div>
             </div>
           )}
 
           <div className="log-row action-diaper">
-            <span className="action-icon"><Droplet /></span>
+            <span className="action-icon" aria-hidden="true"><Droplet /></span>
             <div className="log-copy">
               <strong>Diaper</strong>
             </div>
             <div className="log-actions">
-              <Button variant="outline" onClick={() => quickLogDiaper("wet")}>Wet</Button>
-              <Button variant="outline" onClick={() => quickLogDiaper("dirty")}>Dirty</Button>
-              <Button variant="outline" onClick={() => quickLogDiaper("both")}>Both</Button>
+              <Button variant="outline" onClick={() => quickLogDiaper("wet")} aria-label="Log wet diaper">Wet</Button>
+              <Button variant="outline" onClick={() => quickLogDiaper("dirty")} aria-label="Log dirty diaper">Dirty</Button>
+              <Button variant="outline" onClick={() => quickLogDiaper("both")} aria-label="Log wet and dirty diaper">Both</Button>
             </div>
           </div>
 
           {!activeSleep && (
             <div className="log-row action-sleep">
-              <span className="action-icon"><Moon /></span>
+              <span className="action-icon" aria-hidden="true"><Moon /></span>
               <div className="log-copy">
                 <strong>Sleep</strong>
                 <small>Start a sleep timer</small>
@@ -485,7 +594,7 @@ export default function TodayScreen({
             className="log-row log-row-secondary action-growth"
             onClick={() => onOpenSheet("growth")}
           >
-            <span className="action-icon"><Weight /></span>
+            <span className="action-icon" aria-hidden="true"><Weight /></span>
             <span className="log-copy">
               <strong>Growth</strong>
               <small>Weight, length, head</small>
@@ -497,115 +606,14 @@ export default function TodayScreen({
             className="log-row log-row-secondary action-health"
             onClick={() => onOpenSheet("health")}
           >
-            <span className="action-icon"><Thermometer /></span>
+            <span className="action-icon" aria-hidden="true"><Thermometer /></span>
             <span className="log-copy">
               <strong>Health note</strong>
               <small>Temperature or note</small>
             </span>
             <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
           </Button>
-        </div>
-
-        {/* Stats only once there is something to count — four em-dashes on a
-            fresh install read as breakage, not calm. */}
-        {(todayActivities.length > 0 || sleepMinutesToday > 0) && (
-        <div className="day-strip" aria-label="Today's summary">
-          <div>
-            <span className="stat-head"><Milk size={14} aria-hidden="true" /> Feeds today</span>
-            <span className="figure t-numeral">
-              {feedsToday.length > 0 ? feedsToday.length : <span className="is-zero">—</span>}
-            </span>
-          </div>
-          <div>
-            <span className="stat-head"><Milk size={14} aria-hidden="true" /> Bottle total</span>
-            <span className="figure t-numeral">
-              {bottleMlToday > 0 ? (
-                <>
-                  {bottleMlToday}
-                  <span className="unit">ml</span>
-                </>
-              ) : (
-                <span className="is-zero">—</span>
-              )}
-            </span>
-          </div>
-          <div>
-            <span className="stat-head"><Droplet size={14} aria-hidden="true" /> Diapers</span>
-            <span className="figure t-numeral">
-              {diapersToday > 0 ? diapersToday : <span className="is-zero">—</span>}
-            </span>
-          </div>
-          <div>
-            <span className="stat-head"><Moon size={14} aria-hidden="true" /> Sleep today</span>
-            <span className="figure t-numeral"><DurationFigure minutes={sleepMinutesToday} /></span>
-          </div>
-        </div>
-        )}
-
-        <DayBand
-          className="today-band"
-          day={new Date(minuteClock)}
-          activities={sortedActivities}
-          now={minuteClock}
-          mode="rolling"
-        />
-
-        <div className="next-up">
-          {/* Same rule as the feed forecast: no "Learning the pattern" over an
-              empty tracker — the row waits for the first logged sleep. The
-              plain "Start sleep" action above stays available regardless. */}
-          {!activeSleep && sortedActivities.some((activity) => activity.type === "sleep") && (
-            <div className="log-row action-sleep">
-              {/* 40px render needs a heavier stroke than the 88px+ frames: 4/96 ≈ 1.7px on screen. */}
-              <span className="action-icon forecast-illustration"><SleepyMoon size={40} strokeWidth={4} /></span>
-              <div className="log-copy">
-                <span>Next likely sleep</span>
-                <strong>
-                  {nextSleepAt ? forecastRelative(nextSleepAt, minuteClock) : "Still learning the rhythm"}
-                </strong>
-                <small>
-                  {nextSleepAt
-                    ? sleepWindowPassed
-                      ? "Follow the cues — whenever works"
-                      : `around ${formatTime(new Date(nextSleepAt).toISOString())}`
-                    : "A few more sleeps and the pattern appears"}
-                </small>
-              </div>
-              <div className="log-actions">
-                <Button variant="outline" onClick={toggleSleep}>Start</Button>
-              </div>
-            </div>
-          )}
-          <div className="care-notes">
-            <p><Clock size={15} /> Patterns, not a schedule — cues and your clinician’s care plan come first.</p>
-            <p><ShieldCheck size={15} /> Safe sleep: back, firm flat surface, clear sleep space.</p>
-          </div>
-        </div>
-
-        <div className="recent-section">
-          <div className="mini-heading">
-            <h2>Recent</h2>
-            <Button onClick={onSeeTimeline}>See all <ChevronRight size={15} /></Button>
-          </div>
-          <Card size="sm" className="activity-list recent-list">
-            <CardContent className="activity-list-content">
-              <ItemGroup>
-                {sortedActivities.slice(0, 6).map((activity, index) => (
-                  <div role="listitem" key={activity.id}>
-                    {index > 0 && <ItemSeparator />}
-                    <ActivityRow activity={activity} onEdit={onEdit} />
-                  </div>
-                ))}
-              </ItemGroup>
-              {!sortedActivities.length && (
-                <EmptyState
-                  illustration={<SleepyMoon />}
-                  text="Your day will appear here as you log it."
-                />
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        </section>
       </div>
     </section>
   );

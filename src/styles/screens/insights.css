@@ -17,7 +17,9 @@
   margin-bottom: 0;
 }
 
-/* Summary tiles: numeral + label, zeros as em-dashes. */
+/* Summary tiles: numeral + label. The whole strip is skipped when every tile
+   is empty; a partly-filled strip renders missing values as decorative
+   em-dashes with an sr-only "No data yet". */
 .insight-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -47,6 +49,18 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+/* Nursing-only weeks: the rhythm figure has no bar-chart partner, so it
+   takes the full row instead of leaving a dead column. */
+.insight-figure.is-solo {
+  grid-column: 1 / -1;
+}
+
+/* The card's own 16/24 padding provides the inset — EmptyState's default
+   24px would double it. */
+.insight-figure .empty-state {
+  padding: 0;
 }
 
 .insight-figure figcaption {
@@ -98,7 +112,9 @@
   position: absolute;
   right: 0;
   left: 0;
-  border-top: 1px dashed var(--border-strong);
+  /* --ink-3 clears the 3:1 non-text minimum; dashed keeps it subordinate
+     to the solid bars. */
+  border-top: 1px dashed var(--ink-3);
 }
 
 .bar-column {
@@ -115,6 +131,7 @@
   left: 50%;
   color: var(--ink-3);
   font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
   line-height: 1.4;
   white-space: nowrap;
   translate: -50%;
@@ -147,7 +164,7 @@
 
 .rhythm-axis {
   position: relative;
-  height: 17px;
+  height: 16px;
   /* Left offset = the 32px rhythm-row label column + its 8px gap. */
   margin-left: calc(32px + 8px);
   color: var(--ink-3);
@@ -288,8 +305,9 @@
 
 .growth-overview strong {
   overflow: hidden;
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   font-weight: 500;
+  font-variant-numeric: tabular-nums;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -329,6 +347,7 @@
   fill: var(--foreground);
   font-size: 0.75rem;
   font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
 .growth-date {
@@ -336,27 +355,15 @@
   font-size: 0.75rem;
 }
 
-.growth-empty {
-  min-height: 150px;
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: 8px;
-  padding: 24px;
-  color: var(--ink-2);
-  text-align: center;
-}
-
-.growth-empty p {
+/* Keep the long empty-copy measure readable inside the wide growth card. */
+.growth-card .empty-state p {
   max-width: 360px;
-  margin: 0;
-  font-size: 0.8125rem;
 }
 
 .growth-note {
   margin: 0;
   color: var(--ink-2);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   line-height: 1.45;
 }
 
@@ -369,8 +376,12 @@
 
 .gentle-note p {
   margin: 0;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   line-height: 1.45;
+}
+
+.gentle-note strong {
+  font-weight: 500;
 }
 
 @media (min-width: 768px) {

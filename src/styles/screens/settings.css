@@ -12,8 +12,19 @@
 .appearance-options {
   width: 100%;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 8px;
+}
+
+@media (min-width: 375px) {
+  .appearance-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Bordered chips need the full card inset, not the press-row negative inset. */
+.appearance-settings [data-slot="card-content"] {
+  padding: 0 16px 16px;
 }
 
 .appearance-options [data-slot="toggle-group-item"] {
@@ -48,13 +59,13 @@
 }
 
 .appearance-options strong {
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   font-weight: 500;
 }
 
 .appearance-options small {
-  color: var(--ink-3);
-  font-size: 0.75rem;
+  color: var(--ink-2);
+  font-size: 0.8125rem;
 }
 
 .appearance-options [data-slot="toggle-group-item"][data-state="on"] {
@@ -69,6 +80,10 @@
   color: var(--primary-foreground);
 }
 
+.appearance-options [data-slot="toggle-group-item"][data-state="on"] small {
+  color: var(--accent-foreground);
+}
+
 .reminder-row {
   width: 100%;
   min-height: 56px;
@@ -78,13 +93,13 @@
 }
 
 .reminder-row [data-slot="item-title"] {
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   font-weight: 500;
 }
 
 .reminder-row [data-slot="item-description"] {
   color: var(--ink-2);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
 }
 
 .reminder-options {
@@ -96,7 +111,7 @@
 .reminder-options p {
   margin: 0;
   color: var(--ink-3);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   line-height: 1.4;
 }
 
@@ -104,7 +119,7 @@
   gap: 0;
 }
 
-.settings-action-list [data-slot="item-separator"] {
+.settings-group [data-slot="item-separator"] {
   width: auto;
   margin: 0 12px;
 }
@@ -150,19 +165,23 @@
 .settings-action-copy strong {
   overflow: hidden;
   color: var(--foreground);
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* Descriptions carry safety copy ("download a backup first") — clamp to two
+   lines instead of mid-sentence ellipsis on narrow phones. */
 .settings-action-copy small {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
   color: var(--ink-2);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 400;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .settings-action-chevron {
@@ -173,8 +192,13 @@
 }
 
 .settings-action:active {
-  background: var(--signal-quiet);
+  background: color-mix(in oklch, var(--foreground) 6%, var(--card));
   transform: none;
+}
+
+/* The destructive row never flashes the primary wash. */
+.settings-action-danger:active {
+  background: var(--danger-soft);
 }
 
 .privacy-card {
@@ -186,28 +210,24 @@
 }
 
 .privacy-card > span {
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
   display: grid;
   place-items: center;
   border-radius: var(--radius-md);
   background: var(--muted);
-  color: var(--signal);
+  color: var(--ink-2);
 }
 
 .privacy-card strong {
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   font-weight: 500;
 }
 
 .privacy-card p {
   margin: 4px 0 0;
   color: var(--ink-2);
-  font-size: 0.75rem;
-}
-
-.privacy-card > svg {
-  color: var(--signal);
+  font-size: 0.8125rem;
 }
 
 .version-note {
@@ -227,10 +247,27 @@
     color: var(--foreground);
     translate: 2px 0;
   }
+
+  .settings-action-danger:hover {
+    border-color: color-mix(in oklch, var(--alert) 25%, var(--border));
+    background: color-mix(in oklch, var(--alert) 8%, transparent);
+  }
+
+  .settings-action-danger:hover .settings-action-chevron {
+    color: var(--alert);
+  }
+
+  .appearance-options [data-slot="toggle-group-item"][data-state="off"]:hover {
+    background: color-mix(in oklch, var(--muted) 68%, transparent);
+  }
 }
 
 @media (min-width: 768px) {
   .more-screen {
     gap: 32px;
+  }
+
+  .appearance-settings [data-slot="card-content"] {
+    padding: 0 24px 24px;
   }
 }

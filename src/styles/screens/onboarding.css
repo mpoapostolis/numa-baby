@@ -19,7 +19,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: max(8px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) 8px max(24px, env(safe-area-inset-left));
+  padding: max(8px, env(safe-area-inset-top)) max(clamp(16px, 4vw, 32px), env(safe-area-inset-right)) 8px max(clamp(16px, 4vw, 32px), env(safe-area-inset-left));
   border-bottom: 1px solid var(--border);
   background: var(--card);
 }
@@ -65,14 +65,19 @@
   font-weight: 500;
 }
 
+.onboarding-theme:hover {
+  border-color: var(--ink-3);
+  cursor: pointer;
+}
+
 .onboarding-layout {
-  width: min(100%, 1120px);
+  width: min(100%, 1140px);
   margin: auto;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(380px, 440px);
   align-items: center;
   gap: clamp(48px, 6vw, 64px);
-  padding: 48px 32px 64px;
+  padding: 48px max(clamp(16px, 4vw, 32px), env(safe-area-inset-right)) 64px max(clamp(16px, 4vw, 32px), env(safe-area-inset-left));
 }
 
 .onboarding-intro {
@@ -143,7 +148,6 @@
 .onboarding-points {
   max-width: 520px;
   display: grid;
-  gap: 4px;
   margin-top: 24px;
 }
 
@@ -161,6 +165,8 @@
   border-bottom: 0;
 }
 
+/* Sizing only — the glyph classes (.glyph-bottle, .glyph-sleep) keep their
+   own wash-on-chip recipe from components.css. */
 .onboarding-points > div > span,
 .onboarding-card-icon {
   width: 40px;
@@ -168,7 +174,6 @@
   display: grid;
   place-items: center;
   border-radius: var(--radius-md);
-  background: var(--muted);
 }
 
 .onboarding-points svg,
@@ -179,6 +184,7 @@
 
 .onboarding-private-icon,
 .onboarding-card-icon {
+  background: var(--muted);
   color: var(--signal);
 }
 
@@ -189,26 +195,25 @@
 }
 
 .onboarding-points strong {
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   font-weight: 500;
 }
 
 .onboarding-points small {
   color: var(--ink-2);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
 }
 
 .onboarding-card,
 .recovery-card {
   border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   background: var(--card);
-  box-shadow: var(--shadow-dialog);
 }
 
 .dark .onboarding-card,
 .dark .recovery-card {
-  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.04);
+  box-shadow: inset 0 1px 0 var(--edge-highlight);
 }
 
 .onboarding-card > [data-slot="card-header"],
@@ -290,9 +295,23 @@
   line-height: 1.45;
 }
 
+/* Keeps the card centred (margin: auto against the flex region) while
+   guaranteeing breathing room on short viewports and above the home bar. */
+.recovery-region {
+  flex: 1;
+  display: flex;
+  padding: 24px 16px max(24px, env(safe-area-inset-bottom));
+}
+
 .recovery-card {
-  width: min(calc(100% - 32px), 560px);
+  width: min(100%, 560px);
   margin: auto;
+}
+
+/* The recovery state's only heading carries title-1 — it must outrank its
+   own description. */
+.recovery-card [data-slot="card-title"] {
+  font-size: 1.375rem;
 }
 
 .recovery-actions {
@@ -304,12 +323,20 @@
   min-height: 48px;
 }
 
-@media (width < 768px) {
-  .onboarding-header {
-    padding-right: max(16px, env(safe-area-inset-right));
-    padding-left: max(16px, env(safe-area-inset-left));
+/* Stack before the intro column starves: below 1024px the display h1 and
+   point rows would otherwise share the row with a 380px+ form column. */
+@media (width < 1024px) {
+  .onboarding-layout {
+    grid-template-columns: 1fr;
+    gap: 32px;
   }
 
+  .onboarding-card {
+    width: 100%;
+  }
+}
+
+@media (width < 768px) {
   .onboarding-theme > span {
     display: none;
   }
@@ -319,16 +346,6 @@
   }
 
   .onboarding-layout {
-    grid-template-columns: 1fr;
-    gap: 32px;
-    padding: 32px 16px 48px;
-  }
-
-  .onboarding-points {
-    margin-top: 24px;
-  }
-
-  .onboarding-card {
-    width: 100%;
+    padding-block: 32px 48px;
   }
 }

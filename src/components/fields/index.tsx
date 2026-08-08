@@ -4,7 +4,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog";
-import { Field, FieldError, FieldLabel } from "../ui/field";
+import { Field, FieldDescription, FieldError, FieldLabel } from "../ui/field";
 import {
   InputGroup,
   InputGroupAddon,
@@ -47,6 +47,7 @@ export function TimeField({
   value,
   onChange,
   label = "When",
+  description,
   inputRef,
   error = false,
   autoFocus = false,
@@ -54,6 +55,7 @@ export function TimeField({
   value: string;
   onChange: (value: string) => void;
   label?: string;
+  description?: string;
   inputRef?: React.Ref<HTMLInputElement>;
   error?: boolean;
   autoFocus?: boolean;
@@ -65,6 +67,7 @@ export function TimeField({
       <InputGroup>
         <InputGroupInput id={id} ref={inputRef} autoFocus={autoFocus} data-initial-focus={autoFocus ? "" : undefined} type="datetime-local" value={value} max={localDateInput(new Date())} aria-invalid={error} aria-describedby={error ? "sheet-error" : undefined} onChange={(event) => onChange(event.target.value)} />
       </InputGroup>
+      {description && <FieldDescription>{description}</FieldDescription>}
     </Field>
   );
 }

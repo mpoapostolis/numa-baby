@@ -150,11 +150,22 @@ button:disabled {
   text-transform: uppercase;
 }
 
+/* Mutable numerals hold their width — no reflow as digits tick. */
+.figure,
+.t-display,
+.t-numeral {
+  font-variant-numeric: tabular-nums;
+}
+
 /* Unit demotion: "2h 15m", "120 ml", "4.20 kg" — units recede, digits speak. */
 .figure .unit {
   color: var(--ink-3);
-  font-size: 0.42em;
+  font-size: 0.75rem;
   font-weight: 500;
+}
+
+.t-display.figure .unit {
+  font-size: 0.9375rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -182,11 +193,16 @@ button:disabled {
   border: 0 !important;
 }
 
+/* display: none keeps hidden file inputs out of the tab order and a11y
+   tree; programmatic .click() still opens the picker. */
 .hidden-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  opacity: 0;
-  pointer-events: none;
+  display: none;
+}
+
+
+/* During a theme swap every color changes at once — transitions off. */
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+  transition: none !important;
 }

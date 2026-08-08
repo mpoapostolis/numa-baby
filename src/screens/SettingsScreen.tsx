@@ -1,4 +1,4 @@
-import { Baby, Bell, Check, Download, Moon, ShieldCheck, Sun, Trash2, Upload } from "lucide-react";
+import { Baby, Bell, Download, Moon, ShieldCheck, Sun, Trash2, Upload } from "lucide-react";
 import { ChangeEvent, useRef } from "react";
 import {
   Card,
@@ -56,6 +56,11 @@ export default function SettingsScreen({
   onEraseAll,
 }: SettingsScreenProps) {
   const importRef = useRef<HTMLInputElement>(null);
+  const feedingModeLabel = {
+    breast: "Breastfeeding",
+    bottle: "Bottle feeding",
+    mixed: "Mixed feeding",
+  }[profile.feedingMode];
 
   return (
     <section className="screen more-screen" aria-labelledby="more-heading">
@@ -86,12 +91,6 @@ export default function SettingsScreen({
         </CardContent>
       </Card>
 
-      <Card className="privacy-card">
-        <span><ShieldCheck size={25} /></span>
-        <div><strong>Private on this device</strong><p>Your baby’s entries stay in this browser. Export a backup anytime.</p></div>
-        <Check size={19} />
-      </Card>
-
       <Card className="settings-group">
         <CardHeader>
           <CardTitle asChild><h2>Baby profile</h2></CardTitle>
@@ -99,7 +98,7 @@ export default function SettingsScreen({
         </CardHeader>
         <CardContent>
           <ItemGroup className="settings-action-list" role="group" aria-label="Baby profile settings">
-            <SettingsAction title={profile.name} description={`${profile.feedingMode} feeding`} icon={<Baby />} onClick={onOpenProfile} />
+            <SettingsAction title={profile.name} description={feedingModeLabel} icon={<Baby />} onClick={onOpenProfile} />
           </ItemGroup>
         </CardContent>
       </Card>
@@ -107,7 +106,7 @@ export default function SettingsScreen({
       <Card className="settings-group reminder-settings">
         <CardHeader>
           <CardTitle asChild><h2>Care reminders</h2></CardTitle>
-          <CardDescription>Reminders only fire while Baby Tracker is open on this device. Don’t rely on them as an alarm.</CardDescription>
+          <CardDescription>Reminders only work while Baby Tracker is open on this device. Don’t rely on them as an alarm.</CardDescription>
         </CardHeader>
         <CardContent>
           <ItemGroup role="group" aria-label="Care reminder settings">
@@ -115,20 +114,23 @@ export default function SettingsScreen({
               <ItemMedia variant="icon" className="glyph-bottle"><Bell /></ItemMedia>
               <ItemContent>
                 <ItemTitle>Feed reminder</ItemTitle>
-                <ItemDescription>
-                  {notificationPermission === "denied"
-                    ? "Blocked in browser settings"
-                    : reminders.feedEnabled && feedReminderTargetAt && feedReminderTargetAt > minuteClock
-                      ? `Around ${formatTime(new Date(feedReminderTargetAt).toISOString())}, if this app is still open`
-                      : "Prompt after the next feed you log"}
+                <ItemDescription id="feed-reminder-status">
+                  {notificationPermission === "unsupported"
+                    ? "This browser can’t show notifications"
+                    : notificationPermission === "denied"
+                      ? "Blocked in browser settings"
+                      : reminders.feedEnabled && feedReminderTargetAt && feedReminderTargetAt > minuteClock
+                        ? `Around ${formatTime(new Date(feedReminderTargetAt).toISOString())}, if this app is still open`
+                        : "Prompt after the next feed you log"}
                 </ItemDescription>
               </ItemContent>
               <ItemActions>
                 <Switch
                   checked={reminders.feedEnabled}
-                  disabled={notificationPermission === "unsupported"}
+                  disabled={notificationPermission === "unsupported" || notificationPermission === "denied"}
                   onCheckedChange={(checked) => void onFeedRemindersChange(checked)}
                   aria-label="Use feed reminders"
+                  aria-describedby="feed-reminder-status"
                 />
               </ItemActions>
             </Item>
@@ -163,7 +165,7 @@ export default function SettingsScreen({
         </CardHeader>
         <CardContent>
           <ItemGroup className="settings-action-list" role="group" aria-label="Backup actions">
-            <SettingsAction title="Download backup" description="Plain, readable JSON — cloud-synced folders will copy it" icon={<Download />} onClick={onExport} />
+            <SettingsAction title="Download backup" description="Saves a file with all your entries — keep it in a synced folder to be safe" icon={<Download />} onClick={onExport} />
             <ItemSeparator />
             <SettingsAction title="Restore a backup" description="Choose a backup file from any device" icon={<Upload />} onClick={() => importRef.current?.click()} />
             <ItemSeparator />
@@ -177,6 +179,11 @@ export default function SettingsScreen({
           </ItemGroup>
         </CardContent>
         <Input ref={importRef} className="hidden-input" type="file" accept="application/json" onChange={onImport} />
+      </Card>
+
+      <Card className="privacy-card">
+        <span><ShieldCheck size={18} /></span>
+        <div><strong>Private on this device</strong><p>Your baby’s entries stay in this browser. Export a backup anytime.</p></div>
       </Card>
 
       <p className="version-note">Baby Tracker · Local-first and private</p>
