@@ -282,7 +282,7 @@ export default function TodayScreen({
   const babyAge = formatBabyAge(profile.birthDate, minuteClock);
   const babyDays = ageInDays(profile.birthDate, minuteClock);
   const trimmedName = profile.name.trim();
-  // Display-capitalize the name — "seraphina" typed at onboarding still
+  // Display-capitalize the name — "mia" typed at onboarding still
   // deserves a headline. The stored profile is never rewritten.
   const displayName = trimmedName
     ? trimmedName.charAt(0).toLocaleUpperCase() + trimmedName.slice(1)
