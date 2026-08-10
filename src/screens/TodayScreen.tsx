@@ -281,11 +281,16 @@ export default function TodayScreen({
 
   const babyAge = formatBabyAge(profile.birthDate, minuteClock);
   const babyDays = ageInDays(profile.birthDate, minuteClock);
+  const trimmedName = profile.name.trim();
+  // Display-capitalize the name — "seraphina" typed at onboarding still
+  // deserves a headline. The stored profile is never rewritten.
+  const displayName = trimmedName
+    ? trimmedName.charAt(0).toLocaleUpperCase() + trimmedName.slice(1)
+    : "your baby";
   // Alternating sides is the usual rhythm — the tile quietly highlights the
   // opposite of the last logged side. Both choices stay one tap.
   const lastNursingSide = sortedActivities.find((a) => a.type === "nursing")?.side;
   const nextSide = lastNursingSide === "left" ? "right" : lastNursingSide === "right" ? "left" : null;
-  const babyName = profile.name.trim() || "your baby";
   // One verified fact per day, matched to the baby's exact age — the pick is
   // deterministic (see babyFacts.ts), so both parents see the same fact.
   // The stage list ("right now she may be…") comes from the same bracket.
@@ -297,10 +302,10 @@ export default function TodayScreen({
       ).values()]
     : [];
   const headline = !babyAge
-    ? `Welcome, ${babyName}`
+    ? `Welcome, ${displayName}`
     : babyAge === "born today"
-      ? `${babyName} — welcome to the world`
-      : `${babyName} is ${babyAge} old`;
+      ? `${displayName} — welcome to the world`
+      : `${displayName} is ${babyAge} old`;
   // The companion mirrors the real baby from the data already logged:
   // sleeping timer → asleep; close to (or past) the usual feed gap → eyeing
   // the bottle; fed within the hour → content; otherwise simply awake.
@@ -347,8 +352,14 @@ export default function TodayScreen({
             <aside className="fact-card" aria-label="What your baby is doing at this age">
               <span className="fact-spark" aria-hidden="true"><TinyStars size={20} /></span>
               <div className="fact-copy">
-                <span className="t-label">{babyAge === "born today" ? "From day one" : `At ${babyAge}`}</span>
-                <p className="fact-doing-lead">Right now, {babyName} may be:</p>
+                <span className="t-label">
+                  {babyAge === "born today"
+                    ? "From day one"
+                    : babyAge.startsWith("almost")
+                      ? babyAge
+                      : `At ${babyAge}`}
+                </span>
+                <p className="fact-doing-lead">Right now, {displayName} may be:</p>
                 <ul className="fact-doing">
                   {stage.doing.map((item) => (
                     <li key={item.text}>{item.text}</li>

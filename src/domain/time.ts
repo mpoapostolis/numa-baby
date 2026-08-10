@@ -107,8 +107,12 @@ export function minutesOnDay(activity: TimedSpan, day: Date, now = Date.now()) {
 }
 
 // "3 weeks" / "2 months" for the welcome hero: weeks under 8, calendar
-// months after, plain days in the first week. Null when there is no
-// (usable) birth date — callers fall back to a plain welcome.
+// months after, plain days in the first week. Ages count COMPLETED units
+// (the paediatrician's convention: a baby turns "2 weeks" at 14 full days),
+// but in the last two days of a week we say "almost 2 weeks" — a parent
+// reading "Day 14" next to "1 week old" rightly calls that a bug.
+// Null when there is no (usable) birth date — callers fall back to a
+// plain welcome.
 export function formatBabyAge(birthDate: string | undefined, now: number): string | null {
   if (!birthDate) return null;
   const birth = new Date(birthDate);
@@ -118,7 +122,10 @@ export function formatBabyAge(birthDate: string | undefined, now: number): strin
   const weeks = Math.floor(days / 7);
   if (days === 0) return "born today";
   if (weeks < 1) return days === 1 ? "1 day" : `${days} days`;
-  if (weeks < 8) return weeks === 1 ? "1 week" : `${weeks} weeks`;
+  if (weeks < 8) {
+    if (days % 7 >= 5) return `almost ${weeks + 1} weeks`;
+    return weeks === 1 ? "1 week" : `${weeks} weeks`;
+  }
   const at = new Date(now);
   const months =
     (at.getFullYear() - birth.getFullYear()) * 12 +

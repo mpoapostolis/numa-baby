@@ -138,7 +138,12 @@ describe("formatBabyAge", () => {
     ["one day", "2026-07-02T10:00:00", "1 day"],
     ["plain days in the first week", "2026-07-06T10:00:00", "5 days"],
     ["one week", "2026-07-08T10:00:00", "1 week"],
-    ["weeks under two months", "2026-07-15T10:00:00", "2 weeks"],
+    // Day 13-14 of life reads "almost 2 weeks" — completed-weeks maths next
+    // to a 1-indexed day counter otherwise looks like a bug to a parent.
+    ["almost two weeks at 12 days", "2026-07-13T10:00:00", "almost 2 weeks"],
+    ["almost two weeks at 13 days", "2026-07-14T10:00:00", "almost 2 weeks"],
+    ["exactly two weeks", "2026-07-15T10:00:00", "2 weeks"],
+    ["mid-week stays on completed weeks", "2026-07-18T10:00:00", "2 weeks"],
     ["weeks past 8 while calendar months < 2", "2026-08-27T10:00:00", "8 weeks"],
     ["calendar months from two on", "2026-10-15T10:00:00", "3 months"],
   ])("%s", (_label, nowIso, expected) => {
