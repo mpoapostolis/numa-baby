@@ -120,12 +120,67 @@
   gap: 4px;
 }
 
-.fact-text {
+/* "Right now, Mia may be:" — the stage list new parents asked for. Petal
+   dot markers, calm ink, hedged copy (milestones are windows, not tests). */
+.fact-doing-lead {
   margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.fact-doing {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  list-style: none;
+}
+
+.fact-doing li {
+  position: relative;
+  padding-left: 14px;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
+.fact-doing li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: calc((1.45em - 5px) / 2);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--signal);
+  opacity: 0.55;
+}
+
+.fact-text {
+  margin: 4px 0 0;
+}
+
+.fact-kicker {
+  font-weight: 500;
+  color: var(--accent-foreground);
+}
+
+/* Footer: the pace reassurance left, the sources trailing after it. */
+.fact-foot {
+  margin: 2px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.fact-pace {
+  font-size: 0.75rem;
+  color: var(--ink-3);
+  font-style: italic;
 }
 
 .fact-source {
-  justify-self: start;
   display: inline-flex;
   align-items: center;
   gap: 4px;

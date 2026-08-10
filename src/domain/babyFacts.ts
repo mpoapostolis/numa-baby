@@ -20,6 +20,9 @@ export type FactBracket = {
   /** Inclusive age bounds in days; the last bracket runs to Infinity. */
   fromDay: number;
   toDay: number;
+  /** Short present-tense "your baby may be…" phrases for the stage list.
+      Hedged on purpose — milestones are windows, not deadlines. */
+  doing: BabyFact[];
   facts: BabyFact[];
 };
 
@@ -86,6 +89,12 @@ export const FACT_BRACKETS: FactBracket[] = [
     // The first two weeks: senses that are already switched on.
     fromDay: 0,
     toDay: 13,
+    doing: [
+      { text: "seeing you best from 20–30 cm — feeding distance", source: AAP_VISION },
+      { text: "recognising your voice; hearing is fully mature", source: AAP_ONE_MONTH },
+      { text: "knowing the scent of their own mother's milk", source: AAP_ONE_MONTH },
+      { text: "preferring your face over any pattern", source: AAP_ONE_MONTH },
+    ],
     facts: [
       {
         text: "Your baby sees you best from 20–30 cm away — almost exactly the distance to your face during a feed.",
@@ -125,6 +134,12 @@ export const FACT_BRACKETS: FactBracket[] = [
     // Weeks 2–5: building strength, waiting on the first real smile.
     fromDay: 14,
     toDay: 41,
+    doing: [
+      { text: "starting tummy time — a few supervised minutes at a time", source: AAP_TUMMY_TIME },
+      { text: "loving bold, high-contrast patterns", source: AAP_ONE_MONTH },
+      { text: "warming up for the first real smile (by ~2 months)", source: AAP_FIRST_SMILE },
+      { text: "still seeing best up close, 20–30 cm", source: AAP_VISION },
+    ],
     facts: [
       {
         text: "Tummy time can start small: 3–5 supervised minutes, 2–3 times a day, while your baby is awake.",
@@ -156,6 +171,12 @@ export const FACT_BRACKETS: FactBracket[] = [
     // Weeks 6–12: the smile lands, the eyes team up.
     fromDay: 42,
     toDay: 89,
+    doing: [
+      { text: "smiling back when you talk — the real social smile", source: AAP_FIRST_SMILE },
+      { text: "learning to follow moving things with their eyes", source: AAP_VISION },
+      { text: "settling the newborn eye-wander as both eyes team up", source: AAP_VISION },
+      { text: "building toward 15–30 minutes of tummy time a day", source: AAP_TUMMY_TIME },
+    ],
     facts: [
       {
         text: "That smile is real: a baby's first social smile usually appears by the end of the second month.",
@@ -187,6 +208,12 @@ export const FACT_BRACKETS: FactBracket[] = [
     // Months 3–5: colour arrives, hands get organised.
     fromDay: 90,
     toDay: 149,
+    doing: [
+      { text: "seeing colours — and their shades — much better", source: AAP_VISION },
+      { text: "babbling chains of sounds: ba-ba-ba, ma-ma-ma", source: AAP_SEVEN_MONTHS },
+      { text: "starting to respond to their own name", source: AAP_SEVEN_MONTHS },
+      { text: "grabbing whole-hand and practising rolling", source: AAP_MOVEMENT_4_7 },
+    ],
     facts: [
       {
         text: "By 4 months your baby is much better at seeing colours — and the shades between them.",
@@ -230,6 +257,12 @@ export const FACT_BRACKETS: FactBracket[] = [
     // Months 5–7: depth perception, first foods, sitting up.
     fromDay: 150,
     toDay: 209,
+    doing: [
+      { text: "spotting you across the room — depth perception is in", source: AAO_FIRST_YEAR },
+      { text: "getting ready for first foods around 6 months", source: WHO_FEEDING },
+      { text: "learning to sit without leaning on their arms", source: AAP_MOVEMENT_4_7 },
+      { text: "rolling both ways", source: AAP_MOVEMENT_4_7 },
+    ],
     facts: [
       {
         text: "Around 5 months depth perception arrives — your baby can now spot you across the room.",
@@ -265,6 +298,12 @@ export const FACT_BRACKETS: FactBracket[] = [
     // Months 7–9: object permanence, the famous pincer grasp.
     fromDay: 210,
     toDay: 269,
+    doing: [
+      { text: "playing peekaboo like it's science — object permanence", source: AAP_MIND_8_12 },
+      { text: "working on the finger-and-thumb pincer grasp", source: AAP_MOVEMENT_4_7 },
+      { text: "judging distances well — crawling season", source: AAO_FIRST_YEAR },
+      { text: "sitting steadily, hands free for toys", source: AAP_MOVEMENT_8_12 },
+    ],
     facts: [
       {
         text: "Peekaboo is brain-building: your baby is learning that things still exist when out of sight.",
@@ -296,6 +335,12 @@ export const FACT_BRACKETS: FactBracket[] = [
     // Months 9–12: the pre-walking curriculum.
     fromDay: 270,
     toDay: 365,
+    doing: [
+      { text: "pulling up to stand and cruising the furniture", source: AAP_MOVEMENT_8_12 },
+      { text: "understanding far more words than they can say", source: AAP_LANGUAGE_8_12 },
+      { text: "pointing and gesturing to talk to you", source: AAP_LANGUAGE_8_12 },
+      { text: "maybe trying first steps around the first birthday", source: AAP_MOVEMENT_8_12 },
+    ],
     facts: [
       {
         text: "Pulling up to stand, then cruising along the furniture — the pre-walking curriculum is in session.",
@@ -331,6 +376,12 @@ export const FACT_BRACKETS: FactBracket[] = [
     // One year and beyond: walking, still growing on milk and meals.
     fromDay: 366,
     toDay: Infinity,
+    doing: [
+      { text: "walking wide-legged and wobbly — on purpose", source: AAP_MOVEMENT_8_12 },
+      { text: "turning first steps into confident walking fast", source: AAP_MOVEMENT_8_12 },
+      { text: "still loving hide-and-find games", source: AAP_MIND_8_12 },
+      { text: "understanding much more than they can say", source: AAP_LANGUAGE_8_12 },
+    ],
     facts: [
       {
         text: "From first steps to confident walking often takes just days — and starting later is normal too.",
@@ -360,15 +411,20 @@ export const FACT_BRACKETS: FactBracket[] = [
   },
 ];
 
+/** The bracket covering a given age in whole days, or null for unusable ages. */
+export function bracketOfAge(ageDays: number): FactBracket | null {
+  if (!Number.isFinite(ageDays) || ageDays < 0) return null;
+  const days = Math.floor(ageDays);
+  return FACT_BRACKETS.find((b) => days >= b.fromDay && days <= b.toDay) ?? null;
+}
+
 /**
  * The fact for a given age in whole days. Deterministic: the same day always
  * shows the same fact, tomorrow rotates to the next one in the bracket.
  * Null for unknown or impossible ages (no birth date, future birth date).
  */
 export function factOfTheDay(ageDays: number): BabyFact | null {
-  if (!Number.isFinite(ageDays) || ageDays < 0) return null;
-  const days = Math.floor(ageDays);
-  const bracket = FACT_BRACKETS.find((b) => days >= b.fromDay && days <= b.toDay);
+  const bracket = bracketOfAge(ageDays);
   if (!bracket) return null;
-  return bracket.facts[days % bracket.facts.length];
+  return bracket.facts[Math.floor(ageDays) % bracket.facts.length];
 }

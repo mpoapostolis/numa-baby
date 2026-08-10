@@ -20,7 +20,7 @@ import { DayBand } from "../components/DayBand";
 import { EmptyState } from "../components/EmptyState";
 import { LittleBottle, SleepyMoon, TinyStars } from "../components/illustrations";
 import { BabyCompanion, CompanionMood } from "../components/BabyCompanion";
-import { factOfTheDay } from "../domain/babyFacts";
+import { bracketOfAge, factOfTheDay } from "../domain/babyFacts";
 import { makeId } from "../domain/id";
 import {
   ageInDays,
@@ -288,7 +288,14 @@ export default function TodayScreen({
   const babyName = profile.name.trim() || "your baby";
   // One verified fact per day, matched to the baby's exact age — the pick is
   // deterministic (see babyFacts.ts), so both parents see the same fact.
+  // The stage list ("right now she may be…") comes from the same bracket.
   const fact = babyDays === null ? null : factOfTheDay(babyDays);
+  const stage = babyDays === null ? null : bracketOfAge(babyDays);
+  const stageSources = stage && fact
+    ? [...new Map(
+        [...stage.doing.map((d) => d.source), fact.source].map((s) => [s.url, s]),
+      ).values()]
+    : [];
   const headline = !babyAge
     ? `Welcome, ${babyName}`
     : babyAge === "born today"
@@ -336,20 +343,34 @@ export default function TodayScreen({
           {/* The fact rides in today-main: on mobile the tap tiles order
               first, so the reading material sits just after the buttons —
               never between a tired thumb and the log. */}
-          {fact && babyAge && (
-            <aside className="fact-card" aria-label="A fact about your baby at this age">
+          {fact && stage && babyAge && (
+            <aside className="fact-card" aria-label="What your baby is doing at this age">
               <span className="fact-spark" aria-hidden="true"><TinyStars size={20} /></span>
               <div className="fact-copy">
                 <span className="t-label">{babyAge === "born today" ? "From day one" : `At ${babyAge}`}</span>
-                <p className="fact-text t-body">{fact.text}</p>
-                <a
-                  className="fact-source"
-                  href={fact.source.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {fact.source.name} <ExternalLink size={12} aria-hidden="true" />
-                </a>
+                <p className="fact-doing-lead">Right now, {babyName} may be:</p>
+                <ul className="fact-doing">
+                  {stage.doing.map((item) => (
+                    <li key={item.text}>{item.text}</li>
+                  ))}
+                </ul>
+                <p className="fact-text t-body">
+                  <strong className="fact-kicker">Did you know?</strong> {fact.text}
+                </p>
+                <p className="fact-foot">
+                  <span className="fact-pace">Every baby has their own pace.</span>
+                  {stageSources.map((source) => (
+                    <a
+                      key={source.url}
+                      className="fact-source"
+                      href={source.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {source.name} <ExternalLink size={12} aria-hidden="true" />
+                    </a>
+                  ))}
+                </p>
               </div>
             </aside>
           )}

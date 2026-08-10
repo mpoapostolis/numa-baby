@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FACT_BRACKETS, factOfTheDay } from "@/domain/babyFacts";
+import { FACT_BRACKETS, bracketOfAge, factOfTheDay } from "@/domain/babyFacts";
 
 // The contract that makes the welcome fact trustworthy: every age maps to
 // exactly one bracket, every fact carries a real source, and the daily pick
@@ -23,6 +23,26 @@ describe("FACT_BRACKETS", () => {
         expect(fact.source.url).toMatch(/^https:\/\/[a-z]/);
       }
     }
+  });
+
+  it("every bracket carries a stage list of 3+ sourced items", () => {
+    for (const bracket of FACT_BRACKETS) {
+      expect(bracket.doing.length).toBeGreaterThanOrEqual(3);
+      for (const item of bracket.doing) {
+        expect(item.text.length).toBeGreaterThan(10);
+        expect(item.source.url).toMatch(/^https:\/\/[a-z]/);
+      }
+    }
+  });
+});
+
+describe("bracketOfAge", () => {
+  it("returns the covering bracket and null for unusable ages", () => {
+    expect(bracketOfAge(0)).toBe(FACT_BRACKETS[0]);
+    expect(bracketOfAge(144)?.fromDay).toBe(90);
+    expect(bracketOfAge(10_000)).toBe(FACT_BRACKETS.at(-1));
+    expect(bracketOfAge(-1)).toBeNull();
+    expect(bracketOfAge(Number.NaN)).toBeNull();
   });
 });
 
