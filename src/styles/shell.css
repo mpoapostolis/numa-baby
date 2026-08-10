@@ -273,7 +273,7 @@
 
 /* ONE content width for every screen — Today, Timeline, Insights and Settings
    must never render at different widths. 1140px keeps Today's two-column
-   container query (>=1100px) reachable on desktop. */
+   container query (>=720px) reachable on desktop. */
 .screen {
   width: min(100%, 1140px);
   margin: 0 auto;

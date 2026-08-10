@@ -21,7 +21,7 @@
 
 /* Night depth: a single inset top highlight, never a drop shadow. */
 .dark :is(.surface-card, .quick-section, .now-card, .care-forecast, .summary-grid, .activity-list, .insight-summary, .chart-card, .growth-card, .settings-group, .privacy-card, .gentle-note) {
-  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.04);
+  box-shadow: inset 0 1px 0 var(--edge-highlight);
 }
 
 /* Self-contained cards: 16px mobile / 24px desktop, everywhere. */
@@ -243,7 +243,7 @@
 }
 
 .dark .bottom-sheet {
-  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.04);
+  box-shadow: inset 0 1px 0 var(--edge-highlight);
 }
 
 .sheet-handle {

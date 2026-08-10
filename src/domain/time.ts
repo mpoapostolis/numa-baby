@@ -106,6 +106,38 @@ export function minutesOnDay(activity: TimedSpan, day: Date, now = Date.now()) {
   return Math.max(0, Math.round((end - start) / 60_000));
 }
 
+// "3 weeks" / "2 months" for the welcome hero: weeks under 8, calendar
+// months after, plain days in the first week. Null when there is no
+// (usable) birth date — callers fall back to a plain welcome.
+export function formatBabyAge(birthDate: string | undefined, now: number): string | null {
+  if (!birthDate) return null;
+  const birth = new Date(birthDate);
+  const birthMs = birth.getTime();
+  if (Number.isNaN(birthMs) || birthMs > now) return null;
+  const days = Math.floor((now - birthMs) / 86_400_000);
+  const weeks = Math.floor(days / 7);
+  if (days === 0) return "born today";
+  if (weeks < 1) return days === 1 ? "1 day" : `${days} days`;
+  if (weeks < 8) return weeks === 1 ? "1 week" : `${weeks} weeks`;
+  const at = new Date(now);
+  const months =
+    (at.getFullYear() - birth.getFullYear()) * 12 +
+    (at.getMonth() - birth.getMonth()) -
+    (at.getDate() < birth.getDate() ? 1 : 0);
+  if (months < 2) return `${weeks} weeks`;
+  return `${months} months`;
+}
+
+// Whole days since birth for the day counter and the fact engine. Null on
+// missing/invalid/future birth dates — the same "no usable age" contract as
+// formatBabyAge above.
+export function ageInDays(birthDate: string | undefined, now: number): number | null {
+  if (!birthDate) return null;
+  const birthMs = new Date(birthDate).getTime();
+  if (Number.isNaN(birthMs) || birthMs > now) return null;
+  return Math.floor((now - birthMs) / 86_400_000);
+}
+
 export function ageInMonths(birthDate: string) {
   const birth = new Date(`${birthDate}T12:00:00`);
   if (!Number.isFinite(birth.getTime())) return null;

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import {
   ChevronRight,
-  Clock,
   Droplet,
+  ExternalLink,
   Heart,
   Milk,
   Moon,
@@ -18,12 +18,16 @@ import { ActivityGlyph } from "../components/ActivityGlyph";
 import { ActivityRow } from "../components/ActivityRow";
 import { DayBand } from "../components/DayBand";
 import { EmptyState } from "../components/EmptyState";
-import { LittleBottle, SleepyMoon } from "../components/illustrations";
+import { LittleBottle, SleepyMoon, TinyStars } from "../components/illustrations";
 import { BabyCompanion, CompanionMood } from "../components/BabyCompanion";
+import { factOfTheDay } from "../domain/babyFacts";
 import { makeId } from "../domain/id";
 import {
+  ageInDays,
   forecastRelative,
+  formatBabyAge,
   formatTime,
+  greeting,
   humanDuration,
   liveDuration,
   minutesBetween,
@@ -48,28 +52,6 @@ function lastFeedSummary(feed: Activity) {
   return feed.endedAt
     ? `Nursing · ${side} · ${humanDuration(minutesBetween(feed.startedAt, feed.endedAt))}`
     : `Nursing · ${side}`;
-}
-
-// "3 weeks" / "2 months" for the status line: weeks under 8, calendar
-// months after, plain days in the first week. Null when there is no
-// (usable) birth date — the line simply stays as it was.
-function formatBabyAge(birthDate: string | undefined, now: number): string | null {
-  if (!birthDate) return null;
-  const birth = new Date(birthDate);
-  const birthMs = birth.getTime();
-  if (Number.isNaN(birthMs) || birthMs > now) return null;
-  const days = Math.floor((now - birthMs) / 86_400_000);
-  const weeks = Math.floor(days / 7);
-  if (days === 0) return "born today";
-  if (weeks < 1) return days === 1 ? "1 day" : `${days} days`;
-  if (weeks < 8) return weeks === 1 ? "1 week" : `${weeks} weeks`;
-  const at = new Date(now);
-  const months =
-    (at.getFullYear() - birth.getFullYear()) * 12 +
-    (at.getMonth() - birth.getMonth()) -
-    (at.getDate() < birth.getDate() ? 1 : 0);
-  if (months < 2) return `${weeks} weeks`;
-  return `${months} months`;
 }
 
 // Display figure with unit demotion: digits speak, units recede.
@@ -298,6 +280,20 @@ export default function TodayScreen({
   }
 
   const babyAge = formatBabyAge(profile.birthDate, minuteClock);
+  const babyDays = ageInDays(profile.birthDate, minuteClock);
+  // Alternating sides is the usual rhythm — the tile quietly highlights the
+  // opposite of the last logged side. Both choices stay one tap.
+  const lastNursingSide = sortedActivities.find((a) => a.type === "nursing")?.side;
+  const nextSide = lastNursingSide === "left" ? "right" : lastNursingSide === "right" ? "left" : null;
+  const babyName = profile.name.trim() || "your baby";
+  // One verified fact per day, matched to the baby's exact age — the pick is
+  // deterministic (see babyFacts.ts), so both parents see the same fact.
+  const fact = babyDays === null ? null : factOfTheDay(babyDays);
+  const headline = !babyAge
+    ? `Welcome, ${babyName}`
+    : babyAge === "born today"
+      ? `${babyName} — welcome to the world`
+      : `${babyName} is ${babyAge} old`;
   // The companion mirrors the real baby from the data already logged:
   // sleeping timer → asleep; close to (or past) the usual feed gap → eyeing
   // the bottle; fed within the hour → content; otherwise simply awake.
@@ -315,16 +311,48 @@ export default function TodayScreen({
 
   return (
     <section className="screen today-screen" aria-labelledby="today-heading">
-      <header className="status-line">
-        <h1 id="today-heading" className="t-title-2">
-          <span className="status-name">{profile.name}</span>
-          {babyAge && <span className="status-age t-meta"> · {babyAge}</span>}
-        </h1>
-        <span className="status-date">{statusDateFormat.format(new Date(minuteClock))}</span>
+      {/* Welcome hero: the companion's face greets first, the age counter
+          does the maths ("Mia is 2 weeks old · day 15"), and one verified,
+          age-matched fact sits underneath with its source in plain sight. */}
+      <header className="welcome-hero">
+        <span className={`welcome-face mood-${companionMood}`} aria-hidden="true">
+          <BabyCompanion mood={companionMood} size={84} reactionKey={reactionKey} />
+        </span>
+        <div className="welcome-copy">
+          <span className="welcome-greeting t-label">{greeting()}</span>
+          <h1 id="today-heading" className="t-title-1 welcome-headline">{headline}</h1>
+          <p className="welcome-date">
+            {statusDateFormat.format(new Date(minuteClock))}
+            {babyDays !== null && <span className="welcome-day-count">Day {babyDays + 1}</span>}
+          </p>
+        </div>
       </header>
 
-      <div className={`today-dashboard${activeTimers.length > 0 ? " has-live" : ""}`}>
+      {/* has-live is nursing-only: the live nursing figure + Stop ARE the 3am
+          state. A background sleep timer is not — tiles stay first for the
+          wake-up that follows tracked sleep. */}
+      <div className={`today-dashboard${activeNursing ? " has-live" : ""}`}>
         <div className="today-main">
+          {/* The fact rides in today-main: on mobile the tap tiles order
+              first, so the reading material sits just after the buttons —
+              never between a tired thumb and the log. */}
+          {fact && babyAge && (
+            <aside className="fact-card" aria-label="A fact about your baby at this age">
+              <span className="fact-spark" aria-hidden="true"><TinyStars size={20} /></span>
+              <div className="fact-copy">
+                <span className="t-label">{babyAge === "born today" ? "From day one" : `At ${babyAge}`}</span>
+                <p className="fact-text t-body">{fact.text}</p>
+                <a
+                  className="fact-source"
+                  href={fact.source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {fact.source.name} <ExternalLink size={12} aria-hidden="true" />
+                </a>
+              </div>
+            </aside>
+          )}
           <div className="hearth">
             {activeNursing ? (
               <NursingHearth activity={activeNursing} onStop={stopNursing} />
@@ -337,26 +365,18 @@ export default function TodayScreen({
                 <p className="t-meta">Log the first feed when it happens — one tap on Bottle or Nursing.</p>
               </div>
             ) : (
-              <div className="hearth-clock hearth-idle">
+              // The companion now greets from the hero above — the idle
+              // hearth stays a clean, single-column clock. Past the usual
+              // gap the numeral itself turns rose: state as color, not a
+              // second line of text (the forecast row below carries words).
+              <div className={`hearth-clock hearth-idle${gapOver > 0 ? " is-over" : ""}`}>
                 <div className="hearth-copy">
                   <span className="t-label">Since last feed</span>
                   <p className="figure hearth-figure t-display">
                     <GapFigure startedAt={lastFeed.startedAt} now={minuteClock} />
                   </p>
                   <p className="hearth-meta">{lastFeedSummary(lastFeed)}</p>
-                  {typicalGap > 0 && (
-                    // One plain sentence — an unlabelled progress bar here read as
-                    // "what is this?" instead of information.
-                    <p className="micro-caption">
-                      {gapOver > 0
-                        ? `${humanDuration(gapOver)} past the usual ${humanDuration(typicalGap)} gap`
-                        : `Usually feeds every ${humanDuration(typicalGap)}`}
-                    </p>
-                  )}
                 </div>
-                <span className="hearth-ambient" aria-hidden="true">
-                  <BabyCompanion mood={companionMood} size={96} reactionKey={reactionKey} />
-                </span>
               </div>
             )}
 
@@ -382,7 +402,9 @@ export default function TodayScreen({
                   <small>
                     {nextFeedAt
                       ? feedWindowPassed
-                        ? "Follow the cues — whenever works"
+                        ? gapOver > 0 && typicalGap > 0
+                          ? `${humanDuration(gapOver)} past the usual ${humanDuration(typicalGap)} gap — follow the cues`
+                          : "Follow the cues — whenever works"
                         : `around ${formatTime(new Date(nextFeedAt).toISOString())}`
                       : "A few more feeds and the rhythm appears"}
                   </small>
@@ -396,13 +418,13 @@ export default function TodayScreen({
               fresh install read as breakage, not calm. */}
           {(todayActivities.length > 0 || sleepMinutesToday > 0) && (
           <section className="day-strip" aria-label="Today's summary">
-            <div>
-              <span className="stat-head"><Milk size={14} aria-hidden="true" /> Feeds today</span>
+            <div className="stat-feeds">
+              <span className="stat-head"><Heart size={14} aria-hidden="true" /> Feeds today</span>
               <span className="figure t-numeral">
                 {feedsToday.length > 0 ? feedsToday.length : <span className="is-zero">—</span>}
               </span>
             </div>
-            <div>
+            <div className="stat-bottle">
               <span className="stat-head"><Milk size={14} aria-hidden="true" /> Bottle total</span>
               <span className="figure t-numeral">
                 {bottleMlToday > 0 ? (
@@ -415,13 +437,13 @@ export default function TodayScreen({
                 )}
               </span>
             </div>
-            <div>
+            <div className="stat-diaper">
               <span className="stat-head"><Droplet size={14} aria-hidden="true" /> Diapers</span>
               <span className="figure t-numeral">
                 {diapersToday > 0 ? diapersToday : <span className="is-zero">—</span>}
               </span>
             </div>
-            <div>
+            <div className="stat-sleep">
               <span className="stat-head"><Moon size={14} aria-hidden="true" /> Sleep today</span>
               <span className="figure t-numeral"><DurationFigure minutes={sleepMinutesToday} /></span>
             </div>
@@ -463,15 +485,14 @@ export default function TodayScreen({
               </div>
             )}
             <div className="care-notes">
-              <p><Clock size={15} aria-hidden="true" /> Patterns, not a schedule — follow the cues and your paediatrician’s advice.</p>
-              <p><ShieldCheck size={15} aria-hidden="true" /> Safe sleep: back, firm flat surface, clear sleep space.</p>
+              <p><ShieldCheck size={14} aria-hidden="true" /> Safe sleep: back, firm flat surface, clear sleep space.</p>
             </div>
           </div>
 
           <div className="recent-section">
             <div className="mini-heading">
               <h2>Recent</h2>
-              <Button variant="ghost" onClick={onSeeTimeline}>See all <ChevronRight size={15} aria-hidden="true" /></Button>
+              <Button variant="ghost" onClick={onSeeTimeline}>See all <ChevronRight size={16} aria-hidden="true" /></Button>
             </div>
             <Card size="sm" className="activity-list recent-list">
               <CardContent className="activity-list-content">
@@ -501,93 +522,108 @@ export default function TodayScreen({
         </div>
 
         <section className="log-column" aria-label="One-tap baby care logging">
-          {profile.feedingMode !== "breast" && (
-            <div className="log-row action-feed">
-              <span className="action-icon" aria-hidden="true"><Milk /></span>
-              <div className="log-copy">
-                <strong>Bottle</strong>
+          {/* Quick-track grid: four big app-style tiles, one thumb-sized tap
+              each. Odd tile counts stretch the last tile so the grid never
+              rags. Secondary flows (change amount, past session) ride along
+              as small chips — never in the way of the main tap. */}
+          <div className="quick-grid">
+            {profile.feedingMode !== "breast" && (
+              <div className="quick-tile tile-bottle">
+                <button
+                  type="button"
+                  className="tile-main"
+                  onClick={quickLogBottle}
+                  aria-label={lastBottle?.amount
+                    ? `Log ${lastBottle.amount} millilitres of ${lastBottle.milkType === "expressed" ? "breast milk" : "formula"} now`
+                    : "Log a bottle"}
+                >
+                  <span className="activity-glyph glyph-bottle" aria-hidden="true"><ActivityGlyph type="bottle" /></span>
+                  <span className="tile-title">Bottle</span>
+                  <span className="tile-sub">
+                    {lastBottle?.amount
+                      ? `${lastBottle.amount} ml · ${lastBottle.milkType === "expressed" ? "breast milk" : "formula"}`
+                      : "Log the first feed"}
+                  </span>
+                </button>
                 {lastBottle?.amount && (
-                  <small>{lastBottle.milkType === "expressed" ? "Breast milk" : "Formula"} · one tap</small>
+                  <Button
+                    variant="ghost"
+                    className="tile-chip"
+                    onClick={() => onOpenSheet("bottle")}
+                    aria-label="Change bottle amount"
+                  >
+                    Change
+                  </Button>
                 )}
               </div>
-              <div className="log-actions">
-                {lastBottle?.amount ? (
-                  <>
-                    <Button
-                      variant="outline"
-                      className="log-quiet"
-                      onClick={quickLogBottle}
-                      aria-label={`Log ${lastBottle.amount} millilitres of ${lastBottle.milkType === "expressed" ? "breast milk" : "formula"} now`}
-                    >
-                      Log {lastBottle.amount} ml
-                    </Button>
-                    <Button variant="outline" onClick={() => onOpenSheet("bottle")} aria-label="Change bottle amount">Change</Button>
-                  </>
-                ) : (
-                  <Button variant="outline" onClick={() => onOpenSheet("bottle")}>Log a bottle</Button>
-                )}
-              </div>
-            </div>
-          )}
+            )}
 
-          {profile.feedingMode !== "bottle" && !activeNursing && (
-            <div className="log-row action-nurse is-stacked">
-              <span className="action-icon" aria-hidden="true"><Heart /></span>
-              <div className="log-copy">
-                <strong>Nursing timer</strong>
-                <small>Choose a side to start instantly</small>
-              </div>
-              <div className="log-actions">
+            {profile.feedingMode !== "bottle" && !activeNursing && (
+              <div className="quick-tile tile-nurse">
+                <div className="tile-head">
+                  <span className="activity-glyph glyph-nursing" aria-hidden="true"><ActivityGlyph type="nursing" /></span>
+                  <span className="tile-title">Nursing</span>
+                </div>
+                <div className="tile-split">
+                  <Button
+                    variant="outline"
+                    className={nextSide === "left" ? "is-next-side" : undefined}
+                    onClick={() => quickStartNursing("left")}
+                    aria-label={nextSide === "left"
+                      ? "Start nursing timer on the left side — usually next"
+                      : "Start nursing timer on the left side"}
+                  >
+                    Left
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className={nextSide === "right" ? "is-next-side" : undefined}
+                    onClick={() => quickStartNursing("right")}
+                    aria-label={nextSide === "right"
+                      ? "Start nursing timer on the right side — usually next"
+                      : "Start nursing timer on the right side"}
+                  >
+                    Right
+                  </Button>
+                </div>
                 <Button
-                  variant="outline"
-                  onClick={() => quickStartNursing("left")}
-                  aria-label="Start nursing timer on the left side"
-                >
-                  Start left
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => quickStartNursing("right")}
-                  aria-label="Start nursing timer on the right side"
-                >
-                  Start right
-                </Button>
-                <Button
-                  variant="outline"
-                  className="span-full"
+                  variant="ghost"
+                  className="tile-chip"
                   onClick={onManualNursing}
                   aria-label="Add a completed nursing session manually"
                 >
-                  <Clock aria-hidden="true" /> Add past session
+                  Past
                 </Button>
               </div>
-            </div>
-          )}
+            )}
 
-          <div className="log-row action-diaper">
-            <span className="action-icon" aria-hidden="true"><Droplet /></span>
-            <div className="log-copy">
-              <strong>Diaper</strong>
+            <div className="quick-tile tile-diaper">
+              <div className="tile-head">
+                <span className="activity-glyph glyph-diaper" aria-hidden="true"><ActivityGlyph type="diaper" /></span>
+                <span className="tile-title">Diaper</span>
+              </div>
+              <div className="tile-split">
+                <Button variant="outline" onClick={() => quickLogDiaper("wet")} aria-label="Log wet diaper">Wet</Button>
+                <Button variant="outline" onClick={() => quickLogDiaper("dirty")} aria-label="Log dirty diaper">Dirty</Button>
+                <Button variant="outline" onClick={() => quickLogDiaper("both")} aria-label="Log wet and dirty diaper">Both</Button>
+              </div>
             </div>
-            <div className="log-actions">
-              <Button variant="outline" onClick={() => quickLogDiaper("wet")} aria-label="Log wet diaper">Wet</Button>
-              <Button variant="outline" onClick={() => quickLogDiaper("dirty")} aria-label="Log dirty diaper">Dirty</Button>
-              <Button variant="outline" onClick={() => quickLogDiaper("both")} aria-label="Log wet and dirty diaper">Both</Button>
-            </div>
+
+            {!activeSleep && (
+              <div className="quick-tile tile-sleep">
+                <button
+                  type="button"
+                  className="tile-main"
+                  onClick={toggleSleep}
+                  aria-label="Start sleep timer"
+                >
+                  <span className="activity-glyph glyph-sleep" aria-hidden="true"><ActivityGlyph type="sleep" /></span>
+                  <span className="tile-title">Sleep</span>
+                  <span className="tile-sub">Start the timer</span>
+                </button>
+              </div>
+            )}
           </div>
-
-          {!activeSleep && (
-            <div className="log-row action-sleep">
-              <span className="action-icon" aria-hidden="true"><Moon /></span>
-              <div className="log-copy">
-                <strong>Sleep</strong>
-                <small>Start a sleep timer</small>
-              </div>
-              <div className="log-actions">
-                <Button variant="outline" onClick={toggleSleep}>Start sleep</Button>
-              </div>
-            </div>
-          )}
 
           <Button
             variant="ghost"

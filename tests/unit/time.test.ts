@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  ageInDays,
   ageInMonths,
   forecastRelative,
+  formatBabyAge,
   humanDuration,
   isSameDay,
   liveDuration,
@@ -117,5 +119,47 @@ describe("liveDuration", () => {
     ["past an hour keeps the hour prefix", "2026-08-07T11:01:05", "1:01:05"],
   ])("%s", (_label, nowIso, expected) => {
     expect(liveDuration(start, Date.parse(nowIso))).toBe(expected);
+  });
+});
+
+describe("formatBabyAge", () => {
+  const birth = "2026-07-01T09:00:00";
+  const at = (iso: string) => Date.parse(iso);
+
+  it("returns null without a usable birth date", () => {
+    const now = at("2026-08-10T12:00:00");
+    expect(formatBabyAge(undefined, now)).toBeNull();
+    expect(formatBabyAge("not-a-date", now)).toBeNull();
+    expect(formatBabyAge("2026-09-01T00:00:00", now)).toBeNull();
+  });
+
+  it.each([
+    ["born today", "2026-07-01T21:00:00", "born today"],
+    ["one day", "2026-07-02T10:00:00", "1 day"],
+    ["plain days in the first week", "2026-07-06T10:00:00", "5 days"],
+    ["one week", "2026-07-08T10:00:00", "1 week"],
+    ["weeks under two months", "2026-07-15T10:00:00", "2 weeks"],
+    ["weeks past 8 while calendar months < 2", "2026-08-27T10:00:00", "8 weeks"],
+    ["calendar months from two on", "2026-10-15T10:00:00", "3 months"],
+  ])("%s", (_label, nowIso, expected) => {
+    expect(formatBabyAge(birth, at(nowIso))).toBe(expected);
+  });
+});
+
+describe("ageInDays", () => {
+  const birth = "2026-07-01T09:00:00";
+
+  it("counts whole days since birth", () => {
+    expect(ageInDays(birth, Date.parse("2026-07-01T23:00:00"))).toBe(0);
+    expect(ageInDays(birth, Date.parse("2026-07-02T08:59:00"))).toBe(0);
+    expect(ageInDays(birth, Date.parse("2026-07-02T09:00:00"))).toBe(1);
+    expect(ageInDays(birth, Date.parse("2026-08-10T10:00:00"))).toBe(40);
+  });
+
+  it("returns null without a usable birth date", () => {
+    const now = Date.parse("2026-08-10T10:00:00");
+    expect(ageInDays(undefined, now)).toBeNull();
+    expect(ageInDays("nope", now)).toBeNull();
+    expect(ageInDays("2026-09-01T00:00:00", now)).toBeNull();
   });
 });

@@ -6,47 +6,138 @@
   container-type: inline-size;
 }
 
-/* 1. Status line: name left, date right, hairline below. No hero. */
-.status-line {
-  min-height: 40px;
+/* 1. Welcome hero: the companion's face left, greeting + age counter right.
+   Compact on purpose — it welcomes without pushing the 3am buttons far. */
+.welcome-hero {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
-  margin-bottom: 24px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
 }
 
-/* Name and age share the line but never fight: the name ellipsizes, the
-   time-sensitive age always survives. */
-.status-line h1 {
-  min-width: 0;
-  display: flex;
-  align-items: baseline;
-  margin: 0;
-}
-
-.status-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.status-date {
+/* The companion sits in a soft mood-hued halo: rose while content, sleep
+   lavender at nap time, bottle blue when hungry. Background-only — no border
+   and no clipping, so the drifting z's and the thought bubble stay free. */
+.welcome-face {
   flex: 0 0 auto;
-  color: var(--ink-3);
+  line-height: 0;
+  color: var(--ink-2);
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in oklch, var(--halo-hue, var(--glyph-nursing)) 16%, transparent),
+    transparent 78%
+  );
+  transition: background-color 600ms ease;
+}
+
+.welcome-face.mood-sleeping {
+  --halo-hue: var(--glyph-sleep);
+}
+
+.welcome-face.mood-hungry,
+.welcome-face.mood-feeding {
+  --halo-hue: var(--glyph-bottle);
+}
+
+.welcome-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.welcome-greeting {
+  color: var(--signal);
+}
+
+.welcome-headline {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.welcome-date {
+  margin: 0;
+  color: var(--ink-2);
   font-size: 0.8125rem;
 }
 
-/* "Mia · 3 weeks" — the age rides along at meta weight, never competing
-   with the name. */
-.status-age {
+/* The most emotional number on screen gets a petal badge, not a gray tail. */
+.welcome-day-count {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--signal-quiet);
+  color: var(--signal);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+/* Small phones: the face scales down a touch so the headline keeps room. */
+@media (width < 400px) {
+  .welcome-face svg {
+    width: 68px;
+    height: 68px;
+  }
+}
+
+/* 1b. Fact of the day: one verified, age-matched sentence on a petal panel,
+   its source linked right there — never a claim without a page. Lives inside
+   today-main so the tap tiles order first on mobile. */
+.fact-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid color-mix(in oklch, var(--signal) 14%, transparent);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(
+    135deg,
+    var(--signal-quiet),
+    color-mix(in oklch, var(--signal-quiet) 45%, var(--card))
+  );
+}
+
+.fact-spark {
   flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--card);
+}
+
+.fact-card .t-label {
+  color: var(--accent-foreground);
+}
+
+.fact-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.fact-text {
+  margin: 0;
+}
+
+.fact-source {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
   color: var(--ink-3);
-  font-weight: 400;
-  white-space: pre;
+  text-decoration: none;
+}
+
+.fact-source:hover,
+.fact-source:focus-visible {
+  color: var(--signal);
+  text-decoration: underline;
 }
 
 .today-dashboard {
@@ -63,11 +154,36 @@
 
 /* 3am rule: in any single-column rendering the log buttons come FIRST — the
    first tap target must sit in the top third, before the clock block.
-   Except while a timer runs: then the live figure and its Stop button ARE
-   the 3am state, and they stay on top. Same 720px threshold as the
-   two-column layout below. */
+   Except while NURSING runs (has-live is nursing-only): the live figure and
+   its Stop button are the 3am state then. A background sleep timer never
+   demotes the tiles. Same 720px threshold as the two-column layout below. */
 @container (width < 720px) {
   .today-dashboard:not(.has-live) > .log-column { order: -1; }
+
+  /* The idle forecast's Log button routes to the slower sheet while the
+     tiles sit one thumb-length above — mobile drops it, desktop and live
+     nursing keep it. */
+  .today-dashboard:not(.has-live) .hearth-foot > [data-slot="button"] {
+    display: none;
+  }
+
+  /* Growth + Health are daytime rows — side by side they cost half the
+     nightly scroll. */
+  .today-dashboard:not(.has-live) > .log-column {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .today-dashboard:not(.has-live) > .log-column > .quick-grid {
+    grid-column: 1 / -1;
+  }
+
+  /* The band's colored lane icons already key the strip — the legend is
+     Insights material. Scoped to Today. */
+  .today-band .day-band-legend {
+    display: none;
+  }
 }
 
 /* 2. Hearth clock: no card, sits on paper, hairline below. */
@@ -87,47 +203,12 @@
   margin: 0;
 }
 
-/* Idle Hearth: text keeps its column, a quiet illustration keeps watch on
-   the right — moon at night, bottle by day. [1fr auto] so the figure's
-   baseline never moves; hidden on very narrow phones. */
-.hearth-idle {
-  grid-template-columns: minmax(0, 1fr) auto;
-  column-gap: 16px;
-  align-items: start;
-}
-
+/* Idle Hearth: a clean single-column clock — the companion greets from the
+   hero above, so the hearth carries no second illustration. */
 .hearth-copy {
   min-width: 0;
   display: grid;
   gap: 8px;
-}
-
-.hearth-ambient {
-  align-self: center;
-  line-height: 0;
-  color: var(--ink-2);
-  opacity: 0.9;
-}
-
-/* Small phones keep the ambient — it scales down instead of vanishing on
-   375-412px hardware (the SVG scales via viewBox). */
-@media (width < 400px) {
-  .hearth-ambient svg {
-    width: 72px;
-    height: 72px;
-  }
-}
-
-/* True edge cases only: drop the ambient and give its column back. */
-@media (width < 340px) {
-  .hearth-ambient {
-    display: none;
-  }
-
-  .hearth-idle {
-    grid-template-columns: minmax(0, 1fr);
-    column-gap: 0;
-  }
 }
 
 /* First-run welcome: illustration instead of an em-dash figure. */
@@ -162,11 +243,10 @@
   line-height: 1.45;
 }
 
-.micro-caption {
-  margin: 0;
-  color: var(--ink-2);
-  font-size: 0.8125rem;
-  line-height: 1.45;
+/* Past the usual gap, the state speaks through the numeral's color — no
+   second caption line competing with the forecast row below. */
+.hearth-idle.is-over .hearth-figure {
+  color: var(--signal);
 }
 
 .hearth-stop {
@@ -208,7 +288,7 @@
 
 .log-copy small {
   overflow: hidden;
-  color: var(--ink-3);
+  color: var(--ink-2);
   font-size: 0.8125rem;
   line-height: 1.45;
 }
@@ -232,14 +312,14 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--card);
 }
 
 .dark .log-row {
-  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.04);
+  box-shadow: inset 0 1px 0 var(--edge-highlight);
 }
 
 .log-actions {
@@ -257,57 +337,204 @@
   font-weight: 500;
 }
 
-/* "Primary quiet": the remembered bottle amount — never a filled button. */
-.log-actions .log-quiet {
-  border-color: color-mix(in oklch, var(--signal) 38%, var(--border));
-  background: var(--signal-quiet);
-  color: var(--accent-foreground);
-}
-
-/* The quiet fill defeats the outline variant's layered hover, so the most-
-   used control gets its own — a touch more signal folded into the wash. */
-@media (hover: hover) and (pointer: fine) {
-  .log-actions .log-quiet:hover {
-    background: color-mix(in oklch, var(--signal) 14%, var(--signal-quiet));
-  }
-}
-
-.log-row.is-stacked {
-  flex-wrap: wrap;
-}
-
-.is-stacked .log-actions {
-  flex: 1 0 100%;
+/* 6b. Quick-track grid: the app's big buttons. Two columns of thumb-sized
+   tiles; an odd tile count stretches the last one so the grid never rags.
+   The whole tile (or its split segments) is the tap target. */
+.quick-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-.is-stacked .log-actions .span-full {
+.quick-grid > .quick-tile:last-child:nth-child(odd) {
   grid-column: 1 / -1;
 }
 
-/* 320px-class phones: the diaper and bottle rows wrap their buttons under
-   the title instead of crushing it to an ellipsis. */
-@media (width < 360px) {
-  .log-row.action-diaper,
-  .log-row.action-feed {
-    flex-wrap: wrap;
-  }
+/* The paintbox: each tile borrows its activity's pigment as a whisper of a
+   wash and a hue-kissed border — Bottle reads blue, Nursing blush, Diaper
+   sage, Sleep lavender at arm's length, like a row of app icons. */
+.tile-bottle { --tile-hue: var(--glyph-bottle); }
+.tile-nurse { --tile-hue: var(--glyph-nursing); }
+.tile-diaper { --tile-hue: var(--glyph-diaper); }
+.tile-sleep { --tile-hue: var(--glyph-sleep); }
 
-  .action-diaper .log-actions,
-  .action-feed .log-actions {
-    flex: 1 0 100%;
-    display: grid;
-  }
+.quick-tile {
+  position: relative;
+  min-height: 96px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid color-mix(in oklch, var(--tile-hue, var(--border)) 16%, var(--border));
+  border-radius: var(--radius-xl);
+  background: linear-gradient(
+    160deg,
+    color-mix(in oklch, var(--tile-hue, var(--border)) 7%, var(--card)),
+    var(--card) 62%
+  );
+  box-shadow:
+    0 1px 2px oklch(0.32 0.04 20 / 0.04),
+    0 10px 24px -16px oklch(0.32 0.04 20 / 0.12);
+  overflow: hidden;
+}
 
-  .action-diaper .log-actions {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+.dark .quick-tile {
+  background: linear-gradient(
+    160deg,
+    color-mix(in oklch, var(--tile-hue, var(--border)) 10%, var(--card)),
+    var(--card) 62%
+  );
+  box-shadow: inset 0 1px 0 var(--edge-highlight);
+}
 
-  .action-feed .log-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+/* Whole-tile tap (bottle, sleep): plain button reset, icon left with title
+   and sub beside it, the system press recipe (90ms down / 300ms release)
+   with a deeper squash for the large surface. */
+.tile-main {
+  appearance: none;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  flex: 1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 12px;
+  row-gap: 2px;
+  align-items: center;
+  align-content: center;
+  padding: 12px;
+  border-radius: inherit;
+  cursor: pointer;
+  transition: transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1), background-color 300ms ease;
+}
+
+.tile-main .activity-glyph {
+  grid-row: 1 / span 2;
+}
+
+.tile-main:active {
+  transition-duration: 90ms;
+  transform: scale(0.97);
+  background-color: color-mix(in oklch, var(--foreground) 6%, transparent);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tile-main:hover {
+    background: color-mix(in oklch, var(--tile-hue, var(--signal)) 5%, transparent);
   }
 }
+
+.tile-main:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.tile-title {
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.tile-sub {
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+/* Split tiles (nursing, diaper): the same horizontal head, then equal
+   segments below. The 44px right padding keeps titles clear of the chip. */
+.tile-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 12px 44px 0 12px;
+}
+
+.tile-split {
+  flex: 1;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  align-items: stretch;
+  padding: 8px 12px 12px;
+}
+
+/* Segments wear the tile's own hue as a quiet fill — one stroke per tile
+   (the tile's), not nine competing outlines across the grid. */
+.tile-split [data-slot="button"] {
+  height: auto;
+  min-height: 52px;
+  min-width: 0;
+  padding: 0 4px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border-color: transparent;
+  background: color-mix(in oklch, var(--tile-hue, var(--foreground)) 6%, var(--card));
+  color: var(--foreground);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tile-split [data-slot="button"]:hover {
+    background: color-mix(in oklch, var(--tile-hue, var(--foreground)) 10%, var(--card));
+  }
+}
+
+/* The side that's usually next (opposite of the last log) speaks up. */
+.tile-split [data-slot="button"].is-next-side {
+  border-color: color-mix(in oklch, var(--signal) 45%, var(--border));
+  background: var(--signal-quiet);
+  color: var(--signal);
+}
+
+/* Corner chips: the quiet second thought (change amount, past session) —
+   a full 44px hitbox tucked into the corner, clipped by the tile radius,
+   so a near-miss never insta-logs a feed. */
+.tile-chip {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: auto;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 14px;
+  font-size: 0.75rem;
+  color: var(--ink-3);
+  background: color-mix(in oklch, var(--foreground) 4%, transparent);
+  border-radius: 0 var(--radius-xl) 0 var(--radius-sm);
+}
+
+/* Lullaby entrance: hero, fact and tiles rise in within ~600ms of opening.
+   The global prefers-reduced-motion block stills every keyframe. */
+@keyframes today-rise {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+.welcome-hero {
+  animation: today-rise 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.fact-card {
+  animation: today-rise 420ms cubic-bezier(0.2, 0.8, 0.2, 1) 60ms both;
+}
+
+.quick-grid .quick-tile {
+  animation: today-rise 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.quick-grid .quick-tile:nth-child(2) { animation-delay: 100ms; }
+.quick-grid .quick-tile:nth-child(3) { animation-delay: 140ms; }
+.quick-grid .quick-tile:nth-child(4) { animation-delay: 180ms; }
 
 /* Live timers rendered as rows (active sleep, orphaned sessions). */
 .timer-row {
@@ -320,7 +547,7 @@
   height: auto;
   min-height: 44px;
   justify-content: flex-start;
-  padding: 4px 8px;
+  padding: 4px 12px;
   text-align: left;
 }
 
@@ -346,10 +573,6 @@
   }
 }
 
-.stat-head {
-  white-space: nowrap;
-}
-
 .day-strip > div {
   min-width: 0;
   display: grid;
@@ -364,12 +587,18 @@
   color: var(--ink-2);
   font-size: 0.8125rem;
   line-height: 1.45;
+  white-space: nowrap;
 }
 
+/* Each stat icon wears its activity pigment — the same key as the band. */
 .stat-head svg {
   flex: 0 0 auto;
-  color: var(--ink-3);
 }
+
+.stat-feeds .stat-head svg { color: var(--glyph-nursing); }
+.stat-bottle .stat-head svg { color: var(--glyph-bottle); }
+.stat-diaper .stat-head svg { color: var(--glyph-diaper); }
+.stat-sleep .stat-head svg { color: var(--glyph-sleep); }
 
 .day-strip .t-numeral {
   overflow: hidden;
@@ -417,7 +646,7 @@
 .care-notes svg {
   flex: 0 0 auto;
   /* Optical centering against the first text line — derived, not a magic px. */
-  margin-top: calc((1lh - 15px) / 2);
+  margin-top: calc((1lh - 14px) / 2);
   color: var(--ink-3);
 }
 
@@ -472,13 +701,6 @@
     gap: 32px;
   }
 
-  /* In the narrow rail most row descriptions truncate — the button labels
-     carry the meaning. The bottle row keeps its "Breast milk / Formula"
-     line: it names what the one-tap log will record. */
-  .today-dashboard > .log-column .log-row:not(.action-feed) .log-copy small {
-    display: none;
-  }
-
   .today-dashboard > .log-column {
     grid-column: 2;
     grid-row: 1;
@@ -486,6 +708,12 @@
     top: 24px;
     border-left: 1px solid var(--border);
     padding-left: 32px;
+  }
+
+  /* The 240-320px rail is too narrow for side-by-side tiles — they stack
+     full-width there and get comfortable again. */
+  .today-dashboard > .log-column .quick-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .hearth-stop {

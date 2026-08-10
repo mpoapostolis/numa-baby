@@ -23,7 +23,6 @@ import { AppSidebar } from "./components/AppSidebar";
 import { BabyFace, SleepingBaby } from "./components/illustrations";
 import { LogSheet } from "./components/LogSheet";
 import OnboardingScreen from "./screens/OnboardingScreen";
-import SettingsScreen from "./screens/SettingsScreen";
 import TodayScreen from "./screens/TodayScreen";
 import { Activity, ActivityType, Sheet, Tab } from "./domain/types";
 import { useActivityStats } from "./hooks/useActivityStats";
@@ -31,9 +30,12 @@ import { useMinuteClock } from "./hooks/useMinuteClock";
 import { useTrackerStore } from "./hooks/useTrackerStore";
 
 // The chart-heavy screens load on first visit; Today never pays for them.
+// Settings rides along: nobody opens it at 3am, so it stays off the
+// initial bundle too.
 const TimelineScreen = lazy(() => import("./screens/TimelineScreen"));
 const InsightsScreen = lazy(() => import("./screens/InsightsScreen"));
 const GrowthGuideScreen = lazy(() => import("./screens/GrowthGuideScreen"));
+const SettingsScreen = lazy(() => import("./screens/SettingsScreen"));
 
 // A future-dated feed from a restored backup must never arm a timer that wraps
 // the 32-bit setTimeout ceiling and fires instantly.
@@ -319,21 +321,23 @@ export default function HomePage() {
           )}
 
           {activeTab === "more" && (
-            <SettingsScreen
-              profile={profile}
-              nightMode={nightMode}
-              reminders={reminders}
-              notificationPermission={notificationPermission}
-              feedReminderTargetAt={feedReminderTargetAt}
-              minuteClock={minuteClock}
-              onNightModeChange={changeNightMode}
-              onFeedRemindersChange={changeFeedReminders}
-              onFeedIntervalChange={changeFeedReminderInterval}
-              onExport={exportData}
-              onImport={importData}
-              onOpenProfile={() => openSheet("profile")}
-              onEraseAll={eraseAllData}
-            />
+            <Suspense fallback={screenFallback}>
+              <SettingsScreen
+                profile={profile}
+                nightMode={nightMode}
+                reminders={reminders}
+                notificationPermission={notificationPermission}
+                feedReminderTargetAt={feedReminderTargetAt}
+                minuteClock={minuteClock}
+                onNightModeChange={changeNightMode}
+                onFeedRemindersChange={changeFeedReminders}
+                onFeedIntervalChange={changeFeedReminderInterval}
+                onExport={exportData}
+                onImport={importData}
+                onOpenProfile={() => openSheet("profile")}
+                onEraseAll={eraseAllData}
+              />
+            </Suspense>
           )}
         </main>
 
