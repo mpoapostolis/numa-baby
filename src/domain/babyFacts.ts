@@ -68,7 +68,7 @@ const WHO_FEEDING: FactSource = {
   url: "https://www.who.int/health-topics/breastfeeding",
 };
 const NHS_WEIGHT: FactSource = {
-  name: "NHS · Baby height and weight",
+  name: "NHS · Your baby's weight and height",
   url: "https://www.nhs.uk/baby/babys-development/height-weight-and-reviews/baby-height-and-weight/",
 };
 const AAP_SEVEN_MONTHS: FactSource = {

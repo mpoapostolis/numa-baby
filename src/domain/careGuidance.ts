@@ -326,12 +326,14 @@ const AAP_DEHYDRATION: FactSource = {
   url: "https://www.healthychildren.org/English/health-issues/injuries-emergencies/Pages/dehydration.aspx",
 };
 const NHS_JAUNDICE: FactSource = {
-  name: "NHS · Newborn jaundice",
-  url: "https://www.nhs.uk/conditions/jaundice-newborn/",
+  name: "NHS · Jaundice in babies",
+  url: "https://www.nhs.uk/conditions/jaundice-in-babies/",
 };
-const NHS_SERIOUSLY_ILL: FactSource = {
-  name: "NHS · Is your baby seriously ill?",
-  url: "https://www.nhs.uk/conditions/baby/health/is-your-baby-or-toddler-seriously-ill/",
+// The NHS rewrote and renamed this page; the old URL now redirects here and
+// the old title matches nothing. Linked canonically, checked 22 Aug 2026.
+const NHS_URGENT_HELP: FactSource = {
+  name: "NHS · When to get urgent medical help",
+  url: "https://www.nhs.uk/baby/health/when-to-get-urgent-medical-help-for-babies-and-children-under-5/",
 };
 
 export const WATCH_FOR: WatchItem[] = [
@@ -349,7 +351,7 @@ export const WATCH_FOR: WatchItem[] = [
   },
   {
     sign: "Green or bloody vomit, forceful projectile vomiting, or a baby who is hard to wake or unusually floppy.",
-    source: NHS_SERIOUSLY_ILL,
+    source: NHS_URGENT_HELP,
   },
   {
     sign: "Not back to birthweight by three weeks, or losing weight after the first week.",
