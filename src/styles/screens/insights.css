@@ -428,3 +428,97 @@
     border-left: 0;
   }
 }
+
+/* The insight deck: the answer, before the evidence. One card per finding,
+   keyed by tone — coral for the ones that end at a phone call, petal for a
+   suggestion, sage for "this is ordinary". Never red, never alarmed: a card
+   that frightens a parent at 3am has failed even when it is right. */
+.insight-deck {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+  list-style: none;
+}
+
+.insight-card {
+  --tone-hue: var(--signal);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid color-mix(in oklch, var(--tone-hue) 28%, var(--border));
+  border-radius: var(--radius-xl);
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklch, var(--tone-hue) 8%, var(--card)),
+    var(--card) 70%
+  );
+}
+
+.insight-card.tone-seek-care { --tone-hue: var(--glyph-health); }
+.insight-card.tone-suggest { --tone-hue: var(--signal); }
+.insight-card.tone-reassure { --tone-hue: var(--glyph-diaper); }
+
+.insight-icon {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: color-mix(in oklch, var(--tone-hue) var(--glyph-wash), var(--card));
+  color: var(--tone-hue);
+}
+
+.insight-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.insight-tone {
+  color: var(--tone-hue);
+}
+
+.insight-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.insight-body {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+/* The advice is the darkest line in the card: it is the only one that asks
+   for something to happen. */
+.insight-advice {
+  position: relative;
+  margin: 2px 0 0;
+  padding-left: 14px;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.insight-advice::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: calc((1.5em - 5px) / 2);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--tone-hue);
+}
+
+.insight-sources {
+  margin: 2px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}

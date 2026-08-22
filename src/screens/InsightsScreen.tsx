@@ -1,16 +1,50 @@
-import { ShieldCheck } from "lucide-react";
+import { ExternalLink, PhoneCall, ShieldCheck, Sparkles } from "lucide-react";
 import { EmptyState } from "../components/EmptyState";
 import { GrowthChart } from "../components/GrowthChart";
 import { LittleBottle } from "../components/illustrations";
 import { activityTitle } from "../domain/activityDisplay";
 import { formatShortDay, formatTime, humanDuration, median } from "../domain/time";
+import { Insight } from "../domain/insightRules";
 import { ActivityStats } from "../hooks/useActivityStats";
 
 type InsightsScreenProps = {
   stats: ActivityStats;
+  insights: Insight[];
   onAddGrowth: () => void;
   onOpenGuide: () => void;
 };
+
+// Tone is the whole design language of a card: what it looks like, what icon
+// it wears, and how loudly it speaks. A seek-care card is coral-keyed and
+// says so plainly; it is never red, never alarmed, and never a diagnosis.
+const TONE_LABEL: Record<Insight["tone"], string> = {
+  "seek-care": "Worth a phone call",
+  suggest: "Something to try",
+  reassure: "This looks ordinary",
+};
+
+function InsightCard({ insight }: { insight: Insight }) {
+  return (
+    <li className={`insight-card tone-${insight.tone}`}>
+      <span className="insight-icon" aria-hidden="true">
+        {insight.tone === "seek-care" ? <PhoneCall size={16} /> : <Sparkles size={16} />}
+      </span>
+      <div className="insight-copy">
+        <span className="t-label insight-tone">{TONE_LABEL[insight.tone]}</span>
+        <h3 className="insight-title">{insight.title}</h3>
+        <p className="insight-body">{insight.body}</p>
+        <p className="insight-advice">{insight.advice}</p>
+        <p className="insight-sources">
+          {insight.sources.map((source) => (
+            <a key={source.url} className="fact-source" href={source.url} target="_blank" rel="noopener noreferrer">
+              {source.name} <ExternalLink size={12} aria-hidden="true" />
+            </a>
+          ))}
+        </p>
+      </div>
+    </li>
+  );
+}
 
 // Unit-demoted duration: "2h 15m" with the letters receding (spec rule 4).
 function DurationFigure({ minutes }: { minutes: number }) {
@@ -21,7 +55,7 @@ function DurationFigure({ minutes }: { minutes: number }) {
   return <>{hours}<span className="unit">h</span> {mins}<span className="unit">m</span></>;
 }
 
-export default function InsightsScreen({ stats, onAddGrowth, onOpenGuide }: InsightsScreenProps) {
+export default function InsightsScreen({ stats, insights, onAddGrowth, onOpenGuide }: InsightsScreenProps) {
   const {
     typicalGap,
     averageFeeds,
@@ -61,9 +95,18 @@ export default function InsightsScreen({ stats, onAddGrowth, onOpenGuide }: Insi
       <div className="section-heading">
         <div>
           <p className="eyebrow">Last 7 days</p>
-          <h1 id="insights-heading">Patterns, calmly</h1>
+          <h1 id="insights-heading">What the log is telling you</h1>
         </div>
       </div>
+
+      {/* The answer first, the evidence below it. Cards only appear when the
+          log can support them honestly — silence here is a good sign, not a
+          missing feature. */}
+      {insights.length > 0 && (
+        <ul className="insight-deck" aria-label="What your entries suggest">
+          {insights.map((insight) => <InsightCard key={insight.id} insight={insight} />)}
+        </ul>
+      )}
 
       {hasSummaryData && (
         <div className="insight-summary">

@@ -26,6 +26,8 @@ import OnboardingScreen from "./screens/OnboardingScreen";
 import TodayScreen from "./screens/TodayScreen";
 import { Activity, ActivityType, Sheet, Tab } from "./domain/types";
 import { JOIN_CODE_PATTERN } from "./domain/familyPairing";
+import { buildInsightInput, insightsFor } from "./domain/insightRules";
+import { ageInDays } from "./domain/time";
 import { useActivityStats } from "./hooks/useActivityStats";
 import { useFamilySync } from "./hooks/useFamilySync";
 import { useMinuteClock } from "./hooks/useMinuteClock";
@@ -337,6 +339,14 @@ export default function HomePage() {
           {activeTab === "insights" && (
             <Suspense fallback={screenFallback}>
               <InsightsScreen
+                insights={insightsFor(buildInsightInput({
+                  activities,
+                  recentDays: stats.recentDays,
+                  ageDays: ageInDays(profile.birthDate, minuteClock),
+                  ageMonths: babyAgeMonths,
+                  feedingMode: profile.feedingMode,
+                  now: minuteClock,
+                }))}
                 stats={stats}
                 onAddGrowth={() => openSheet("growth")}
                 onOpenGuide={() => navigateTo("guide")}
