@@ -1,4 +1,4 @@
-import { Baby, Bell, Download, Moon, ShieldCheck, Sun, Trash2, Upload } from "lucide-react";
+import { Baby, Bell, Download, Moon, Share2, ShieldCheck, Sun, Trash2, Upload } from "lucide-react";
 import { ChangeEvent, useRef } from "react";
 import {
   Card,
@@ -20,8 +20,10 @@ import {
 } from "../components/ui/item";
 import { Switch } from "../components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "../components/ui/toggle-group";
+import { FamilySyncCard } from "../components/FamilySyncCard";
 import { SettingsAction } from "../components/SettingsAction";
 import { formatTime } from "../domain/time";
+import { FamilySync } from "../hooks/useFamilySync";
 import { Profile, ReminderSettings } from "../domain/types";
 
 type SettingsScreenProps = {
@@ -35,9 +37,13 @@ type SettingsScreenProps = {
   onFeedRemindersChange: (enabled: boolean) => Promise<void>;
   onFeedIntervalChange: (minutes: number) => void;
   onExport: () => void;
+  onShare: () => void;
   onImport: (event: ChangeEvent<HTMLInputElement>) => void;
   onOpenProfile: () => void;
   onEraseAll: () => void;
+  familySync: FamilySync;
+  incomingJoinCode?: string | null;
+  onIncomingCodeUsed?: () => void;
 };
 
 export default function SettingsScreen({
@@ -51,9 +57,13 @@ export default function SettingsScreen({
   onFeedRemindersChange,
   onFeedIntervalChange,
   onExport,
+  onShare,
   onImport,
   onOpenProfile,
   onEraseAll,
+  familySync,
+  incomingJoinCode,
+  onIncomingCodeUsed,
 }: SettingsScreenProps) {
   const importRef = useRef<HTMLInputElement>(null);
   const feedingModeLabel = {
@@ -158,6 +168,13 @@ export default function SettingsScreen({
         </CardContent>
       </Card>
 
+      <FamilySyncCard
+        familySync={familySync}
+        profile={profile}
+        incomingCode={incomingJoinCode}
+        onIncomingCodeUsed={onIncomingCodeUsed}
+      />
+
       <Card className="settings-group">
         <CardHeader>
           <CardTitle asChild><h2>Your data</h2></CardTitle>
@@ -165,9 +182,11 @@ export default function SettingsScreen({
         </CardHeader>
         <CardContent>
           <ItemGroup className="settings-action-list" role="group" aria-label="Backup actions">
+            <SettingsAction title="Share with partner" description="Send today's log — their app merges it, nothing gets replaced" icon={<Share2 />} onClick={onShare} />
+            <ItemSeparator />
             <SettingsAction title="Download backup" description="Saves a file with all your entries — keep it in a synced folder to be safe" icon={<Download />} onClick={onExport} />
             <ItemSeparator />
-            <SettingsAction title="Restore a backup" description="Choose a backup file from any device" icon={<Upload />} onClick={() => importRef.current?.click()} />
+            <SettingsAction title="Restore a backup" description="Merges a backup file from any device" icon={<Upload />} onClick={() => importRef.current?.click()} />
             <ItemSeparator />
             <SettingsAction
               className="settings-action-danger"
@@ -183,7 +202,11 @@ export default function SettingsScreen({
 
       <Card className="privacy-card">
         <span><ShieldCheck size={18} /></span>
-        <div><strong>Private on this device</strong><p>Your baby’s entries stay in this browser. Export a backup anytime.</p></div>
+        {familySync.pairing ? (
+          <div><strong>Private to your family</strong><p>Entries stay on this phone and sync through your private family space in the cloud.</p></div>
+        ) : (
+          <div><strong>Private on this device</strong><p>Your baby’s entries stay in this browser. Export a backup anytime.</p></div>
+        )}
       </Card>
 
       <p className="version-note">Baby Tracker · Local-first and private</p>

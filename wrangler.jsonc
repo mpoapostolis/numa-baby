@@ -2,8 +2,17 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "numa-baby",
   "compatibility_date": "2026-08-06",
+  "main": "worker/index.ts",
   "assets": {
     "directory": "./dist",
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "single-page-application",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "vars": {
+    "TURSO_DATABASE_URL": "https://numa-baby-sync-mpoapostolis.aws-eu-west-1.turso.io"
+  },
+  "observability": {
+    "enabled": true
   }
 }

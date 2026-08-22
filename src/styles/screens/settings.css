@@ -271,3 +271,127 @@
     padding: 0 24px 24px;
   }
 }
+
+/* Family Sync card. The code is the hero: huge, tabular, unmistakable. */
+.family-card-content {
+  display: grid;
+  gap: 12px;
+}
+
+.family-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.family-join {
+  display: grid;
+  gap: 8px;
+}
+
+.family-join-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.family-join-row input {
+  font-size: 1.375rem;
+  letter-spacing: 0.35em;
+  font-variant-numeric: tabular-nums;
+}
+
+.family-back {
+  justify-self: start;
+}
+
+.family-code-view {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  padding: 8px 0 4px;
+  text-align: center;
+}
+
+.family-code {
+  margin: 4px 0;
+  font-size: 2.75rem;
+  letter-spacing: 0.22em;
+  line-height: 1;
+}
+
+.family-waiting {
+  color: var(--signal);
+}
+
+.family-status {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+}
+
+.family-status-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--signal) var(--glyph-wash), var(--card));
+  color: var(--signal);
+}
+
+.family-status-copy {
+  display: grid;
+  gap: 0;
+}
+
+.family-status-copy strong {
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.family-status-copy small {
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+}
+
+.family-status .family-actions {
+  grid-column: 2;
+  margin-top: 8px;
+}
+
+.family-leave {
+  color: var(--ink-2);
+}
+
+/* The invite QR: always on a white field with its quiet zone, whatever the
+   theme — a scanner reading an inverted or edge-to-edge code fails silently,
+   which is the worst possible failure here. */
+.family-qr {
+  justify-self: center;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  line-height: 0;
+  box-shadow: 0 1px 2px oklch(0 0 0 / 0.08);
+}
+
+.qr-code {
+  display: block;
+  width: 176px;
+  height: 176px;
+  max-width: 100%;
+}
+
+.family-qr-hint {
+  text-align: center;
+  max-width: 32ch;
+  margin-inline: auto;
+}
+
+/* The typed code becomes the fallback, so it steps down from hero to backup. */
+.family-code-label {
+  margin-top: 4px;
+  color: var(--ink-3);
+}

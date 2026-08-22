@@ -25,7 +25,9 @@ import { LogSheet } from "./components/LogSheet";
 import OnboardingScreen from "./screens/OnboardingScreen";
 import TodayScreen from "./screens/TodayScreen";
 import { Activity, ActivityType, Sheet, Tab } from "./domain/types";
+import { JOIN_CODE_PATTERN } from "./domain/familyPairing";
 import { useActivityStats } from "./hooks/useActivityStats";
+import { useFamilySync } from "./hooks/useFamilySync";
 import { useMinuteClock } from "./hooks/useMinuteClock";
 import { useTrackerStore } from "./hooks/useTrackerStore";
 
@@ -69,9 +71,22 @@ function NavTrigger() {
   );
 }
 
+// A scanned invite arrives as "/#join=123456". Read once at boot and strip it
+// from the URL, so a refresh (or a shared screenshot of the address bar) never
+// replays a join that already happened.
+function readIncomingJoinCode(): string | null {
+  const match = JOIN_CODE_PATTERN.exec(window.location.hash);
+  if (!match) return null;
+  window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  return match[1];
+}
+
 export default function HomePage() {
   const [debugMode] = useState(() => new URLSearchParams(window.location.search).has("debug"));
-  const [activeTab, setActiveTab] = useState<Tab>("today");
+  const [incomingJoinCode, setIncomingJoinCode] = useState(readIncomingJoinCode);
+  // A scanned link opens straight on Settings, where Family Sync lives. Read
+  // from the state above, never from the hash — by now it has been stripped.
+  const [activeTab, setActiveTab] = useState<Tab>(incomingJoinCode ? "more" : "today");
   const [sheet, setSheet] = useState<Sheet>(null);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [nursingInitialMode, setNursingInitialMode] = useState<"timer" | "manual">("timer");
@@ -108,13 +123,26 @@ export default function HomePage() {
     completeOnboarding,
     changeFeedReminders,
     changeFeedReminderInterval,
+    persistVersion,
+    mergeRemote,
+    readPersisted,
     exportData,
+    sharePartner,
     importData,
     downloadRecovery,
     resetUnreadableData,
     dismissRecoveredNotice,
     eraseAllData,
   } = useTrackerStore({ debugMode, showToast, onNotificationPermission: setNotificationPermission });
+
+  const familySync = useFamilySync({
+    debugMode,
+    bootState,
+    persistVersion,
+    readPersisted,
+    mergeRemote,
+    showToast,
+  });
 
   useEffect(() => {
     // Theme changes swap every surface color at once — transitions would
@@ -339,9 +367,13 @@ export default function HomePage() {
                 onFeedRemindersChange={changeFeedReminders}
                 onFeedIntervalChange={changeFeedReminderInterval}
                 onExport={exportData}
+                onShare={() => void sharePartner()}
                 onImport={importData}
                 onOpenProfile={() => openSheet("profile")}
                 onEraseAll={eraseAllData}
+                familySync={familySync}
+                incomingJoinCode={incomingJoinCode}
+                onIncomingCodeUsed={() => setIncomingJoinCode(null)}
               />
             </Suspense>
           )}

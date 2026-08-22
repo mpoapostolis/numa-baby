@@ -49,7 +49,22 @@ export function isValidActivity(value: unknown): value is Activity {
   if (value.side !== undefined && value.side !== "left" && value.side !== "right") return false;
   if (value.diaperKind !== undefined && !["wet", "dirty", "both"].includes(String(value.diaperKind))) return false;
   if (value.milkType !== undefined && value.milkType !== "formula" && value.milkType !== "expressed") return false;
+  if (value.updatedAt !== undefined && !isValidDate(value.updatedAt)) return false;
+  if (value.deleted !== undefined && value.deleted !== true) return false;
   return true;
+}
+
+// The live (non-tombstoned) view of a stored activity list. Tombstones stay in
+// storage so a future sync can merge deletions, but no UI surface reads them.
+export function liveActivities(list: Activity[]): Activity[] {
+  return list.filter((activity) => !activity.deleted);
+}
+
+// Migration rule for legacy rows: a missing updatedAt counts as "last written
+// at startedAt". Stored data is never rewritten on load — the rule is applied
+// wherever a comparison needs it.
+export function activityUpdatedAt(activity: Activity): string {
+  return activity.updatedAt ?? activity.startedAt;
 }
 
 function isValidProfile(value: unknown): value is Profile & { isDemo?: boolean } {
@@ -61,6 +76,19 @@ function isValidProfile(value: unknown): value is Profile & { isDemo?: boolean }
     ["mixed", "breast", "bottle"].includes(String(value.feedingMode)) &&
     (value.isDemo === undefined || typeof value.isDemo === "boolean")
   );
+}
+
+// A profile arriving over sync is unauthenticated JSON from another device:
+// same tolerance as parseStoredData — reject the wrong shape outright, quietly
+// drop an unrecognised sex, never adopt extra keys.
+export function sanitizeProfile(value: unknown): Profile | null {
+  if (!isValidProfile(value)) return null;
+  return {
+    name: value.name,
+    birthDate: value.birthDate,
+    feedingMode: value.feedingMode,
+    sex: value.sex === "girl" || value.sex === "boy" ? value.sex : undefined,
+  };
 }
 
 function isValidReminderSettings(value: unknown): value is ReminderSettings {
@@ -85,6 +113,9 @@ export function parseStoredData(value: string): StoredData {
   const storedProfile = parsed.profile;
   const onboardingComplete = typeof parsed.onboardingComplete === "boolean" ? parsed.onboardingComplete : undefined;
   return {
+    // Optional and backward compatible: blobs written before profile stamping
+    // simply have no stamp, and the sync profile rule treats that as "older".
+    profileUpdatedAt: isValidDate(parsed.profileUpdatedAt) ? parsed.profileUpdatedAt : undefined,
     profile: {
       name: storedProfile.name,
       birthDate: storedProfile.birthDate,

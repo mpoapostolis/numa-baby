@@ -55,5 +55,12 @@ export default defineConfig({
     host: "127.0.0.1",
     port: 3000,
     strictPort: true,
+    // Dev-only: /api lives in the deployed worker (same-origin in production).
+    proxy: {
+      "/api": {
+        target: "https://numa-baby.mpoapostolis.workers.dev",
+        changeOrigin: true,
+      },
+    },
   },
 });

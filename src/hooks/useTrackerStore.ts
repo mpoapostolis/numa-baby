@@ -1,5 +1,6 @@
 import { ChangeEvent, useEffect, useRef, useState } from "react";
-import { parseStoredData } from "../domain/validate";
+import { mergeActivities, mergeStored, summarizeMerge } from "../domain/merge";
+import { activityUpdatedAt, liveActivities, parseStoredData } from "../domain/validate";
 import { Activity, BootState, Profile, ReminderSettings } from "../domain/types";
 
 // The entire persistence core in one hook: the five persisted state slices,
@@ -11,6 +12,21 @@ export const STORAGE_KEY = "numa-baby-v1";
 export const RECOVERY_KEY = "numa-baby-v1-recovery";
 const EMPTY_PROFILE: Profile = { name: "", birthDate: "", feedingMode: "mixed" };
 const DEFAULT_REMINDERS: ReminderSettings = { feedEnabled: false, feedIntervalMinutes: 180 };
+
+// Tombstones (deleted: true) are kept in storage so a future sync can merge
+// deletions across devices, but they must not grow the blob forever. Any
+// tombstone whose last write (activityUpdatedAt) is older than this window has
+// had ample time to propagate and is dropped on the next persist.
+const TOMBSTONE_RETENTION_DAYS = 90;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function sweepExpiredTombstones(list: Activity[]): Activity[] {
+  const cutoff = Date.now() - TOMBSTONE_RETENTION_DAYS * DAY_MS;
+  const swept = list.filter(
+    (activity) => !activity.deleted || new Date(activityUpdatedAt(activity)).getTime() >= cutoff,
+  );
+  return swept.length === list.length ? list : swept;
+}
 
 type TrackerStoreOptions = {
   debugMode: boolean;
@@ -28,16 +44,29 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
   const [reminders, setReminders] = useState<ReminderSettings>(DEFAULT_REMINDERS);
   const [storageWarning, setStorageWarning] = useState<string | null>(null);
   const [recoveredNotice, setRecoveredNotice] = useState<string | null>(null);
+  // Bumped on every successful persist. The sync engine watches it to know
+  // "something was written locally" without reaching into this hook's internals.
+  const [persistVersion, setPersistVersion] = useState(0);
   // Always-current mirror of every persisted slice. Undo callbacks and post-await
   // code read from here so they never write a stale render's snapshot to storage.
   // Synced inside persistSnapshot and the load paths — never from render.
-  const persistedStateRef = useRef({ activities, profile, nightMode, reminders, bootState });
+  // NOTE: `activities` here is the FULL persisted list including tombstones;
+  // the React `activities` state above is always its live (non-deleted) view.
+  const persistedStateRef = useRef({
+    activities,
+    profile,
+    nightMode,
+    reminders,
+    bootState,
+    profileUpdatedAt: undefined as string | undefined,
+  });
 
   // Single entry point for loading state from storage (boot, cross-tab, reset):
   // keeps the persisted-state ref and React state in lockstep.
   function applyLoadedState(next: {
     activities: Activity[];
     profile: Profile;
+    profileUpdatedAt?: string;
     nightMode?: boolean;
     reminders?: ReminderSettings;
     bootState: BootState;
@@ -45,12 +74,13 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     const merged = {
       activities: next.activities,
       profile: next.profile,
+      profileUpdatedAt: next.profileUpdatedAt,
       nightMode: next.nightMode ?? persistedStateRef.current.nightMode,
       reminders: next.reminders ?? persistedStateRef.current.reminders,
       bootState: next.bootState,
     };
     persistedStateRef.current = merged;
-    setActivities(merged.activities);
+    setActivities(liveActivities(merged.activities));
     setProfile(merged.profile);
     setNightMode(merged.nightMode);
     setReminders(merged.reminders);
@@ -98,6 +128,7 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
               applyLoadedState({
                 activities: parsed.activities,
                 profile: parsed.profile,
+                profileUpdatedAt: parsed.profileUpdatedAt,
                 nightMode: Boolean(parsed.nightMode),
                 reminders: parsed.reminders ?? DEFAULT_REMINDERS,
                 bootState: "ready",
@@ -162,6 +193,7 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
           applyLoadedState({
             activities: parsed.activities,
             profile: parsed.profile,
+            profileUpdatedAt: parsed.profileUpdatedAt,
             nightMode: Boolean(parsed.nightMode),
             reminders: parsed.reminders ?? DEFAULT_REMINDERS,
             bootState: "ready",
@@ -181,26 +213,36 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     nextNightMode: boolean = persistedStateRef.current.nightMode,
     nextReminders: ReminderSettings = persistedStateRef.current.reminders,
     nextOnboardingComplete: boolean = persistedStateRef.current.bootState === "ready",
+    nextProfileUpdatedAt: string | undefined = persistedStateRef.current.profileUpdatedAt,
   ) {
+    // Every persist doubles as the tombstone sweep: expired tombstones are
+    // dropped from what gets written (and from the ref), never from mid-flight
+    // UI state — the live view they were already absent from.
+    const sweptActivities = sweepExpiredTombstones(nextActivities);
     const nextPersisted = {
-      activities: nextActivities,
+      activities: sweptActivities,
       profile: nextProfile,
       nightMode: nextNightMode,
       reminders: nextReminders,
       bootState: nextOnboardingComplete ? ("ready" as const) : persistedStateRef.current.bootState,
+      profileUpdatedAt: nextProfileUpdatedAt,
     };
     if (debugMode) {
       persistedStateRef.current = nextPersisted;
       setStorageWarning(null);
+      setPersistVersion((version) => version + 1);
       return true;
     }
     try {
+      // profileUpdatedAt is undefined until a profile save stamps it;
+      // JSON.stringify drops the key, keeping legacy blobs byte-identical.
       window.localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ activities: nextActivities, profile: nextProfile, nightMode: nextNightMode, reminders: nextReminders, onboardingComplete: nextOnboardingComplete }),
+        JSON.stringify({ activities: sweptActivities, profile: nextProfile, nightMode: nextNightMode, reminders: nextReminders, onboardingComplete: nextOnboardingComplete, profileUpdatedAt: nextProfileUpdatedAt }),
       );
       persistedStateRef.current = nextPersisted;
       setStorageWarning(null);
+      setPersistVersion((version) => version + 1);
       return true;
     } catch {
       setStorageWarning("This browser could not save the latest change. Your previous data is still intact.");
@@ -209,37 +251,59 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     }
   }
 
+  // After a successful persistSnapshot the ref holds the swept full list;
+  // React state always shows its live view.
+  function syncActivitiesFromRef() {
+    setActivities(liveActivities(persistedStateRef.current.activities));
+  }
+
   function addActivity(activity: Activity, message: string) {
-    const next = [activity, ...persistedStateRef.current.activities];
+    const stamped: Activity = { ...activity, updatedAt: new Date().toISOString() };
+    const next = [stamped, ...persistedStateRef.current.activities];
     if (!persistSnapshot(next)) return false;
-    setActivities(next);
+    syncActivitiesFromRef();
     showToast(message, () => {
       // Remove exactly this entry — never restore a whole stale array, which
-      // would silently delete anything logged after it.
-      const undone = persistedStateRef.current.activities.filter((item) => item.id !== activity.id);
+      // would silently delete anything logged after it. A just-added entry has
+      // never left this device, so it needs no tombstone.
+      const undone = persistedStateRef.current.activities.filter((item) => item.id !== stamped.id);
       if (!persistSnapshot(undone)) return;
-      setActivities(undone);
+      syncActivitiesFromRef();
       showToast("Last change undone");
     });
     return true;
   }
 
   function updateActivity(next: Activity) {
-    const nextActivities = persistedStateRef.current.activities.map((activity) => activity.id === next.id ? next : activity);
+    const stamped: Activity = { ...next, updatedAt: new Date().toISOString() };
+    const nextActivities = persistedStateRef.current.activities.map((activity) => activity.id === stamped.id ? stamped : activity);
     if (!persistSnapshot(nextActivities)) return false;
-    setActivities(nextActivities);
+    syncActivitiesFromRef();
     return true;
   }
 
   function removeActivity(activity: Activity) {
-    const next = persistedStateRef.current.activities.filter((item) => item.id !== activity.id);
+    // Delete is a tombstone write, not a filter-out: the row stays in storage
+    // (deleted: true) so a future sync can merge the deletion, and the UI only
+    // ever sees the live view.
+    const next = persistedStateRef.current.activities.map((item) =>
+      item.id === activity.id
+        ? { ...item, deleted: true as const, updatedAt: new Date().toISOString() }
+        : item,
+    );
     if (!persistSnapshot(next)) return false;
-    setActivities(next);
+    syncActivitiesFromRef();
     showToast("Entry removed", () => {
-      // Re-insert exactly this entry; sortedActivities re-orders on render.
-      const restored = [activity, ...persistedStateRef.current.activities];
+      // Undo revives the tombstone in place: the deleted flag comes off and the
+      // revival is itself a fresh write (restamped updatedAt) so it wins a merge.
+      const restored = persistedStateRef.current.activities.map((item) => {
+        if (item.id !== activity.id) return item;
+        const revived: Activity = { ...item, updatedAt: new Date().toISOString() };
+        delete revived.deleted;
+        return revived;
+      });
       if (!persistSnapshot(restored)) return;
-      setActivities(restored);
+      syncActivitiesFromRef();
       showToast("Entry restored");
     });
     return true;
@@ -248,14 +312,15 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
   function stopTimer(id: string) {
     const current = persistedStateRef.current.activities;
     const target = current.find((activity) => activity.id === id);
-    if (!target || target.endedAt) return;
+    if (!target || target.deleted || target.endedAt) return;
+    const stampedAt = new Date().toISOString();
     const nextActivities = current.map((activity) =>
         activity.id === id
-          ? { ...activity, endedAt: new Date().toISOString() }
+          ? { ...activity, endedAt: stampedAt, updatedAt: stampedAt }
           : activity,
     );
     if (!persistSnapshot(nextActivities)) return;
-    setActivities(nextActivities);
+    syncActivitiesFromRef();
     showToast(target.type === "sleep" ? "Sleep session saved" : "Nursing session saved");
   }
 
@@ -266,18 +331,21 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
       setNightMode(enabled);
       return;
     }
-    if (!persistSnapshot(activities, profile, enabled)) return;
+    // Read activities through the ref: the live state is missing tombstones,
+    // and persisting it would silently drop them from storage.
+    if (!persistSnapshot(persistedStateRef.current.activities, profile, enabled)) return;
     setNightMode(enabled);
   }
 
   function saveProfile(nextProfile: Profile) {
-    if (!persistSnapshot(activities, nextProfile)) return false;
+    // Stamp the save so the sync engine can tell whose profile edit is fresher.
+    if (!persistSnapshot(persistedStateRef.current.activities, nextProfile, undefined, undefined, undefined, new Date().toISOString())) return false;
     setProfile(nextProfile);
     return true;
   }
 
   function completeOnboarding(nextProfile: Profile) {
-    if (!persistSnapshot([], nextProfile, nightMode, reminders, true)) return false;
+    if (!persistSnapshot([], nextProfile, nightMode, reminders, true, new Date().toISOString())) return false;
     setActivities([]);
     setProfile(nextProfile);
     setStorageWarning(null);
@@ -288,7 +356,7 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
   async function changeFeedReminders(enabled: boolean) {
     if (!enabled) {
       const next = { ...reminders, feedEnabled: false };
-      if (!persistSnapshot(activities, profile, nightMode, next)) return;
+      if (!persistSnapshot(persistedStateRef.current.activities, profile, nightMode, next)) return;
       setReminders(next);
       showToast("Feed reminders off");
       return;
@@ -320,25 +388,98 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
   function changeFeedReminderInterval(minutes: number) {
     if (![120, 180, 240].includes(minutes)) return;
     const next = { ...reminders, feedIntervalMinutes: minutes };
-    if (!persistSnapshot(activities, profile, nightMode, next)) return;
+    if (!persistSnapshot(persistedStateRef.current.activities, profile, nightMode, next)) return;
     setReminders(next);
   }
 
-  function exportData() {
-    // A debug-preview export is marked so the import guard rejects it — fake
-    // entries must never be restorable over a real log.
+  // Sync ingestion. Union the partner's rows into the FULL persisted list
+  // (mergeActivities: LWW, ties to the tombstone, deletions never resurrect)
+  // and report what changed from this device's point of view. Persist-first
+  // like every write path — and only when something actually changed, so the
+  // 60-second poll never rewrites an identical blob.
+  function mergeRemote(remote: Activity[], remoteProfile?: Profile, remoteProfileUpdatedAt?: string): { added: number; updated: number } {
+    const current = persistedStateRef.current;
+    const merged = remote.length ? mergeActivities(current.activities, remote) : current.activities;
+    const summary = remote.length ? summarizeMerge(current.activities, merged) : { added: 0, updated: 0 };
+    // Profile rule: adopt the remote copy only when it cannot clobber a fresher
+    // local edit — the local profile is still the untouched empty default, or
+    // the remote stamp is strictly newer than the local one. A local profile
+    // that predates stamping counts as older: once a family syncs, the stamped
+    // copy is the only one whose recency is known, and a local re-edit always
+    // stamps newer and wins back.
+    const localMs = current.profileUpdatedAt ? new Date(current.profileUpdatedAt).getTime() : -1;
+    const remoteMs = remoteProfileUpdatedAt ? new Date(remoteProfileUpdatedAt).getTime() : -1;
+    const emptyDefault = current.profile.name === "" && current.profile.birthDate === "";
+    const adoptProfile = remoteProfile !== undefined && (emptyDefault || remoteMs > localMs);
+    if (summary.added === 0 && summary.updated === 0 && !adoptProfile) return { added: 0, updated: 0 };
+    const nextProfile = adoptProfile && remoteProfile ? remoteProfile : current.profile;
+    const nextStamp = adoptProfile && remoteProfileUpdatedAt ? remoteProfileUpdatedAt : current.profileUpdatedAt;
+    if (!persistSnapshot(merged, nextProfile, undefined, undefined, undefined, nextStamp)) {
+      return { added: 0, updated: 0 };
+    }
+    syncActivitiesFromRef();
+    if (adoptProfile) setProfile(nextProfile);
+    return { added: summary.added, updated: summary.updated };
+  }
+
+  // Sync egress. A function rather than a value so the debounced push reads
+  // the ref at send time — never a stale render's snapshot. Returns the FULL
+  // list (tombstones included: deletions must travel) plus the profile stamp.
+  function readPersisted() {
+    const { activities, profile, profileUpdatedAt } = persistedStateRef.current;
+    return { activities, profile, profileUpdatedAt };
+  }
+
+  // One payload for every way data leaves this device (download, share): the
+  // full persisted list, tombstones included — a backup is a sync artifact, and
+  // a restore elsewhere must be able to merge deletions too. A debug-preview
+  // export is marked isDemo so the import guard rejects it — fake entries must
+  // never be restorable over a real log.
+  function buildExportFile() {
     const exportProfile = debugMode ? { ...profile, isDemo: true } : profile;
-    const payload = JSON.stringify({ profile: exportProfile, activities, nightMode, reminders, onboardingComplete: true, exportedAt: new Date().toISOString() }, null, 2);
+    const payload = JSON.stringify({ profile: exportProfile, activities: persistedStateRef.current.activities, nightMode, reminders, onboardingComplete: true, exportedAt: new Date().toISOString() }, null, 2);
+    const name = debugMode
+      ? `baby-tracker-DEBUG-${new Date().toISOString().slice(0, 10)}.json`
+      : `baby-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    return { payload, name };
+  }
+
+  function downloadExportFile(payload: string, name: string) {
     const blob = new Blob([payload], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = debugMode
-      ? `baby-tracker-DEBUG-${new Date().toISOString().slice(0, 10)}.json`
-      : `baby-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    anchor.download = name;
     anchor.click();
     URL.revokeObjectURL(url);
     showToast(debugMode ? "Debug file saved — this is not your real log" : "Backup saved to your device");
+  }
+
+  function exportData() {
+    const { payload, name } = buildExportFile();
+    downloadExportFile(payload, name);
+  }
+
+  async function sharePartner() {
+    const { payload, name } = buildExportFile();
+    const file = new File([payload], name, { type: "application/json" });
+    if (!navigator.canShare?.({ files: [file] })) {
+      // No file sharing here (typically desktop): the download is the same
+      // payload, so the partner flow still works via any file hand-off.
+      downloadExportFile(payload, name);
+      return;
+    }
+    try {
+      await navigator.share({ files: [file] });
+      showToast(debugMode
+        ? "Debug file shared — this is not your real log"
+        : "Shared — have your partner open it in their Baby Tracker");
+    } catch (error) {
+      // Closing the share sheet is a decision, not a failure — stay silent.
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      // canShare said yes but share still failed: fall back to the download.
+      downloadExportFile(payload, name);
+    }
   }
 
   function downloadRecovery() {
@@ -392,47 +533,76 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     reader.onload = () => {
       try {
         const parsed = parseStoredData(String(reader.result));
-        if (bootState === "ready" && !window.confirm("Restore this backup? Your current timeline will be replaced and cannot be recovered from the app.")) {
+        if (parsed.legacyDemo) throw new Error("Preview backups are not importable");
+        if (bootState === "ready" && !window.confirm("Merge this backup into your timeline? Existing entries stay; newer versions win.")) {
           return;
         }
+        // Rollback safety: the pre-merge state is written to the recovery slot
+        // BEFORE anything is merged, so a bad backup can always be walked back.
         let recoveryCreated = true;
         if (bootState === "ready" && !debugMode) {
           try {
             window.localStorage.setItem(
               RECOVERY_KEY,
-              JSON.stringify({ profile, activities, nightMode, reminders, onboardingComplete: true }),
+              JSON.stringify({
+                profile: persistedStateRef.current.profile,
+                activities: persistedStateRef.current.activities,
+                nightMode: persistedStateRef.current.nightMode,
+                reminders: persistedStateRef.current.reminders,
+                onboardingComplete: true,
+              }),
             );
           } catch {
             recoveryCreated = false;
           }
         }
-        if (!recoveryCreated && !window.confirm("This browser cannot create a recovery copy. Restore anyway and replace the current timeline without rollback?")) {
+        if (!recoveryCreated && !window.confirm("This browser cannot create a recovery copy. Merge the backup anyway without rollback?")) {
           return;
         }
-        if (parsed.legacyDemo) throw new Error("Preview backups are not importable");
-        const nextProfile = parsed.profile;
-        const nextReminders = parsed.reminders ?? DEFAULT_REMINDERS;
+        const localActivities = persistedStateRef.current.activities;
+        const merged = mergeStored(
+          {
+            activities: localActivities,
+            profile: persistedStateRef.current.profile,
+            nightMode: persistedStateRef.current.nightMode,
+            reminders: persistedStateRef.current.reminders,
+          },
+          {
+            activities: parsed.activities,
+            profile: parsed.profile,
+            nightMode: Boolean(parsed.nightMode),
+            reminders: parsed.reminders ?? DEFAULT_REMINDERS,
+          },
+        );
+        if (merged.activities.length > 25_000) {
+          // parseStoredData rejects blobs beyond this cap; persisting one would
+          // make the tracker unreadable on the next boot.
+          showToast("Merging would create more entries than this app can store safely. Nothing was changed.");
+          return;
+        }
+        const summary = summarizeMerge(localActivities, merged.activities);
         const restoringFromRecovery = bootState !== "ready";
-        if (!persistSnapshot(parsed.activities, nextProfile, Boolean(parsed.nightMode), nextReminders, true)) return;
+        if (!persistSnapshot(merged.activities, merged.profile, merged.nightMode, merged.reminders, true)) return;
         if (restoringFromRecovery) {
           // The stale recovery copy must not shadow future downloads now that a
           // healthy timeline is in place. (Ready-state imports keep the fresh
-          // pre-import copy written above.)
+          // pre-merge copy written above.)
           try {
             window.localStorage.removeItem(RECOVERY_KEY);
           } catch {
             // Ignore: nothing depends on the removal succeeding.
           }
         }
-        setProfile(nextProfile);
-        setActivities(parsed.activities);
-        setNightMode(Boolean(parsed.nightMode));
-        setReminders(nextReminders);
+        setProfile(merged.profile);
+        syncActivitiesFromRef();
+        setNightMode(merged.nightMode);
+        setReminders(merged.reminders);
         setStorageWarning(null);
         setBootState("ready");
+        const counts = `Merged: ${summary.added} new, ${summary.updated} updated, ${summary.unchanged} unchanged`;
         showToast(parsed.droppedActivities > 0
-          ? `Backup restored — ${parsed.droppedActivities} unreadable ${parsed.droppedActivities === 1 ? "entry was" : "entries were"} skipped`
-          : "Backup restored");
+          ? `${counts} — ${parsed.droppedActivities} unreadable ${parsed.droppedActivities === 1 ? "entry" : "entries"} skipped`
+          : counts);
       } catch {
         showToast("That backup could not be read");
       }
@@ -448,7 +618,9 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
 
   // Deliberate, confirmed, total erase — the only way back to onboarding.
   function eraseAllData() {
-    const count = persistedStateRef.current.activities.length;
+    // Count only live entries — tombstones are invisible bookkeeping and would
+    // inflate the number a parent is asked to confirm deleting.
+    const count = liveActivities(persistedStateRef.current.activities).length;
     const name = persistedStateRef.current.profile.name.trim() || "your baby";
     if (
       !window.confirm(
@@ -479,6 +651,9 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     reminders,
     storageWarning,
     recoveredNotice,
+    persistVersion,
+    mergeRemote,
+    readPersisted,
     addActivity,
     updateActivity,
     removeActivity,
@@ -489,6 +664,7 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     changeFeedReminders,
     changeFeedReminderInterval,
     exportData,
+    sharePartner,
     importData,
     downloadRecovery,
     resetUnreadableData,

@@ -5,7 +5,8 @@ import {
   NumericFieldName,
   numericFieldError,
 } from "@/domain/activitySchema";
-import { isValidActivity, parseStoredData, validateDraft } from "@/domain/validate";
+import { activityUpdatedAt, isValidActivity, liveActivities, parseStoredData, validateDraft } from "@/domain/validate";
+import { Activity } from "@/domain/types";
 
 const profile = { name: "Mia", birthDate: "2026-07-14", feedingMode: "mixed" };
 
@@ -33,6 +34,37 @@ describe("isValidActivity numeric bounds", () => {
   it("caps notes at the shared maximum length", () => {
     expect(isValidActivity({ ...baseActivity, note: "x".repeat(NOTE_MAX_LENGTH) })).toBe(true);
     expect(isValidActivity({ ...baseActivity, note: "x".repeat(NOTE_MAX_LENGTH + 1) })).toBe(false);
+  });
+
+  it("tolerates the sync fields and rejects malformed ones", () => {
+    expect(isValidActivity(baseActivity)).toBe(true);
+    expect(isValidActivity({ ...baseActivity, updatedAt: "2026-08-02T10:00:00" })).toBe(true);
+    expect(isValidActivity({ ...baseActivity, updatedAt: "not-a-date" })).toBe(false);
+    expect(isValidActivity({ ...baseActivity, updatedAt: 1234 })).toBe(false);
+    expect(isValidActivity({ ...baseActivity, deleted: true })).toBe(true);
+    expect(isValidActivity({ ...baseActivity, deleted: false })).toBe(false);
+    expect(isValidActivity({ ...baseActivity, deleted: "true" })).toBe(false);
+  });
+});
+
+describe("sync helpers", () => {
+  it("parseStoredData keeps tombstones in the parsed list", () => {
+    const parsed = parseStoredData(storedBlob({
+      activities: [baseActivity, { ...baseActivity, id: "a-2", deleted: true, updatedAt: "2026-08-02T10:00:00" }],
+    }));
+    expect(parsed.activities.map((activity) => activity.id)).toEqual(["a-1", "a-2"]);
+    expect(parsed.droppedActivities).toBe(0);
+  });
+
+  it("liveActivities filters tombstones out", () => {
+    const live: Activity = { id: "live", type: "bottle", startedAt: "2026-08-01T10:00:00" };
+    const dead: Activity = { id: "dead", type: "bottle", startedAt: "2026-08-01T10:00:00", deleted: true };
+    expect(liveActivities([live, dead])).toEqual([live]);
+  });
+
+  it("activityUpdatedAt falls back to startedAt for legacy rows", () => {
+    expect(activityUpdatedAt({ id: "a", type: "diaper", startedAt: "2026-08-01T10:00:00" })).toBe("2026-08-01T10:00:00");
+    expect(activityUpdatedAt({ id: "a", type: "diaper", startedAt: "2026-08-01T10:00:00", updatedAt: "2026-08-03T09:00:00" })).toBe("2026-08-03T09:00:00");
   });
 });
 

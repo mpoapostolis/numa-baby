@@ -21,6 +21,12 @@ export type Activity = {
   headCm?: number;
   temperatureC?: number;
   note?: string;
+  // Sync-ready metadata. Absent on legacy rows: a missing updatedAt is treated
+  // as equal to startedAt (activityUpdatedAt in validate.ts) and stored data is
+  // never rewritten on load. `deleted: true` marks a tombstone — kept in
+  // storage so a future sync can merge the deletion, hidden from the UI.
+  updatedAt?: string;
+  deleted?: true;
 };
 
 export type Profile = {
@@ -44,6 +50,9 @@ export type Sheet = null | "bottle" | "nursing" | "diaper" | "growth" | "health"
 export type StoredData = {
   activities: Activity[];
   profile: Profile;
+  // When the profile was last saved on a device. Optional and backward
+  // compatible — the sync engine uses it to decide whose profile is fresher.
+  profileUpdatedAt?: string;
   nightMode?: boolean;
   reminders?: ReminderSettings;
   legacyDemo?: boolean;
