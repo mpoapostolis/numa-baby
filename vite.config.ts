@@ -22,7 +22,7 @@ export default defineConfig({
       manifest: {
         name: "Baby Tracker — Calm, private baby logging",
         short_name: "Baby Tracker",
-        description: "Private, one-handed tracking for feeds, diapers, sleep and growth.",
+        description: "Private, one-handed tracking for feeds, diapers, burping and growth.",
         id: "/",
         start_url: "/",
         scope: "/",

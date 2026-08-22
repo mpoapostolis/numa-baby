@@ -102,10 +102,10 @@ export default function OnboardingScreen({
             <NurseryScene className="onboarding-scene" />
             <p className="eyebrow">Private by default</p>
             <h1 id="onboarding-title">The whole day,<br />without the mental load.</h1>
-            <p>Log feeds, diapers, sleep and growth in seconds. No account, no cloud — everything stays on this device.</p>
+            <p>Log feeds, diapers, burping and growth in seconds. No account, no cloud — everything stays on this device.</p>
             <div className="onboarding-points">
               <div><span className="glyph-bottle"><Milk /></span><p><strong>One-tap logging</strong><small>Details only when you need them.</small></p></div>
-              <div><span className="glyph-sleep"><Clock /></span><p><strong>Live timers and patterns</strong><small>See what happened and what may be next.</small></p></div>
+              <div><span className="glyph-burp"><Clock /></span><p><strong>Live timers and patterns</strong><small>See what happened and what may be next.</small></p></div>
               <div><span className="onboarding-private-icon"><ShieldCheck /></span><p><strong>Only on this device</strong><small>Export a private backup anytime.</small></p></div>
             </div>
           </section>

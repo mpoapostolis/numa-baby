@@ -10,7 +10,7 @@ Built by a new dad for his own daughter, because every baby app we tried wanted 
 
 - bottle feeds and nursing timers (with next-side memory)
 - wet, dirty, or mixed diapers
-- sleep timers with exact start and stop times
+- a burping stopwatch for the stretch after a feed
 - weight, length, and head circumference
 - temperature and free-form health notes
 - optional notes on feeds, diapers, and growth checks
@@ -22,7 +22,10 @@ Built by a new dad for his own daughter, because every baby app we tried wanted 
 - "right now your baby may be…" — a stage list per age bracket, plus a
   rotating fact of the day; every claim links to its source (AAP,
   WHO, NHS, AAO) and nothing ships without a verified page behind it
-- feed/sleep forecasts learned from your own pattern
+- a care guide that answers "what do I do today" for the baby's exact
+  age — feeding, nappy output, tummy time, burping — and a standing
+  "when to call someone" list with exact thresholds
+- feed forecasts learned from your own pattern
 - a growth guide built on the WHO child growth standards
 
 Not a medical device — always follow your paediatrician's advice.
