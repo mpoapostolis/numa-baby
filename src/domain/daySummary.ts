@@ -164,3 +164,40 @@ export function summarizeDay(activities: Activity[], day: Date, now: number): Da
 
   return summary;
 }
+
+/**
+ * The last `count` calendar days ending on `endDay`, oldest first.
+ *
+ * One bucketing pass over the activities, then one summarize per day over its
+ * own bucket — O(activities), not O(days x activities), so a fortnight of
+ * trend lines re-derived on every minute tick stays free.
+ */
+export function summarizeDays(
+  activities: Activity[],
+  endDay: Date,
+  count: number,
+  now: number,
+): DaySummary[] {
+  const days: Date[] = [];
+  const buckets = new Map<string, Activity[]>();
+  for (let index = count - 1; index >= 0; index--) {
+    const date = new Date(endDay);
+    date.setHours(12, 0, 0, 0);
+    date.setDate(date.getDate() - index);
+    days.push(date);
+    buckets.set(dayKey(date), []);
+  }
+
+  for (const activity of activities) {
+    const bucket = buckets.get(dayKey(new Date(activity.startedAt)));
+    if (bucket) bucket.push(activity);
+  }
+
+  return days.map((date) => summarizeDay(buckets.get(dayKey(date)) ?? [], date, now));
+}
+
+// Local calendar key — never toISOString(), which would bucket by UTC and
+// shift every evening entry into the next day east of Greenwich.
+function dayKey(date: Date) {
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}

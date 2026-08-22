@@ -8,6 +8,7 @@ import { ActivityGlyph } from "../components/ActivityGlyph";
 import { ActivityRow } from "../components/ActivityRow";
 import { DayBand } from "../components/DayBand";
 import { DayRecap } from "../components/DayRecap";
+import { TrendChart } from "../components/TrendChart";
 import { EmptyState } from "../components/EmptyState";
 import { LittleBottle, TinyStars } from "../components/illustrations";
 import { BabyCompanion, CompanionMood } from "../components/BabyCompanion";
@@ -196,6 +197,7 @@ export default function TodayScreen({
   const {
     sortedActivities,
     today,
+    recentDays,
     lastFeed,
     lastBottle,
     activeNursing,
@@ -486,6 +488,12 @@ export default function TodayScreen({
                 canNext: dayOffset > 0,
               } : undefined}
             />
+          )}
+
+          {/* Day-by-day totals: the question a single day cannot answer. Shown
+              once there is more than one day of history to compare. */}
+          {recentDays.filter((day) => !day.isEmpty).length > 1 && (
+            <TrendChart days={recentDays} />
           )}
 
           <DayBand

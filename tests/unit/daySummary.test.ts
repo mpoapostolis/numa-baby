@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { STALE_OPEN_SPAN_MINUTES, summarizeDay } from "@/domain/daySummary";
+import { STALE_OPEN_SPAN_MINUTES, summarizeDay, summarizeDays } from "@/domain/daySummary";
 import { Activity } from "@/domain/types";
 
 // Local-time ISO strings (no trailing Z) keep every case timezone-agnostic.
@@ -259,5 +259,47 @@ describe("summarizeDay", () => {
 
   it("marks a past day as not today", () => {
     expect(summarizeDay([], new Date(2026, 7, 10), now).isToday).toBe(false);
+  });
+});
+
+describe("summarizeDays", () => {
+  it("returns the window oldest first, ending on the given day", () => {
+    const week = summarizeDays([], day, 7, now);
+    expect(week).toHaveLength(7);
+    expect(week[6].isToday).toBe(true);
+    expect(week.map((d) => d.date.getDate())).toEqual([6, 7, 8, 9, 10, 11, 12]);
+  });
+
+  it("buckets each activity onto its own local day", () => {
+    const week = summarizeDays(
+      [
+        make({ type: "bottle", startedAt: "2026-08-10T09:00:00", amount: 100 }),
+        make({ type: "bottle", startedAt: "2026-08-12T09:00:00", amount: 120 }),
+        make({ type: "bottle", startedAt: "2026-08-12T23:45:00", amount: 60 }),
+      ],
+      day,
+      7,
+      now,
+    );
+    expect(week.map((d) => d.ml)).toEqual([0, 0, 0, 0, 100, 0, 180]);
+  });
+
+  it("ignores activities outside the window", () => {
+    const week = summarizeDays(
+      [make({ type: "bottle", startedAt: "2026-07-01T09:00:00", amount: 100 })],
+      day,
+      7,
+      now,
+    );
+    expect(week.every((d) => d.isEmpty)).toBe(true);
+  });
+
+  it("agrees with summarizeDay for the same day", () => {
+    const acts = [
+      make({ type: "bottle", startedAt: "2026-08-12T09:00:00", amount: 100 }),
+      make({ type: "diaper", startedAt: "2026-08-12T10:00:00", diaperKind: "both" }),
+    ];
+    const [viaRange] = summarizeDays(acts, day, 1, now);
+    expect(viaRange).toEqual(summarizeDay(acts, day, now));
   });
 });

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { summarizeDay } from "../domain/daySummary";
+import { summarizeDay, summarizeDays } from "../domain/daySummary";
 import { ageInMonths, isSameDay, median } from "../domain/time";
 import { Activity, Profile } from "../domain/types";
 
@@ -139,9 +139,12 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
     // The full breakdown every recap quotes — one shared source so Today,
     // Timeline and Insights can never disagree about a number.
     const today = summarizeDay(sortedActivities, new Date(minuteClock), minuteClock);
+    // A fortnight of daily totals for the trend line — one pass, not fourteen.
+    const recentDays = summarizeDays(sortedActivities, new Date(minuteClock), 14, minuteClock);
 
     return {
       today,
+      recentDays,
       todayActivities,
       feedsToday,
       bottleMlToday,
