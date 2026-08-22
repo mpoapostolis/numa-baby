@@ -671,16 +671,26 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Five cells, read as one row per system: feeding, diapers, sleep. The odd
+   one out (sleep) takes the full width rather than leaving a hole. */
 .recap-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px 12px;
 }
 
-/* Wide enough for one row: four cells side by side. */
-@container (width >= 560px) {
+.recap-grid > .recap-stat:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+/* Wide enough for one row: every cell side by side. */
+@container (width >= 640px) {
   .recap-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .recap-grid > .recap-stat:last-child:nth-child(odd) {
+    grid-column: auto;
   }
 }
 

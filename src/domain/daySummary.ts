@@ -20,6 +20,11 @@ export type DaySummary = {
   isToday: boolean;
   /** A timer (nursing or sleep) was still running when this was computed. */
   hasRunningTimer: boolean;
+  /** A timer left open far longer than any real session was excluded from the
+      minute figures — it is a forgotten stopwatch, not twenty hours of sleep. */
+  hasStaleTimer: boolean;
+  /** Changes logged as both wet and dirty: exactly wet + dirty - diapers. */
+  both: number;
 
   feeds: number;
   bottles: number;
@@ -51,6 +56,12 @@ export type DaySummary = {
   isEmpty: boolean;
 };
 
+/** An open span older than this is a forgotten timer, not data. Above any
+    plausible newborn sleep or nursing session, below a full day — so a genuine
+    overnight is never dropped, but a timer nobody stopped three days ago stops
+    handing 24 hours of "sleep" to every day in between. */
+export const STALE_OPEN_SPAN_MINUTES = 18 * 60;
+
 const EMPTY = {
   feeds: 0,
   bottles: 0,
@@ -60,6 +71,7 @@ const EMPTY = {
   diapers: 0,
   wet: 0,
   dirty: 0,
+  both: 0,
   sleepMinutes: 0,
   naps: 0,
   longestSleepMinutes: 0,
@@ -85,19 +97,30 @@ export function summarizeDay(activities: Activity[], day: Date, now: number): Da
     date,
     isToday,
     hasRunningTimer: false,
+    hasStaleTimer: false,
     isEmpty: true,
   };
 
+  const nowIso = new Date(now).toISOString();
+  let firstFeedMs: number | undefined;
+  let lastFeedMs: number | undefined;
+
   for (const activity of activities) {
     const isSpan = activity.type === "sleep" || activity.type === "nursing";
-    // Spans belong to every day they touch; point events only to their own.
-    const touchesDay = isSpan
-      ? minutesOnDay(activity, date, now) > 0 || isSameDay(activity.startedAt, date)
-      : isSameDay(activity.startedAt, date);
+    const isOpen = isSpan && !activity.endedAt;
+    const isStale =
+      isOpen &&
+      now - new Date(activity.startedAt).getTime() > STALE_OPEN_SPAN_MINUTES * 60_000;
+    const startedToday = isSameDay(activity.startedAt, date);
+    // Live spans belong to every day they touch; point events and forgotten
+    // timers belong only to the day they started.
+    const touchesDay = isSpan && !isStale
+      ? minutesOnDay(activity, date, now) > 0 || startedToday
+      : startedToday;
     if (!touchesDay) continue;
 
-    const startedToday = isSameDay(activity.startedAt, date);
-    if (isSpan && !activity.endedAt) summary.hasRunningTimer = true;
+    if (isStale) summary.hasStaleTimer = true;
+    else if (isOpen) summary.hasRunningTimer = true;
 
     switch (activity.type) {
       case "bottle":
@@ -112,26 +135,31 @@ export function summarizeDay(activities: Activity[], day: Date, now: number): Da
           } else {
             summary.nursings += 1;
           }
-          if (!summary.firstFeedAt || activity.startedAt < summary.firstFeedAt) {
+          // Compared as instants, never as strings: lexicographic order only
+          // agrees with time while every value is the same UTC form, which a
+          // restored backup carrying "+02:00" offsets breaks silently.
+          const startedMs = new Date(activity.startedAt).getTime();
+          if (firstFeedMs === undefined || startedMs < firstFeedMs) {
+            firstFeedMs = startedMs;
             summary.firstFeedAt = activity.startedAt;
           }
-          if (!summary.lastFeedAt || activity.startedAt > summary.lastFeedAt) {
+          if (lastFeedMs === undefined || startedMs > lastFeedMs) {
+            lastFeedMs = startedMs;
             summary.lastFeedAt = activity.startedAt;
           }
           // Minutes follow the count: a 23:50 nursing that ends at 00:10 is
           // one feed on the day it started, with all of its minutes there —
-          // "0 feeds · 10m nursing" on the next day reads as a bug.
-          if (activity.type === "nursing") {
-            summary.nursingMinutes += minutesBetween(
-              activity.startedAt,
-              activity.endedAt ?? new Date(now).toISOString(),
-            );
+          // "0 feeds · 10m nursing" on the next day reads as a bug. A timer
+          // nobody stopped is not twenty hours of nursing.
+          if (activity.type === "nursing" && !isStale) {
+            summary.nursingMinutes += minutesBetween(activity.startedAt, activity.endedAt ?? nowIso);
           }
         }
         break;
       }
       case "diaper": {
         summary.diapers += 1;
+        if (activity.diaperKind === "both") summary.both += 1;
         // A kind-less diaper renders as "Wet diaper" in every row and title
         // (activityDisplay.ts) — the totals must tell the same story.
         if (activity.diaperKind !== "dirty") summary.wet += 1;
@@ -139,7 +167,7 @@ export function summarizeDay(activities: Activity[], day: Date, now: number): Da
         break;
       }
       case "sleep": {
-        const minutes = minutesOnDay(activity, date, now);
+        const minutes = isStale ? 0 : minutesOnDay(activity, date, now);
         if (minutes > 0) {
           summary.sleepMinutes += minutes;
           summary.naps += 1;

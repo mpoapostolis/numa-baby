@@ -51,13 +51,12 @@ function Stat({ glyph, label, children, sub }: StatProps) {
   );
 }
 
-// "4 wet · 2 dirty" — only the halves that happened, so a nothing-but-wet day
-// never reads "4 wet · 0 dirty".
-function diaperSub(summary: DaySummary) {
-  const parts: string[] = [];
-  if (summary.wet > 0) parts.push(`${summary.wet} wet`);
-  if (summary.dirty > 0) parts.push(`${summary.dirty} dirty`);
-  return parts.join(" · ");
+// Wet and dirty each get their own numeral, so "how many times did she pee"
+// is answered at glance speed. They deliberately overlap — a "both" change
+// counts in each — so the reconciling line names the real change count.
+function changesSub(summary: DaySummary) {
+  if (summary.diapers === 0) return undefined;
+  return `of ${summary.diapers} ${summary.diapers === 1 ? "change" : "changes"}`;
 }
 
 function feedSub(summary: DaySummary) {
@@ -166,12 +165,11 @@ export function DayRecap({ summary, title, stepper }: DayRecapProps) {
               : <span className="is-zero">—</span>}
           </Stat>
         )}
-        <Stat
-          glyph="diaper"
-          label={summary.diapers === 1 ? "Diaper" : "Diapers"}
-          sub={diaperSub(summary)}
-        >
-          <Count value={summary.diapers} />
+        <Stat glyph="diaper" label="Wet" sub={changesSub(summary)}>
+          <Count value={summary.wet} />
+        </Stat>
+        <Stat glyph="diaper" label="Dirty" sub={changesSub(summary)}>
+          <Count value={summary.dirty} />
         </Stat>
         <Stat glyph="sleep" label="Sleep" sub={sleepSub(summary)}>
           <Duration minutes={summary.sleepMinutes} />

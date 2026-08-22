@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { summarizeDay } from "@/domain/daySummary";
+import { STALE_OPEN_SPAN_MINUTES, summarizeDay } from "@/domain/daySummary";
 import { Activity } from "@/domain/types";
 
 // Local-time ISO strings (no trailing Z) keep every case timezone-agnostic.
@@ -136,6 +136,66 @@ describe("summarizeDay", () => {
     );
     expect(summary.naps).toBe(2);
     expect(summary.longestSleepMinutes).toBe(150);
+  });
+
+  it("does not let a forgotten timer fabricate sleep on days it crosses", () => {
+    // Started three days ago and never stopped: the day it began keeps the
+    // entry, every day since must stay untouched.
+    const orphan = make({ type: "sleep", startedAt: "2026-08-09T21:00:00" });
+    const started = summarizeDay([orphan], new Date(2026, 7, 9), now);
+    const crossed = summarizeDay([orphan], new Date(2026, 7, 10), now);
+    const today = summarizeDay([orphan], day, now);
+
+    expect(started.naps).toBe(1);
+    expect(started.sleepMinutes).toBe(0);
+    expect(started.hasStaleTimer).toBe(true);
+    expect(started.hasRunningTimer).toBe(false);
+    for (const summary of [crossed, today]) {
+      expect(summary.sleepMinutes).toBe(0);
+      expect(summary.naps).toBe(0);
+      expect(summary.isEmpty).toBe(true);
+    }
+  });
+
+  it("still trusts an open timer that is younger than the stale threshold", () => {
+    const started = new Date(now - (STALE_OPEN_SPAN_MINUTES - 60) * 60_000);
+    const summary = summarizeDay(
+      [make({ type: "sleep", startedAt: started.toISOString() })],
+      day,
+      now,
+    );
+    expect(summary.sleepMinutes).toBeGreaterThan(0);
+    expect(summary.hasRunningTimer).toBe(true);
+    expect(summary.hasStaleTimer).toBe(false);
+  });
+
+  it("brackets the day by instant, not by string order", () => {
+    // Same two feeds, one written in a +02:00 offset by a restored backup:
+    // 07:30+02:00 is 05:30 UTC, earlier than 06:00Z despite sorting later.
+    const summary = summarizeDay(
+      [
+        make({ type: "bottle", startedAt: "2026-08-12T06:00:00.000Z", amount: 90 }),
+        make({ type: "bottle", startedAt: "2026-08-12T07:30:00.000+02:00", amount: 90 }),
+      ],
+      new Date(Date.parse("2026-08-12T06:00:00.000Z")),
+      Date.parse("2026-08-12T20:00:00.000Z"),
+    );
+    expect(summary.firstFeedAt).toBe("2026-08-12T07:30:00.000+02:00");
+    expect(summary.lastFeedAt).toBe("2026-08-12T06:00:00.000Z");
+  });
+
+  it("counts wet + dirty overlaps so the halves reconcile with the changes", () => {
+    const summary = summarizeDay(
+      [
+        make({ type: "diaper", startedAt: "2026-08-12T08:00:00", diaperKind: "wet" }),
+        make({ type: "diaper", startedAt: "2026-08-12T11:00:00", diaperKind: "both" }),
+        make({ type: "diaper", startedAt: "2026-08-12T14:00:00", diaperKind: "dirty" }),
+      ],
+      day,
+      now,
+    );
+    expect(summary.both).toBe(1);
+    expect(summary.wet + summary.dirty - summary.diapers).toBe(summary.both);
   });
 
   it("is order-independent", () => {
