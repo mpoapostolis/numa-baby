@@ -523,3 +523,66 @@ test("changing night mode on the recovery screen persists nothing", async () => 
   expect(setItem).not.toHaveBeenCalled();
   expect(window.localStorage.getItem(STORAGE_KEY)).toBe(corrupt);
 });
+
+// —— Pairing on a legacy install ——————————————————————————————————
+// Both of these were found by running the real two-device flow, not by
+// reading the code: a phone that has been logging since before sync existed
+// carries no profile stamp, and a partner's phone carries nothing at all.
+
+test("starting a family makes an unstamped legacy profile syncable", async () => {
+  window.localStorage.setItem(STORAGE_KEY, makeBlob([makeActivity("a1")]));
+  const { result } = renderStore([]);
+  await waitFor(() => expect(result.current.bootState).toBe("ready"));
+
+  // A blob written before sync existed has no stamp, and the push only sends
+  // stamped profiles — so without this the partner never learns the name.
+  expect(result.current.readPersisted().profileUpdatedAt).toBeUndefined();
+
+  act(() => result.current.stampProfileForSync());
+
+  const stamped = result.current.readPersisted();
+  expect(stamped.profileUpdatedAt).toBeDefined();
+  expect(stamped.profile.name).toBe("Mia");
+  // Stamping is not an edit: not one entry may move.
+  expect(stamped.activities.map((a) => a.id)).toEqual(["a1"]);
+});
+
+test("stamping never overwrites a stamp that already exists", async () => {
+  const existing = "2026-01-01T00:00:00.000Z";
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    ...JSON.parse(makeBlob()),
+    profileUpdatedAt: existing,
+  }));
+  const { result } = renderStore([]);
+  await waitFor(() => expect(result.current.bootState).toBe("ready"));
+
+  act(() => result.current.stampProfileForSync());
+
+  expect(result.current.readPersisted().profileUpdatedAt).toBe(existing);
+});
+
+test("stamping does nothing on a phone with no profile of its own", async () => {
+  const { result } = renderStore([]);
+  await waitFor(() => expect(result.current.bootState).toBe("onboarding"));
+
+  act(() => result.current.stampProfileForSync());
+
+  // An empty default must stay unstamped, or a joining phone would out-rank
+  // the family's real profile on the first pull.
+  expect(result.current.readPersisted().profileUpdatedAt).toBeUndefined();
+});
+
+test("joining a family reaches ready without inventing a profile", async () => {
+  const { result } = renderStore([]);
+  await waitFor(() => expect(result.current.bootState).toBe("onboarding"));
+
+  act(() => { result.current.completeJoin(); });
+
+  // The sync engine refuses to pull before "ready", so a phone stuck in
+  // onboarding would pair and then never receive anything.
+  expect(result.current.bootState).toBe("ready");
+  const persisted = result.current.readPersisted();
+  expect(persisted.profile.name).toBe("");
+  expect(persisted.profileUpdatedAt).toBeUndefined();
+  expect(persisted.activities).toEqual([]);
+});

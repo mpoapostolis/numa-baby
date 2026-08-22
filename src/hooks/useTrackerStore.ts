@@ -353,6 +353,42 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     return true;
   }
 
+  // The phone that STARTS a family is the source of truth for the baby's
+  // profile, but a profile saved before sync existed carries no stamp — and
+  // the push deliberately only sends stamped profiles, so without this the
+  // partner's phone would join and never learn the baby's name or birth date.
+  // Stamping once, at pairing, makes the existing profile syncable without
+  // touching a single entry. A phone that JOINS must never call this: its
+  // profile has to lose to the family's.
+  function stampProfileForSync() {
+    const current = persistedStateRef.current;
+    const isEmptyDefault = current.profile.name === "" && current.profile.birthDate === "";
+    if (current.profileUpdatedAt || isEmptyDefault) return;
+    persistSnapshot(
+      current.activities,
+      current.profile,
+      undefined,
+      undefined,
+      undefined,
+      new Date().toISOString(),
+    );
+  }
+
+  // A phone that joined a family skips the setup form entirely: it has no
+  // baby of its own to describe, and the profile is about to arrive over the
+  // sync. Onboarding is marked complete so the app reaches "ready" — the sync
+  // engine deliberately refuses to pull before then — and the profile is left
+  // as the untouched empty default with NO stamp, so the first pull adopts the
+  // family's copy rather than out-ranking it with a fresh local timestamp.
+  function completeJoin() {
+    const current = persistedStateRef.current;
+    if (!persistSnapshot(current.activities, current.profile, nightMode, reminders, true, current.profileUpdatedAt)) {
+      return false;
+    }
+    setBootState("ready");
+    return true;
+  }
+
   async function changeFeedReminders(enabled: boolean) {
     if (!enabled) {
       const next = { ...reminders, feedEnabled: false };
@@ -661,6 +697,8 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     changeNightMode,
     saveProfile,
     completeOnboarding,
+    completeJoin,
+    stampProfileForSync,
     changeFeedReminders,
     changeFeedReminderInterval,
     exportData,

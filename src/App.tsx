@@ -22,11 +22,11 @@ import { Toaster } from "./components/ui/sonner";
 import { AppSidebar } from "./components/AppSidebar";
 import { BabyFace, SleepingBaby } from "./components/illustrations";
 import { LogSheet } from "./components/LogSheet";
+import JoinFamilyScreen from "./components/JoinFamilyScreen";
 import OnboardingScreen from "./screens/OnboardingScreen";
 import TodayScreen from "./screens/TodayScreen";
 import { Activity, ActivityType, Sheet, Tab } from "./domain/types";
 import { JOIN_CODE_PATTERN } from "./domain/familyPairing";
-import { buildInsightInput, insightsFor } from "./domain/insightRules";
 import { ageInDays } from "./domain/time";
 import { useActivityStats } from "./hooks/useActivityStats";
 import { useFamilySync } from "./hooks/useFamilySync";
@@ -123,11 +123,13 @@ export default function HomePage() {
     changeNightMode,
     saveProfile,
     completeOnboarding,
+    completeJoin,
     changeFeedReminders,
     changeFeedReminderInterval,
     persistVersion,
     mergeRemote,
     readPersisted,
+    stampProfileForSync,
     exportData,
     sharePartner,
     importData,
@@ -142,6 +144,7 @@ export default function HomePage() {
     bootState,
     persistVersion,
     readPersisted,
+    stampProfileForSync,
     mergeRemote,
     showToast,
   });
@@ -226,6 +229,21 @@ export default function HomePage() {
         <SleepingBaby size={64} aria-hidden="true" />
         <span>Baby Tracker</span>
       </main>
+    );
+  }
+
+  // A scanned invite on an empty phone skips onboarding entirely: the profile
+  // and the whole history are about to arrive over the sync, so asking this
+  // parent to type a name and a birth date would be asking them to invent a
+  // baby that already exists.
+  if (bootState === "onboarding" && incomingJoinCode && !familySync.pairing) {
+    return (
+      <JoinFamilyScreen
+        code={incomingJoinCode}
+        familySync={familySync}
+        onJoined={completeJoin}
+        onSkip={() => setIncomingJoinCode(null)}
+      />
     );
   }
 
@@ -339,14 +357,10 @@ export default function HomePage() {
           {activeTab === "insights" && (
             <Suspense fallback={screenFallback}>
               <InsightsScreen
-                insights={insightsFor(buildInsightInput({
-                  activities,
-                  recentDays: stats.recentDays,
-                  ageDays: ageInDays(profile.birthDate, minuteClock),
-                  ageMonths: babyAgeMonths,
-                  feedingMode: profile.feedingMode,
-                  now: minuteClock,
-                }))}
+                activities={activities}
+                ageDays={ageInDays(profile.birthDate, minuteClock)}
+                feedingMode={profile.feedingMode}
+                minuteClock={minuteClock}
                 stats={stats}
                 onAddGrowth={() => openSheet("growth")}
                 onOpenGuide={() => navigateTo("guide")}

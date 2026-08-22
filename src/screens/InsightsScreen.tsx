@@ -1,15 +1,22 @@
+import { useMemo } from "react";
 import { ExternalLink, PhoneCall, ShieldCheck, Sparkles } from "lucide-react";
 import { EmptyState } from "../components/EmptyState";
 import { GrowthChart } from "../components/GrowthChart";
 import { LittleBottle } from "../components/illustrations";
 import { activityTitle } from "../domain/activityDisplay";
 import { formatShortDay, formatTime, humanDuration, median } from "../domain/time";
-import { Insight } from "../domain/insightRules";
+import { Insight, buildInsightInput, insightsFor } from "../domain/insightRules";
+import { Activity, FeedingMode } from "../domain/types";
 import { ActivityStats } from "../hooks/useActivityStats";
 
 type InsightsScreenProps = {
   stats: ActivityStats;
-  insights: Insight[];
+  // The rules engine is derived here rather than in App so it rides this
+  // screen's lazy chunk — Today must not pay for advice it never shows.
+  activities: Activity[];
+  ageDays: number | null;
+  feedingMode: FeedingMode;
+  minuteClock: number;
   onAddGrowth: () => void;
   onOpenGuide: () => void;
 };
@@ -55,7 +62,26 @@ function DurationFigure({ minutes }: { minutes: number }) {
   return <>{hours}<span className="unit">h</span> {mins}<span className="unit">m</span></>;
 }
 
-export default function InsightsScreen({ stats, insights, onAddGrowth, onOpenGuide }: InsightsScreenProps) {
+export default function InsightsScreen({
+  stats,
+  activities,
+  ageDays,
+  feedingMode,
+  minuteClock,
+  onAddGrowth,
+  onOpenGuide,
+}: InsightsScreenProps) {
+  const insights = useMemo(
+    () => insightsFor(buildInsightInput({
+      activities,
+      recentDays: stats.recentDays,
+      ageDays,
+      ageMonths: stats.babyAgeMonths,
+      feedingMode,
+      now: minuteClock,
+    })),
+    [activities, stats.recentDays, stats.babyAgeMonths, ageDays, feedingMode, minuteClock],
+  );
   const {
     typicalGap,
     averageFeeds,

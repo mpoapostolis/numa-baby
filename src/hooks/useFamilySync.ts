@@ -37,6 +37,8 @@ type FamilySyncOptions = {
   // Bumped by the store on every successful persist — the push trigger.
   persistVersion: number;
   readPersisted: () => { activities: Activity[]; profile: Profile; profileUpdatedAt?: string };
+  /** Makes an unstamped legacy profile syncable. Only ever called on create. */
+  stampProfileForSync: () => void;
   mergeRemote: (remote: Activity[], profile?: Profile, profileUpdatedAt?: string) => { added: number; updated: number };
   showToast: (message: string) => void;
 };
@@ -77,7 +79,7 @@ type LiveSync = {
   revoked: boolean;
 };
 
-export function useFamilySync({ debugMode, bootState, persistVersion, readPersisted, mergeRemote, showToast }: FamilySyncOptions) {
+export function useFamilySync({ debugMode, bootState, persistVersion, readPersisted, stampProfileForSync, mergeRemote, showToast }: FamilySyncOptions) {
   const [pairing, setPairing] = useState<FamilyPairing | null>(() => (debugMode ? null : loadPairing()));
   const [status, setStatus] = useState<SyncStatus>(() => ({
     phase: "idle",
@@ -292,6 +294,8 @@ export function useFamilySync({ debugMode, bootState, persistVersion, readPersis
     if (debugMode) return false;
     try {
       beginPairing(await transport.createFamily(label), label);
+      // This phone owns the family's profile; make sure it can actually travel.
+      stampProfileForSync();
       return true;
     } catch (error) {
       markFailed(error);
