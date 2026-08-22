@@ -1,6 +1,9 @@
-import { ArrowLeft, ExternalLink, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ExternalLink, PhoneCall, ShieldCheck } from "lucide-react";
 import { Button } from "../components/ui/button";
+import { ActivityGlyph } from "../components/ActivityGlyph";
 import { SproutChart } from "../components/illustrations";
+import { CareCard, WATCH_FOR, careForAge } from "../domain/careGuidance";
+import { ageInDays } from "../domain/time";
 import {
   MAX_REFERENCE_MONTHS,
   WEEKLY_GAIN_BANDS,
@@ -22,8 +25,37 @@ const kg = (value: number) => value.toFixed(1);
 type GrowthGuideScreenProps = {
   profile: Profile;
   latestGrowth?: Activity;
+  minuteClock: number;
   onBack?: () => void;
 };
+
+// Each care card wears the pigment of the thing it is about, so the four read
+// as one row of the same family the log rows already use.
+const CARE_GLYPH = {
+  feeding: "bottle",
+  nappies: "diaper",
+  activity: "growth",
+  comfort: "burp",
+} as const;
+
+function CareCardView({ card }: { card: CareCard }) {
+  const glyph = CARE_GLYPH[card.kind];
+  return (
+    <li className="care-card">
+      <span className={`activity-glyph glyph-${glyph}`} aria-hidden="true">
+        <ActivityGlyph type={glyph} />
+      </span>
+      <div className="care-copy">
+        <h3 className="care-title">{card.title}</h3>
+        <p className="care-body">{card.body}</p>
+        <p className="care-action">{card.action}</p>
+        <a className="fact-source" href={card.source.url} target="_blank" rel="noopener noreferrer">
+          {card.source.name} <ExternalLink size={12} aria-hidden="true" />
+        </a>
+      </div>
+    </li>
+  );
+}
 
 // Fractional age drives the interpolated band — a 24-day-old must not be
 // shown the birth-day range, which parks a healthy weight at the P97 edge.
@@ -94,8 +126,15 @@ const GUIDE_SOURCES = [
   },
 ];
 
-export default function GrowthGuideScreen({ profile, latestGrowth, onBack }: GrowthGuideScreenProps) {
+export default function GrowthGuideScreen({
+  profile,
+  latestGrowth,
+  minuteClock,
+  onBack,
+}: GrowthGuideScreenProps) {
   const name = profile.name.trim() || "Baby";
+  const careDays = ageInDays(profile.birthDate, minuteClock);
+  const care = careDays === null ? null : careForAge(careDays);
   const exactAge = fractionalAgeMonths(profile.birthDate);
   const age = exactAge === null ? null : Math.min(exactAge, MAX_REFERENCE_MONTHS);
   const range = age === null ? null : expectedWeightRange(age, profile.sex);
@@ -117,10 +156,48 @@ export default function GrowthGuideScreen({ profile, latestGrowth, onBack }: Gro
               <ArrowLeft size={16} aria-hidden="true" /> Insights
             </Button>
           )}
-          <p className="eyebrow">Reference ranges</p>
-          <h1 id="growth-guide-heading">Growth guide</h1>
+          <p className="eyebrow">Care guide</p>
+          <h1 id="growth-guide-heading">What to do today</h1>
         </div>
       </div>
+
+      {care && (
+        <section className="care-today" aria-labelledby="care-today-heading">
+          <div className="care-heading">
+            <h2 id="care-today-heading" className="t-title-2">{care.stage}</h2>
+            <p className="t-meta">
+              What is expected for {name} right now, and what to do about it. Every line links
+              to the page it came from.
+            </p>
+          </div>
+          <ul className="care-list">
+            {care.cards.map((card) => <CareCardView key={card.title} card={card} />)}
+          </ul>
+        </section>
+      )}
+
+      <section className="surface-card watch-card" aria-labelledby="watch-heading">
+        <div className="watch-head">
+          <span className="watch-icon" aria-hidden="true"><PhoneCall size={18} /></span>
+          <div>
+            <h2 id="watch-heading" className="t-title-2">When to call someone</h2>
+            <p className="t-meta">
+              This app never decides any of these — you do. Trust your instincts and ring your
+              paediatrician, midwife or health visitor.
+            </p>
+          </div>
+        </div>
+        <ul className="watch-list">
+          {WATCH_FOR.map((item) => (
+            <li key={item.sign}>
+              <span>{item.sign}</span>
+              <a className="fact-source" href={item.source.url} target="_blank" rel="noopener noreferrer">
+                {item.source.name} <ExternalLink size={12} aria-hidden="true" />
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <div className="surface-card guide-disclaimer">
         <ShieldCheck size={20} />

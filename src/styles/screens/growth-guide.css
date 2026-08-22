@@ -332,3 +332,139 @@
     display: none;
   }
 }
+
+/* "What to do today" — the age-matched care cards. One row per card, the
+   pigment chip on the left like every log row, the action in ink-1 so the
+   thing to actually do is the darkest line in the block. */
+.care-today {
+  display: grid;
+  gap: 12px;
+}
+
+.care-heading {
+  display: grid;
+  gap: 4px;
+}
+
+.care-heading h2 {
+  margin: 0;
+}
+
+.care-heading p {
+  margin: 0;
+}
+
+.care-list {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+  list-style: none;
+}
+
+.care-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--card);
+}
+
+.care-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.care-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.care-body {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+/* The action earns a petal marker: it is the only line that asks for
+   something to happen. */
+.care-action {
+  position: relative;
+  margin: 2px 0 0;
+  padding-left: 14px;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.care-action::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: calc((1.5em - 5px) / 2);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--signal);
+}
+
+.care-card .fact-source {
+  justify-self: start;
+  margin-top: 2px;
+}
+
+/* The call-someone card: coral-keyed but never alarmed — no red fill, no
+   siren. A parent reading this at 3am must not be frightened by styling. */
+.watch-card {
+  display: grid;
+  gap: 12px;
+  border-color: color-mix(in oklch, var(--glyph-health) 28%, var(--border));
+}
+
+.watch-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.watch-head h2,
+.watch-head p {
+  margin: 0;
+}
+
+.watch-icon {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: color-mix(in oklch, var(--glyph-health) var(--glyph-wash), var(--card));
+  color: var(--glyph-health);
+}
+
+.watch-list {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+  list-style: none;
+}
+
+.watch-list li {
+  display: grid;
+  gap: 2px;
+  padding-left: 14px;
+  border-left: 2px solid color-mix(in oklch, var(--glyph-health) 45%, transparent);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.watch-list .fact-source {
+  justify-self: start;
+}

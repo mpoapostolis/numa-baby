@@ -318,7 +318,11 @@ export default function HomePage() {
 
           {activeTab === "guide" && (
             <Suspense fallback={screenFallback}>
-              <GrowthGuideScreen profile={profile} latestGrowth={stats.latestGrowth} />
+              <GrowthGuideScreen
+                profile={profile}
+                latestGrowth={stats.latestGrowth}
+                minuteClock={minuteClock}
+              />
             </Suspense>
           )}
 
