@@ -67,6 +67,20 @@ function feedSub(summary: DaySummary) {
   return parts.join(" · ");
 }
 
+// The millilitre figure covers bottles only; say so whenever the day also
+// held nursing, so the number is never read as the day's total intake.
+function milkSub(summary: DaySummary) {
+  if (summary.nursings === 0) return undefined;
+  return summary.nursingMinutes > 0
+    ? `bottles only · ${humanDuration(summary.nursingMinutes)} nursing`
+    : "bottles only";
+}
+
+function nursedSub(summary: DaySummary) {
+  const sessions = `${summary.nursings} ${summary.nursings === 1 ? "session" : "sessions"}`;
+  return summary.hasRunningTimer ? `${sessions} · one still going` : sessions;
+}
+
 function sleepSub(summary: DaySummary) {
   const parts: string[] = [];
   if (summary.naps > 0) parts.push(`${summary.naps} ${summary.naps === 1 ? "stretch" : "stretches"}`);
@@ -138,13 +152,20 @@ export function DayRecap({ summary, title, stepper }: DayRecapProps) {
         >
           <Count value={summary.feeds} />
         </Stat>
-        <Stat
-          glyph="bottle"
-          label="Milk"
-          sub={summary.nursingMinutes > 0 ? `${humanDuration(summary.nursingMinutes)} nursing` : undefined}
-        >
-          {summary.ml > 0 ? <>{summary.ml}<span className="unit">ml</span></> : <span className="is-zero">—</span>}
-        </Stat>
+        {/* A breast-only day gets time at the breast, not "Milk —" forever.
+            When both happen, the millilitres are labelled as bottles only —
+            300 ml is not the day's whole intake if there was also nursing. */}
+        {summary.bottles === 0 && summary.nursings > 0 ? (
+          <Stat glyph="nursing" label="Nursed" sub={nursedSub(summary)}>
+            <Duration minutes={summary.nursingMinutes} />
+          </Stat>
+        ) : (
+          <Stat glyph="bottle" label="Milk" sub={milkSub(summary)}>
+            {summary.ml > 0
+              ? <>{summary.ml}<span className="unit">ml</span></>
+              : <span className="is-zero">—</span>}
+          </Stat>
+        )}
         <Stat
           glyph="diaper"
           label={summary.diapers === 1 ? "Diaper" : "Diapers"}
