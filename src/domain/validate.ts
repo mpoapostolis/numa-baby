@@ -14,6 +14,7 @@ const activityTypes = new Set<ActivityType>([
   "bottle",
   "nursing",
   "diaper",
+  "burp",
   "sleep",
   "growth",
   "health",

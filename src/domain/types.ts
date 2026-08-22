@@ -2,7 +2,7 @@
 // touches is defined here so the validators, the fixtures and the app agree on
 // one shape.
 
-export type ActivityType = "bottle" | "nursing" | "diaper" | "sleep" | "growth" | "health";
+export type ActivityType = "bottle" | "nursing" | "diaper" | "burp" | "sleep" | "growth" | "health";
 export type DiaperKind = "wet" | "dirty" | "both";
 export type FeedingMode = "mixed" | "breast" | "bottle";
 export type Tab = "today" | "timeline" | "insights" | "guide" | "more";

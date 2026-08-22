@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { summarizeDay } from "../domain/daySummary";
-import { ageInMonths, isSameDay, median, minutesOnDay } from "../domain/time";
+import { ageInMonths, isSameDay, median } from "../domain/time";
 import { Activity, Profile } from "../domain/types";
 
 // Every derived figure the screens read, split into two memos: one pass over
@@ -21,11 +21,9 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
     // source lists the pattern maths read from.
     let lastFeed: Activity | undefined;
     let lastBottle: Activity | undefined;
-    let activeSleep: Activity | undefined;
     let activeNursing: Activity | undefined;
     const activeTimers: Activity[] = [];
     const feedTimes: number[] = [];
-    const completedSleeps: Activity[] = [];
     const growthByDate: Activity[] = [];
     for (const activity of sortedActivities) {
       const isFeed = activity.type === "bottle" || activity.type === "nursing";
@@ -37,14 +35,10 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
         lastBottle = activity;
       }
       if ((activity.type === "nursing" || activity.type === "sleep") && !activity.endedAt) {
-        // Every open session, not just the newest of each type — orphaned timers
-        // from older data must stay visible and individually stoppable.
+        // Every open session, not just nursing — a sleep timer left running by
+        // an older version must stay visible and individually stoppable.
         activeTimers.push(activity);
-        if (!activeSleep && activity.type === "sleep") activeSleep = activity;
         if (!activeNursing && activity.type === "nursing") activeNursing = activity;
-      }
-      if (activity.type === "sleep" && activity.endedAt && completedSleeps.length < 24) {
-        completedSleeps.push(activity);
       }
       if (activity.type === "growth" && activity.weightGrams) growthByDate.push(activity);
     }
@@ -66,17 +60,6 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
       .filter((minutes) => minutes > 20 && minutes < 480);
     const typicalGap = median(feedingGaps);
 
-    const chronologicalSleeps = [...completedSleeps].sort(
-      (a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime(),
-    );
-    const wakeGaps = chronologicalSleeps
-      .slice(1)
-      .map((sleep, index) => Math.round(
-        (new Date(sleep.startedAt).getTime() - new Date(chronologicalSleeps[index].endedAt!).getTime()) / 60_000,
-      ))
-      .filter((minutes) => minutes >= 20 && minutes <= 360);
-    const typicalWakeGap = median(wakeGaps);
-
     const feedPatternReady = feedingGaps.length >= 3 && Boolean(lastFeed);
     const feedSpread = feedPatternReady
       ? Math.max(15, Math.min(45, median(feedingGaps.map((gap) => Math.abs(gap - typicalGap)))))
@@ -85,20 +68,10 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
       ? new Date(lastFeed.startedAt).getTime() + typicalGap * 60_000
       : null;
 
-    const lastCompletedSleep = completedSleeps[0];
-    const sleepPatternReady = wakeGaps.length >= 2 && Boolean(lastCompletedSleep);
-    const sleepSpread = sleepPatternReady
-      ? Math.max(15, Math.min(40, median(wakeGaps.map((gap) => Math.abs(gap - typicalWakeGap)))))
-      : 20;
-    const nextSleepAt = sleepPatternReady && lastCompletedSleep?.endedAt
-      ? new Date(lastCompletedSleep.endedAt).getTime() + typicalWakeGap * 60_000
-      : null;
-
     return {
       sortedActivities,
       lastFeed,
       lastBottle,
-      activeSleep,
       activeNursing,
       activeTimers,
       growthEntries,
@@ -107,20 +80,14 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
       weightChange,
       feedingGaps,
       typicalGap,
-      completedSleeps,
-      wakeGaps,
-      typicalWakeGap,
       feedPatternReady,
       feedSpread,
       nextFeedAt,
-      sleepPatternReady,
-      sleepSpread,
-      nextSleepAt,
     };
   }, [activities]);
 
   const timeSensitive = useMemo(() => {
-    const { sortedActivities, nextFeedAt, feedSpread, nextSleepAt, sleepSpread } = base;
+    const { sortedActivities, nextFeedAt, feedSpread } = base;
     // Derived from minuteClock, not a render-time `new Date()`, so every figure
     // rolls over together at midnight while the app stays open.
     const todayActivities = sortedActivities.filter((activity) =>
@@ -131,14 +98,10 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
     );
     const bottleMlToday = feedsToday.reduce((sum, activity) => sum + (activity.amount ?? 0), 0);
     const diapersToday = todayActivities.filter((activity) => activity.type === "diaper").length;
-    const sleepMinutesToday = sortedActivities
-      .filter((activity) => activity.type === "sleep")
-      .reduce((sum, activity) => sum + minutesOnDay(activity, new Date(minuteClock), minuteClock), 0);
 
     // Suppress a predicted clock range once it is entirely in the past — a card
     // reading "14:05–14:45" at 17:00 presents history as a forecast.
     const feedWindowPassed = nextFeedAt !== null && nextFeedAt + feedSpread * 60_000 < minuteClock;
-    const sleepWindowPassed = nextSleepAt !== null && nextSleepAt + sleepSpread * 60_000 < minuteClock;
 
     const weekly = Array.from({ length: 7 }, (_, index) => {
       const date = new Date(minuteClock);
@@ -153,9 +116,7 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
         feeds,
         ml: feeds.reduce((sum, activity) => sum + (activity.amount ?? 0), 0),
         diapers: dayActivities.filter((activity) => activity.type === "diaper").length,
-        sleep: sortedActivities
-          .filter((activity) => activity.type === "sleep")
-          .reduce((sum, activity) => sum + minutesOnDay(activity, date, minuteClock), 0),
+        burps: dayActivities.filter((activity) => activity.type === "burp").length,
       };
     });
     const maxMl = Math.max(...weekly.map((day) => day.ml), 1);
@@ -180,9 +141,7 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
       feedsToday,
       bottleMlToday,
       diapersToday,
-      sleepMinutesToday,
       feedWindowPassed,
-      sleepWindowPassed,
       weekly,
       maxMl,
       trackedDays,

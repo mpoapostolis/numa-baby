@@ -4,13 +4,12 @@
 // the same numbers.
 //
 // Two rules make the figures honest:
-//   1. Spans are counted by the minutes that fall INSIDE the day (minutesOnDay),
-//      so a sleep from 23:00 to 06:00 gives 60 minutes to one day and 360 to the
-//      next — never 7 hours to both.
-//   2. A running timer is clamped to `now`, so "sleep so far" is what has
-//      actually happened, not a promise about the rest of the night.
+//   1. An entry belongs to the day it STARTED, count and minutes together — a
+//      23:50 nursing that ends at 00:10 is one feed last night, never two.
+//   2. A running timer is clamped to `now`, so "nursed so far" is what has
+//      actually happened, not a promise about the rest of the session.
 
-import { isSameDay, minutesBetween, minutesOnDay } from "./time";
+import { isSameDay, minutesBetween } from "./time";
 import { Activity } from "./types";
 
 export type DaySummary = {
@@ -43,12 +42,8 @@ export type DaySummary = {
   wet: number;
   dirty: number;
 
-  /** Sleep minutes falling inside this day, naps included. */
-  sleepMinutes: number;
-  /** Sleep sessions that touched this day. */
-  naps: number;
-  /** The longest single stretch's minutes inside this day. */
-  longestSleepMinutes: number;
+  /** Burps logged on this day — one tap each, no duration. */
+  burps: number;
 
   growthEntries: number;
   healthEntries: number;
@@ -72,9 +67,7 @@ const EMPTY = {
   wet: 0,
   dirty: 0,
   both: 0,
-  sleepMinutes: 0,
-  naps: 0,
-  longestSleepMinutes: 0,
+  burps: 0,
   growthEntries: 0,
   healthEntries: 0,
 };
@@ -106,38 +99,35 @@ export function summarizeDay(activities: Activity[], day: Date, now: number): Da
   let lastFeedMs: number | undefined;
 
   for (const activity of activities) {
-    const isSpan = activity.type === "sleep" || activity.type === "nursing";
-    const isOpen = isSpan && !activity.endedAt;
+    // Every entry belongs to the day it started, so a session running past
+    // midnight is never counted twice.
+    if (!isSameDay(activity.startedAt, date)) continue;
+
+    const isOpen = activity.type === "nursing" && !activity.endedAt;
     const isStale =
       isOpen &&
       now - new Date(activity.startedAt).getTime() > STALE_OPEN_SPAN_MINUTES * 60_000;
-    const startedToday = isSameDay(activity.startedAt, date);
-    // Live spans belong to every day they touch; point events and forgotten
-    // timers belong only to the day they started.
-    const touchesDay = isSpan && !isStale
-      ? minutesOnDay(activity, date, now) > 0 || startedToday
-      : startedToday;
-    if (!touchesDay) continue;
-
     if (isStale) summary.hasStaleTimer = true;
     else if (isOpen) summary.hasRunningTimer = true;
 
     switch (activity.type) {
       case "bottle":
       case "nursing": {
-        // A feed is counted on the day it STARTED — a nursing session that runs
-        // past midnight is still last night's feed, not two feeds.
-        if (startedToday) {
-          summary.feeds += 1;
-          if (activity.type === "bottle") {
-            summary.bottles += 1;
-            summary.ml += activity.amount ?? 0;
-          } else {
-            summary.nursings += 1;
+        summary.feeds += 1;
+        if (activity.type === "bottle") {
+          summary.bottles += 1;
+          summary.ml += activity.amount ?? 0;
+        } else {
+          summary.nursings += 1;
+          // A timer nobody stopped is not twenty hours of nursing.
+          if (!isStale) {
+            summary.nursingMinutes += minutesBetween(activity.startedAt, activity.endedAt ?? nowIso);
           }
-          // Compared as instants, never as strings: lexicographic order only
-          // agrees with time while every value is the same UTC form, which a
-          // restored backup carrying "+02:00" offsets breaks silently.
+        }
+        // Compared as instants, never as strings: lexicographic order only
+        // agrees with time while every value is the same UTC form, which a
+        // restored backup carrying "+02:00" offsets breaks silently.
+        {
           const startedMs = new Date(activity.startedAt).getTime();
           if (firstFeedMs === undefined || startedMs < firstFeedMs) {
             firstFeedMs = startedMs;
@@ -146,13 +136,6 @@ export function summarizeDay(activities: Activity[], day: Date, now: number): Da
           if (lastFeedMs === undefined || startedMs > lastFeedMs) {
             lastFeedMs = startedMs;
             summary.lastFeedAt = activity.startedAt;
-          }
-          // Minutes follow the count: a 23:50 nursing that ends at 00:10 is
-          // one feed on the day it started, with all of its minutes there —
-          // "0 feeds · 10m nursing" on the next day reads as a bug. A timer
-          // nobody stopped is not twenty hours of nursing.
-          if (activity.type === "nursing" && !isStale) {
-            summary.nursingMinutes += minutesBetween(activity.startedAt, activity.endedAt ?? nowIso);
           }
         }
         break;
@@ -166,17 +149,8 @@ export function summarizeDay(activities: Activity[], day: Date, now: number): Da
         if (activity.diaperKind === "dirty" || activity.diaperKind === "both") summary.dirty += 1;
         break;
       }
-      case "sleep": {
-        const minutes = isStale ? 0 : minutesOnDay(activity, date, now);
-        if (minutes > 0) {
-          summary.sleepMinutes += minutes;
-          summary.naps += 1;
-          summary.longestSleepMinutes = Math.max(summary.longestSleepMinutes, minutes);
-        } else if (startedToday) {
-          // A sleep logged with a zero-minute span (or just started) still
-          // happened — count the nap, add no minutes.
-          summary.naps += 1;
-        }
+      case "burp": {
+        summary.burps += 1;
         break;
       }
       case "growth":
@@ -191,8 +165,7 @@ export function summarizeDay(activities: Activity[], day: Date, now: number): Da
   summary.isEmpty =
     summary.feeds === 0 &&
     summary.diapers === 0 &&
-    summary.sleepMinutes === 0 &&
-    summary.naps === 0 &&
+    summary.burps === 0 &&
     summary.growthEntries === 0 &&
     summary.healthEntries === 0;
 

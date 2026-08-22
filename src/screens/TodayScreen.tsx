@@ -9,7 +9,7 @@ import { ActivityRow } from "../components/ActivityRow";
 import { DayBand } from "../components/DayBand";
 import { DayRecap } from "../components/DayRecap";
 import { EmptyState } from "../components/EmptyState";
-import { LittleBottle, SleepyMoon, TinyStars } from "../components/illustrations";
+import { LittleBottle, TinyStars } from "../components/illustrations";
 import { BabyCompanion, CompanionMood } from "../components/BabyCompanion";
 import { bracketOfAge, factOfTheDay } from "../domain/babyFacts";
 import { summarizeDay } from "../domain/daySummary";
@@ -157,6 +157,7 @@ function TimerRow({
 
 type TodayScreenProps = {
   profile: Profile;
+  nightMode: boolean;
   minuteClock: number;
   stats: ActivityStats;
   onAdd: (activity: Activity, message: string) => boolean;
@@ -169,6 +170,7 @@ type TodayScreenProps = {
 
 export default function TodayScreen({
   profile,
+  nightMode,
   minuteClock,
   stats,
   onAdd,
@@ -183,14 +185,11 @@ export default function TodayScreen({
     today,
     lastFeed,
     lastBottle,
-    activeSleep,
     activeNursing,
     activeTimers,
     typicalGap,
     nextFeedAt,
-    nextSleepAt,
     feedWindowPassed,
-    sleepWindowPassed,
   } = stats;
 
   // The companion notices the moment a completed care entry lands: the entry
@@ -260,17 +259,13 @@ export default function TodayScreen({
     }
   }
 
-  function toggleSleep() {
-    if (activeSleep) {
-      onStopTimer(activeSleep.id);
-      return;
-    }
+  function quickLogBurp() {
     const entry: Activity = {
       id: makeId(),
-      type: "sleep",
+      type: "burp",
       startedAt: new Date().toISOString(),
     };
-    onAdd(entry, "Sleep timer started");
+    if (onAdd(entry, "Burp saved")) setReactionKey(entry.id);
   }
 
   const selectedDay = new Date(minuteClock);
@@ -314,17 +309,20 @@ export default function TodayScreen({
     : babyAge === "born today"
       ? `${displayName} — welcome to the world`
       : `${displayName} is ${babyAge} old`;
-  // The companion mirrors the real baby from the data already logged:
-  // sleeping timer → asleep; close to (or past) the usual feed gap → eyeing
-  // the bottle; fed within the hour → content; otherwise simply awake.
-  const companionMood: CompanionMood = activeSleep
-    ? "sleeping"
-    : activeNursing
-      ? "feeding"
-      : !lastFeed
-        ? "awake"
-        : gapOver > 0 || (nextFeedAt !== null && nextFeedAt - minuteClock < 30 * 60_000)
-          ? "hungry"
+  // The companion mirrors the real baby from what is actually known: nursing
+  // now → feeding; close to (or past) the usual feed gap → eyeing the bottle;
+  // fed within the hour → content. Hunger outranks the hour, so a 3am cue
+  // never gets a sleeping face; otherwise night mode means night.
+  const isHungry = Boolean(lastFeed) &&
+    (gapOver > 0 || (nextFeedAt !== null && nextFeedAt - minuteClock < 30 * 60_000));
+  const companionMood: CompanionMood = activeNursing
+    ? "feeding"
+    : isHungry
+      ? "hungry"
+      : nightMode && gapElapsed >= 20
+        ? "sleeping"
+        : !lastFeed
+          ? "awake"
           : gapElapsed < 60
             ? "content"
             : "awake";
@@ -479,31 +477,6 @@ export default function TodayScreen({
           />
 
           <div className="next-up">
-            {/* Same rule as the feed forecast: no "Learning the pattern" over an
-                empty tracker — the row waits for the first logged sleep. The
-                plain "Start sleep" action above stays available regardless. */}
-            {!activeSleep && sortedActivities.some((activity) => activity.type === "sleep") && (
-              <div className="log-row action-sleep">
-                {/* 40px render needs a heavier stroke than the 88px+ frames: 4/96 ≈ 1.7px on screen. */}
-                <span className="action-icon forecast-illustration"><SleepyMoon size={40} strokeWidth={4} /></span>
-                <div className="log-copy">
-                  <span className="t-label">Next likely sleep</span>
-                  <strong>
-                    {nextSleepAt ? forecastRelative(nextSleepAt, minuteClock) : "Still learning the rhythm"}
-                  </strong>
-                  <small>
-                    {nextSleepAt
-                      ? sleepWindowPassed
-                        ? "Follow the cues — whenever works"
-                        : `around ${formatTime(new Date(nextSleepAt).toISOString())}`
-                      : "A few more sleeps and the rhythm appears"}
-                  </small>
-                </div>
-                <div className="log-actions">
-                  <Button variant="outline" onClick={toggleSleep} aria-label="Start sleep timer">Start</Button>
-                </div>
-              </div>
-            )}
             <div className="care-notes">
               <p><ShieldCheck size={14} aria-hidden="true" /> Safe sleep: back, firm flat surface, clear sleep space.</p>
             </div>
@@ -629,20 +602,18 @@ export default function TodayScreen({
               </div>
             </div>
 
-            {!activeSleep && (
-              <div className="quick-tile tile-sleep">
-                <button
-                  type="button"
-                  className="tile-main"
-                  onClick={toggleSleep}
-                  aria-label="Start sleep timer"
-                >
-                  <span className="activity-glyph glyph-sleep" aria-hidden="true"><ActivityGlyph type="sleep" /></span>
-                  <span className="tile-title">Sleep</span>
-                  <span className="tile-sub">Start the timer</span>
-                </button>
-              </div>
-            )}
+            <div className="quick-tile tile-burp">
+              <button
+                type="button"
+                className="tile-main"
+                onClick={quickLogBurp}
+                aria-label="Log a burp"
+              >
+                <span className="activity-glyph glyph-burp" aria-hidden="true"><ActivityGlyph type="burp" /></span>
+                <span className="tile-title">Burp</span>
+                <span className="tile-sub">One tap</span>
+              </button>
+            </div>
           </div>
 
           <Button

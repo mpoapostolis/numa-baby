@@ -126,6 +126,12 @@
   color: var(--glyph-diaper);
 }
 
+.action-burp .action-icon,
+.glyph-burp {
+  background: color-mix(in oklch, var(--glyph-burp) var(--glyph-wash), var(--card));
+  color: var(--glyph-burp);
+}
+
 .action-sleep .action-icon,
 .glyph-sleep {
   background: color-mix(in oklch, var(--glyph-sleep) var(--glyph-wash), var(--card));

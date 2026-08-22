@@ -40,22 +40,22 @@ export function debugPreviewData(): { profile: Profile; activities: Activity[] }
       });
     });
 
+    // A burp lands a few minutes after most feeds — not all of them, because
+    // a preview that is too tidy stops looking like a real day.
     [
-      { hour: 2, minute: 30, duration: 110 },
-      { hour: 9, minute: 25, duration: 65 },
-      { hour: 13, minute: 5, duration: 80 },
-      { hour: 17, minute: 15, duration: 45 },
-      { hour: 23, minute: 10, duration: 145 },
-    ].forEach((sleep, index) => {
+      { hour: 3, minute: 12 },
+      { hour: 6, minute: 48 },
+      { hour: 10, minute: 22 },
+      { hour: 15, minute: 5 },
+      { hour: 21, minute: 40 },
+    ].forEach((burp, index) => {
       const started = new Date(day);
-      started.setHours(sleep.hour, sleep.minute + (dayOffset % 3) * 5, 0, 0);
-      const ended = new Date(started.getTime() + sleep.duration * 60_000);
-      if (started > now || ended > now) return;
+      started.setHours(burp.hour, burp.minute + (dayOffset % 3) * 5, 0, 0);
+      if (started > now) return;
       activities.push({
-        id: `debug-sleep-${dayOffset}-${index}`,
-        type: "sleep",
+        id: `debug-burp-${dayOffset}-${index}`,
+        type: "burp",
         startedAt: started.toISOString(),
-        endedAt: ended.toISOString(),
       });
     });
   }

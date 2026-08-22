@@ -42,6 +42,7 @@
 /* Lane icons inherit their activity hue so icon and marks match. */
 .lane-feed .band-lane-icon { color: var(--glyph-bottle); }
 .lane-diaper .band-lane-icon { color: var(--glyph-diaper); }
+.lane-burp .band-lane-icon { color: var(--glyph-burp); }
 .lane-sleep .band-lane-icon { color: var(--glyph-sleep); }
 .lane-mark .band-lane-icon { color: var(--ink-3); }
 
@@ -67,6 +68,12 @@
 
 .band-dot.is-bottle {
   background: var(--glyph-bottle);
+}
+
+/* Burps are their own teal dot: same 10px mark as a feed, different hue,
+   so a glance separates "fed" from "brought it up". */
+.band-dot.burp-dot {
+  background: var(--glyph-burp);
 }
 
 .band-dot.is-nursing {
@@ -211,6 +218,10 @@
 .key-diaper {
   border-radius: 3px;
   background: var(--glyph-diaper);
+}
+
+.key-burp {
+  background: var(--glyph-burp);
 }
 
 .key-sleep {

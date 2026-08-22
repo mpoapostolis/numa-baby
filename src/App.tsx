@@ -277,6 +277,7 @@ export default function HomePage() {
           {activeTab === "today" && (
             <TodayScreen
               profile={profile}
+              nightMode={nightMode}
               minuteClock={minuteClock}
               stats={stats}
               onAdd={addActivity}

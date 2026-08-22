@@ -4,6 +4,7 @@ import { Activity } from "./types";
 export function activityTitle(activity: Activity) {
   if (activity.type === "bottle") return "Bottle";
   if (activity.type === "nursing") return "Nursing";
+  if (activity.type === "burp") return "Burp";
   if (activity.type === "sleep") return activity.endedAt ? "Sleep" : "Sleeping now";
   if (activity.type === "growth") return "Growth check";
   if (activity.type === "health") return activity.temperatureC ? "Temperature" : "Health note";
@@ -34,6 +35,9 @@ export function activityDetail(activity: Activity) {
       ? `${formatTime(activity.startedAt)}–${formatTime(activity.endedAt)} · ${humanDuration(minutesBetween(activity.startedAt, activity.endedAt))}`
       : `Started ${formatTime(activity.startedAt)} · ${timeAgo(activity.startedAt)}`;
     return includeNote(detail, activity.note);
+  }
+  if (activity.type === "burp") {
+    return includeNote(formatTime(activity.startedAt), activity.note);
   }
   if (activity.type === "growth") {
     const values = [

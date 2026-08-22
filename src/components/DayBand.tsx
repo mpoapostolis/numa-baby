@@ -1,9 +1,10 @@
-import { Droplet, Milk, Moon, Stethoscope } from "lucide-react";
+import { Droplet, Milk, Moon, Stethoscope, Wind } from "lucide-react";
 import { formatTime, humanDuration, isSameDay, minutesOnDay } from "../domain/time";
 import { Activity } from "../domain/types";
 
 // Multi-lane activity band, one hue per activity: bottle dots are filled blue,
-// nursing dots are rose rings, diaper marks are teal squares and sleep spans
+// nursing dots are rose rings, diaper marks are sage squares, burps are teal
+// dots and legacy sleep spans
 // are violet bars — the same glyph hues used on the log rows, so the chart
 // needs no decoding. Two windows:
 //   mode="rolling" (Today) — the LAST 24 HOURS ending at `now`, which sits at
@@ -55,6 +56,7 @@ export function DayBand({
 
   const feeds: Activity[] = [];
   const diapers: Activity[] = [];
+  const burps: Activity[] = [];
   const sleeps: Activity[] = [];
   const marks: Activity[] = [];
   let sleepMinutes = 0;
@@ -79,11 +81,12 @@ export function DayBand({
     }
     if (!includePoint(activity.startedAt)) continue;
     if (activity.type === "diaper") diapers.push(activity);
+    else if (activity.type === "burp") burps.push(activity);
     else marks.push(activity);
   }
 
   // Nothing to show → render nothing: no icon gutters over blank tracks.
-  if (feeds.length + diapers.length + sleeps.length + marks.length === 0) return null;
+  if (feeds.length + diapers.length + burps.length + sleeps.length + marks.length === 0) return null;
 
   // Feeds within ~20 min of each other stack on the same spot; nudge them
   // vertically so clusters stay countable.
@@ -123,7 +126,8 @@ export function DayBand({
   const parts = [`${feeds.length} ${feeds.length === 1 ? "feed" : "feeds"}`];
   if (!feedsOnly) {
     parts.push(`${diapers.length} ${diapers.length === 1 ? "diaper" : "diapers"}`);
-    parts.push(sleepMinutes > 0 ? `${humanDuration(sleepMinutes)} sleep` : "no sleep logged");
+    parts.push(burps.length === 1 ? "1 burp" : `${burps.length} burps`);
+    if (sleepMinutes > 0) parts.push(`${humanDuration(sleepMinutes)} sleep`);
     if (marks.length > 0) {
       parts.push(`${marks.length} ${marks.length === 1 ? "measurement or note" : "measurements and notes"}`);
     }
@@ -181,6 +185,24 @@ export function DayBand({
                 ))}
               </div>
             </div>
+            {burps.length > 0 && (
+              <div className="band-lane lane-burp">
+                <span className="band-lane-icon" title="Burps"><Wind size={14} /></span>
+                <div className="band-track">
+                  {burps.map((activity) => (
+                    <span
+                      key={activity.id}
+                      className={`band-dot burp-dot${isFresh(activity.startedAt) ? " is-new" : ""}`}
+                      title={`Burp · ${formatTime(activity.startedAt)}`}
+                      style={{ left: `${pct(new Date(activity.startedAt).getTime())}%` }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* Sleep is no longer tracked, but entries logged before that
+                change still draw their lane so old days read correctly. */}
+            {sleeps.length > 0 && (
             <div className="band-lane lane-sleep">
               <span className="band-lane-icon" title="Sleep"><Moon size={14} /></span>
               <div className="band-track">
@@ -207,6 +229,7 @@ export function DayBand({
                 })}
               </div>
             </div>
+            )}
             {marks.length > 0 && (
               <div className="band-lane lane-mark">
                 <span className="band-lane-icon" title="Measurements and notes"><Stethoscope size={14} /></span>
@@ -257,6 +280,7 @@ export function DayBand({
           {hasBottle && <span><i className="key-swatch key-bottle" /> Bottle</span>}
           {hasNursing && <span><i className="key-swatch key-nursing" /> Nursing</span>}
           {diapers.length > 0 && <span><i className="key-swatch key-diaper" /> Diaper</span>}
+          {burps.length > 0 && <span><i className="key-swatch key-burp" /> Burp</span>}
           {sleeps.length > 0 && <span><i className="key-swatch key-sleep" /> Sleep</span>}
         </p>
       )}

@@ -18,7 +18,7 @@ describe("summarizeDay", () => {
     expect(summary.isEmpty).toBe(true);
     expect(summary.feeds).toBe(0);
     expect(summary.wet).toBe(0);
-    expect(summary.sleepMinutes).toBe(0);
+    expect(summary.burps).toBe(0);
     expect(summary.isToday).toBe(true);
   });
 
@@ -71,17 +71,37 @@ describe("summarizeDay", () => {
     expect(summary.ml).toBe(0);
   });
 
-  it("splits an overnight sleep across both days", () => {
-    const overnight = make({
-      type: "sleep",
-      startedAt: "2026-08-11T23:00:00",
-      endedAt: "2026-08-12T06:00:00",
-    });
-    const before = summarizeDay([overnight], new Date(2026, 7, 11), now);
-    const after = summarizeDay([overnight], day, now);
-    expect(before.sleepMinutes).toBe(60);
-    expect(after.sleepMinutes).toBe(360);
-    expect(after.longestSleepMinutes).toBe(360);
+  it("counts burps as plain one-tap events", () => {
+    const summary = summarizeDay(
+      [
+        make({ type: "burp", startedAt: "2026-08-12T06:20:00" }),
+        make({ type: "burp", startedAt: "2026-08-12T09:55:00" }),
+        make({ type: "burp", startedAt: "2026-08-12T13:10:00" }),
+      ],
+      day,
+      now,
+    );
+    expect(summary.burps).toBe(3);
+    expect(summary.isEmpty).toBe(false);
+    // A burp is not a feed and carries no duration.
+    expect(summary.feeds).toBe(0);
+    expect(summary.nursingMinutes).toBe(0);
+  });
+
+  it("leaves legacy sleep entries out of every figure", () => {
+    // Sleep is no longer tracked. Old entries stay readable in the Timeline,
+    // but they must not add minutes to a day that no longer reports sleep.
+    const summary = summarizeDay(
+      [make({
+        type: "sleep",
+        startedAt: "2026-08-12T13:00:00",
+        endedAt: "2026-08-12T15:30:00",
+      })],
+      day,
+      now,
+    );
+    expect(summary.isEmpty).toBe(true);
+    expect(summary.feeds).toBe(0);
   });
 
   it("gives an overnight feed — count AND minutes — to the day it started", () => {
@@ -114,57 +134,40 @@ describe("summarizeDay", () => {
   it("survives a corrupt span whose end precedes its start", () => {
     const summary = summarizeDay(
       [make({
-        type: "sleep",
+        type: "nursing",
         startedAt: "2026-08-12T15:00:00",
         endedAt: "2026-08-12T14:00:00",
+        side: "left",
       })],
       day,
       now,
     );
-    expect(summary.sleepMinutes).toBe(0);
-    expect(summary.naps).toBe(1);
+    expect(summary.feeds).toBe(1);
+    expect(summary.nursingMinutes).toBe(0);
   });
 
-  it("does not let a zero-length sleep displace the longest stretch", () => {
-    const summary = summarizeDay(
-      [
-        make({ type: "sleep", startedAt: "2026-08-12T13:00:00", endedAt: "2026-08-12T15:30:00" }),
-        make({ type: "sleep", startedAt: "2026-08-12T16:00:00", endedAt: "2026-08-12T16:00:00" }),
-      ],
-      day,
-      now,
-    );
-    expect(summary.naps).toBe(2);
-    expect(summary.longestSleepMinutes).toBe(150);
-  });
-
-  it("does not let a forgotten timer fabricate sleep on days it crosses", () => {
-    // Started three days ago and never stopped: the day it began keeps the
-    // entry, every day since must stay untouched.
-    const orphan = make({ type: "sleep", startedAt: "2026-08-09T21:00:00" });
+  it("does not let a forgotten nursing timer fabricate hours at the breast", () => {
+    // Started three days ago and never stopped: the feed still counts on the
+    // day it began, but it contributes no minutes to anything.
+    const orphan = make({ type: "nursing", startedAt: "2026-08-09T21:00:00", side: "left" });
     const started = summarizeDay([orphan], new Date(2026, 7, 9), now);
     const crossed = summarizeDay([orphan], new Date(2026, 7, 10), now);
-    const today = summarizeDay([orphan], day, now);
 
-    expect(started.naps).toBe(1);
-    expect(started.sleepMinutes).toBe(0);
+    expect(started.feeds).toBe(1);
+    expect(started.nursingMinutes).toBe(0);
     expect(started.hasStaleTimer).toBe(true);
     expect(started.hasRunningTimer).toBe(false);
-    for (const summary of [crossed, today]) {
-      expect(summary.sleepMinutes).toBe(0);
-      expect(summary.naps).toBe(0);
-      expect(summary.isEmpty).toBe(true);
-    }
+    expect(crossed.isEmpty).toBe(true);
   });
 
   it("still trusts an open timer that is younger than the stale threshold", () => {
     const started = new Date(now - (STALE_OPEN_SPAN_MINUTES - 60) * 60_000);
     const summary = summarizeDay(
-      [make({ type: "sleep", startedAt: started.toISOString() })],
+      [make({ type: "nursing", startedAt: started.toISOString(), side: "right" })],
       day,
       now,
     );
-    expect(summary.sleepMinutes).toBeGreaterThan(0);
+    expect(summary.nursingMinutes).toBeGreaterThan(0);
     expect(summary.hasRunningTimer).toBe(true);
     expect(summary.hasStaleTimer).toBe(false);
   });
@@ -202,7 +205,7 @@ describe("summarizeDay", () => {
     const acts = [
       make({ type: "bottle", startedAt: "2026-08-12T09:00:00", amount: 100 }),
       make({ type: "diaper", startedAt: "2026-08-12T07:00:00", diaperKind: "both" }),
-      make({ type: "sleep", startedAt: "2026-08-12T11:00:00", endedAt: "2026-08-12T12:00:00" }),
+      make({ type: "burp", startedAt: "2026-08-12T09:05:00" }),
     ];
     const forward = summarizeDay(acts, day, now);
     const backward = summarizeDay([...acts].reverse(), day, now);
@@ -219,29 +222,15 @@ describe("summarizeDay", () => {
     expect(summary.ml).toBe(0);
   });
 
-  it("clamps a running timer to now and flags it", () => {
+  it("clamps a running nursing timer to now and flags it", () => {
     const summary = summarizeDay(
-      [make({ type: "sleep", startedAt: "2026-08-12T18:30:00" })],
+      [make({ type: "nursing", startedAt: "2026-08-12T19:40:00", side: "left" })],
       day,
       now,
     );
-    expect(summary.sleepMinutes).toBe(90);
-    expect(summary.naps).toBe(1);
+    expect(summary.feeds).toBe(1);
+    expect(summary.nursingMinutes).toBe(20);
     expect(summary.hasRunningTimer).toBe(true);
-  });
-
-  it("tracks the longest stretch separately from the total", () => {
-    const summary = summarizeDay(
-      [
-        make({ type: "sleep", startedAt: "2026-08-12T09:00:00", endedAt: "2026-08-12T09:40:00" }),
-        make({ type: "sleep", startedAt: "2026-08-12T13:00:00", endedAt: "2026-08-12T15:30:00" }),
-      ],
-      day,
-      now,
-    );
-    expect(summary.naps).toBe(2);
-    expect(summary.sleepMinutes).toBe(190);
-    expect(summary.longestSleepMinutes).toBe(150);
   });
 
   it("counts growth and health entries without touching the care figures", () => {
