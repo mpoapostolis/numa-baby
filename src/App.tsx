@@ -292,6 +292,7 @@ export default function HomePage() {
             <Suspense fallback={screenFallback}>
               <TimelineScreen
                 activities={sortedActivities}
+                minuteClock={minuteClock}
                 filter={timelineFilter}
                 limit={timelineLimit}
                 onFilterChange={(value) => {

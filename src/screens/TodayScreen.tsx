@@ -1,32 +1,25 @@
 import { useState } from "react";
-import {
-  ChevronRight,
-  Droplet,
-  ExternalLink,
-  Heart,
-  Milk,
-  Moon,
-  ShieldCheck,
-  Square,
-  Thermometer,
-  Weight,
-} from "lucide-react";
+import { ChevronRight, ExternalLink, ShieldCheck, Square, Thermometer, Weight } from "lucide-react";
+
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { ItemGroup, ItemSeparator } from "../components/ui/item";
 import { ActivityGlyph } from "../components/ActivityGlyph";
 import { ActivityRow } from "../components/ActivityRow";
 import { DayBand } from "../components/DayBand";
+import { DayRecap } from "../components/DayRecap";
 import { EmptyState } from "../components/EmptyState";
 import { LittleBottle, SleepyMoon, TinyStars } from "../components/illustrations";
 import { BabyCompanion, CompanionMood } from "../components/BabyCompanion";
 import { bracketOfAge, factOfTheDay } from "../domain/babyFacts";
+import { summarizeDay } from "../domain/daySummary";
 import { makeId } from "../domain/id";
 import {
   ageInDays,
   forecastRelative,
   formatBabyAge,
   formatTime,
+  formatTimelineDay,
   greeting,
   humanDuration,
   liveDuration,
@@ -187,11 +180,7 @@ export default function TodayScreen({
 }: TodayScreenProps) {
   const {
     sortedActivities,
-    todayActivities,
-    feedsToday,
-    bottleMlToday,
-    diapersToday,
-    sleepMinutesToday,
+    today,
     lastFeed,
     lastBottle,
     activeSleep,
@@ -208,6 +197,11 @@ export default function TodayScreen({
   // id keys a one-shot heart on the drawn baby. Timer starts don't count —
   // the reaction is for finished care, not a running stopwatch.
   const [reactionKey, setReactionKey] = useState<string | null>(null);
+
+  // The recap can walk back through whole days without leaving Today: 0 is
+  // today, 1 is yesterday. Bounded by the first thing ever logged so the
+  // arrows never step into blank prehistory — or into tomorrow.
+  const [dayOffset, setDayOffset] = useState(0);
 
   const forecastFeedSheet: "bottle" | "nursing" = profile.feedingMode === "breast"
     ? "nursing"
@@ -278,6 +272,20 @@ export default function TodayScreen({
     };
     onAdd(entry, "Sleep timer started");
   }
+
+  const selectedDay = new Date(minuteClock);
+  selectedDay.setHours(12, 0, 0, 0);
+  selectedDay.setDate(selectedDay.getDate() - dayOffset);
+  const oldestActivity = sortedActivities[sortedActivities.length - 1];
+  const maxDayOffset = oldestActivity
+    ? Math.max(0, Math.floor((minuteClock - new Date(oldestActivity.startedAt).getTime()) / 86_400_000))
+    : 0;
+  const daySummary = dayOffset === 0
+    ? today
+    : summarizeDay(sortedActivities, selectedDay, minuteClock);
+  const recapTitle = dayOffset === 0
+    ? "Today so far"
+    : formatTimelineDay(selectedDay.toISOString());
 
   const babyAge = formatBabyAge(profile.birthDate, minuteClock);
   const babyDays = ageInDays(profile.birthDate, minuteClock);
@@ -446,48 +454,28 @@ export default function TodayScreen({
             )}
           </div>
 
-          {/* Stats only once there is something to count — four em-dashes on a
-              fresh install read as breakage, not calm. */}
-          {(todayActivities.length > 0 || sleepMinutesToday > 0) && (
-          <section className="day-strip" aria-label="Today's summary">
-            <div className="stat-feeds">
-              <span className="stat-head"><Heart size={14} aria-hidden="true" /> Feeds today</span>
-              <span className="figure t-numeral">
-                {feedsToday.length > 0 ? feedsToday.length : <span className="is-zero">—</span>}
-              </span>
-            </div>
-            <div className="stat-bottle">
-              <span className="stat-head"><Milk size={14} aria-hidden="true" /> Bottle total</span>
-              <span className="figure t-numeral">
-                {bottleMlToday > 0 ? (
-                  <>
-                    {bottleMlToday}
-                    <span className="unit">ml</span>
-                  </>
-                ) : (
-                  <span className="is-zero">—</span>
-                )}
-              </span>
-            </div>
-            <div className="stat-diaper">
-              <span className="stat-head"><Droplet size={14} aria-hidden="true" /> Diapers</span>
-              <span className="figure t-numeral">
-                {diapersToday > 0 ? diapersToday : <span className="is-zero">—</span>}
-              </span>
-            </div>
-            <div className="stat-sleep">
-              <span className="stat-head"><Moon size={14} aria-hidden="true" /> Sleep today</span>
-              <span className="figure t-numeral"><DurationFigure minutes={sleepMinutesToday} /></span>
-            </div>
-          </section>
+          {/* Shown from the first thing ever logged. A fresh install skips it
+              — four em-dashes read as breakage, not calm — but a quiet morning
+              keeps the card, or the arrows back to yesterday vanish with it. */}
+          {sortedActivities.length > 0 && (
+            <DayRecap
+              summary={daySummary}
+              title={recapTitle}
+              stepper={maxDayOffset > 0 ? {
+                onPrev: () => setDayOffset((value) => Math.min(maxDayOffset, value + 1)),
+                onNext: () => setDayOffset((value) => Math.max(0, value - 1)),
+                canPrev: dayOffset < maxDayOffset,
+                canNext: dayOffset > 0,
+              } : undefined}
+            />
           )}
 
           <DayBand
             className="today-band"
-            day={new Date(minuteClock)}
+            day={dayOffset === 0 ? new Date(minuteClock) : selectedDay}
             activities={sortedActivities}
             now={minuteClock}
-            mode="rolling"
+            mode={dayOffset === 0 ? "rolling" : "day"}
           />
 
           <div className="next-up">

@@ -614,51 +614,118 @@
 /* 3. Day strip: four stats, no internal borders, hairline above. */
 /* The hearth's bottom hairline already divides — no second rule above the
    stats, no dead band of empty space between two lines. */
-.day-strip {
+/* 4. The day's numbers — how much milk, how many wet, how many dirty, how
+   much sleep. One card, four cells, each wearing its activity pigment. The
+   same component draws one compact line under every Timeline day heading. */
+.day-recap {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--card);
 }
 
-/* Narrow phones: 2x2 so a label NEVER wraps to a second line. */
-@media (width < 480px) {
-  .day-strip {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    row-gap: 16px;
+.recap-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The title takes the slack so the arrows stay pinned to the card's edges. */
+.recap-title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Day arrows: 32px ghost squares, quiet until they matter. A disabled end
+   stays visible — a vanishing arrow reflows the header mid-tap. */
+.recap-step {
+  flex: 0 0 auto;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  margin: -4px 0;
+  border-radius: 10px;
+  color: var(--ink-2);
+}
+
+.recap-step:disabled {
+  opacity: 0.3;
+}
+
+/* A past day with nothing logged says so, rather than showing four dashes. */
+.recap-empty {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 0.875rem;
+}
+
+/* "06:10 → 23:40" — the day's feeding bracket, quiet beside the label. */
+.recap-bracket {
+  flex: 0 0 auto;
+  color: var(--ink-3);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.recap-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 12px;
+}
+
+/* Wide enough for one row: four cells side by side. */
+@container (width >= 560px) {
+  .recap-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
-.day-strip > div {
+.recap-stat {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+/* The chip is smaller here than in a tap target — this is a readout. */
+.recap-stat .activity-glyph {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border-radius: 10px;
+}
+
+.recap-stat .activity-glyph svg {
+  width: 16px;
+  height: 16px;
+}
+
+.recap-figures {
   min-width: 0;
   display: grid;
-  gap: 4px;
+  gap: 1px;
 }
 
-/* Sentence-case label with its activity icon — no decoding required. */
-.stat-head {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+.recap-value {
+  line-height: 1.15;
+}
+
+.recap-label {
   color: var(--ink-2);
   font-size: 0.8125rem;
-  line-height: 1.45;
-  white-space: nowrap;
+  line-height: 1.35;
 }
 
-/* Each stat icon wears its activity pigment — the same key as the band. */
-.stat-head svg {
-  flex: 0 0 auto;
-}
-
-.stat-feeds .stat-head svg { color: var(--glyph-nursing); }
-.stat-bottle .stat-head svg { color: var(--glyph-bottle); }
-.stat-diaper .stat-head svg { color: var(--glyph-diaper); }
-.stat-sleep .stat-head svg { color: var(--glyph-sleep); }
-
-.day-strip .t-numeral {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* The breakdown line: "4 wet · 2 dirty", "3 bottles · 3 nursing". */
+.recap-sub {
+  color: var(--ink-3);
+  font-size: 0.75rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .is-zero {

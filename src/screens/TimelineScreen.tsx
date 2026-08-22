@@ -5,12 +5,15 @@ import { Card, CardContent } from "../components/ui/card";
 import { ItemGroup, ItemSeparator } from "../components/ui/item";
 import { ToggleGroup, ToggleGroupItem } from "../components/ui/toggle-group";
 import { ActivityRow } from "../components/ActivityRow";
+import { DayRecapLine } from "../components/DayRecap";
 import { EmptyState } from "../components/EmptyState";
+import { summarizeDay } from "../domain/daySummary";
 import { formatTimelineDay } from "../domain/time";
 import { Activity, ActivityType } from "../domain/types";
 
 type TimelineScreenProps = {
   activities: Activity[];
+  minuteClock: number;
   filter: "all" | ActivityType;
   limit: number;
   onFilterChange: (filter: "all" | ActivityType) => void;
@@ -20,6 +23,7 @@ type TimelineScreenProps = {
 
 export default function TimelineScreen({
   activities,
+  minuteClock,
   filter,
   limit,
   onFilterChange,
@@ -41,6 +45,16 @@ export default function TimelineScreen({
     });
     return [...groups.values()];
   }, [filteredTimeline, limit]);
+
+  // Totals always describe the whole day, never the current filter — otherwise
+  // "2 feeds" would quietly mean "2 shown". Memoized: one pass per visible day
+  // instead of one per render.
+  const daySummaries = useMemo(
+    () => timelineGroups.map((group) =>
+      summarizeDay(activities, new Date(group[0].startedAt), minuteClock),
+    ),
+    [timelineGroups, activities, minuteClock],
+  );
 
   return (
     <section className="screen timeline-screen" aria-labelledby="timeline-heading">
@@ -77,12 +91,15 @@ export default function TimelineScreen({
         )}
       </div>
       <div className="timeline-groups">
-        {timelineGroups.map((group) => (
+        {timelineGroups.map((group, groupIndex) => (
           <section className="timeline-day" key={new Date(group[0].startedAt).toDateString()}>
             <div className="timeline-day-heading">
               <h2>{formatTimelineDay(group[0].startedAt)}</h2>
               <span>{group.length} {group.length === 1 ? "log" : "logs"}</span>
             </div>
+            {/* The day's totals sit below the sticky heading, not inside it —
+                a two-line sticky bar clips under the app header. */}
+            <DayRecapLine summary={daySummaries[groupIndex]} />
             <Card size="sm" className="activity-list timeline-list">
               <CardContent className="activity-list-content">
                 <ItemGroup>

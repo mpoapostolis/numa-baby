@@ -1,0 +1,177 @@
+// The day's numbers, in the order a parent (or their paediatrician) asks for
+// them: how much milk, how many wet, how many dirty, how much sleep. One
+// component serves both readings — the full card on Today ("Today so far")
+// and a single compact line under each Timeline day heading, so scrolling
+// back through the week answers "how did Tuesday go" without opening anything.
+//
+// Every figure comes from summarizeDay, so the two readings can never disagree.
+
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ActivityGlyph } from "./ActivityGlyph";
+import { Button } from "./ui/button";
+import { DaySummary } from "../domain/daySummary";
+import { formatTime, humanDuration } from "../domain/time";
+
+// Unit demotion, the house rule: digits speak, units recede.
+function Duration({ minutes }: { minutes: number }) {
+  if (minutes <= 0) return <span className="is-zero">—</span>;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours === 0) return <>{mins}<span className="unit">m</span></>;
+  if (mins === 0) return <>{hours}<span className="unit">h</span></>;
+  return <>{hours}<span className="unit">h</span> {mins}<span className="unit">m</span></>;
+}
+
+function Count({ value }: { value: number }) {
+  if (value <= 0) return <span className="is-zero">—</span>;
+  return <>{value}</>;
+}
+
+type StatProps = {
+  glyph: "bottle" | "nursing" | "diaper" | "sleep";
+  label: string;
+  children: React.ReactNode;
+  sub?: string;
+};
+
+function Stat({ glyph, label, children, sub }: StatProps) {
+  return (
+    <div className="recap-stat">
+      <span className={`activity-glyph glyph-${glyph}`} aria-hidden="true">
+        <ActivityGlyph type={glyph} />
+      </span>
+      <div className="recap-figures">
+        <span className="figure t-numeral recap-value">{children}</span>
+        <span className="recap-label">{label}</span>
+        {/* The secondary line is where the breakdown lives — present only when
+            there is something to break down, never a placeholder. */}
+        {sub && <span className="recap-sub">{sub}</span>}
+      </div>
+    </div>
+  );
+}
+
+// "4 wet · 2 dirty" — only the halves that happened, so a nothing-but-wet day
+// never reads "4 wet · 0 dirty".
+function diaperSub(summary: DaySummary) {
+  const parts: string[] = [];
+  if (summary.wet > 0) parts.push(`${summary.wet} wet`);
+  if (summary.dirty > 0) parts.push(`${summary.dirty} dirty`);
+  return parts.join(" · ");
+}
+
+function feedSub(summary: DaySummary) {
+  const parts: string[] = [];
+  if (summary.bottles > 0) parts.push(`${summary.bottles} bottle${summary.bottles === 1 ? "" : "s"}`);
+  if (summary.nursings > 0) parts.push(`${summary.nursings} nursing`);
+  return parts.join(" · ");
+}
+
+function sleepSub(summary: DaySummary) {
+  const parts: string[] = [];
+  if (summary.naps > 0) parts.push(`${summary.naps} ${summary.naps === 1 ? "stretch" : "stretches"}`);
+  if (summary.longestSleepMinutes > 0) {
+    parts.push(`longest ${humanDuration(summary.longestSleepMinutes)}`);
+  }
+  return parts.join(" · ");
+}
+
+type DayRecapProps = {
+  summary: DaySummary;
+  title: string;
+  /** Omitted entirely when there is no history to walk; otherwise both arrows
+      always render and disable at the ends, so the header never reflows. */
+  stepper?: {
+    onPrev: () => void;
+    onNext: () => void;
+    canPrev: boolean;
+    canNext: boolean;
+  };
+};
+
+export function DayRecap({ summary, title, stepper }: DayRecapProps) {
+  const bracket =
+    summary.firstFeedAt && summary.lastFeedAt && summary.firstFeedAt !== summary.lastFeedAt
+      ? `${formatTime(summary.firstFeedAt)} → ${formatTime(summary.lastFeedAt)}`
+      : null;
+
+  return (
+    <section className="day-recap" aria-label={`${title} summary`}>
+      <header className="recap-head">
+        {/* The stepper walks whole calendar days: back only as far as the
+            first thing ever logged, forward never past today. */}
+        {stepper && (
+          <Button
+            variant="ghost"
+            className="recap-step"
+            onClick={stepper.onPrev}
+            disabled={!stepper.canPrev}
+            aria-label="Previous day"
+          >
+            <ChevronLeft size={16} aria-hidden="true" />
+          </Button>
+        )}
+        <span className="t-label recap-title">{title}</span>
+        {bracket && <span className="recap-bracket">{bracket}</span>}
+        {stepper && (
+          <Button
+            variant="ghost"
+            className="recap-step"
+            onClick={stepper.onNext}
+            disabled={!stepper.canNext}
+            aria-label="Next day"
+          >
+            <ChevronRight size={16} aria-hidden="true" />
+          </Button>
+        )}
+      </header>
+      {summary.isEmpty ? (
+        <p className="recap-empty">
+          {summary.isToday ? "Nothing logged yet today." : "Nothing logged on this day."}
+        </p>
+      ) : (
+      <div className="recap-grid">
+        <Stat
+          glyph="nursing"
+          label={summary.feeds === 1 ? "Feed" : "Feeds"}
+          sub={feedSub(summary)}
+        >
+          <Count value={summary.feeds} />
+        </Stat>
+        <Stat
+          glyph="bottle"
+          label="Milk"
+          sub={summary.nursingMinutes > 0 ? `${humanDuration(summary.nursingMinutes)} nursing` : undefined}
+        >
+          {summary.ml > 0 ? <>{summary.ml}<span className="unit">ml</span></> : <span className="is-zero">—</span>}
+        </Stat>
+        <Stat
+          glyph="diaper"
+          label={summary.diapers === 1 ? "Diaper" : "Diapers"}
+          sub={diaperSub(summary)}
+        >
+          <Count value={summary.diapers} />
+        </Stat>
+        <Stat glyph="sleep" label="Sleep" sub={sleepSub(summary)}>
+          <Duration minutes={summary.sleepMinutes} />
+        </Stat>
+      </div>
+      )}
+    </section>
+  );
+}
+
+/**
+ * The same day as one line, for a Timeline day heading. Only the parts that
+ * happened appear — an empty day renders nothing at all.
+ */
+export function DayRecapLine({ summary }: { summary: DaySummary }) {
+  const parts: string[] = [];
+  if (summary.feeds > 0) parts.push(`${summary.feeds} ${summary.feeds === 1 ? "feed" : "feeds"}`);
+  if (summary.ml > 0) parts.push(`${summary.ml} ml`);
+  if (summary.wet > 0) parts.push(`${summary.wet} wet`);
+  if (summary.dirty > 0) parts.push(`${summary.dirty} dirty`);
+  if (summary.sleepMinutes > 0) parts.push(`${humanDuration(summary.sleepMinutes)} sleep`);
+  if (parts.length === 0) return null;
+  return <p className="recap-line">{parts.join(" · ")}</p>;
+}

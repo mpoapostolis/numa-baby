@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { summarizeDay } from "../domain/daySummary";
 import { ageInMonths, isSameDay, median, minutesOnDay } from "../domain/time";
 import { Activity, Profile } from "../domain/types";
 
@@ -169,7 +170,12 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
       ? Math.round((weekly.reduce((sum, day) => sum + day.feeds.length, 0) / trackedDays) * 10) / 10
       : null;
 
+    // The full breakdown every recap quotes — one shared source so Today,
+    // Timeline and Insights can never disagree about a number.
+    const today = summarizeDay(sortedActivities, new Date(minuteClock), minuteClock);
+
     return {
+      today,
       todayActivities,
       feedsToday,
       bottleMlToday,
