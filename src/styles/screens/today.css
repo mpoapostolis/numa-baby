@@ -409,11 +409,11 @@
 
 /* The paintbox: each tile borrows its activity's pigment as a whisper of a
    wash and a hue-kissed border — Bottle reads blue, Nursing blush, Diaper
-   sage, Sleep lavender at arm's length, like a row of app icons. */
+   sage, Burp teal at arm's length, like a row of app icons. */
 .tile-bottle { --tile-hue: var(--glyph-bottle); }
 .tile-nurse { --tile-hue: var(--glyph-nursing); }
 .tile-diaper { --tile-hue: var(--glyph-diaper); }
-.tile-sleep { --tile-hue: var(--glyph-sleep); }
+.tile-burp { --tile-hue: var(--glyph-burp); }
 
 .quick-tile {
   position: relative;
