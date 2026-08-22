@@ -974,3 +974,97 @@
   background: color-mix(in oklch, var(--alert) 10%, var(--card));
   color: var(--alert);
 }
+
+/* ——— Thumb-sized hit areas ———————————————————————————————————————
+   Several controls are drawn small on purpose: a day arrow next to a label,
+   a series tab, a citation link under a card. Drawn size and TAP size are
+   different things, so these grow an invisible hit area instead of growing
+   visually. The overlay is centred and never larger than the gap around the
+   control, so it can never steal a neighbour's tap. */
+.recap-step,
+.trend-tab {
+  position: relative;
+}
+
+.recap-step::after,
+.trend-tab::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  width: max(100%, 44px);
+  height: 44px;
+}
+
+/* Citation links sit in stacked lists, so a 44px overlay would cover the link
+   below it. They get real height instead — comfortably over the 24px minimum
+   — and the extra padding doubles as the spacing between them. */
+.fact-source {
+  padding-block: 4px;
+  min-height: 26px;
+  align-items: center;
+}
+
+/* The switch is the only control in its row, so the whole row can carry the
+   tap: 20px of drawn track, 44px of reachable target. */
+[data-slot="switch"] {
+  position: relative;
+}
+
+[data-slot="switch"]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 0;
+  translate: 0 -50%;
+  width: 56px;
+  height: 44px;
+}
+
+/* The toast's own dismiss button ships at 20px. A toast that cannot be
+   dismissed with a thumb is a toast that gets waited out. */
+[data-close-button="true"] {
+  position: relative;
+}
+
+[data-close-button="true"]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  width: 44px;
+  height: 44px;
+}
+
+/* A pointer that is not a thumb does not need any of this. */
+@media (pointer: fine) {
+  .recap-step::after,
+  .trend-tab::after,
+  [data-slot="switch"]::after,
+  [data-close-button="true"]::after {
+    content: none;
+  }
+}
+
+/* ——— Form fields on a phone —————————————————————————————————————
+   iOS Safari zooms the entire page when a focused field's text is under 16px.
+   At 3am, one-handed, that means the layout jumps and the thumb loses its
+   place mid-entry. Touch pointers get genuine 16px text and a 44px field; a
+   mouse keeps the compact desktop form. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: 16px;
+    min-height: 44px;
+  }
+
+  /* The date and time controls iOS renders natively need the room too. */
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"] {
+    min-height: 44px;
+  }
+}
