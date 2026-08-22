@@ -42,8 +42,6 @@ export type DaySummary = {
   wet: number;
   dirty: number;
 
-  /** Burps logged on this day — one tap each, no duration. */
-  burps: number;
 
   growthEntries: number;
   healthEntries: number;
@@ -67,7 +65,6 @@ const EMPTY = {
   wet: 0,
   dirty: 0,
   both: 0,
-  burps: 0,
   growthEntries: 0,
   healthEntries: 0,
 };
@@ -103,7 +100,8 @@ export function summarizeDay(activities: Activity[], day: Date, now: number): Da
     // midnight is never counted twice.
     if (!isSameDay(activity.startedAt, date)) continue;
 
-    const isOpen = activity.type === "nursing" && !activity.endedAt;
+    const isOpen =
+      (activity.type === "nursing" || activity.type === "burp") && !activity.endedAt;
     const isStale =
       isOpen &&
       now - new Date(activity.startedAt).getTime() > STALE_OPEN_SPAN_MINUTES * 60_000;
@@ -149,10 +147,6 @@ export function summarizeDay(activities: Activity[], day: Date, now: number): Da
         if (activity.diaperKind === "dirty" || activity.diaperKind === "both") summary.dirty += 1;
         break;
       }
-      case "burp": {
-        summary.burps += 1;
-        break;
-      }
       case "growth":
         summary.growthEntries += 1;
         break;
@@ -165,7 +159,6 @@ export function summarizeDay(activities: Activity[], day: Date, now: number): Da
   summary.isEmpty =
     summary.feeds === 0 &&
     summary.diapers === 0 &&
-    summary.burps === 0 &&
     summary.growthEntries === 0 &&
     summary.healthEntries === 0;
 

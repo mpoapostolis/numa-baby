@@ -119,7 +119,15 @@ function NursingHearth({ activity, onStop }: { activity: Activity; onStop: () =>
   );
 }
 
-// Active sleep (and any orphaned timer from older data) renders as a 56px
+// A running burp is a stopwatch you watch: the seconds tick in place, so a
+// parent holding the baby upright after a feed can see exactly how long it
+// has been without doing arithmetic on a start time.
+function LiveClock({ startedAt }: { startedAt: string }) {
+  const now = useSecondClock();
+  return <span className="timer-clock t-numeral">{liveDuration(startedAt, now)}</span>;
+}
+
+// Active timers (and any orphaned one from older data) render as a 56px
 // row below the Hearth — never a second display-size numeral.
 function TimerRow({
   activity,
@@ -131,9 +139,13 @@ function TimerRow({
   onStop: () => void;
 }) {
   const isSleep = activity.type === "sleep";
+  const isBurp = activity.type === "burp";
   const title = isSleep
     ? "Sleeping now"
-    : `Nursing · ${activity.side === "left" ? "Left" : "Right"}`;
+    : isBurp
+      ? "Burping"
+      : `Nursing · ${activity.side === "left" ? "Left" : "Right"}`;
+  const stopLabel = isSleep ? "Wake up" : isBurp ? "Done" : "Stop";
   return (
     <div className="log-row timer-row">
       <span className={`activity-glyph glyph-${activity.type}`}>
@@ -142,13 +154,14 @@ function TimerRow({
       <div className="log-copy">
         <strong>{title}</strong>
         <small>
-          Started {formatTime(activity.startedAt)} ·{" "}
-          {humanDuration(minutesBetween(activity.startedAt, new Date(now).toISOString()))}
+          Started {formatTime(activity.startedAt)}
+          {!isBurp && ` · ${humanDuration(minutesBetween(activity.startedAt, new Date(now).toISOString()))}`}
         </small>
       </div>
+      {isBurp && <LiveClock startedAt={activity.startedAt} />}
       <div className="log-actions">
-        <Button onClick={onStop} aria-label={`Stop ${isSleep ? "sleep" : "nursing"} timer`}>
-          <Square size={14} fill="currentColor" aria-hidden="true" /> {isSleep ? "Wake up" : "Stop"}
+        <Button onClick={onStop} aria-label={`Stop ${activity.type} timer`}>
+          <Square size={14} fill="currentColor" aria-hidden="true" /> {stopLabel}
         </Button>
       </div>
     </div>
@@ -186,6 +199,7 @@ export default function TodayScreen({
     lastFeed,
     lastBottle,
     activeNursing,
+    activeBurp,
     activeTimers,
     typicalGap,
     nextFeedAt,
@@ -259,13 +273,19 @@ export default function TodayScreen({
     }
   }
 
-  function quickLogBurp() {
+  // A stopwatch, not a counter: one tap starts it, one tap stops it. The
+  // reading is the whole point — nothing about it is totalled anywhere.
+  function toggleBurp() {
+    if (activeBurp) {
+      onStopTimer(activeBurp.id);
+      return;
+    }
     const entry: Activity = {
       id: makeId(),
       type: "burp",
       startedAt: new Date().toISOString(),
     };
-    if (onAdd(entry, "Burp saved")) setReactionKey(entry.id);
+    onAdd(entry, "Burping timer started");
   }
 
   const selectedDay = new Date(minuteClock);
@@ -602,18 +622,20 @@ export default function TodayScreen({
               </div>
             </div>
 
-            <div className="quick-tile tile-burp">
-              <button
-                type="button"
-                className="tile-main"
-                onClick={quickLogBurp}
-                aria-label="Log a burp"
-              >
-                <span className="activity-glyph glyph-burp" aria-hidden="true"><ActivityGlyph type="burp" /></span>
-                <span className="tile-title">Burp</span>
-                <span className="tile-sub">One tap</span>
-              </button>
-            </div>
+            {!activeBurp && (
+              <div className="quick-tile tile-burp">
+                <button
+                  type="button"
+                  className="tile-main"
+                  onClick={toggleBurp}
+                  aria-label="Start burping timer"
+                >
+                  <span className="activity-glyph glyph-burp" aria-hidden="true"><ActivityGlyph type="burp" /></span>
+                  <span className="tile-title">Burp</span>
+                  <span className="tile-sub">Start the timer</span>
+                </button>
+              </div>
+            )}
           </div>
 
           <Button

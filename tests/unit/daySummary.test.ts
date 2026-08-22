@@ -18,7 +18,6 @@ describe("summarizeDay", () => {
     expect(summary.isEmpty).toBe(true);
     expect(summary.feeds).toBe(0);
     expect(summary.wet).toBe(0);
-    expect(summary.burps).toBe(0);
     expect(summary.isToday).toBe(true);
   });
 
@@ -71,19 +70,16 @@ describe("summarizeDay", () => {
     expect(summary.ml).toBe(0);
   });
 
-  it("counts burps as plain one-tap events", () => {
+  it("keeps burping out of every figure — it is a stopwatch, not a statistic", () => {
     const summary = summarizeDay(
       [
-        make({ type: "burp", startedAt: "2026-08-12T06:20:00" }),
+        make({ type: "burp", startedAt: "2026-08-12T06:20:00", endedAt: "2026-08-12T06:26:00" }),
         make({ type: "burp", startedAt: "2026-08-12T09:55:00" }),
-        make({ type: "burp", startedAt: "2026-08-12T13:10:00" }),
       ],
       day,
       now,
     );
-    expect(summary.burps).toBe(3);
-    expect(summary.isEmpty).toBe(false);
-    // A burp is not a feed and carries no duration.
+    expect(summary.isEmpty).toBe(true);
     expect(summary.feeds).toBe(0);
     expect(summary.nursingMinutes).toBe(0);
   });
@@ -205,7 +201,7 @@ describe("summarizeDay", () => {
     const acts = [
       make({ type: "bottle", startedAt: "2026-08-12T09:00:00", amount: 100 }),
       make({ type: "diaper", startedAt: "2026-08-12T07:00:00", diaperKind: "both" }),
-      make({ type: "burp", startedAt: "2026-08-12T09:05:00" }),
+      make({ type: "diaper", startedAt: "2026-08-12T09:05:00", diaperKind: "dirty" }),
     ];
     const forward = summarizeDay(acts, day, now);
     const backward = summarizeDay([...acts].reverse(), day, now);

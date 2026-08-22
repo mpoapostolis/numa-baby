@@ -22,6 +22,7 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
     let lastFeed: Activity | undefined;
     let lastBottle: Activity | undefined;
     let activeNursing: Activity | undefined;
+    let activeBurp: Activity | undefined;
     const activeTimers: Activity[] = [];
     const feedTimes: number[] = [];
     const growthByDate: Activity[] = [];
@@ -34,11 +35,15 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
       if (!lastBottle && activity.type === "bottle" && activity.amount && activity.milkType) {
         lastBottle = activity;
       }
-      if ((activity.type === "nursing" || activity.type === "sleep") && !activity.endedAt) {
+      if (
+        (activity.type === "nursing" || activity.type === "burp" || activity.type === "sleep") &&
+        !activity.endedAt
+      ) {
         // Every open session, not just nursing — a sleep timer left running by
         // an older version must stay visible and individually stoppable.
         activeTimers.push(activity);
         if (!activeNursing && activity.type === "nursing") activeNursing = activity;
+        if (!activeBurp && activity.type === "burp") activeBurp = activity;
       }
       if (activity.type === "growth" && activity.weightGrams) growthByDate.push(activity);
     }
@@ -73,6 +78,7 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
       lastFeed,
       lastBottle,
       activeNursing,
+      activeBurp,
       activeTimers,
       growthEntries,
       latestGrowth,
@@ -116,7 +122,6 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
         feeds,
         ml: feeds.reduce((sum, activity) => sum + (activity.amount ?? 0), 0),
         diapers: dayActivities.filter((activity) => activity.type === "diaper").length,
-        burps: dayActivities.filter((activity) => activity.type === "burp").length,
       };
     });
     const maxMl = Math.max(...weekly.map((day) => day.ml), 1);

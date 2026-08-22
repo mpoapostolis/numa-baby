@@ -176,7 +176,9 @@ export function LogSheet({
   const lengthRef = useRef<HTMLInputElement>(null);
   const headRef = useRef<HTMLInputElement>(null);
   const temperatureRef = useRef<HTMLInputElement>(null);
-  const isTimed = editing ? editing.type === "nursing" || editing.type === "sleep" : false;
+  const isTimed = editing
+    ? editing.type === "nursing" || editing.type === "burp" || editing.type === "sleep"
+    : false;
 
   function patch(partial: Partial<SheetDraft>) {
     setDraft((current) => ({ ...current, ...partial }));
@@ -315,7 +317,8 @@ export function LogSheet({
 
   function saveEditedActivity() {
     if (!editing) return;
-    const timed = editing.type === "sleep" || editing.type === "nursing";
+    const timed =
+      editing.type === "sleep" || editing.type === "nursing" || editing.type === "burp";
     const outcome = validateDraft(
       {
         type: editing.type,
@@ -343,7 +346,7 @@ export function LogSheet({
     };
 
     if (
-      (next.type === "nursing" || next.type === "sleep") &&
+      (next.type === "nursing" || next.type === "burp" || next.type === "sleep") &&
       !next.endedAt &&
       activities.some(
         (activity) => activity.type === next.type && !activity.endedAt && activity.id !== next.id,

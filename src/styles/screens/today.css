@@ -742,6 +742,19 @@
   color: var(--ink-3);
 }
 
+/* A running stopwatch inside a 56px row: tabular so the digits never jitter
+   as the seconds turn over, sized between a label and the hearth's display. */
+.timer-clock {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding-right: 12px;
+  font-size: 1.375rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--signal);
+  line-height: 1;
+}
+
 /* 5. Next-up + guidance footer. */
 .next-up {
   display: grid;

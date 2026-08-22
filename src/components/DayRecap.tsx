@@ -28,7 +28,7 @@ function Count({ value }: { value: number }) {
 }
 
 type StatProps = {
-  glyph: "bottle" | "nursing" | "diaper" | "burp";
+  glyph: "bottle" | "nursing" | "diaper";
   label: string;
   children: React.ReactNode;
   sub?: string;
@@ -78,13 +78,6 @@ function milkSub(summary: DaySummary) {
 function nursedSub(summary: DaySummary) {
   const sessions = `${summary.nursings} ${summary.nursings === 1 ? "session" : "sessions"}`;
   return summary.hasRunningTimer ? `${sessions} · one still going` : sessions;
-}
-
-// A burp per feed is the usual rhythm, so the useful second line is how the
-// two counts line up — never a verdict, just the pair.
-function burpSub(summary: DaySummary) {
-  if (summary.burps === 0 || summary.feeds === 0) return undefined;
-  return `after ${summary.feeds} ${summary.feeds === 1 ? "feed" : "feeds"}`;
 }
 
 type DayRecapProps = {
@@ -169,9 +162,6 @@ export function DayRecap({ summary, title, stepper }: DayRecapProps) {
         <Stat glyph="diaper" label="Dirty" sub={changesSub(summary)}>
           <Count value={summary.dirty} />
         </Stat>
-        <Stat glyph="burp" label="Burps" sub={burpSub(summary)}>
-          <Count value={summary.burps} />
-        </Stat>
       </div>
       )}
     </section>
@@ -188,7 +178,6 @@ export function DayRecapLine({ summary }: { summary: DaySummary }) {
   if (summary.ml > 0) parts.push(`${summary.ml} ml`);
   if (summary.wet > 0) parts.push(`${summary.wet} wet`);
   if (summary.dirty > 0) parts.push(`${summary.dirty} dirty`);
-  if (summary.burps > 0) parts.push(`${summary.burps} ${summary.burps === 1 ? "burp" : "burps"}`);
   if (parts.length === 0) return null;
   return <p className="recap-line">{parts.join(" · ")}</p>;
 }
