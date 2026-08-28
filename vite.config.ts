@@ -47,8 +47,21 @@ export default defineConfig({
         navigateFallback: "/index.html",
         // Without this the service worker answers EVERY navigation with the
         // cached app shell — including /admin and /api, which live in the
-        // Worker and must reach the network.
-        navigateFallbackDenylist: [/^\/admin/, /^\/api\//],
+        // Worker and must reach the network, and the prerendered content
+        // pages, which are the whole point of being findable at all: a person
+        // arriving from a search result must get the article they clicked,
+        // not the app shell wearing its URL.
+        navigateFallbackDenylist: [
+          /^\/admin/,
+          /^\/api\//,
+          /^\/guides/,
+          /^\/sources/,
+          /^\/newborn/,
+          /^\/\d+-(weeks|months)/,
+          /^\/1-year/,
+          /^\/when-to-call-a-doctor/,
+          /^\/how-much-milk/,
+        ],
         globPatterns: ["**/*.{html,js,css,png,svg,webmanifest}"],
         globIgnores: ["**/og-baby-tracker.png"],
         sourcemap: false,

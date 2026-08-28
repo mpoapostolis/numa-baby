@@ -598,13 +598,22 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
    *
    * @param prompt what to ask before merging, since the two callers arrive
    *               with different context
+   * @param source where the data came from, which decides how much is taken on
+   *               trust. A FILE was chosen by the person holding the phone. A
+   *               LINK was not: anyone can put one in front of anybody, so it
+   *               is always confirmed and never allowed near the recovery copy.
    * @returns whether anything was merged
    */
-  function mergeBackupText(text: string, prompt: string): boolean {
+  function mergeBackupText(text: string, prompt: string, source: "file" | "link"): boolean {
       try {
         const parsed = parseStoredData(text);
         if (parsed.legacyDemo) throw new Error("Preview backups are not importable");
-        if (bootState === "ready" && !window.confirm(prompt)) return false;
+        // A file is only ever merged unasked on a phone with nothing to lose —
+        // a fresh install, or the recovery screen, where the parent has just
+        // picked the file themselves. A link has no such story: it is always
+        // confirmed, whatever state the app is in, or a page could plant a
+        // fabricated log on a fresh install with no tap at all.
+        if ((source === "link" || bootState === "ready") && !window.confirm(prompt)) return false;
         // Rollback safety: the pre-merge state is written to the recovery slot
         // BEFORE anything is merged, so a bad backup can always be walked back.
         let recoveryCreated = true;
@@ -649,7 +658,12 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
           return false;
         }
         const summary = summarizeMerge(localActivities, merged.activities);
-        const restoringFromRecovery = bootState !== "ready";
+        // Only a file the parent chose may clear the recovery copy, and only
+        // when they were on the recovery screen to choose it. In that state the
+        // copy is a family's ONLY surviving version of an unreadable log, and a
+        // link that could delete it would be a way to destroy someone's history
+        // from a distance — with no tap, and nothing left to restore.
+        const restoringFromRecovery = source === "file" && bootState !== "ready";
         if (!persistSnapshot(merged.activities, merged.profile, merged.nightMode, merged.reminders, true)) return false;
         if (restoringFromRecovery) {
           // The stale recovery copy must not shadow future downloads now that a
@@ -691,6 +705,7 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
       mergeBackupText(
         String(reader.result),
         "Merge this backup into your timeline? Existing entries stay; newer versions win.",
+        "file",
       );
     };
     reader.onerror = () => showToast("That backup could not be opened");

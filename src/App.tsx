@@ -29,6 +29,7 @@ import { Activity, ActivityType, Sheet, Tab } from "./domain/types";
 import { JOIN_CODE_PATTERN } from "./domain/familyPairing";
 import { track, suppressTracking } from "./domain/analytics";
 import { LATEST_RELEASE_ID, unseenReleases } from "./domain/changelog";
+import { parseStoredData } from "./domain/validate";
 import {
   HANDOFF_PATH,
   handoffReturnUrl,
@@ -246,12 +247,18 @@ export default function HomePage() {
       .then(({ unpackHandoff }) => unpackHandoff(payload))
       .then((text) => {
         if (cancelled) return;
-        // The same confirmation, rollback copy and validation as a backup file
-        // opened by hand — see mergeBackupText. Arriving by link earns no
-        // shortcut through any of it.
+        // The same validation and rollback copy as a backup file opened by
+        // hand — see mergeBackupText — and, because this arrived in a link
+        // rather than from a file the parent picked, ALWAYS a confirmation.
+        // The prompt names what is about to arrive: "412 entries for Mia" is
+        // something a person can recognise or reject; "merge this data?" is not.
+        const arriving = parseStoredData(text);
+        const count = arriving.activities.length;
+        const whose = arriving.profile.name.trim();
         mergeBackupText(
           text,
-          "Bring this log across from the app's other address? Existing entries stay; newer versions win.",
+          `Bring ${count} ${count === 1 ? "entry" : "entries"}${whose ? ` for ${whose}` : ""} across from the app's other address? Existing entries stay; newer versions win.`,
+          "link",
         );
       })
       .catch(() => showToast("That log could not be read"));
