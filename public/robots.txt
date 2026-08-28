@@ -1,0 +1,8 @@
+# Baby Tracker
+User-agent: *
+Allow: /
+# The operator dashboard is not content.
+Disallow: /admin
+Disallow: /api/
+
+Sitemap: https://numa-baby.mpoapostolis.workers.dev/sitemap.xml

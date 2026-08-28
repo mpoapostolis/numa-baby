@@ -1,5 +1,6 @@
 /// <reference types="@cloudflare/workers-types" />
 import { createClient } from "@libsql/client/web";
+import { adminLogout, adminPage, handleAdminLogin, handleAdminStats } from "./admin";
 
 // Family Sync API — the doorman between the PWA and the Turso database.
 // Same origin as the static app: /api/* is handled here, everything else
@@ -13,6 +14,8 @@ type Env = {
   ASSETS: Fetcher;
   TURSO_DATABASE_URL: string;
   TURSO_AUTH_TOKEN: string;
+  /** Operator password for /admin. Unset means the page does not exist. */
+  ADMIN_PASSWORD?: string;
 };
 
 const INVITE_TTL_MS = 15 * 60 * 1000;
@@ -237,6 +240,28 @@ async function handlePush(env: Env, request: Request, familyId: string): Promise
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+
+    // The operator page and its endpoints. With no ADMIN_PASSWORD set they
+    // return 404 rather than an unguarded dashboard — a secret that was never
+    // configured must not become an open door.
+    const isAdmin = url.pathname === "/admin" || url.pathname.startsWith("/api/admin/");
+    if (isAdmin) {
+      const secret = env.ADMIN_PASSWORD;
+      if (!secret) return new Response("Not found", { status: 404 });
+      const now = Date.now();
+      if (url.pathname === "/admin") return adminPage();
+      if (url.pathname === "/api/admin/login" && request.method === "POST") {
+        return await handleAdminLogin(secret, request, now);
+      }
+      if (url.pathname === "/api/admin/logout" && request.method === "POST") {
+        return adminLogout();
+      }
+      if (url.pathname === "/api/admin/stats" && request.method === "GET") {
+        return await handleAdminStats(db(env), secret, request, now);
+      }
+      return new Response("Not found", { status: 404 });
+    }
+
     if (!url.pathname.startsWith("/api/")) {
       return env.ASSETS.fetch(request);
     }
