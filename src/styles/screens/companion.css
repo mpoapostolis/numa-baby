@@ -2,7 +2,7 @@
    by the global prefers-reduced-motion block in base.css. */
 
 .baby-companion {
-  color: color-mix(in oklch, var(--glyph-nursing) 45%, var(--foreground));
+  color: color-mix(in oklab, var(--glyph-nursing) 45%, var(--foreground));
 }
 
 /* Awake: a blink every six seconds. */

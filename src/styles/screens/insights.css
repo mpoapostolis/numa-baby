@@ -455,11 +455,11 @@
   align-items: flex-start;
   gap: 12px;
   padding: 16px;
-  border: 1px solid color-mix(in oklch, var(--tone-hue) 28%, var(--border));
+  border: 1px solid color-mix(in oklab, var(--tone-hue) 28%, var(--border));
   border-radius: var(--radius-xl);
   background: linear-gradient(
     135deg,
-    color-mix(in oklch, var(--tone-hue) 8%, var(--card)),
+    color-mix(in oklab, var(--tone-hue) 8%, var(--card)),
     var(--card) 70%
   );
 }
@@ -475,7 +475,7 @@
   display: grid;
   place-items: center;
   border-radius: 10px;
-  background: color-mix(in oklch, var(--tone-hue) var(--glyph-wash), var(--card));
+  background: color-mix(in oklab, var(--tone-hue) var(--glyph-wash), var(--card));
   color: var(--tone-hue);
 }
 

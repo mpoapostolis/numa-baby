@@ -108,7 +108,7 @@
   --glyph-health: oklch(0.53 0.11 25);    /* coral        */
   /* Blush wash for pastel activity chips: hue over --card. */
   --glyph-wash: 12%;
-  --danger-soft: color-mix(in oklch, var(--alert) 8%, var(--background));
+  --danger-soft: color-mix(in oklab, var(--alert) 8%, var(--background));
   --shadow-card: none;
   --shadow-dialog: 0 16px 48px -24px oklch(0.32 0.04 20 / 0.28);
   color-scheme: light;
@@ -150,7 +150,7 @@
   --glyph-growth: oklch(0.78 0.085 85);
   --glyph-health: oklch(0.765 0.085 25);
   --glyph-wash: 18%;
-  --danger-soft: color-mix(in oklch, var(--alert) 12%, var(--background));
+  --danger-soft: color-mix(in oklab, var(--alert) 12%, var(--background));
   --shadow-dialog: none;
   color-scheme: dark;
 }

@@ -34,7 +34,7 @@
 }
 
 .filter-row [data-slot="toggle-group-item"][data-state="on"] {
-  border-color: color-mix(in oklch, var(--signal) 40%, var(--border));
+  border-color: color-mix(in oklab, var(--signal) 40%, var(--border));
   background: var(--signal-quiet);
   color: var(--signal);
   box-shadow: none;

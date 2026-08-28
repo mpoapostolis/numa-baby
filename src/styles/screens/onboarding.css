@@ -243,14 +243,14 @@
    chips, plus two amber stars riding the corner. Box stays 40px. */
 .onboarding-baby-icon {
   position: relative;
-  border: 1px solid color-mix(in oklch, var(--glyph-nursing) 22%, var(--border));
+  border: 1px solid color-mix(in oklab, var(--glyph-nursing) 22%, var(--border));
   border-radius: 50%;
-  background: color-mix(in oklch, var(--glyph-nursing) 12%, var(--card));
-  color: color-mix(in oklch, var(--glyph-nursing) 45%, var(--foreground));
+  background: color-mix(in oklab, var(--glyph-nursing) 12%, var(--card));
+  color: color-mix(in oklab, var(--glyph-nursing) 45%, var(--foreground));
 }
 
 .dark .onboarding-baby-icon {
-  background: color-mix(in oklch, var(--glyph-nursing) 20%, var(--card));
+  background: color-mix(in oklab, var(--glyph-nursing) 20%, var(--card));
 }
 
 .onboarding-baby-icon svg:first-child {
@@ -292,7 +292,7 @@
 
 .onboarding-alert {
   padding: 8px 12px;
-  border: 1px solid color-mix(in oklch, var(--alert) 28%, var(--border));
+  border: 1px solid color-mix(in oklab, var(--alert) 28%, var(--border));
   border-radius: var(--radius-md);
   background: var(--danger-soft);
   color: var(--foreground);

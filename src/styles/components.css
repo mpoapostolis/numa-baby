@@ -110,42 +110,42 @@
 
 .action-feed .action-icon,
 .glyph-bottle {
-  background: color-mix(in oklch, var(--glyph-bottle) var(--glyph-wash), var(--card));
+  background: color-mix(in oklab, var(--glyph-bottle) var(--glyph-wash), var(--card));
   color: var(--glyph-bottle);
 }
 
 .action-nurse .action-icon,
 .glyph-nursing {
-  background: color-mix(in oklch, var(--glyph-nursing) var(--glyph-wash), var(--card));
+  background: color-mix(in oklab, var(--glyph-nursing) var(--glyph-wash), var(--card));
   color: var(--glyph-nursing);
 }
 
 .action-diaper .action-icon,
 .glyph-diaper {
-  background: color-mix(in oklch, var(--glyph-diaper) var(--glyph-wash), var(--card));
+  background: color-mix(in oklab, var(--glyph-diaper) var(--glyph-wash), var(--card));
   color: var(--glyph-diaper);
 }
 
 .action-burp .action-icon,
 .glyph-burp {
-  background: color-mix(in oklch, var(--glyph-burp) var(--glyph-wash), var(--card));
+  background: color-mix(in oklab, var(--glyph-burp) var(--glyph-wash), var(--card));
   color: var(--glyph-burp);
 }
 
 .glyph-sleep {
-  background: color-mix(in oklch, var(--glyph-sleep) var(--glyph-wash), var(--card));
+  background: color-mix(in oklab, var(--glyph-sleep) var(--glyph-wash), var(--card));
   color: var(--glyph-sleep);
 }
 
 .action-growth .action-icon,
 .glyph-growth {
-  background: color-mix(in oklch, var(--glyph-growth) var(--glyph-wash), var(--card));
+  background: color-mix(in oklab, var(--glyph-growth) var(--glyph-wash), var(--card));
   color: var(--glyph-growth);
 }
 
 .action-health .action-icon,
 .glyph-health {
-  background: color-mix(in oklch, var(--glyph-health) var(--glyph-wash), var(--card));
+  background: color-mix(in oklab, var(--glyph-health) var(--glyph-wash), var(--card));
   color: var(--glyph-health);
 }
 
@@ -263,12 +263,12 @@
   gap: 12px;
   padding: 16px 64px 16px 24px;
   border-bottom: 1px solid var(--border);
-  background: color-mix(in oklch, var(--popover) 94%, var(--muted));
+  background: color-mix(in oklab, var(--popover) 94%, var(--muted));
 }
 
 /* Night: popover == muted, so the band mixes toward black instead. */
 .dark .log-dialog-header {
-  background: color-mix(in oklch, var(--popover) 94%, black);
+  background: color-mix(in oklab, var(--popover) 94%, black);
 }
 
 .sheet-symbol {
@@ -531,7 +531,7 @@
 .preset-row [data-slot="toggle-group-item"][data-state="on"],
 .side-grid [data-slot="toggle-group-item"][data-state="on"],
 .diaper-grid [data-slot="toggle-group-item"][data-state="on"] {
-  border-color: color-mix(in oklch, var(--signal) 40%, var(--border));
+  border-color: color-mix(in oklab, var(--signal) 40%, var(--border));
   background: var(--signal-quiet);
   color: var(--signal);
   box-shadow: none;
@@ -722,7 +722,7 @@
 .health-alert,
 .form-error {
   padding: 12px;
-  border: 1px solid color-mix(in oklch, var(--alert) 28%, var(--border));
+  border: 1px solid color-mix(in oklab, var(--alert) 28%, var(--border));
   border-radius: var(--radius-md);
   background: var(--danger-soft);
   color: var(--foreground);
@@ -887,11 +887,11 @@
 .activity-open:active,
 .log-row-secondary:active,
 [data-slot="toggle-group-item"][data-state="off"]:active {
-  background-color: color-mix(in oklch, var(--foreground) 6%, var(--card));
+  background-color: color-mix(in oklab, var(--foreground) 6%, var(--card));
 }
 
 .segmented [data-slot="toggle-group-item"][data-state="off"]:active {
-  background-color: color-mix(in oklch, var(--foreground) 6%, var(--muted));
+  background-color: color-mix(in oklab, var(--foreground) 6%, var(--muted));
 }
 
 /* Sheet feel: unhurried rise, quicker goodbye. Keyframes animate `transform`
@@ -970,8 +970,8 @@
 }
 
 .settings-action-danger .settings-action-icon {
-  border-color: color-mix(in oklch, var(--alert) 25%, var(--border));
-  background: color-mix(in oklch, var(--alert) 10%, var(--card));
+  border-color: color-mix(in oklab, var(--alert) 25%, var(--border));
+  background: color-mix(in oklab, var(--alert) 10%, var(--card));
   color: var(--alert);
 }
 
@@ -1151,7 +1151,7 @@
 .feedback-bubble:hover,
 .feedback-bubble:focus-visible {
   color: var(--signal);
-  border-color: color-mix(in oklch, var(--signal) 40%, var(--border));
+  border-color: color-mix(in oklab, var(--signal) 40%, var(--border));
 }
 
 .feedback-bubble:active {

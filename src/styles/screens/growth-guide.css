@@ -69,9 +69,9 @@
   position: absolute;
   top: 6px;
   bottom: 6px;
-  border: 1px solid color-mix(in oklch, var(--ink-3) 65%, var(--border-strong));
+  border: 1px solid color-mix(in oklab, var(--ink-3) 65%, var(--border-strong));
   border-radius: 999px;
-  background: color-mix(in oklch, var(--ink-3) 10%, var(--card));
+  background: color-mix(in oklab, var(--ink-3) 10%, var(--card));
 }
 
 .range-median {
@@ -423,7 +423,7 @@
 .watch-card {
   display: grid;
   gap: 12px;
-  border-color: color-mix(in oklch, var(--glyph-health) 28%, var(--border));
+  border-color: color-mix(in oklab, var(--glyph-health) 28%, var(--border));
 }
 
 .watch-head {
@@ -444,7 +444,7 @@
   display: grid;
   place-items: center;
   border-radius: 12px;
-  background: color-mix(in oklch, var(--glyph-health) var(--glyph-wash), var(--card));
+  background: color-mix(in oklab, var(--glyph-health) var(--glyph-wash), var(--card));
   color: var(--glyph-health);
 }
 

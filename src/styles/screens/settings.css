@@ -69,7 +69,7 @@
 }
 
 .appearance-options [data-slot="toggle-group-item"][data-state="on"] {
-  border-color: color-mix(in oklch, var(--signal) 52%, var(--border));
+  border-color: color-mix(in oklab, var(--signal) 52%, var(--border));
   background: var(--signal-quiet);
   color: var(--accent-foreground);
   box-shadow: none;
@@ -192,7 +192,7 @@
 }
 
 .settings-action:active {
-  background: color-mix(in oklch, var(--foreground) 6%, var(--card));
+  background: color-mix(in oklab, var(--foreground) 6%, var(--card));
   transform: none;
 }
 
@@ -249,7 +249,7 @@
   }
 
   .settings-action-danger:hover {
-    border-color: color-mix(in oklch, var(--alert) 25%, var(--border));
+    border-color: color-mix(in oklab, var(--alert) 25%, var(--border));
     background: color-mix(in oklch, var(--alert) 8%, transparent);
   }
 
@@ -337,7 +337,7 @@
   display: grid;
   place-items: center;
   border-radius: var(--radius-md);
-  background: color-mix(in oklch, var(--signal) var(--glyph-wash), var(--card));
+  background: color-mix(in oklab, var(--signal) var(--glyph-wash), var(--card));
   color: var(--signal);
 }
 
