@@ -6,7 +6,15 @@
   gap: 24px;
 }
 
+/* The two-column grid is for the FIGURES. Everything that reads as a
+   full-width block — the heading, the answer-first cards, the summary strip,
+   growth, the closing note — spans both, or it strands itself in one column
+   and tears a hole beside it. New blocks default to full width by being
+   listed here; a figure opts into a column instead. */
 .insights-screen > .section-heading,
+.insights-screen > .visit-open,
+.insights-screen > .intake-card,
+.insights-screen > .insight-deck,
 .insights-screen > .insight-summary,
 .insights-screen > .growth-card,
 .insights-screen > .gentle-note {
