@@ -39,6 +39,22 @@ Two things do leave the device, and both are stated in the app:
 - **Family Sync (opt-in).** Turning it on stores your entries in your family's own space in a hosted database, so a second phone can share the log. Leave the family and the phone keeps its data and stops syncing.
 - **Anonymous usage statistics.** The app loads Google Analytics to count page views. It never receives your baby's entries — those are not sent anywhere except through Family Sync, if you enable it.
 
+## Family Sync service
+
+The optional sync API is a Cloudflare Worker (`worker/index.ts`) backed by a
+Turso (libSQL) database. The worker assumes its schema already exists; create
+it with:
+
+```bash
+turso db shell <database> < worker/schema.sql
+```
+
+Set `TURSO_DATABASE_URL` in `wrangler.jsonc` and the token as a secret:
+
+```bash
+turso db tokens create <database> | npx wrangler secret put TURSO_AUTH_TOKEN
+```
+
 ## Development
 
 Requires Node.js `>=22.13.0`.
