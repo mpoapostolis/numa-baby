@@ -23,8 +23,6 @@ import { AppSidebar } from "./components/AppSidebar";
 import { BabyFace, SleepingBaby } from "./components/illustrations";
 import { ConsentBanner } from "./components/ConsentBanner";
 import { FeedbackBubble } from "./components/FeedbackBubble";
-import { WhatsNew } from "./components/WhatsNew";
-import { LogSheet } from "./components/LogSheet";
 import OnboardingScreen from "./screens/OnboardingScreen";
 import TodayScreen from "./screens/TodayScreen";
 import { Activity, ActivityType, Sheet, Tab } from "./domain/types";
@@ -47,6 +45,12 @@ const GrowthGuideScreen = lazy(() => import("./screens/GrowthGuideScreen"));
 const SettingsScreen = lazy(() => import("./screens/SettingsScreen"));
 // Only ever rendered for someone arriving from a scanned invite.
 const JoinFamilyScreen = lazy(() => import("./components/JoinFamilyScreen"));
+// Read once and dismissed for ever — not worth the critical path.
+const WhatsNew = lazy(() => import("./components/WhatsNew").then((m) => ({ default: m.WhatsNew })));
+// Every form in the app. The one-tap paths never open it, and the paths that
+// do are the deliberate slow ones — so it loads on the first sheet, not on
+// the boot a parent waits through at 3am.
+const LogSheet = lazy(() => import("./components/LogSheet").then((m) => ({ default: m.LogSheet })));
 
 // A future-dated feed from a restored backup must never arm a timer that wraps
 // the 32-bit setTimeout ceiling and fires instantly.
@@ -393,6 +397,7 @@ export default function HomePage() {
 
         <main className="content">
           {activeTab === "today" && releasesToShow.length > 0 && (
+            <Suspense fallback={null}>
             <WhatsNew
               releases={releasesToShow}
               onDismiss={() => {
@@ -400,6 +405,7 @@ export default function HomePage() {
                 markReleasesSeen();
               }}
             />
+            </Suspense>
           )}
 
           {activeTab === "today" && (
@@ -536,6 +542,7 @@ export default function HomePage() {
               }}
             >
               <div className="sheet-handle" />
+              <Suspense fallback={null}>
               <LogSheet
                 key={sheet === "edit" ? editingActivity?.id : sheet}
                 sheet={sheet}
@@ -553,6 +560,7 @@ export default function HomePage() {
                 onClose={() => setSheet(null)}
                 showToast={showToast}
               />
+              </Suspense>
             </DialogContent>
           )}
         </Dialog>

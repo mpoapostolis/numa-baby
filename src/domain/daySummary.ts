@@ -9,7 +9,7 @@
 //   2. A running timer is clamped to `now`, so "nursed so far" is what has
 //      actually happened, not a promise about the rest of the session.
 
-import { isSameDay, minutesBetween } from "./time";
+import { isSameDay, minutesBetween, minutesOnDay } from "./time";
 import { Activity } from "./types";
 
 export type DaySummary = {
@@ -43,6 +43,13 @@ export type DaySummary = {
   dirty: number;
 
 
+  /** Sleep minutes falling inside this day — an overnight splits honestly. */
+  sleepMinutes: number;
+  /** Sleep stretches that started on this day. */
+  naps: number;
+  /** The longest single stretch's minutes inside this day. */
+  longestSleepMinutes: number;
+
   growthEntries: number;
   healthEntries: number;
   /** Anything at all logged on this day. */
@@ -65,6 +72,9 @@ const EMPTY = {
   wet: 0,
   dirty: 0,
   both: 0,
+  sleepMinutes: 0,
+  naps: 0,
+  longestSleepMinutes: 0,
   growthEntries: 0,
   healthEntries: 0,
 };
@@ -96,12 +106,17 @@ export function summarizeDay(activities: Activity[], day: Date, now: number): Da
   let lastFeedMs: number | undefined;
 
   for (const activity of activities) {
-    // Every entry belongs to the day it started, so a session running past
-    // midnight is never counted twice.
-    if (!isSameDay(activity.startedAt, date)) continue;
+    // Sleep is the exception: a 22:00–06:00 stretch is two hours of THIS date
+    // and six of the next, so it is counted by the minutes that fall inside
+    // the day. Everything else belongs to the day it started, so a session
+    // running past midnight is never counted twice.
+    const isSleep = activity.type === "sleep";
+    const startedToday = isSameDay(activity.startedAt, date);
+    const sleepMinutesHere = isSleep ? minutesOnDay(activity, date, now) : 0;
+    if (!startedToday && !(isSleep && sleepMinutesHere > 0)) continue;
 
     const isOpen =
-      (activity.type === "nursing" || activity.type === "burp") && !activity.endedAt;
+      (activity.type === "nursing" || activity.type === "burp" || isSleep) && !activity.endedAt;
     const isStale =
       isOpen &&
       now - new Date(activity.startedAt).getTime() > STALE_OPEN_SPAN_MINUTES * 60_000;
@@ -147,6 +162,16 @@ export function summarizeDay(activities: Activity[], day: Date, now: number): Da
         if (activity.diaperKind === "dirty" || activity.diaperKind === "both") summary.dirty += 1;
         break;
       }
+      case "sleep": {
+        // A forgotten timer is not twenty hours of sleep, so a stale one keeps
+        // its entry and contributes no minutes.
+        if (startedToday) summary.naps += 1;
+        if (!isStale) {
+          summary.sleepMinutes += sleepMinutesHere;
+          summary.longestSleepMinutes = Math.max(summary.longestSleepMinutes, sleepMinutesHere);
+        }
+        break;
+      }
       case "growth":
         summary.growthEntries += 1;
         break;
@@ -159,6 +184,8 @@ export function summarizeDay(activities: Activity[], day: Date, now: number): Da
   summary.isEmpty =
     summary.feeds === 0 &&
     summary.diapers === 0 &&
+    summary.naps === 0 &&
+    summary.sleepMinutes === 0 &&
     summary.growthEntries === 0 &&
     summary.healthEntries === 0;
 

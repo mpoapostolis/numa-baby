@@ -23,6 +23,7 @@ const SERIES: Series[] = [
   { key: "feeds", label: "Feeds", glyph: "nursing", hue: "var(--glyph-nursing)", value: (d) => d.feeds },
   { key: "wet", label: "Wet", glyph: "diaper", hue: "var(--glyph-diaper)", value: (d) => d.wet },
   { key: "dirty", label: "Dirty", glyph: "diaper", hue: "var(--glyph-growth)", value: (d) => d.dirty },
+  { key: "sleep", label: "Sleep", glyph: "diaper", hue: "var(--glyph-sleep)", unit: "m", value: (d) => d.sleepMinutes },
 ];
 
 const dayFormat = new Intl.DateTimeFormat("en", { weekday: "short" });

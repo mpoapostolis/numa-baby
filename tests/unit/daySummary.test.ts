@@ -84,20 +84,37 @@ describe("summarizeDay", () => {
     expect(summary.nursingMinutes).toBe(0);
   });
 
-  it("leaves legacy sleep entries out of every figure", () => {
-    // Sleep is no longer tracked. Old entries stay readable in the Timeline,
-    // but they must not add minutes to a day that no longer reports sleep.
-    const summary = summarizeDay(
-      [make({
-        type: "sleep",
-        startedAt: "2026-08-12T13:00:00",
-        endedAt: "2026-08-12T15:30:00",
-      })],
-      day,
-      now,
-    );
-    expect(summary.isEmpty).toBe(true);
-    expect(summary.feeds).toBe(0);
+  it("counts sleep, and splits an overnight across both dates", () => {
+    // Restored after two users asked for it back within hours of removal.
+    const nap = make({
+      type: "sleep",
+      startedAt: "2026-08-12T13:00:00",
+      endedAt: "2026-08-12T15:30:00",
+    });
+    const overnight = make({
+      type: "sleep",
+      startedAt: "2026-08-11T22:00:00",
+      endedAt: "2026-08-12T06:00:00",
+    });
+
+    const today = summarizeDay([nap, overnight], day, now);
+    // 150 minutes of nap plus the six hours of the overnight that fall today.
+    expect(today.sleepMinutes).toBe(150 + 360);
+    expect(today.longestSleepMinutes).toBe(360);
+    // Only the nap STARTED today; the overnight is yesterday's stretch.
+    expect(today.naps).toBe(1);
+
+    const yesterday = summarizeDay([overnight], new Date(2026, 7, 11), now);
+    expect(yesterday.sleepMinutes).toBe(120);
+    expect(yesterday.naps).toBe(1);
+  });
+
+  it("does not let a forgotten sleep timer invent a night of sleep", () => {
+    const orphan = make({ type: "sleep", startedAt: "2026-08-09T21:00:00" });
+    const started = summarizeDay([orphan], new Date(2026, 7, 9), now);
+    expect(started.naps).toBe(1);
+    expect(started.sleepMinutes).toBe(0);
+    expect(started.hasStaleTimer).toBe(true);
   });
 
   it("gives an overnight feed — count AND minutes — to the day it started", () => {

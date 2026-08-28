@@ -17,6 +17,15 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-08-30",
+    title: "Sleep is back — thank you for telling me",
+    items: [
+      "Sleep tracking and the next-sleep prediction are back. Burping stays, so you have both. Every sleep you logged before is still there and counts again.",
+      "The Diaper tile now shows how long since the last change.",
+      "Sleep is back in the daily recap, the 14-day chart and the Timeline filter.",
+    ],
+  },
+  {
     id: "2026-08-29",
     title: "Sounds for the twenty minutes before sleep",
     items: [

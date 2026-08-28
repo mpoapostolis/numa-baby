@@ -1,5 +1,5 @@
 import { Suspense, lazy, useState } from "react";
-import { ChevronRight, ExternalLink, ShieldCheck, Square, Thermometer, Waves, Weight } from "lucide-react";
+import { ChevronRight, ExternalLink, Moon, ShieldCheck, Square, Thermometer, Waves, Weight } from "lucide-react";
 
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -208,10 +208,13 @@ export default function TodayScreen({
     lastBottle,
     activeNursing,
     activeBurp,
+    activeSleep,
     activeTimers,
     typicalGap,
     nextFeedAt,
     feedWindowPassed,
+    nextSleepAt,
+    sleepWindowPassed,
   } = stats;
 
   // The companion notices the moment a completed care entry lands: the entry
@@ -289,6 +292,20 @@ export default function TodayScreen({
 
   // A stopwatch, not a counter: one tap starts it, one tap stops it. The
   // reading is the whole point — nothing about it is totalled anywhere.
+  function toggleSleep() {
+    if (activeSleep) {
+      onStopTimer(activeSleep.id);
+      track("sleep_stopped");
+      return;
+    }
+    const entry: Activity = {
+      id: makeId(),
+      type: "sleep",
+      startedAt: new Date().toISOString(),
+    };
+    if (onAdd(entry, "Sleep timer started")) track("sleep_started");
+  }
+
   function toggleBurp() {
     if (activeBurp) {
       track("burp_stopped");
@@ -316,6 +333,8 @@ export default function TodayScreen({
   const recapTitle = dayOffset === 0
     ? "Today so far"
     : formatTimelineDay(selectedDay.toISOString());
+
+  const lastDiaper = sortedActivities.find((activity) => activity.type === "diaper");
 
   const babyAge = formatBabyAge(profile.birthDate, minuteClock);
   const babyDays = ageInDays(profile.birthDate, minuteClock);
@@ -519,6 +538,27 @@ export default function TodayScreen({
           />
 
           <div className="next-up">
+            {!activeSleep && sortedActivities.some((activity) => activity.type === "sleep") && (
+              <div className="log-row action-sleep">
+                <span className="action-icon" aria-hidden="true"><Moon /></span>
+                <div className="log-copy">
+                  <span className="t-label">Next likely sleep</span>
+                  <strong>
+                    {nextSleepAt ? forecastRelative(nextSleepAt, minuteClock) : "Still learning the rhythm"}
+                  </strong>
+                  <small>
+                    {nextSleepAt
+                      ? sleepWindowPassed
+                        ? "Follow the cues — whenever works"
+                        : `around ${formatTime(new Date(nextSleepAt).toISOString())}`
+                      : "A few more sleeps and the rhythm appears"}
+                  </small>
+                </div>
+                <div className="log-actions">
+                  <Button variant="outline" onClick={toggleSleep} aria-label="Start sleep timer">Start</Button>
+                </div>
+              </div>
+            )}
             <div className="care-notes">
               <p><ShieldCheck size={14} aria-hidden="true" /> Safe sleep: back, firm flat surface, clear sleep space.</p>
             </div>
@@ -636,6 +676,13 @@ export default function TodayScreen({
               <div className="tile-head">
                 <span className="activity-glyph glyph-diaper" aria-hidden="true"><ActivityGlyph type="diaper" /></span>
                 <span className="tile-title">Diaper</span>
+                {/* Asked for by a user: the question at the changing mat is
+                    never "how many today", it is "how long has it been". */}
+                {lastDiaper && (
+                  <span className="tile-since">
+                    {humanDuration(minutesBetween(lastDiaper.startedAt, new Date(minuteClock).toISOString()))} ago
+                  </span>
+                )}
               </div>
               <div className="tile-split">
                 <Button variant="outline" onClick={() => quickLogDiaper("wet")} aria-label="Log wet diaper">Wet</Button>
@@ -643,6 +690,21 @@ export default function TodayScreen({
                 <Button variant="outline" onClick={() => quickLogDiaper("both")} aria-label="Log wet and dirty diaper">Both</Button>
               </div>
             </div>
+
+            {!activeSleep && (
+              <div className="quick-tile tile-sleep">
+                <button
+                  type="button"
+                  className="tile-main"
+                  onClick={toggleSleep}
+                  aria-label="Start sleep timer"
+                >
+                  <span className="activity-glyph glyph-sleep" aria-hidden="true"><ActivityGlyph type="sleep" /></span>
+                  <span className="tile-title">Sleep</span>
+                  <span className="tile-sub">Start the timer</span>
+                </button>
+              </div>
+            )}
 
             {!activeBurp && (
               <div className="quick-tile tile-burp">

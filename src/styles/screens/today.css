@@ -418,6 +418,17 @@
 .quick-tile { --chip-w: 0px; }
 .quick-tile:has(.tile-chip) { --chip-w: 76px; }
 
+/* "2h 10m ago" under the Diaper title — the question a parent standing at the
+   changing mat actually has. Sits on its own row so it never fights the chip
+   reserve. */
+.tile-since {
+  grid-column: 2;
+  color: var(--ink-3);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.tile-sleep { --tile-hue: var(--glyph-sleep); }
 .tile-bottle { --tile-hue: var(--glyph-bottle); }
 .tile-nurse { --tile-hue: var(--glyph-nursing); }
 .tile-diaper { --tile-hue: var(--glyph-diaper); }

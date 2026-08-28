@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { summarizeDay, summarizeDays } from "../domain/daySummary";
-import { ageInMonths, isSameDay, median } from "../domain/time";
+import { ageInMonths, isSameDay, median, minutesOnDay } from "../domain/time";
 import { Activity, Profile } from "../domain/types";
 
 // Every derived figure the screens read, split into two memos: one pass over
@@ -23,6 +23,8 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
     let lastBottle: Activity | undefined;
     let activeNursing: Activity | undefined;
     let activeBurp: Activity | undefined;
+    let activeSleep: Activity | undefined;
+    const completedSleeps: Activity[] = [];
     const activeTimers: Activity[] = [];
     const feedTimes: number[] = [];
     const growthByDate: Activity[] = [];
@@ -44,6 +46,10 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
         activeTimers.push(activity);
         if (!activeNursing && activity.type === "nursing") activeNursing = activity;
         if (!activeBurp && activity.type === "burp") activeBurp = activity;
+        if (!activeSleep && activity.type === "sleep") activeSleep = activity;
+      }
+      if (activity.type === "sleep" && activity.endedAt && completedSleeps.length < 24) {
+        completedSleeps.push(activity);
       }
       if (activity.type === "growth" && activity.weightGrams) growthByDate.push(activity);
     }
@@ -65,6 +71,27 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
       .filter((minutes) => minutes > 20 && minutes < 480);
     const typicalGap = median(feedingGaps);
 
+    // Sleep forecasting, restored: two users asked for it back within hours of
+    // it being removed, and both said the prediction was the part they used.
+    const chronologicalSleeps = [...completedSleeps].sort(
+      (a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime(),
+    );
+    const wakeGaps = chronologicalSleeps
+      .slice(1)
+      .map((sleep, index) => Math.round(
+        (new Date(sleep.startedAt).getTime() - new Date(chronologicalSleeps[index].endedAt!).getTime()) / 60_000,
+      ))
+      .filter((minutes) => minutes >= 20 && minutes <= 360);
+    const typicalWakeGap = median(wakeGaps);
+    const lastCompletedSleep = completedSleeps[0];
+    const sleepPatternReady = wakeGaps.length >= 2 && Boolean(lastCompletedSleep);
+    const sleepSpread = sleepPatternReady
+      ? Math.max(15, Math.min(40, median(wakeGaps.map((gap) => Math.abs(gap - typicalWakeGap)))))
+      : 20;
+    const nextSleepAt = sleepPatternReady && lastCompletedSleep?.endedAt
+      ? new Date(lastCompletedSleep.endedAt).getTime() + typicalWakeGap * 60_000
+      : null;
+
     const feedPatternReady = feedingGaps.length >= 3 && Boolean(lastFeed);
     const feedSpread = feedPatternReady
       ? Math.max(15, Math.min(45, median(feedingGaps.map((gap) => Math.abs(gap - typicalGap)))))
@@ -79,6 +106,11 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
       lastBottle,
       activeNursing,
       activeBurp,
+      activeSleep,
+      typicalWakeGap,
+      sleepPatternReady,
+      sleepSpread,
+      nextSleepAt,
       activeTimers,
       growthEntries,
       latestGrowth,
@@ -93,7 +125,7 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
   }, [activities]);
 
   const timeSensitive = useMemo(() => {
-    const { sortedActivities, nextFeedAt, feedSpread } = base;
+    const { sortedActivities, nextFeedAt, feedSpread, nextSleepAt, sleepSpread } = base;
     // Derived from minuteClock, not a render-time `new Date()`, so every figure
     // rolls over together at midnight while the app stays open.
     const todayActivities = sortedActivities.filter((activity) =>
@@ -108,6 +140,7 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
     // Suppress a predicted clock range once it is entirely in the past — a card
     // reading "14:05–14:45" at 17:00 presents history as a forecast.
     const feedWindowPassed = nextFeedAt !== null && nextFeedAt + feedSpread * 60_000 < minuteClock;
+    const sleepWindowPassed = nextSleepAt !== null && nextSleepAt + sleepSpread * 60_000 < minuteClock;
 
     const weekly = Array.from({ length: 7 }, (_, index) => {
       const date = new Date(minuteClock);
@@ -122,6 +155,9 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
         feeds,
         ml: feeds.reduce((sum, activity) => sum + (activity.amount ?? 0), 0),
         diapers: dayActivities.filter((activity) => activity.type === "diaper").length,
+        sleep: sortedActivities
+          .filter((activity) => activity.type === "sleep")
+          .reduce((sum, activity) => sum + minutesOnDay(activity, date, minuteClock), 0),
       };
     });
     const maxMl = Math.max(...weekly.map((day) => day.ml), 1);
@@ -150,6 +186,7 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
       bottleMlToday,
       diapersToday,
       feedWindowPassed,
+      sleepWindowPassed,
       weekly,
       maxMl,
       trackedDays,

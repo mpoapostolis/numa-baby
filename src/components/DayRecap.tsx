@@ -29,7 +29,7 @@ function Count({ value }: { value: number }) {
 }
 
 type StatProps = {
-  glyph: "bottle" | "nursing" | "diaper";
+  glyph: "bottle" | "nursing" | "diaper" | "sleep";
   label: string;
   children: React.ReactNode;
   sub?: string;
@@ -55,6 +55,14 @@ function Stat({ glyph, label, children, sub }: StatProps) {
 // Wet and dirty each get their own numeral, so "how many times did she pee"
 // is answered at glance speed. They deliberately overlap — a "both" change
 // counts in each — so the reconciling line names the real change count.
+// "3 stretches · longest 2h 30m" — the shape of the night, not just its total.
+function sleepSub(summary: DaySummary) {
+  const parts: string[] = [];
+  if (summary.naps > 0) parts.push(`${summary.naps} ${summary.naps === 1 ? "stretch" : "stretches"}`);
+  if (summary.longestSleepMinutes > 0) parts.push(`longest ${humanDuration(summary.longestSleepMinutes)}`);
+  return parts.join(" · ") || undefined;
+}
+
 function changesSub(summary: DaySummary) {
   if (summary.diapers === 0) return undefined;
   return `of ${summary.diapers} ${summary.diapers === 1 ? "change" : "changes"}`;
@@ -163,6 +171,9 @@ export function DayRecap({ summary, title, stepper }: DayRecapProps) {
         <Stat glyph="diaper" label="Dirty" sub={changesSub(summary)}>
           <Count value={summary.dirty} />
         </Stat>
+        <Stat glyph="sleep" label="Sleep" sub={sleepSub(summary)}>
+          <Duration minutes={summary.sleepMinutes} />
+        </Stat>
       </div>
       )}
     </section>
@@ -179,6 +190,7 @@ export function DayRecapLine({ summary }: { summary: DaySummary }) {
   if (summary.ml > 0) parts.push(`${summary.ml} ml`);
   if (summary.wet > 0) parts.push(`${summary.wet} wet`);
   if (summary.dirty > 0) parts.push(`${summary.dirty} dirty`);
+  if (summary.sleepMinutes > 0) parts.push(`${humanDuration(summary.sleepMinutes)} sleep`);
   if (parts.length === 0) return null;
   return <p className="recap-line">{parts.join(" · ")}</p>;
 }
