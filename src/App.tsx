@@ -23,6 +23,7 @@ import { AppSidebar } from "./components/AppSidebar";
 import { BabyFace, SleepingBaby } from "./components/illustrations";
 import { ConsentBanner } from "./components/ConsentBanner";
 import { FeedbackBubble } from "./components/FeedbackBubble";
+import { WhatsNew } from "./components/WhatsNew";
 import { LogSheet } from "./components/LogSheet";
 import JoinFamilyScreen from "./components/JoinFamilyScreen";
 import OnboardingScreen from "./screens/OnboardingScreen";
@@ -30,6 +31,7 @@ import TodayScreen from "./screens/TodayScreen";
 import { Activity, ActivityType, Sheet, Tab } from "./domain/types";
 import { JOIN_CODE_PATTERN } from "./domain/familyPairing";
 import { track, suppressTracking } from "./domain/analytics";
+import { LATEST_RELEASE_ID, unseenReleases } from "./domain/changelog";
 import { readConsent } from "./domain/consent";
 import { ageInDays } from "./domain/time";
 import { useActivityStats } from "./hooks/useActivityStats";
@@ -77,6 +79,8 @@ function NavTrigger() {
   );
 }
 
+const SEEN_RELEASE_KEY = "numa-baby-seen-release-v1";
+
 // A scanned invite arrives as "/#join=123456". Read once at boot and strip it
 // from the URL, so a refresh (or a shared screenshot of the address bar) never
 // replays a join that already happened.
@@ -101,6 +105,15 @@ export default function HomePage() {
   // null = never asked. The banner shows only then, so a parent is asked once
   // rather than on every one of the six visits they make in a night.
   const [consent, setConsent] = useState(readConsent);
+  const [seenRelease, setSeenRelease] = useState(() => {
+    try {
+      return window.localStorage.getItem(SEEN_RELEASE_KEY);
+    } catch {
+      // Storage blocked: treat every release as already seen rather than
+      // showing the same card on every single visit.
+      return LATEST_RELEASE_ID;
+    }
+  });
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [nursingInitialMode, setNursingInitialMode] = useState<"timer" | "manual">("timer");
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | "unsupported">(
@@ -172,8 +185,34 @@ export default function HomePage() {
     return () => window.clearTimeout(settle);
   }, [nightMode]);
 
+  function markReleasesSeen() {
+    try {
+      window.localStorage.setItem(SEEN_RELEASE_KEY, LATEST_RELEASE_ID);
+    } catch {
+      // Nothing to do — the card simply reappears next time.
+    }
+    setSeenRelease(LATEST_RELEASE_ID);
+  }
+
   const stats = useActivityStats(activities, profile, minuteClock);
   const { sortedActivities, lastFeed, lastBottle, activeNursing, babyAgeMonths } = stats;
+
+  const releasesToShow = seenRelease === null && sortedActivities.length === 0
+    ? []
+    : unseenReleases(seenRelease);
+
+  useEffect(() => {
+    // Everything is new to someone who just arrived; greeting them with a
+    // changelog is noise. Record the latest and say nothing.
+    if (seenRelease === null && bootState === "ready" && sortedActivities.length === 0) {
+      try {
+        window.localStorage.setItem(SEEN_RELEASE_KEY, LATEST_RELEASE_ID);
+      } catch {
+        // Nothing to do.
+      }
+    }
+  }, [seenRelease, bootState, sortedActivities.length]);
+
 
   const feedReminderTargetAt = lastFeed
     ? new Date(lastFeed.startedAt).getTime() + reminders.feedIntervalMinutes * 60_000
@@ -350,6 +389,16 @@ export default function HomePage() {
         )}
 
         <main className="content">
+          {activeTab === "today" && releasesToShow.length > 0 && (
+            <WhatsNew
+              releases={releasesToShow}
+              onDismiss={() => {
+                track("whats_new_dismissed", { release: LATEST_RELEASE_ID });
+                markReleasesSeen();
+              }}
+            />
+          )}
+
           {activeTab === "today" && (
             <TodayScreen
               profile={profile}
