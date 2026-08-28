@@ -55,6 +55,44 @@ Set `TURSO_DATABASE_URL` in `wrangler.jsonc` and the token as a secret:
 turso db tokens create <database> | npx wrangler secret put TURSO_AUTH_TOKEN
 ```
 
+## Moving to a new domain
+
+Read this before pointing a new domain at the app.
+
+`localStorage` belongs to an **origin**. `numa-baby.workers.dev` and a new
+domain are two different origins, so **a redirect does not move anybody's log —
+it hides it.** Their entries stay in the old origin's storage and the redirect
+guarantees they can never load the page that could read them. Not lost, not
+reachable: the worst of both.
+
+So:
+
+1. Add the new domain as a **second custom domain on the same Worker**. Do not
+   redirect, and do not retire the old address — every existing user's log
+   lives there.
+2. Add the new origin to `PRODUCTION_ORIGINS` in
+   [src/domain/handoff.ts](src/domain/handoff.ts) and deploy. That one line is
+   what turns the move on: with a single entry there is nowhere to move a log
+   to, so the app never offers.
+3. Anyone landing on the new address now sees *"Bring my log from
+   numa-baby.workers.dev"* on the setup screen and in Settings → Backups.
+
+The move itself never touches the network. The new address sends the person to
+`OLD/handoff#to=<new origin>` — a top-level navigation, because an iframe would
+be given partitioned storage and see nothing — the old address shows them what
+is about to be handed over and to whom, and on confirmation sends them back to
+`NEW/#numa-handoff=<the backup, gzipped>`. Fragments are never sent to a
+server. The receiving side then runs the ordinary backup-import path: the same
+validation, the same confirmation, the same rollback copy. Nothing is deleted
+from the old address.
+
+The security of all of it is the allowlist in that one file. The old address
+will hand a complete infant health record to whatever origin it is asked to, so
+the target is matched exactly — no wildcards, no subdomain matching, no "starts
+with" — and production and development addresses are kept in separate bands, or
+a link to `PROD/handoff#to=http://localhost:3000` would post someone's records
+to whatever is running on their own machine.
+
 ## The operator dashboard
 
 `/admin` shows what the sync service is doing: how many families exist, how

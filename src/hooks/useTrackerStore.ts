@@ -521,6 +521,12 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     downloadExportFile(payload, name);
   }
 
+  /** The backup file's contents, without writing a file — what the handoff
+      hands to the app's other web address. */
+  function exportPayload(): string {
+    return buildExportFile().payload;
+  }
+
   async function sharePartner() {
     const { payload, name } = buildExportFile();
     const file = new File([payload], name, { type: "application/json" });
@@ -582,22 +588,23 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     }
   }
 
-  function importData(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    if (file.size > 2_000_000) {
-      showToast("That backup is too large to import safely");
-      event.target.value = "";
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
+  /**
+   * Merge a backup, whatever brought it here.
+   *
+   * A file the parent chose, or a log handed over from the app's old web
+   * address (domain/handoff.ts) — the confirmation, the rollback copy, the
+   * validation and the counts are the same either way, because a second route
+   * into the timeline is a second place for it to go wrong.
+   *
+   * @param prompt what to ask before merging, since the two callers arrive
+   *               with different context
+   * @returns whether anything was merged
+   */
+  function mergeBackupText(text: string, prompt: string): boolean {
       try {
-        const parsed = parseStoredData(String(reader.result));
+        const parsed = parseStoredData(text);
         if (parsed.legacyDemo) throw new Error("Preview backups are not importable");
-        if (bootState === "ready" && !window.confirm("Merge this backup into your timeline? Existing entries stay; newer versions win.")) {
-          return;
-        }
+        if (bootState === "ready" && !window.confirm(prompt)) return false;
         // Rollback safety: the pre-merge state is written to the recovery slot
         // BEFORE anything is merged, so a bad backup can always be walked back.
         let recoveryCreated = true;
@@ -618,7 +625,7 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
           }
         }
         if (!recoveryCreated && !window.confirm("This browser cannot create a recovery copy. Merge the backup anyway without rollback?")) {
-          return;
+          return false;
         }
         const localActivities = persistedStateRef.current.activities;
         const merged = mergeStored(
@@ -639,11 +646,11 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
           // parseStoredData rejects blobs beyond this cap; persisting one would
           // make the tracker unreadable on the next boot.
           showToast("Merging would create more entries than this app can store safely. Nothing was changed.");
-          return;
+          return false;
         }
         const summary = summarizeMerge(localActivities, merged.activities);
         const restoringFromRecovery = bootState !== "ready";
-        if (!persistSnapshot(merged.activities, merged.profile, merged.nightMode, merged.reminders, true)) return;
+        if (!persistSnapshot(merged.activities, merged.profile, merged.nightMode, merged.reminders, true)) return false;
         if (restoringFromRecovery) {
           // The stale recovery copy must not shadow future downloads now that a
           // healthy timeline is in place. (Ready-state imports keep the fresh
@@ -664,9 +671,27 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
         showToast(parsed.droppedActivities > 0
           ? `${counts} — ${parsed.droppedActivities} unreadable ${parsed.droppedActivities === 1 ? "entry" : "entries"} skipped`
           : counts);
+        return true;
       } catch {
         showToast("That backup could not be read");
+        return false;
       }
+  }
+
+  function importData(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2_000_000) {
+      showToast("That backup is too large to import safely");
+      event.target.value = "";
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      mergeBackupText(
+        String(reader.result),
+        "Merge this backup into your timeline? Existing entries stay; newer versions win.",
+      );
     };
     reader.onerror = () => showToast("That backup could not be opened");
     reader.readAsText(file);
@@ -729,8 +754,10 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     changeDiaperReminders,
     changeDiaperReminderInterval,
     exportData,
+    exportPayload,
     sharePartner,
     importData,
+    mergeBackupText,
     downloadRecovery,
     resetUnreadableData,
     dismissRecoveredNotice,

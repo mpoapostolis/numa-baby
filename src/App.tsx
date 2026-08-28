@@ -29,6 +29,12 @@ import { Activity, ActivityType, Sheet, Tab } from "./domain/types";
 import { JOIN_CODE_PATTERN } from "./domain/familyPairing";
 import { track, suppressTracking } from "./domain/analytics";
 import { LATEST_RELEASE_ID, unseenReleases } from "./domain/changelog";
+import {
+  HANDOFF_PATH,
+  handoffReturnUrl,
+  readHandoffPayload,
+  readHandoffTarget,
+} from "./domain/handoff";
 import { readConsent } from "./domain/consent";
 import { ageInDays } from "./domain/time";
 import { useActivityStats } from "./hooks/useActivityStats";
@@ -51,6 +57,9 @@ const WhatsNew = lazy(() => import("./components/WhatsNew").then((m) => ({ defau
 // do are the deliberate slow ones — so it loads on the first sheet, not on
 // the boot a parent waits through at 3am.
 const LogSheet = lazy(() => import("./components/LogSheet").then((m) => ({ default: m.LogSheet })));
+// Only reached by someone deliberately moving their log to the app's other web
+// address, which most people will do once or never.
+const HandoffScreen = lazy(() => import("./screens/HandoffScreen").then((m) => ({ default: m.HandoffScreen })));
 
 // A future-dated feed from a restored backup must never arm a timer that wraps
 // the 32-bit setTimeout ceiling and fires instantly.
@@ -162,8 +171,10 @@ export default function HomePage() {
     readPersisted,
     stampProfileForSync,
     exportData,
+    exportPayload,
     sharePartner,
     importData,
+    mergeBackupText,
     downloadRecovery,
     resetUnreadableData,
     dismissRecoveredNotice,
@@ -220,6 +231,34 @@ export default function HomePage() {
       }
     }
   }, [seenRelease, bootState, sortedActivities.length]);
+
+  useEffect(() => {
+    // A log arriving from the app's other web address. The fragment is cleared
+    // FIRST — before anything is decoded — so a refresh cannot import twice and
+    // a family's entries do not sit in the address bar a moment longer than
+    // they have to.
+    if (bootState === "loading") return;
+    const payload = readHandoffPayload(window.location.hash);
+    if (!payload) return;
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    let cancelled = false;
+    void import("./domain/handoff")
+      .then(({ unpackHandoff }) => unpackHandoff(payload))
+      .then((text) => {
+        if (cancelled) return;
+        // The same confirmation, rollback copy and validation as a backup file
+        // opened by hand — see mergeBackupText. Arriving by link earns no
+        // shortcut through any of it.
+        mergeBackupText(
+          text,
+          "Bring this log across from the app's other address? Existing entries stay; newer versions win.",
+        );
+      })
+      .catch(() => showToast("That log could not be read"));
+    return () => { cancelled = true; };
+    // Runs once the store is readable; mergeBackupText is stable for this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bootState === "loading"]);
 
   useEffect(() => {
     // Being shown IS being seen. The card is marked read a moment after it
@@ -338,6 +377,38 @@ export default function HomePage() {
         <SleepingBaby size={64} aria-hidden="true" />
         <span>Baby Tracker</span>
       </main>
+    );
+  }
+
+  // Someone is moving their log to the app's other web address, and this is
+  // the address holding it. readHandoffTarget has already refused anything not
+  // on the allowlist; what remains is asking the person whose log it is.
+  const handoffTarget = window.location.pathname === HANDOFF_PATH
+    ? readHandoffTarget(window.location.hash, window.location.origin)
+    : null;
+  if (handoffTarget) {
+    return (
+      <Suspense fallback={screenFallback}>
+        <HandoffScreen
+          target={handoffTarget}
+          babyName={profile.name.trim()}
+          entryCount={activities.filter((activity) => !activity.deleted).length}
+          onDownloadInstead={exportData}
+          onCancel={() => window.location.replace("/")}
+          onSend={async () => {
+            track("handoff_sent");
+            try {
+              const { packHandoff } = await import("./domain/handoff");
+              const packed = await packHandoff(exportPayload());
+              if (!packed) return "too-large" as const;
+              window.location.replace(handoffReturnUrl(handoffTarget, packed));
+              return "sent" as const;
+            } catch {
+              return "failed" as const;
+            }
+          }}
+        />
+      </Suspense>
     );
   }
 

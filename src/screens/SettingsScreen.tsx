@@ -1,4 +1,4 @@
-import { Baby, Bell, Download, Moon, Share2, ShieldCheck, Sun, Trash2, Upload } from "lucide-react";
+import { ArrowLeftRight, Baby, Bell, Download, Moon, Share2, ShieldCheck, Sun, Trash2, Upload } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
 import {
   Card,
@@ -27,6 +27,7 @@ import { track } from "../domain/analytics";
 import { ConsentChoice, readConsent, saveConsent } from "../domain/consent";
 import { formatTime } from "../domain/time";
 import { FamilySync } from "../hooks/useFamilySync";
+import { handoffPeers, handoffSendUrl, originLabel } from "../domain/handoff";
 import { Profile, ReminderSettings } from "../domain/types";
 
 type SettingsScreenProps = {
@@ -75,6 +76,7 @@ export default function SettingsScreen({
   onIncomingCodeUsed,
 }: SettingsScreenProps) {
   const importRef = useRef<HTMLInputElement>(null);
+  const [handoffFrom] = useState(() => handoffPeers(window.location.origin)[0] ?? null);
   const [consent, setConsent] = useState<ConsentChoice | null>(readConsent);
   const feedingModeLabel = {
     breast: "Breastfeeding",
@@ -244,6 +246,22 @@ export default function SettingsScreen({
             <SettingsAction title="Download backup" description="Saves a file with all your entries — keep it in a synced folder to be safe" icon={<Download />} onClick={() => { track("backup_downloaded"); onExport(); }} />
             <ItemSeparator />
             <SettingsAction title="Restore a backup" description="Merges a backup file from any device" icon={<Upload />} onClick={() => { track("backup_restore_opened"); importRef.current?.click(); }} />
+            {/* Storage belongs to a web address. A log kept at the app's other
+                address is invisible here until someone walks it across. */}
+            {handoffFrom && (
+              <>
+                <ItemSeparator />
+                <SettingsAction
+                  title={`Bring a log from ${originLabel(handoffFrom)}`}
+                  description="Copies your entries across from the app's other web address — nothing is uploaded"
+                  icon={<ArrowLeftRight />}
+                  onClick={() => {
+                    track("handoff_started");
+                    window.location.href = handoffSendUrl(handoffFrom, window.location.origin);
+                  }}
+                />
+              </>
+            )}
             <ItemSeparator />
             <SettingsAction
               className="settings-action-danger"

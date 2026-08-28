@@ -1,4 +1,5 @@
 import {
+  ArrowLeftRight,
   Check,
   ChevronRight,
   Clock,
@@ -31,6 +32,7 @@ import { Toaster } from "../components/ui/sonner";
 import { Switch } from "../components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "../components/ui/toggle-group";
 import { localDateInput } from "../domain/time";
+import { handoffPeers, handoffSendUrl, originLabel } from "../domain/handoff";
 import { FeedingMode, Profile } from "../domain/types";
 
 export default function OnboardingScreen({
@@ -61,6 +63,10 @@ export default function OnboardingScreen({
   const sexLabelId = useId();
   const feedingLabelId = useId();
   const restoreRef = useRef<HTMLInputElement>(null);
+  // The app's other web address, if it has one. Storage belongs to an origin,
+  // so a log kept at the old address is invisible to this page until someone
+  // walks it across.
+  const [handoffFrom] = useState(() => handoffPeers(window.location.origin)[0] ?? null);
 
   return (
     <main className="onboarding-shell">
@@ -188,6 +194,19 @@ export default function OnboardingScreen({
                 {storageWarning && <div className="onboarding-alert" role="alert">{storageWarning}</div>}
                 <Button type="submit" size="lg" className="onboarding-primary">Start tracking <ChevronRight /></Button>
                 <Button type="button" variant="ghost" onClick={() => restoreRef.current?.click()}><Upload /> Restore a backup</Button>
+                {/* Whoever arrives here from the app's older web address has a
+                    full log sitting in a browser store this page cannot see —
+                    different origin, different storage. Asking them to invent
+                    a baby that already exists is the wrong first screen. */}
+                {handoffFrom && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => { window.location.href = handoffSendUrl(handoffFrom, window.location.origin); }}
+                  >
+                    <ArrowLeftRight /> Bring my log from {originLabel(handoffFrom)}
+                  </Button>
+                )}
               </form>
             </CardContent>
           </Card>
