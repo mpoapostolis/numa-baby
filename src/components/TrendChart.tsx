@@ -28,13 +28,11 @@ const SERIES: Series[] = [
 const dayFormat = new Intl.DateTimeFormat("en", { weekday: "short" });
 const fullDayFormat = new Intl.DateTimeFormat("en", { month: "short", day: "numeric" });
 
-// A fixed viewBox with the plot inset: the SVG scales to any card width while
-// the stroke and dot sizes stay put.
-const W = 300;
-const H = 96;
-const PAD_X = 6;
-const PAD_TOP = 10;
-const PAD_BOTTOM = 8;
+// Geometry in percentages, laid out with CSS rather than a stretched viewBox.
+// The old chart used preserveAspectRatio="none", which distorted every slope
+// with the card width — a line whose angle depends on the window is a chart
+// that lies. Bars have no slope to distort.
+const BAR_HEIGHT = 108;
 
 export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
   const [activeKey, setActiveKey] = useState(SERIES[0].key);
@@ -48,15 +46,10 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
   const days = firstLogged <= 0 ? allDays : allDays.slice(firstLogged);
 
   const values = days.map(series.value);
-  const max = Math.max(...values, 1);
-  const plotW = W - PAD_X * 2;
-  const plotH = H - PAD_TOP - PAD_BOTTOM;
-  const x = (index: number) =>
-    days.length === 1 ? W / 2 : PAD_X + (index / (days.length - 1)) * plotW;
-  const y = (value: number) => PAD_TOP + plotH - (value / max) * plotH;
-
-  const points = values.map((value, index) => `${x(index)},${y(value)}`).join(" ");
-  const area = `${PAD_X},${PAD_TOP + plotH} ${points} ${x(days.length - 1)},${PAD_TOP + plotH}`;
+  // Headroom so the tallest bar never touches the average label above it.
+  const peak = Math.max(...values, 0);
+  // Headroom so the tallest bar never collides with the average label.
+  const scaleMax = Math.max(peak, 1) * 1.15;
   const todayIndex = days.length - 1;
   const total = values.reduce((sum, value) => sum + value, 0);
   // Averaged over the days that actually have something, so a fortnight with
@@ -86,7 +79,7 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
         </div>
         {trackedDays > 0 && (
           <span className="trend-peak">
-            peak {max}{series.unit && <span className="unit">{series.unit}</span>}
+            peak {peak}{series.unit && <span className="unit">{series.unit}</span>}
           </span>
         )}
       </header>
@@ -107,25 +100,35 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
         ))}
       </div>
 
-      <div className="trend-plot" style={{ "--trend-hue": series.hue } as React.CSSProperties}>
-        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={description}>
-          <polygon className="trend-area" points={area} />
-          <polyline className="trend-line" points={points} />
+      <div
+        className="trend-plot"
+        style={{ "--trend-hue": series.hue, height: `${BAR_HEIGHT}px` } as React.CSSProperties}
+        role="img"
+        aria-label={description}
+      >
+        {/* The average is the reading that makes a bar mean something: a day
+            is only "a lot" against the fortnight it sits in. */}
+        {trackedDays > 0 && (
+          <div className="trend-mean" style={{ bottom: `${(average / scaleMax) * 100}%` }}>
+            <span>avg</span>
+          </div>
+        )}
+        <div className="trend-bars">
           {values.map((value, index) => (
-            <circle
+            <div
+              className={index === todayIndex ? "trend-bar is-today" : "trend-bar"}
               key={days[index].date.toISOString()}
-              className={index === todayIndex ? "trend-dot is-today" : "trend-dot"}
-              cx={x(index)}
-              cy={y(value)}
-              r={index === todayIndex ? 3.5 : 2}
+              title={`${fullDayFormat.format(days[index].date)}: ${value}${series.unit ? ` ${series.unit}` : ""}`}
             >
-              <title>
-                {fullDayFormat.format(days[index].date)}: {value}
-                {series.unit ? ` ${series.unit}` : ""}
-              </title>
-            </circle>
+              {/* A logged day with a zero still gets a hairline, so an empty
+                  day and a zero day never look identical. */}
+              <span
+                className={value > 0 ? "trend-fill" : "trend-fill is-zero"}
+                style={{ height: value > 0 ? `${Math.max(3, (value / scaleMax) * 100)}%` : "2px" }}
+              />
+            </div>
           ))}
-        </svg>
+        </div>
       </div>
 
       <div className="trend-axis" aria-hidden="true">

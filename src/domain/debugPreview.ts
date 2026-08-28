@@ -56,6 +56,7 @@ export function debugPreviewData(): { profile: Profile; activities: Activity[] }
         id: `debug-burp-${dayOffset}-${index}`,
         type: "burp",
         startedAt: started.toISOString(),
+        endedAt: new Date(started.getTime() + 4 * 60_000).toISOString(),
       });
     });
   }
