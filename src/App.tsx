@@ -207,6 +207,7 @@ export default function HomePage() {
   const releasesToShow = seenRelease === null && sortedActivities.length === 0
     ? []
     : unseenReleases(seenRelease);
+  const showWhatsNew = activeTab === "today" && releasesToShow.length > 0;
 
   useEffect(() => {
     // Everything is new to someone who just arrived; greeting them with a
@@ -219,6 +220,23 @@ export default function HomePage() {
       }
     }
   }, [seenRelease, bootState, sortedActivities.length]);
+
+  useEffect(() => {
+    // Being shown IS being seen. The card is marked read a moment after it
+    // appears, so it never greets the same person twice — whether or not they
+    // ever tapped the X. Only storage is written, not state: it stays on
+    // screen for the rest of this visit so it can actually be read.
+    if (!showWhatsNew) return;
+    const settle = window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(SEEN_RELEASE_KEY, LATEST_RELEASE_ID);
+      } catch {
+        // Storage blocked. It will come back next time, and that is the
+        // lesser of the two failures.
+      }
+    }, 1_200);
+    return () => window.clearTimeout(settle);
+  }, [showWhatsNew]);
 
 
   const lastDiaperAt = sortedActivities.find((a) => a.type === "diaper")?.startedAt;
@@ -429,7 +447,7 @@ export default function HomePage() {
         )}
 
         <main className="content">
-          {activeTab === "today" && releasesToShow.length > 0 && (
+          {showWhatsNew && (
             <Suspense fallback={null}>
             <WhatsNew
               releases={releasesToShow}

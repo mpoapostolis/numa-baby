@@ -7,8 +7,13 @@
 //
 // A fresh install never sees it — everything is new to someone who just
 // arrived, so the marker is stored silently instead (see App).
+//
+// And it is marked as read the moment it is ON SCREEN, not when the X is
+// tapped. Being shown IS being seen; making someone dismiss a notice they
+// already read is a second job handed to a person holding a baby.
 
-import { Sparkles, X } from "lucide-react";
+import { useState } from "react";
+import { ChevronDown, Sparkles, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { Release } from "../domain/changelog";
 
@@ -18,27 +23,42 @@ type WhatsNewProps = {
 };
 
 export function WhatsNew({ releases, onDismiss }: WhatsNewProps) {
+  const [open, setOpen] = useState(false);
   if (releases.length === 0) return null;
-  // Several releases can pile up for someone who was away; their items read
-  // as one list, because "what changed since I last looked" is one question.
-  // Capped hard at three: this card sits above the logging tiles, and a wall
-  // of release notes between a parent and the Bottle button is exactly the
-  // thing this app exists not to be.
-  const all = releases.flatMap((release) => release.items);
-  const items = all.slice(0, 3);
-  const extra = all.length - items.length;
+  // Closed, this is one line: the headline, which is written to be the whole
+  // story on its own. The detail is a tap away for anyone who wants it. Four
+  // paragraphs of release notes unfolded above a parent's own baby is exactly
+  // the thing this app exists not to be — and most people, most nights, only
+  // need to know that something moved.
+  //
+  // Several releases can pile up for someone who was away; their items read as
+  // one list, because "what changed since I last looked" is one question.
+  const items = releases.flatMap((release) => release.items).slice(0, 4);
 
   return (
     <section className="whats-new" aria-labelledby="whats-new-heading">
-      <span className="whats-new-icon" aria-hidden="true"><Sparkles size={16} /></span>
+      <span className="whats-new-icon" aria-hidden="true"><Sparkles size={14} /></span>
       <div className="whats-new-copy">
-        <span className="t-label">New since you were last here</span>
-        <h2 id="whats-new-heading" className="whats-new-title">{releases[0].title}</h2>
-        <ul className="whats-new-list">
-          {items.map((item) => <li key={item}>{item}</li>)}
-        </ul>
-        {extra > 0 && (
-          <p className="whats-new-more">and {extra} more {extra === 1 ? "change" : "changes"}</p>
+        <h2 id="whats-new-heading" className="whats-new-title">
+          <button
+            type="button"
+            className="whats-new-toggle"
+            aria-expanded={open}
+            onClick={() => setOpen((wasOpen) => !wasOpen)}
+          >
+            <span className="whats-new-tag">New</span>
+            <span className="whats-new-headline">{releases[0].title}</span>
+            <ChevronDown
+              size={14}
+              className={open ? "whats-new-chevron is-open" : "whats-new-chevron"}
+              aria-hidden="true"
+            />
+          </button>
+        </h2>
+        {open && (
+          <ul className="whats-new-list">
+            {items.map((item) => <li key={item}>{item}</li>)}
+          </ul>
         )}
       </div>
       <Button
@@ -47,7 +67,7 @@ export function WhatsNew({ releases, onDismiss }: WhatsNewProps) {
         aria-label="Dismiss what's new"
         onClick={onDismiss}
       >
-        <X size={16} aria-hidden="true" />
+        <X size={14} aria-hidden="true" />
       </Button>
     </section>
   );

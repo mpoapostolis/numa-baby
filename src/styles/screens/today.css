@@ -1055,21 +1055,25 @@
 /* "What's new". Not a modal: a parent holding a hungry baby must never have
    to dismiss a release note before they can log a feed. It sits above Today,
    reads in about five seconds, and leaves for good when dismissed. */
+/* Quiet on purpose. This sits above a parent's own baby, so it earns its
+   place by being small: no shouty label, no gradient panel, two lines of
+   substance and a way out. */
 .whats-new {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
-  margin-bottom: 16px;
-  border: 1px solid color-mix(in oklab, var(--signal) 20%, var(--border));
-  border-radius: var(--radius-xl);
-  background: linear-gradient(135deg, var(--signal-quiet), var(--card) 75%);
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  border: 1px solid color-mix(in oklab, var(--signal) 14%, var(--border));
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklab, var(--signal-quiet) 55%, var(--card));
 }
 
 .whats-new-icon {
-  flex: 0 0 28px;
-  width: 28px;
-  height: 28px;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
   display: grid;
   place-items: center;
   border-radius: 50%;
@@ -1079,15 +1083,69 @@
 
 .whats-new-copy {
   min-width: 0;
+  flex: 1;
   display: grid;
-  gap: 4px;
+  gap: 5px;
 }
 
 .whats-new-title {
   margin: 0;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   font-weight: 500;
-  line-height: 1.35;
+  line-height: 1.4;
+}
+
+/* The whole card is the headline until someone asks for more. */
+.whats-new-toggle {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.whats-new-headline {
+  flex: 1;
+  min-width: 0;
+}
+
+.whats-new-chevron {
+  flex: 0 0 auto;
+  margin-left: 8px;
+  color: var(--ink-3);
+  transition: transform 160ms ease;
+  align-self: center;
+}
+
+.whats-new-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .whats-new-chevron {
+    transition: none;
+  }
+}
+
+/* Four letters instead of a five-word heading: enough to say why the card is
+   here, small enough not to be the loudest thing on the screen. */
+.whats-new-tag {
+  display: inline-block;
+  margin-right: 7px;
+  padding: 1px 7px;
+  border-radius: 99px;
+  background: color-mix(in oklab, var(--signal) 14%, transparent);
+  color: var(--signal);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  vertical-align: 1px;
 }
 
 .whats-new-list {
@@ -1100,8 +1158,8 @@
 
 .whats-new-list li {
   position: relative;
-  padding-left: 14px;
-  font-size: 0.8125rem;
+  padding-left: 13px;
+  font-size: 0.78125rem;
   line-height: 1.45;
   color: var(--ink-2);
 }
@@ -1122,13 +1180,7 @@
   flex: 0 0 auto;
   min-width: 44px;
   min-height: 44px;
-  margin: -6px -6px 0 0;
-  color: var(--ink-3);
-}
-
-.whats-new-more {
-  margin: 0;
-  font-size: 0.75rem;
+  margin: -10px -10px 0 0;
   color: var(--ink-3);
 }
 
