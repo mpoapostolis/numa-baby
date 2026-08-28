@@ -127,9 +127,15 @@ CREATE TABLE IF NOT EXISTS admin_audit (
 );
 CREATE INDEX IF NOT EXISTS idx_admin_audit_at ON admin_audit(at);
 
--- Spent one-time codes, so a code read over a shoulder cannot be used in the
--- seconds it has left. Rows are cleared once they are older than any window.
-CREATE TABLE IF NOT EXISTS admin_totp_used (
-  counter INTEGER PRIMARY KEY,
-  at TEXT NOT NULL
+-- Browsers that have signed in here before. Being on this list buys exactly
+-- one thing — the lockout is skipped — and it is what stops the lockout from
+-- becoming a way for a stranger to shut the owner out of their own dashboard.
+-- It is not a way in: the password is still asked for, and still has to be
+-- right. Stored as a hash, so the table is not a set of keys.
+CREATE TABLE IF NOT EXISTS admin_known (
+  token_hash TEXT PRIMARY KEY,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  last_seen_at TEXT,
+  ip TEXT, country TEXT, user_agent TEXT
 );

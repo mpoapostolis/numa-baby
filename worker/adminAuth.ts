@@ -13,8 +13,14 @@
 //   1. IP allowlist   (ADMIN_ALLOW_IPS)   — if set, everyone else gets a 404
 //   2. Lockout        (always)            — per-IP and global, exponential
 //   3. Password       (ADMIN_PASSWORD)    — PBKDF2, compared in constant time
-//   4. One-time code  (ADMIN_TOTP_SECRET) — if set, the password alone is not
-//                                            enough to get in
+//
+// With one exemption that matters more than any of them: a browser that has
+// signed in successfully before carries a long-lived token, and a request
+// carrying one SKIPS THE LOCKS ENTIRELY. It still has to know the password.
+// This is not a softening — it is what makes the locks usable at all. A
+// lockout that can shut the owner out of their own dashboard is a denial of
+// service anyone can trigger for the price of a few requests, and the owner is
+// the one person it must never catch.
 //
 // Gate 2 is the one that actually kills brute force, so it is the one with no
 // off switch: the budget is SPENT BEFORE the password is looked at, in a
@@ -24,8 +30,8 @@
 // reach a password comparison at all. Counting failures afterwards would have
 // let all thousand through for the price of one.
 //
-// Gates 1 and 4 exist because "only me" is a stronger claim than "only someone
-// who knows the password", and both are enabled simply by setting a secret.
+// Gate 1 exists because "only me" is a stronger claim than "only someone who
+// knows the password", and it is enabled simply by setting a secret.
 
 import type { Client } from "@libsql/client/web";
 
@@ -114,80 +120,6 @@ export function randomId(): string {
 }
 
 // ---------------------------------------------------------------------------
-// One-time codes (RFC 6238)
-// ---------------------------------------------------------------------------
-
-const BASE32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-
-/** Decode a base32 secret as an authenticator app writes it: any case, spaces
-    and padding tolerated. Returns null if it contains anything else. */
-export function base32Decode(input: string): Uint8Array | null {
-  const clean = input.toUpperCase().replace(/[\s=]/g, "");
-  if (!clean.length) return null;
-  const bytes: number[] = [];
-  let bits = 0;
-  let value = 0;
-  for (const char of clean) {
-    const index = BASE32.indexOf(char);
-    if (index < 0) return null;
-    value = (value << 5) | index;
-    bits += 5;
-    if (bits >= 8) {
-      bits -= 8;
-      bytes.push((value >>> bits) & 0xff);
-    }
-  }
-  return new Uint8Array(bytes);
-}
-
-/** The 6-digit code for a given 30-second counter. */
-export async function totpCode(secretBase32: string, counter: number): Promise<string | null> {
-  const secret = base32Decode(secretBase32);
-  if (!secret || secret.length === 0) return null;
-  const message = new Uint8Array(8);
-  // Counters stay far below 2^32 for the next few thousand years, so the high
-  // word is zero and the low word is written big-endian by hand.
-  new DataView(message.buffer).setUint32(4, counter >>> 0, false);
-  const key = await crypto.subtle.importKey(
-    "raw",
-    secret as unknown as BufferSource,
-    { name: "HMAC", hash: "SHA-1" },
-    false,
-    ["sign"],
-  );
-  const mac = new Uint8Array(await crypto.subtle.sign("HMAC", key, message as unknown as BufferSource));
-  const offset = mac[mac.length - 1] & 0x0f;
-  const binary =
-    ((mac[offset] & 0x7f) << 24) | (mac[offset + 1] << 16) | (mac[offset + 2] << 8) | mac[offset + 3];
-  return String(binary % 1_000_000).padStart(6, "0");
-}
-
-export const TOTP_STEP_SECONDS = 30;
-
-/**
- * Check a supplied code against the current window and its neighbours.
- * Returns the counter it matched — the caller stores that so the same code
- * cannot be replayed inside its own 30 seconds by anyone watching.
- */
-export async function verifyTotp(
-  secretBase32: string,
-  supplied: string,
-  now: number,
-  skew = 1,
-): Promise<number | null> {
-  if (!/^\d{6}$/.test(supplied)) return null;
-  const current = Math.floor(now / 1000 / TOTP_STEP_SECONDS);
-  let matched: number | null = null;
-  // Every candidate is evaluated, never short-circuited: the number of
-  // comparisons must not depend on which one was right.
-  for (let step = -skew; step <= skew; step++) {
-    const expected = await totpCode(secretBase32, current + step);
-    if (expected && timingSafeEqual(expected, supplied)) matched = current + step;
-  }
-  return matched;
-}
-
-// ---------------------------------------------------------------------------
 // Lockout policy — pure, so it can be tested without a database
 // ---------------------------------------------------------------------------
 
@@ -269,9 +201,12 @@ export async function ensureAdminTables(client: Client) {
          event TEXT NOT NULL,
          ip TEXT, country TEXT, asn TEXT, user_agent TEXT
        )`,
-      `CREATE TABLE IF NOT EXISTS admin_totp_used (
-         counter INTEGER PRIMARY KEY,
-         at TEXT NOT NULL
+      `CREATE TABLE IF NOT EXISTS admin_known (
+         token_hash TEXT PRIMARY KEY,
+         created_at TEXT NOT NULL,
+         expires_at TEXT NOT NULL,
+         last_seen_at TEXT,
+         ip TEXT, country TEXT, user_agent TEXT
        )`,
       `CREATE INDEX IF NOT EXISTS idx_admin_audit_at ON admin_audit(at)`,
     ],
@@ -437,11 +372,11 @@ export async function createSession(
   return id;
 }
 
-function cookieValue(header: string | null): string | null {
+function cookieValue(header: string | null, name: string): string | null {
   if (!header) return null;
   for (const part of header.split(";")) {
     const trimmed = part.trim();
-    if (trimmed.startsWith(`${COOKIE}=`)) return trimmed.slice(COOKIE.length + 1);
+    if (trimmed.startsWith(`${name}=`)) return trimmed.slice(name.length + 1);
   }
   return null;
 }
@@ -449,7 +384,7 @@ function cookieValue(header: string | null): string | null {
 /** True if this request carries a live session. Also refreshes last_seen so
     the dashboard can show which sessions are actually being used. */
 export async function sessionValid(client: Client, request: Request, now: number): Promise<boolean> {
-  const raw = cookieValue(request.headers.get("cookie"));
+  const raw = cookieValue(request.headers.get("cookie"), COOKIE);
   // Shape-checked before it is hashed: a session id is 43 base64url chars.
   if (!raw || !/^[A-Za-z0-9_-]{20,64}$/.test(raw)) return false;
   const hash = await sha256Hex(raw);
@@ -470,8 +405,59 @@ export async function sessionValid(client: Client, request: Request, now: number
   return true;
 }
 
+// ---------------------------------------------------------------------------
+// Trusted browsers
+// ---------------------------------------------------------------------------
+
+export const KNOWN_COOKIE = "nb_admin_known";
+/** Long, because the point is to still be trusted the night something breaks
+    and the dashboard is needed in a hurry. */
+export const KNOWN_TTL_SECONDS = 400 * 24 * 60 * 60;
+
+/** Mint the token that says "this browser has been here before". Stored as a
+    hash, like everything else: the table is not a set of keys. */
+export async function trustBrowser(client: Client, caller: Caller, now: number): Promise<string> {
+  const token = randomId();
+  await client.execute({
+    sql: `INSERT INTO admin_known (token_hash, created_at, expires_at, last_seen_at, ip, country, user_agent)
+          VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    args: [
+      await sha256Hex(token),
+      iso(now),
+      iso(now + KNOWN_TTL_SECONDS * 1000),
+      iso(now),
+      caller.ip,
+      caller.country,
+      caller.userAgent,
+    ],
+  });
+  return token;
+}
+
+/**
+ * Has this browser signed in successfully before?
+ *
+ * Being known buys exactly one thing: the lockout is skipped. It is not a way
+ * in — the password is still asked for, and still has to be right.
+ */
+export async function browserIsKnown(client: Client, request: Request, now: number): Promise<boolean> {
+  const raw = cookieValue(request.headers.get("cookie"), KNOWN_COOKIE);
+  if (!raw || !/^[A-Za-z0-9_-]{20,64}$/.test(raw)) return false;
+  const hash = await sha256Hex(raw);
+  const found = await client.execute({
+    sql: "SELECT expires_at FROM admin_known WHERE token_hash = ?",
+    args: [hash],
+  });
+  const row = found.rows[0];
+  if (!row || new Date(String(row.expires_at)).getTime() <= now) return false;
+  await client
+    .execute({ sql: "UPDATE admin_known SET last_seen_at = ? WHERE token_hash = ?", args: [iso(now), hash] })
+    .catch(() => undefined);
+  return true;
+}
+
 export async function destroySession(client: Client, request: Request, all: boolean) {
-  const raw = cookieValue(request.headers.get("cookie"));
+  const raw = cookieValue(request.headers.get("cookie"), COOKIE);
   if (all) {
     await client.execute("DELETE FROM admin_sessions");
     return;

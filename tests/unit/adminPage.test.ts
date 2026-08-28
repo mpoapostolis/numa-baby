@@ -48,6 +48,8 @@ const STATS = {
   lockouts: [{ scope: `ip:${XSS}`, failures: 0, strikes: 2, window_start: "", locked_until: "2026-08-28 22:09:00" }],
   sessions: [{ created: "2026-08-28 22:01", expires: "2026-08-29 10:01", last_seen: "2026-08-28 22:33",
     ip: "1.2.3.4", country: "GR", user_agent: XSS }],
+  knownBrowsers: [{ trusted: "2026-08-28", last_seen: "2026-08-28 22:33", ip: "1.2.3.4",
+    country: "GR", user_agent: XSS }],
   trendDays: 30,
   generatedAt: "2026-08-28T22:33:00.000Z",
 };
@@ -83,6 +85,7 @@ describe("the dashboard renders", () => {
       "Pulse", "Entries synced", "New families", "Are they still here?",
       "How much do they log?", "Weekly cohorts", "What gets logged", "Hour of day",
       "Pairing", "Phones", "Messages", "Families", "Who has been at this door",
+      "Browsers that skip the lockout",
     ]) {
       expect(text).toContain(heading);
     }
@@ -95,9 +98,10 @@ describe("the dashboard renders", () => {
     expect(text).toContain("60% of invite codes were scanned");
   });
 
-  it("swaps the login form for the dashboard", () => {
-    expect((document.getElementById("login") as HTMLElement).style.display).toBe("none");
+  it("swaps the sign-in screen for the dashboard", () => {
+    expect(document.getElementById("gate")!.className).toContain("hide");
     expect(document.getElementById("dash")!.className).toBe("");
+    expect(document.getElementById("head")!.className).toBe("row");
   });
 });
 

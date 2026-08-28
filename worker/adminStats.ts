@@ -54,6 +54,7 @@ export async function collectStats(client: Client, now: number) {
     auditLog,
     lockouts,
     sessions,
+    knownBrowsers,
   ] = await Promise.all([
     safe(
       client,
@@ -221,6 +222,13 @@ export async function collectStats(client: Client, now: number) {
               substr(last_seen_at, 1, 16) as last_seen, ip, country, user_agent
        from admin_sessions where expires_at > ${NOW} order by created_at desc limit 20`,
     ),
+
+    safe(
+      client,
+      `select substr(created_at, 1, 10) as trusted, substr(last_seen_at, 1, 16) as last_seen,
+              ip, country, user_agent
+       from admin_known where expires_at > ${NOW} order by last_seen_at desc limit 20`,
+    ),
   ]);
 
   // The median is the one figure SQLite will not give cheaply, and it is the
@@ -250,6 +258,7 @@ export async function collectStats(client: Client, now: number) {
     auditLog,
     lockouts,
     sessions,
+    knownBrowsers,
     trendDays: TREND_DAYS,
     generatedAt: new Date(now).toISOString(),
   };

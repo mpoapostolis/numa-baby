@@ -69,15 +69,9 @@ It exists only if you give it a password. Without one, `/admin` and every
 npx wrangler secret put ADMIN_PASSWORD
 ```
 
-Two optional secrets tighten it further, and both can be removed again:
+One optional secret tightens it further, and can be removed again:
 
 ```bash
-# A one-time code as well as the password. Run the script first — it generates
-# the secret on your machine, shows a QR for your authenticator app, and never
-# writes it anywhere.
-node scripts/admin-totp.mjs
-npx wrangler secret put ADMIN_TOTP_SECRET
-
 # Only these addresses may even see the page; everyone else gets a 404.
 npx wrangler secret put ADMIN_ALLOW_IPS   # e.g. 203.0.113.7, 198.51.100.4
 ```
@@ -90,14 +84,15 @@ thousand through. Five tries per address per quarter hour, twenty across the
 whole endpoint, and the door shuts. Each subsequent lock on the same address
 doubles, up to a day.
 
-The shared lock never doubles, because it is the one a stranger could trip on
-purpose to shut *you* out too. If `ADMIN_TOTP_SECRET` is set, a current
-one-time code walks straight past it — a botnet cannot make one, and whoever
-can is the person the door is for. Without the second factor, `ADMIN_ALLOW_IPS`
-is the way to make that attack impossible instead.
+Which raises the obvious objection: a stranger can spend that budget on purpose
+and shut *you* out of your own dashboard. So a browser that has signed in here
+before is remembered for a year, and **a remembered browser skips the locks
+entirely** — it still has to know the password, it just never queues. Sign in
+once on your laptop and once on your phone and no lockout, yours or anyone
+else's, will ever hold you up again.
 
 Every attempt, right or wrong, is listed on the dashboard with its address and
-country.
+country, alongside the browsers that skip the queue.
 
 ## Development
 

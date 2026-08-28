@@ -15,12 +15,17 @@ export function adminPageHtml(nonce: string): string {
 <style nonce="${nonce}">
   :root {
     color-scheme: light dark;
-    --bg:#fdf5f2; --card:#fffdfc; --ink:#221a1d; --ink-2:#6b5a60; --ink-3:#9c8a90;
-    --line:#efdfd9; --signal:#8d2f57; --signal-2:#c98aa4; --good:#2f7d55; --warn:#a8631a; --bad:#b3261e;
+    --bg:#fdf5f2; --card:#fffdfc; --field:#fff; --ink:#221a1d; --ink-2:#6b5a60; --ink-3:#9c8a90;
+    --line:#e8d6cf; --signal:#8d2f57; --signal-2:#c98aa4; --on-signal:#fff;
+    --good:#2f7d55; --warn:#a8631a; --bad:#b3261e;
   }
+  /* Dark is not "the same page with the lights off": the card has to lift off
+     the background and a text field has to look like somewhere you can type,
+     which needs its own fill rather than the page's. */
   @media (prefers-color-scheme: dark) {
-    :root { --bg:#120c0f; --card:#1b1418; --ink:#f4e9ec; --ink-2:#b3a0a7; --ink-3:#7d6b72;
-            --line:#33262b; --signal:#f0a8c0; --signal-2:#7a4359; --good:#7fd0a2; --warn:#e0a860; --bad:#f0938c; }
+    :root { --bg:#100b0d; --card:#1e1519; --field:#2a1f24; --ink:#f4e9ec; --ink-2:#b3a0a7; --ink-3:#8a767d;
+            --line:#3b2c32; --signal:#f0a8c0; --signal-2:#8d5069; --on-signal:#241017;
+            --good:#7fd0a2; --warn:#e0a860; --bad:#f0938c; }
   }
   * { box-sizing:border-box; }
   body { margin:0; padding:20px 16px 64px; background:var(--bg); color:var(--ink);
@@ -45,8 +50,25 @@ export function adminPageHtml(nonce: string): string {
   td.num, th.num { text-align:right; }
   .scroll { overflow-x:auto; }
   input, button, select { font:inherit; border-radius:10px; border:1px solid var(--line); padding:11px 13px; }
-  input { width:100%; background:var(--bg); color:var(--ink); font-size:16px; }
-  button { background:var(--signal); color:#fff; border:0; font-weight:550; cursor:pointer; min-height:44px; }
+  input { width:100%; background:var(--field); color:var(--ink); font-size:16px; }
+  input:focus-visible { outline:2px solid color-mix(in oklab, var(--signal) 55%, transparent);
+    outline-offset:1px; border-color:var(--signal); }
+  button { background:var(--signal); color:var(--on-signal); border:0; font-weight:600; cursor:pointer; min-height:46px; }
+  button:hover { filter:brightness(1.06); }
+
+  /* The sign-in screen is its own screen, not a card stranded at the top of an
+     empty page. */
+  .gate { min-height:72vh; display:grid; place-items:center; }
+  .gate .card { width:100%; max-width:372px; padding:24px; }
+  .brand { display:flex; align-items:center; gap:10px; font-size:1.05rem; font-weight:600;
+    letter-spacing:-.01em; }
+  .brand svg { flex:0 0 30px; color:var(--signal); }
+  .field { display:grid; gap:6px; }
+  .field > span { font-size:.75rem; font-weight:500; color:var(--ink-2); }
+  .link { background:none; border:0; padding:6px 0; min-height:0; color:var(--ink-2);
+    font-size:.8125rem; font-weight:500; text-decoration:underline; text-underline-offset:3px;
+    cursor:pointer; justify-self:center; }
+  .link:hover { color:var(--ink); filter:none; }
   button.ghost { background:transparent; color:var(--ink-2); border:1px solid var(--line); min-height:36px;
     padding:6px 12px; font-size:.8125rem; font-weight:500; }
   button.ghost:hover { color:var(--ink); border-color:var(--ink-3); }
@@ -79,7 +101,9 @@ export function adminPageHtml(nonce: string): string {
     border:1px solid var(--line); color:var(--ink-2); }
   .pill.ok { color:var(--good); border-color:color-mix(in oklab, var(--good) 40%, transparent); }
   .pill.bad { color:var(--bad); border-color:color-mix(in oklab, var(--bad) 40%, transparent); }
-  .err { color:var(--bad); font-size:.8125rem; margin:10px 0 0; }
+  .err { color:var(--bad); font-size:.8125rem; margin:0; padding:10px 12px; border-radius:10px;
+    background:color-mix(in oklab, var(--bad) 10%, transparent);
+    border:1px solid color-mix(in oklab, var(--bad) 30%, transparent); }
   .hide { display:none !important; }
   .fieldset { display:grid; gap:10px; margin-top:12px; }
   .foot { text-align:center; }
@@ -87,12 +111,12 @@ export function adminPageHtml(nonce: string): string {
 </head>
 <body>
 <main>
-  <div class="row">
+  <div class="row hide" id="head">
     <div>
       <h1>Numa · service</h1>
       <p class="muted" id="sub">Aggregate only — no entry contents, no names.</p>
     </div>
-    <div class="tools hide" id="tools">
+    <div class="tools" id="tools">
       <button class="ghost" id="refresh">Refresh</button>
       <button class="ghost" id="copy">Copy JSON</button>
       <button class="ghost" id="out">Sign out</button>
@@ -100,28 +124,32 @@ export function adminPageHtml(nonce: string): string {
     </div>
   </div>
 
-  <form id="login" class="card" style="max-width:420px">
-    <h2>Sign in</h2>
-    <div class="fieldset">
-      <div>
-        <label class="tiny" for="pw">Password</label>
-        <input id="pw" type="password" autocomplete="current-password" autofocus />
+  <section class="gate" id="gate">
+    <form id="login" class="card">
+      <div class="brand">
+        <svg viewBox="0 0 32 32" width="30" height="30" fill="none" aria-hidden="true">
+          <circle cx="16" cy="17" r="10.5" stroke="currentColor" stroke-width="1.6" />
+          <circle cx="16" cy="5.5" r="2.4" stroke="currentColor" stroke-width="1.6" />
+          <circle cx="12.4" cy="16" r="1.2" fill="currentColor" />
+          <circle cx="19.6" cy="16" r="1.2" fill="currentColor" />
+          <path d="M12.8 20.6c1.8 1.5 4.6 1.5 6.4 0" stroke="currentColor" stroke-width="1.6"
+                stroke-linecap="round" />
+        </svg>
+        Numa · service
       </div>
-      <div>
-        <label class="tiny" for="code">One-time code <span style="opacity:.7">(only if enabled)</span></label>
-        <input id="code" type="text" inputmode="numeric" autocomplete="one-time-code"
-               maxlength="6" pattern="[0-9]*" />
+      <p class="muted" style="margin-top:6px">The sync service, in numbers.</p>
+      <div class="fieldset">
+        <label class="field" for="pw"><span>Password</span>
+          <input id="pw" type="password" autocomplete="current-password" autofocus />
+        </label>
+        <button id="go">Sign in</button>
+        <p id="err" class="err hide"></p>
       </div>
-      <button id="go">Sign in</button>
-    </div>
-    <p id="err" class="err hide"></p>
-  </form>
+    </form>
+  </section>
 
   <div id="dash" class="hide" style="display:grid;gap:16px"></div>
   <p class="muted foot" id="stamp"></p>
-  <p class="tiny foot">Who and where lives in
-    <a href="https://analytics.google.com/analytics/web/" rel="noreferrer noopener"
-       style="color:var(--signal)">Google Analytics</a> — this page is the database.</p>
 </main>
 <script nonce="${nonce}">
 (function () {
@@ -321,6 +349,14 @@ export function adminPageHtml(nonce: string): string {
             '<td style="max-width:280px;overflow:hidden;text-overflow:ellipsis">' +
             esc(s.user_agent || "—") + '</td>';
         });
+    sec += '<p class="muted" style="margin:14px 0 8px">Browsers that skip the lockout</p>' +
+      table([{ label: "Trusted since" }, { label: "Last seen" }, { label: "From" }, { label: "Browser" }],
+        d.knownBrowsers || [], function (k) {
+          return '<td>' + esc(k.trusted) + '</td><td>' + esc(k.last_seen || "—") + '</td>' +
+            '<td>' + esc(k.ip) + ' ' + esc(k.country) + '</td>' +
+            '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis">' +
+            esc(k.user_agent || "—") + '</td>';
+        });
     sec += '<p class="muted" style="margin:14px 0 8px">Recent attempts</p>' +
       table([{ label: "When" }, { label: "Event" }, { label: "From" }, { label: "AS" }],
         d.auditLog, function (a) {
@@ -353,10 +389,9 @@ export function adminPageHtml(nonce: string): string {
       return res.json().then(function (d) {
         last = d;
         render(d);
-        $("login").style.display = "none";
+        $("gate").className = "gate hide";
         $("dash").className = "";
-        $("tools").className = "tools";
-        $("sub").textContent = "Aggregate only — no entry contents, no names.";
+        $("head").className = "row";
         if (!timer) timer = setInterval(function () { load(); }, 60000);
         return true;
       });
@@ -368,10 +403,10 @@ export function adminPageHtml(nonce: string): string {
     $("go").disabled = true;
     fetch("/api/admin/login", {
       method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ password: $("pw").value, code: $("code").value })
+      body: JSON.stringify({ password: $("pw").value })
     }).then(function (res) {
       $("go").disabled = false;
-      if (res.ok) { $("pw").value = ""; $("code").value = ""; $("err").className = "err hide"; load(); return; }
+      if (res.ok) { $("pw").value = ""; $("err").className = "err hide"; load(); return; }
       return res.json().catch(function () { return {}; }).then(function (body) {
         $("err").textContent = body.error || "That did not work.";
         $("err").className = "err";
