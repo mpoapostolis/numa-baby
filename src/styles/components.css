@@ -1068,3 +1068,59 @@
     min-height: 44px;
   }
 }
+
+/* ——— The cookie question ————————————————————————————————————————
+   Not a modal and not a wall: a parent who opened the app at 4am to log a
+   feed can still do exactly that with this on screen. It floats above the
+   bottom navigation, and both answers carry the same weight — a "reject"
+   that is harder to find than "accept" is not consent. */
+.consent-banner {
+  position: fixed;
+  z-index: 60;
+  left: 12px;
+  right: 12px;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--card);
+  box-shadow: 0 8px 28px oklch(0 0 0 / 0.14);
+  animation: consent-rise 260ms ease-out;
+}
+
+@media (width >= 720px) {
+  .consent-banner {
+    left: auto;
+    right: 24px;
+    bottom: 24px;
+    max-width: 380px;
+  }
+}
+
+.consent-copy {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.consent-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.consent-actions button {
+  width: 100%;
+}
+
+@keyframes consent-rise {
+  from { opacity: 0; translate: 0 12px; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .consent-banner { animation: none; }
+}

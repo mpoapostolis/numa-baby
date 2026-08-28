@@ -1,5 +1,5 @@
 import { Baby, Bell, Download, Moon, Share2, ShieldCheck, Sun, Trash2, Upload } from "lucide-react";
-import { ChangeEvent, useRef } from "react";
+import { ChangeEvent, useRef, useState } from "react";
 import {
   Card,
   CardContent,
@@ -22,6 +22,7 @@ import { Switch } from "../components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "../components/ui/toggle-group";
 import { FamilySyncCard } from "../components/FamilySyncCard";
 import { SettingsAction } from "../components/SettingsAction";
+import { ConsentChoice, readConsent, saveConsent } from "../domain/consent";
 import { formatTime } from "../domain/time";
 import { FamilySync } from "../hooks/useFamilySync";
 import { Profile, ReminderSettings } from "../domain/types";
@@ -66,6 +67,7 @@ export default function SettingsScreen({
   onIncomingCodeUsed,
 }: SettingsScreenProps) {
   const importRef = useRef<HTMLInputElement>(null);
+  const [consent, setConsent] = useState<ConsentChoice | null>(readConsent);
   const feedingModeLabel = {
     breast: "Breastfeeding",
     bottle: "Bottle feeding",
@@ -198,6 +200,32 @@ export default function SettingsScreen({
           </ItemGroup>
         </CardContent>
         <Input ref={importRef} className="hidden-input" type="file" accept="application/json" onChange={onImport} />
+      </Card>
+
+      <Card className="settings-group">
+        <CardHeader>
+          <CardTitle asChild><h2>Usage statistics</h2></CardTitle>
+          <CardDescription>
+            Anonymous page counts, so I can see which parts of the app get used. Never your
+            baby’s entries. You can change this whenever you like.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ToggleGroup
+            type="single"
+            value={consent ?? "denied"}
+            className="filter-row"
+            aria-label="Usage statistics"
+            onValueChange={(value) => {
+              if (!value) return;
+              saveConsent(value as ConsentChoice);
+              setConsent(value as ConsentChoice);
+            }}
+          >
+            <ToggleGroupItem value="granted">Allowed</ToggleGroupItem>
+            <ToggleGroupItem value="denied">Off</ToggleGroupItem>
+          </ToggleGroup>
+        </CardContent>
       </Card>
 
       <Card className="privacy-card">

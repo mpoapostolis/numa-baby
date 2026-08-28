@@ -21,12 +21,14 @@ import {
 import { Toaster } from "./components/ui/sonner";
 import { AppSidebar } from "./components/AppSidebar";
 import { BabyFace, SleepingBaby } from "./components/illustrations";
+import { ConsentBanner } from "./components/ConsentBanner";
 import { LogSheet } from "./components/LogSheet";
 import JoinFamilyScreen from "./components/JoinFamilyScreen";
 import OnboardingScreen from "./screens/OnboardingScreen";
 import TodayScreen from "./screens/TodayScreen";
 import { Activity, ActivityType, Sheet, Tab } from "./domain/types";
 import { JOIN_CODE_PATTERN } from "./domain/familyPairing";
+import { readConsent } from "./domain/consent";
 import { ageInDays } from "./domain/time";
 import { useActivityStats } from "./hooks/useActivityStats";
 import { useFamilySync } from "./hooks/useFamilySync";
@@ -90,6 +92,9 @@ export default function HomePage() {
   // from the state above, never from the hash — by now it has been stripped.
   const [activeTab, setActiveTab] = useState<Tab>(incomingJoinCode ? "more" : "today");
   const [sheet, setSheet] = useState<Sheet>(null);
+  // null = never asked. The banner shows only then, so a parent is asked once
+  // rather than on every one of the six visits they make in a night.
+  const [consent, setConsent] = useState(readConsent);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [nursingInitialMode, setNursingInitialMode] = useState<"timer" | "manual">("timer");
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | "unsupported">(
@@ -417,6 +422,8 @@ export default function HomePage() {
             </button>
           ))}
         </nav>
+
+        {consent === null && <ConsentBanner onChoose={setConsent} />}
 
         <Toaster
           theme={nightMode ? "dark" : "light"}

@@ -53,10 +53,12 @@
         space so a second phone can share the log. JavaScript is required to use the app.
       </p>
     </noscript>
-    <!-- Google tag (gtag.js). The configuration lives in /analytics.js so the
-         Content-Security-Policy can keep refusing inline scripts. -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-X94KW80ZGY"></script>
+    <!-- Consent Mode defaults must be set before the tag processes anything,
+         so /analytics.js loads first and synchronously. It also keeps the
+         configuration out of an inline script, so the CSP can go on refusing
+         those. -->
     <script src="/analytics.js"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-X94KW80ZGY"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
