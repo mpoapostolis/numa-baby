@@ -14,7 +14,7 @@ import { track } from "../domain/analytics";
 
 type State = "idle" | "sending" | "sent" | "failed";
 
-export function FeedbackCard() {
+export function FeedbackForm({ onSent }: { onSent?: () => void } = {}) {
   const [message, setMessage] = useState("");
   const [contact, setContact] = useState("");
   const [state, setState] = useState<State>("idle");
@@ -38,6 +38,7 @@ export function FeedbackCard() {
       setState("sent");
       setMessage("");
       setContact("");
+      onSent?.();
     } catch {
       // Offline is the likeliest cause, and this app is used offline a lot.
       setState("failed");
@@ -45,21 +46,13 @@ export function FeedbackCard() {
   }
 
   return (
-    <Card className="settings-group">
-      <CardHeader>
-        <CardTitle asChild><h2>Need anything?</h2></CardTitle>
-        <CardDescription>
-          Something broken, missing, or just annoying? It goes straight to the person who
-          built this — one dad, evenings, between feeds.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {state === "sent" ? (
+    <>
+      {state === "sent" ? (
           <p className="feedback-thanks" role="status">
             Sent — thank you. Genuinely.
           </p>
-        ) : (
-          <form className="feedback-form" onSubmit={(event) => void submit(event)}>
+      ) : (
+        <form className="feedback-form" onSubmit={(event) => void submit(event)}>
             <label className="sr-only" htmlFor="feedback-message">Your message</label>
             <textarea
               id="feedback-message"
@@ -92,8 +85,25 @@ export function FeedbackCard() {
               <MessageCircle size={16} aria-hidden="true" />
               {state === "sending" ? "Sending…" : "Send"}
             </Button>
-          </form>
-        )}
+        </form>
+      )}
+    </>
+  );
+}
+
+export const FEEDBACK_BLURB =
+  "Something broken, missing, or just annoying? It goes straight to the person who built " +
+  "this — one dad, evenings, between feeds.";
+
+export function FeedbackCard() {
+  return (
+    <Card className="settings-group">
+      <CardHeader>
+        <CardTitle asChild><h2>Need anything?</h2></CardTitle>
+        <CardDescription>{FEEDBACK_BLURB}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <FeedbackForm />
       </CardContent>
     </Card>
   );

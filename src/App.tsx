@@ -22,6 +22,7 @@ import { Toaster } from "./components/ui/sonner";
 import { AppSidebar } from "./components/AppSidebar";
 import { BabyFace, SleepingBaby } from "./components/illustrations";
 import { ConsentBanner } from "./components/ConsentBanner";
+import { FeedbackBubble } from "./components/FeedbackBubble";
 import { LogSheet } from "./components/LogSheet";
 import JoinFamilyScreen from "./components/JoinFamilyScreen";
 import OnboardingScreen from "./screens/OnboardingScreen";
@@ -262,6 +263,7 @@ export default function HomePage() {
 
   if (bootState === "onboarding" || bootState === "recovery") {
     return (
+      <>
       <OnboardingScreen
         mode={bootState}
         profile={profile}
@@ -273,6 +275,19 @@ export default function HomePage() {
         onDownloadRecovery={downloadRecovery}
         onResetRecovery={resetUnreadableData}
       />
+      {/* The landing screen is where most first-time visitors stop, so the
+          question has to be asked here too — not only once someone has
+          finished setting a baby up. */}
+      {consent === null && (
+        <ConsentBanner
+          onChoose={(choice) => {
+            setConsent(choice);
+            track("consent_answered", { choice, screen: "onboarding" });
+          }}
+        />
+      )}
+      <FeedbackBubble hidden={consent === null} />
+      </>
     );
   }
 
@@ -430,6 +445,10 @@ export default function HomePage() {
             </button>
           ))}
         </nav>
+
+        {/* Hidden while the consent banner owns the same corner, and while a
+            log sheet is open — nothing competes with the 3am flow. */}
+        <FeedbackBubble hidden={consent === null || sheet !== null} />
 
         {consent === null && (
           <ConsentBanner

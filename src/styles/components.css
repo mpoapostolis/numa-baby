@@ -1124,3 +1124,58 @@
 @media (prefers-reduced-motion: reduce) {
   .consent-banner { animation: none; }
 }
+
+/* ——— The feedback bubble ————————————————————————————————————————
+   Bottom-right, above the nav. The logging tiles this app exists for sit at
+   the top of a phone, so this corner is the one place a permanent button
+   costs a tired parent nothing. Deliberately quiet: an outline, not a
+   coloured blob, because it is an offer and not a call to action. */
+.feedback-bubble {
+  position: fixed;
+  z-index: 40;
+  right: 16px;
+  bottom: calc(84px + env(safe-area-inset-bottom));
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--ink-2);
+  box-shadow: 0 4px 14px oklch(0 0 0 / 0.1);
+  cursor: pointer;
+  transition: color 160ms ease, border-color 160ms ease, scale 120ms ease;
+}
+
+.feedback-bubble:hover,
+.feedback-bubble:focus-visible {
+  color: var(--signal);
+  border-color: color-mix(in oklch, var(--signal) 40%, var(--border));
+}
+
+.feedback-bubble:active {
+  scale: 0.94;
+}
+
+/* Desktop keeps the sidebar, so the nav bar is gone and the bubble can sit
+   lower without covering anything. */
+@media (width >= 768px) {
+  .feedback-bubble {
+    right: 24px;
+    bottom: 24px;
+  }
+}
+
+.feedback-dialog {
+  display: grid;
+  gap: 12px;
+}
+
+.feedback-dismiss {
+  justify-self: end;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feedback-bubble { transition: none; }
+}
