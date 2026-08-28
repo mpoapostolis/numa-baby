@@ -522,3 +522,65 @@
   flex-wrap: wrap;
   gap: 4px 12px;
 }
+
+/* Milk against weight. The BAND is the subject and the marker is just where
+   these days happen to sit — no target line, and no colour that reads as pass
+   or fail, because a range is not a score. */
+.intake-card {
+  display: grid;
+  gap: 12px;
+}
+
+.intake-bar {
+  position: relative;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--muted);
+  overflow: hidden;
+}
+
+.intake-band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: color-mix(in oklch, var(--glyph-bottle) 26%, transparent);
+  border-left: 1px solid color-mix(in oklch, var(--glyph-bottle) 55%, transparent);
+  border-right: 1px solid color-mix(in oklch, var(--glyph-bottle) 55%, transparent);
+}
+
+/* The family's own figure: the one petal mark on the whole chart. */
+.intake-marker {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--signal);
+  translate: -50% 0;
+}
+
+.intake-reading {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ink-2);
+}
+
+.intake-reading .figure {
+  margin-right: 4px;
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.intake-caveat {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+
+.intake-card .figure-source {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}

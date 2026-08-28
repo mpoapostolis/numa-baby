@@ -7,6 +7,8 @@ import { activityTitle } from "../domain/activityDisplay";
 import { formatShortDay, formatTime, humanDuration, median } from "../domain/time";
 import { track } from "../domain/analytics";
 import { Insight, buildInsightInput, insightsFor } from "../domain/insightRules";
+import { guidanceFor } from "../domain/intakeGuide";
+import { AAP_FORMULA_AMOUNT, NHS_ENOUGH_MILK } from "../domain/sources";
 import { Activity, FeedingMode } from "../domain/types";
 import { ActivityStats } from "../hooks/useActivityStats";
 
@@ -72,6 +74,17 @@ export default function InsightsScreen({
   onAddGrowth,
   onOpenGuide,
 }: InsightsScreenProps) {
+  // Milk against this baby's own weight, rather than a stranger's average.
+  const intake = useMemo(() => {
+    const bottleDays = stats.recentDays.filter((day) => day.ml > 0);
+    return guidanceFor(
+      stats.latestGrowth?.weightGrams,
+      median(bottleDays.map((day) => day.ml)),
+      bottleDays.length,
+      feedingMode,
+    );
+  }, [stats.recentDays, stats.latestGrowth, feedingMode]);
+
   const insights = useMemo(
     () => insightsFor(buildInsightInput({
       activities,
@@ -129,6 +142,67 @@ export default function InsightsScreen({
       {/* The answer first, the evidence below it. Cards only appear when the
           log can support them honestly — silence here is a good sign, not a
           missing feature. */}
+      {intake && (
+        <figure className="chart-card intake-card">
+          <figcaption>
+            <p className="t-label">Milk against weight</p>
+            <h2>
+              At {intake.weightKg.toFixed(2)} kg, the usual guide is about{" "}
+              {intake.lowMl}–{intake.highMl} ml a day.
+            </h2>
+          </figcaption>
+
+          {/* The band is the subject; the marker is where these days sit. No
+              target line, no colour that says pass or fail. */}
+          <div
+            className="intake-bar"
+            role="img"
+            aria-label={`Reference band ${intake.lowMl} to ${intake.highMl} millilitres a day. Your typical day is ${intake.typicalMl} millilitres, which is ${intake.position} the band.`}
+          >
+            {(() => {
+              const span = Math.max(intake.highMl * 1.35, intake.typicalMl * 1.15);
+              const at = (value: number) => `${Math.min(100, (value / span) * 100)}%`;
+              return (
+                <>
+                  <div
+                    className="intake-band"
+                    style={{ left: at(intake.lowMl), width: `calc(${at(intake.highMl)} - ${at(intake.lowMl)})` }}
+                  />
+                  <span className="intake-marker" style={{ left: at(intake.typicalMl) }} />
+                </>
+              );
+            })()}
+          </div>
+
+          <p className="intake-reading">
+            <strong className="figure">{intake.typicalMl}<span className="unit">ml</span></strong>
+            <span> is your typical day — {intake.position === "within"
+              ? "inside that range"
+              : intake.position === "below" ? "below it" : "above it"}.</span>
+          </p>
+
+          <p className="intake-caveat">
+            {intake.cappedByCeiling
+              ? "Capped at the 960 ml a day AAP gives as the usual maximum, whatever the weight suggests. "
+              : ""}
+            This counts bottles only, so any nursing sits outside it. Babies feed to appetite and
+            a range is not a target — bring the number to your paediatrician rather than to a
+            calculator.
+          </p>
+
+          <p className="figure-source">
+            <a className="fact-source" href={AAP_FORMULA_AMOUNT.url} target="_blank" rel="noopener noreferrer"
+               onClick={() => track("source_opened", { name: AAP_FORMULA_AMOUNT.name })}>
+              {AAP_FORMULA_AMOUNT.name} <ExternalLink size={12} aria-hidden="true" />
+            </a>
+            <a className="fact-source" href={NHS_ENOUGH_MILK.url} target="_blank" rel="noopener noreferrer"
+               onClick={() => track("source_opened", { name: NHS_ENOUGH_MILK.name })}>
+              {NHS_ENOUGH_MILK.name} <ExternalLink size={12} aria-hidden="true" />
+            </a>
+          </p>
+        </figure>
+      )}
+
       {insights.length > 0 && (
         <ul className="insight-deck" aria-label="What your entries suggest">
           {insights.map((insight) => <InsightCard key={insight.id} insight={insight} />)}
