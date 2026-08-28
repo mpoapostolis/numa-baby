@@ -17,6 +17,15 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-08-31",
+    title: "What is probably next, in one place",
+    items: [
+      "Feed, sleep and nappy forecasts now sit together in one “Coming up” card, soonest first — they used to be two rows in two different places on the screen.",
+      "Nappies are forecast too, learned from your own log. They stay quiet when your changes have no steady rhythm, because a confident wrong time is worse than none.",
+      "The what’s-new card marks itself read as soon as you see it, so it never greets you twice.",
+    ],
+  },
+  {
     id: "2026-08-30",
     title: "Sleep is back — thank you for telling me",
     items: [

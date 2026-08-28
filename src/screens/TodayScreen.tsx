@@ -1,5 +1,5 @@
 import { Suspense, lazy, useState } from "react";
-import { ChevronRight, ExternalLink, Moon, ShieldCheck, Square, Thermometer, Waves, Weight } from "lucide-react";
+import { ChevronRight, ExternalLink, ShieldCheck, Square, Thermometer, Waves, Weight } from "lucide-react";
 
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -7,6 +7,7 @@ import { ItemGroup, ItemSeparator } from "../components/ui/item";
 import { ActivityGlyph } from "../components/ActivityGlyph";
 import { ActivityRow } from "../components/ActivityRow";
 import { DayBand } from "../components/DayBand";
+import { ComingUp, ComingUpEntry } from "../components/ComingUp";
 import { DayRecap } from "../components/DayRecap";
 import { TrendChart } from "../components/TrendChart";
 // The noise generator is only needed once someone asks for it, so it stays
@@ -23,7 +24,6 @@ import { summarizeDay } from "../domain/daySummary";
 import { makeId } from "../domain/id";
 import {
   ageInDays,
-  forecastRelative,
   formatBabyAge,
   formatTime,
   formatTimelineDay,
@@ -211,10 +211,7 @@ export default function TodayScreen({
     activeSleep,
     activeTimers,
     typicalGap,
-    nextFeedAt,
-    feedWindowPassed,
-    nextSleepAt,
-    sleepWindowPassed,
+    forecasts,
   } = stats;
 
   // The companion notices the moment a completed care entry lands: the entry
@@ -239,6 +236,72 @@ export default function TodayScreen({
     ? minutesBetween(lastFeed.startedAt, new Date(minuteClock).toISOString())
     : 0;
   const gapOver = Math.max(0, gapElapsed - typicalGap);
+
+  // What is probably next, in one place. A row appears only once the thing it
+  // forecasts has been logged at all — greeting a fresh install with three
+  // "still learning" lines is noise about the app, not help with the baby.
+  const comingUp: ComingUpEntry[] = [];
+  if (lastFeed && !activeNursing) {
+    comingUp.push({
+      type: profile.feedingMode === "breast" ? "nursing" : "bottle",
+      label: "Feed",
+      forecast: forecasts.feed,
+      waiting: {
+        headline: "Still learning the rhythm",
+        hint: "A few more feeds and the pattern appears.",
+      },
+      gone: {
+        headline: "Past the usual window",
+        hint: gapOver > 0 && typicalGap > 0
+          ? `${humanDuration(gapOver)} past the usual ${humanDuration(typicalGap)} gap — follow the cues`
+          : "Follow the cues — whenever works",
+      },
+      action: {
+        label: "Log",
+        onClick: () => onOpenSheet(forecastFeedSheet),
+        ariaLabel: "Log a feed",
+      },
+    });
+  }
+  if (!activeSleep && sortedActivities.some((activity) => activity.type === "sleep")) {
+    comingUp.push({
+      type: "sleep",
+      label: "Sleep",
+      forecast: forecasts.sleep,
+      waiting: {
+        headline: "Still learning the rhythm",
+        hint: "A few more sleeps and the pattern appears.",
+      },
+      gone: {
+        headline: "Past the usual window",
+        hint: "Follow the cues — whenever works",
+      },
+      action: {
+        label: "Start",
+        onClick: toggleSleep,
+        ariaLabel: "Start sleep timer",
+      },
+    });
+  }
+  if (sortedActivities.some((activity) => activity.type === "diaper")) {
+    comingUp.push({
+      type: "diaper",
+      label: "Nappy",
+      forecast: forecasts.diaper,
+      // Nappies are the noisiest of the three and the forecast stays quiet
+      // whenever the changes do not fall into a rhythm — so this line has to
+      // be true both before there is data and when there is data that
+      // disagrees with itself. It never promises the pattern will arrive.
+      waiting: {
+        headline: "No steady pattern",
+        hint: "Nappies come when they come — check whenever something seems off.",
+      },
+      gone: {
+        headline: "Past the usual window",
+        hint: "Worth a check.",
+      },
+    });
+  }
 
   function quickLogBottle() {
     if (!lastBottle?.amount) {
@@ -368,7 +431,7 @@ export default function TodayScreen({
   // fed within the hour → content. Hunger outranks the hour, so a 3am cue
   // never gets a sleeping face; otherwise night mode means night.
   const isHungry = Boolean(lastFeed) &&
-    (gapOver > 0 || (nextFeedAt !== null && nextFeedAt - minuteClock < 30 * 60_000));
+    (gapOver > 0 || (forecasts.feed.at !== null && forecasts.feed.at - minuteClock < 30 * 60_000));
   const companionMood: CompanionMood = activeNursing
     ? "feeding"
     : isHungry
@@ -482,30 +545,9 @@ export default function TodayScreen({
               />
             ))}
 
-            {/* With zero feeds there is no pattern to forecast — the row waits
-                for the first feed instead of announcing "Learning the pattern"
-                over an empty tracker. */}
-            {!activeNursing && lastFeed && (
-              <div className="hearth-foot">
-                <div className="log-copy">
-                  <span className="t-label">Next likely feed</span>
-                  <strong>
-                    {nextFeedAt ? forecastRelative(nextFeedAt, minuteClock) : "Still learning the rhythm"}
-                  </strong>
-                  <small>
-                    {nextFeedAt
-                      ? feedWindowPassed
-                        ? gapOver > 0 && typicalGap > 0
-                          ? `${humanDuration(gapOver)} past the usual ${humanDuration(typicalGap)} gap — follow the cues`
-                          : "Follow the cues — whenever works"
-                        : `around ${formatTime(new Date(nextFeedAt).toISOString())}`
-                      : "A few more feeds and the rhythm appears"}
-                  </small>
-                </div>
-                <Button variant="outline" onClick={() => onOpenSheet(forecastFeedSheet)} aria-label="Log a feed">Log</Button>
-              </div>
-            )}
           </div>
+
+          <ComingUp entries={comingUp} now={minuteClock} />
 
           {/* Shown from the first thing ever logged. A fresh install skips it
               — four em-dashes read as breakage, not calm — but a quiet morning
@@ -538,27 +580,6 @@ export default function TodayScreen({
           />
 
           <div className="next-up">
-            {!activeSleep && sortedActivities.some((activity) => activity.type === "sleep") && (
-              <div className="log-row action-sleep">
-                <span className="action-icon" aria-hidden="true"><Moon /></span>
-                <div className="log-copy">
-                  <span className="t-label">Next likely sleep</span>
-                  <strong>
-                    {nextSleepAt ? forecastRelative(nextSleepAt, minuteClock) : "Still learning the rhythm"}
-                  </strong>
-                  <small>
-                    {nextSleepAt
-                      ? sleepWindowPassed
-                        ? "Follow the cues — whenever works"
-                        : `around ${formatTime(new Date(nextSleepAt).toISOString())}`
-                      : "A few more sleeps and the rhythm appears"}
-                  </small>
-                </div>
-                <div className="log-actions">
-                  <Button variant="outline" onClick={toggleSleep} aria-label="Start sleep timer">Start</Button>
-                </div>
-              </div>
-            )}
             <div className="care-notes">
               <p><ShieldCheck size={14} aria-hidden="true" /> Safe sleep: back, firm flat surface, clear sleep space.</p>
             </div>

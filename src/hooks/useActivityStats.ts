@@ -1,6 +1,14 @@
 import { useMemo } from "react";
 import { summarizeDay, summarizeDays } from "../domain/daySummary";
-import { ageInMonths, isSameDay, median, minutesOnDay } from "../domain/time";
+import {
+  DIAPER_BOUNDS,
+  FEED_BOUNDS,
+  SLEEP_BOUNDS,
+  atClock,
+  forecast,
+  gapsBetween,
+} from "../domain/forecast";
+import { ageInMonths, isSameDay, minutesOnDay } from "../domain/time";
 import { Activity, Profile } from "../domain/types";
 
 // Every derived figure the screens read, split into two memos: one pass over
@@ -27,6 +35,8 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
     const completedSleeps: Activity[] = [];
     const activeTimers: Activity[] = [];
     const feedTimes: number[] = [];
+    const diaperTimes: number[] = [];
+    let lastDiaper: Activity | undefined;
     const growthByDate: Activity[] = [];
     for (const activity of sortedActivities) {
       const isFeed = activity.type === "bottle" || activity.type === "nursing";
@@ -51,6 +61,10 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
       if (activity.type === "sleep" && activity.endedAt && completedSleeps.length < 24) {
         completedSleeps.push(activity);
       }
+      if (activity.type === "diaper") {
+        if (!lastDiaper) lastDiaper = activity;
+        if (diaperTimes.length < 30) diaperTimes.push(new Date(activity.startedAt).getTime());
+      }
       if (activity.type === "growth" && activity.weightGrams) growthByDate.push(activity);
     }
 
@@ -64,41 +78,42 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
         ? latestGrowth.weightGrams - previousGrowth.weightGrams
         : 0;
 
-    feedTimes.sort((a, b) => a - b);
-    const feedingGaps = feedTimes
-      .slice(1)
-      .map((time, index) => Math.round((time - feedTimes[index]) / 60_000))
-      .filter((minutes) => minutes > 20 && minutes < 480);
-    const typicalGap = median(feedingGaps);
-
-    // Sleep forecasting, restored: two users asked for it back within hours of
-    // it being removed, and both said the prediction was the part they used.
+    // Three forecasts, one piece of arithmetic — see domain/forecast.ts. The
+    // windows are worked out here, where they only change when the data does;
+    // whether one has gone by is decided against the minute clock below.
     const chronologicalSleeps = [...completedSleeps].sort(
       (a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime(),
     );
-    const wakeGaps = chronologicalSleeps
-      .slice(1)
-      .map((sleep, index) => Math.round(
-        (new Date(sleep.startedAt).getTime() - new Date(chronologicalSleeps[index].endedAt!).getTime()) / 60_000,
-      ))
-      .filter((minutes) => minutes >= 20 && minutes <= 360);
-    const typicalWakeGap = median(wakeGaps);
+    // Sleep is the odd one out: the gap that matters runs from the END of one
+    // sleep to the START of the next, which is how long the baby stayed awake.
+    const wakeGaps = chronologicalSleeps.slice(1).map((sleep, index) => Math.round(
+      (new Date(sleep.startedAt).getTime() - new Date(chronologicalSleeps[index].endedAt!).getTime()) / 60_000,
+    ));
     const lastCompletedSleep = completedSleeps[0];
-    const sleepPatternReady = wakeGaps.length >= 2 && Boolean(lastCompletedSleep);
-    const sleepSpread = sleepPatternReady
-      ? Math.max(15, Math.min(40, median(wakeGaps.map((gap) => Math.abs(gap - typicalWakeGap)))))
-      : 20;
-    const nextSleepAt = sleepPatternReady && lastCompletedSleep?.endedAt
-      ? new Date(lastCompletedSleep.endedAt).getTime() + typicalWakeGap * 60_000
-      : null;
 
-    const feedPatternReady = feedingGaps.length >= 3 && Boolean(lastFeed);
-    const feedSpread = feedPatternReady
-      ? Math.max(15, Math.min(45, median(feedingGaps.map((gap) => Math.abs(gap - typicalGap)))))
-      : 20;
-    const nextFeedAt = feedPatternReady && lastFeed
-      ? new Date(lastFeed.startedAt).getTime() + typicalGap * 60_000
-      : null;
+    const forecasts = {
+      feed: forecast(
+        "feed",
+        gapsBetween(feedTimes),
+        lastFeed ? new Date(lastFeed.startedAt).getTime() : null,
+        0,
+        FEED_BOUNDS,
+      ),
+      sleep: forecast(
+        "sleep",
+        wakeGaps,
+        lastCompletedSleep?.endedAt ? new Date(lastCompletedSleep.endedAt).getTime() : null,
+        0,
+        SLEEP_BOUNDS,
+      ),
+      diaper: forecast(
+        "diaper",
+        gapsBetween(diaperTimes),
+        lastDiaper ? new Date(lastDiaper.startedAt).getTime() : null,
+        0,
+        DIAPER_BOUNDS,
+      ),
+    };
 
     return {
       sortedActivities,
@@ -107,25 +122,22 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
       activeNursing,
       activeBurp,
       activeSleep,
-      typicalWakeGap,
-      sleepPatternReady,
-      sleepSpread,
-      nextSleepAt,
+      lastDiaper,
       activeTimers,
       growthEntries,
       latestGrowth,
       previousGrowth,
       weightChange,
-      feedingGaps,
-      typicalGap,
-      feedPatternReady,
-      feedSpread,
-      nextFeedAt,
+      forecasts,
+      // Insights quotes this on its own ("feeds usually arrive about 3h
+      // apart"), so it stays a named value rather than a reach into the
+      // forecast object.
+      typicalGap: forecasts.feed.typicalGap,
     };
   }, [activities]);
 
   const timeSensitive = useMemo(() => {
-    const { sortedActivities, nextFeedAt, feedSpread, nextSleepAt, sleepSpread } = base;
+    const { sortedActivities } = base;
     // Derived from minuteClock, not a render-time `new Date()`, so every figure
     // rolls over together at midnight while the app stays open.
     const todayActivities = sortedActivities.filter((activity) =>
@@ -137,10 +149,13 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
     const bottleMlToday = feedsToday.reduce((sum, activity) => sum + (activity.amount ?? 0), 0);
     const diapersToday = todayActivities.filter((activity) => activity.type === "diaper").length;
 
-    // Suppress a predicted clock range once it is entirely in the past — a card
-    // reading "14:05–14:45" at 17:00 presents history as a forecast.
-    const feedWindowPassed = nextFeedAt !== null && nextFeedAt + feedSpread * 60_000 < minuteClock;
-    const sleepWindowPassed = nextSleepAt !== null && nextSleepAt + sleepSpread * 60_000 < minuteClock;
+    // Re-judged every minute, so a window that has gone by stops presenting
+    // history as a forecast the moment it does.
+    const forecasts = {
+      feed: atClock(base.forecasts.feed, minuteClock),
+      sleep: atClock(base.forecasts.sleep, minuteClock),
+      diaper: atClock(base.forecasts.diaper, minuteClock),
+    };
 
     const weekly = Array.from({ length: 7 }, (_, index) => {
       const date = new Date(minuteClock);
@@ -185,8 +200,7 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
       feedsToday,
       bottleMlToday,
       diapersToday,
-      feedWindowPassed,
-      sleepWindowPassed,
+      forecasts,
       weekly,
       maxMl,
       trackedDays,
