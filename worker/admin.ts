@@ -118,14 +118,18 @@ async function login(
   // guesses therefore draw a thousand different numbers and only the first few
   // are allowed to go on and be checked. Counting failures after the check —
   // the obvious way to write this — would have let all thousand through.
-  const [byAddress, overall] = await Promise.all([
-    reserveAttempt(client, ipScope, now, IP_MAX_ATTEMPTS, true),
-    reserveAttempt(client, "global", now, GLOBAL_MAX_ATTEMPTS, false),
-  ]);
+  // The address is asked first and ALONE. Spending both budgets together
+  // would let one locked-out address keep draining the shared one — twenty
+  // requests from a single machine already refused at the door would shut
+  // every other door in the building. Two round trips on a login is a price
+  // worth paying for that not being true.
+  //
   // Not audited: a refusal costs nothing to send, so writing a row for each
   // one would hand an attacker a way to grow the table for free. The lock
   // itself is on the dashboard, and so are the attempts that caused it.
+  const byAddress = await reserveAttempt(client, ipScope, now, IP_MAX_ATTEMPTS, true);
   if (!byAddress.allowed) return tooManyTries(byAddress.retryAfterMs);
+  const overall = await reserveAttempt(client, "global", now, GLOBAL_MAX_ATTEMPTS, false);
 
   const body = await readBody(request);
   const password = typeof body.password === "string" ? body.password : "";
