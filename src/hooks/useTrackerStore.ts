@@ -11,7 +11,12 @@ import { Activity, BootState, Profile, ReminderSettings } from "../domain/types"
 export const STORAGE_KEY = "numa-baby-v1";
 export const RECOVERY_KEY = "numa-baby-v1-recovery";
 const EMPTY_PROFILE: Profile = { name: "", birthDate: "", feedingMode: "mixed" };
-const DEFAULT_REMINDERS: ReminderSettings = { feedEnabled: false, feedIntervalMinutes: 180 };
+const DEFAULT_REMINDERS: ReminderSettings = {
+  feedEnabled: false,
+  feedIntervalMinutes: 180,
+  diaperEnabled: false,
+  diaperIntervalMinutes: 120,
+};
 
 // Tombstones (deleted: true) are kept in storage so a future sync can merge
 // deletions across devices, but they must not grow the blob forever. Any
@@ -389,12 +394,16 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     return true;
   }
 
-  async function changeFeedReminders(enabled: boolean) {
+  async function changeReminder(
+    key: "feedEnabled" | "diaperEnabled",
+    enabled: boolean,
+    label: string,
+  ) {
     if (!enabled) {
-      const next = { ...reminders, feedEnabled: false };
+      const next = { ...reminders, [key]: false };
       if (!persistSnapshot(persistedStateRef.current.activities, profile, nightMode, next)) return;
       setReminders(next);
-      showToast("Feed reminders off");
+      showToast(`${label} reminders off`);
       return;
     }
 
@@ -415,15 +424,31 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
 
     // Read through the ref: `activities` in this closure was captured before the
     // permission prompt, and the user may have logged entries while it was open.
-    const next = { ...persistedStateRef.current.reminders, feedEnabled: true };
+    const next = { ...persistedStateRef.current.reminders, [key]: true };
     if (!persistSnapshot(persistedStateRef.current.activities, undefined, undefined, next)) return;
     setReminders(next);
-    showToast("Feed reminders on");
+    showToast(`${label} reminders on`);
+  }
+
+  function changeFeedReminders(enabled: boolean) {
+    return changeReminder("feedEnabled", enabled, "Feed");
+  }
+
+  // Asked for by a user: "put a reminder to change diaper".
+  function changeDiaperReminders(enabled: boolean) {
+    return changeReminder("diaperEnabled", enabled, "Nappy");
   }
 
   function changeFeedReminderInterval(minutes: number) {
     if (![120, 180, 240].includes(minutes)) return;
     const next = { ...reminders, feedIntervalMinutes: minutes };
+    if (!persistSnapshot(persistedStateRef.current.activities, profile, nightMode, next)) return;
+    setReminders(next);
+  }
+
+  function changeDiaperReminderInterval(minutes: number) {
+    if (![90, 120, 180].includes(minutes)) return;
+    const next = { ...reminders, diaperIntervalMinutes: minutes };
     if (!persistSnapshot(persistedStateRef.current.activities, profile, nightMode, next)) return;
     setReminders(next);
   }
@@ -701,6 +726,8 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     stampProfileForSync,
     changeFeedReminders,
     changeFeedReminderInterval,
+    changeDiaperReminders,
+    changeDiaperReminderInterval,
     exportData,
     sharePartner,
     importData,

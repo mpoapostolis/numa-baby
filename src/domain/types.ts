@@ -43,6 +43,10 @@ export type BootState = "loading" | "onboarding" | "ready" | "recovery";
 export type ReminderSettings = {
   feedEnabled: boolean;
   feedIntervalMinutes: number;
+  // Added later, so both are optional in storage and default to off — a blob
+  // written before nappy reminders existed must not start firing them.
+  diaperEnabled?: boolean;
+  diaperIntervalMinutes?: number;
 };
 
 export type Sheet = null | "bottle" | "nursing" | "diaper" | "growth" | "health" | "profile" | "edit";

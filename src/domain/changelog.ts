@@ -21,7 +21,7 @@ export const RELEASES: Release[] = [
     title: "Sleep is back — thank you for telling me",
     items: [
       "Sleep tracking and the next-sleep prediction are back. Burping stays, so you have both. Every sleep you logged before is still there and counts again.",
-      "The Diaper tile now shows how long since the last change.",
+      "The Diaper tile shows how long since the last change, and there is now a nappy reminder in Settings.",
       "Sleep is back in the daily recap, the 14-day chart and the Timeline filter.",
     ],
   },

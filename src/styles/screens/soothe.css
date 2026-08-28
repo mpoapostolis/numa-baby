@@ -121,3 +121,15 @@
   color: var(--foreground);
   box-shadow: 0 1px 2px oklch(0 0 0 / 0.06);
 }
+
+/* A tap that produces nothing is the worst failure this panel can have: the
+   parent concludes the app is broken and never tries again. */
+.soothe-failed {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklab, var(--glyph-health) 10%, var(--card));
+  color: var(--foreground);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}

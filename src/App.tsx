@@ -155,6 +155,8 @@ export default function HomePage() {
     completeJoin,
     changeFeedReminders,
     changeFeedReminderInterval,
+    changeDiaperReminders,
+    changeDiaperReminderInterval,
     persistVersion,
     mergeRemote,
     readPersisted,
@@ -219,6 +221,11 @@ export default function HomePage() {
   }, [seenRelease, bootState, sortedActivities.length]);
 
 
+  const lastDiaperAt = sortedActivities.find((a) => a.type === "diaper")?.startedAt;
+  const diaperReminderTargetAt = lastDiaperAt && reminders.diaperEnabled
+    ? new Date(lastDiaperAt).getTime() + (reminders.diaperIntervalMinutes ?? 120) * 60_000
+    : null;
+
   const feedReminderTargetAt = lastFeed
     ? new Date(lastFeed.startedAt).getTime() + reminders.feedIntervalMinutes * 60_000
     : null;
@@ -248,6 +255,32 @@ export default function HomePage() {
 
     return () => window.clearTimeout(timer);
   }, [feedReminderTargetAt, lastFeed?.id, notificationPermission, reminders.feedEnabled]);
+
+  useEffect(() => {
+    if (
+      !reminders.diaperEnabled ||
+      notificationPermission !== "granted" ||
+      !diaperReminderTargetAt ||
+      !("serviceWorker" in navigator)
+    ) return;
+
+    const delay = diaperReminderTargetAt - Date.now();
+    if (delay <= 0 || delay > MAX_REMINDER_DELAY_MS) return;
+    const timer = window.setTimeout(() => {
+      void navigator.serviceWorker.ready
+        .then((registration) => registration.showNotification("Nappy check", {
+          // No name on a lock screen — this may show in a shared room.
+          body: "It has been a while since the last change.",
+          icon: "/icon-192.png",
+          badge: "/icon-192.png",
+          tag: `diaper-reminder-${lastDiaperAt ?? "latest"}`,
+          data: { url: "/" },
+        }))
+        .catch(() => undefined);
+    }, delay);
+
+    return () => window.clearTimeout(timer);
+  }, [diaperReminderTargetAt, lastDiaperAt, notificationPermission, reminders.diaperEnabled]);
 
   // Every navigation leaves the guide, so returning to Insights later starts
   // at the Insights content — never a stale sub-screen.
@@ -477,6 +510,9 @@ export default function HomePage() {
                 onNightModeChange={changeNightMode}
                 onFeedRemindersChange={changeFeedReminders}
                 onFeedIntervalChange={changeFeedReminderInterval}
+                onDiaperRemindersChange={changeDiaperReminders}
+                onDiaperIntervalChange={changeDiaperReminderInterval}
+                diaperReminderTargetAt={diaperReminderTargetAt}
                 onExport={exportData}
                 onShare={() => void sharePartner()}
                 onImport={importData}

@@ -35,10 +35,13 @@ type SettingsScreenProps = {
   reminders: ReminderSettings;
   notificationPermission: NotificationPermission | "unsupported";
   feedReminderTargetAt: number | null;
+  diaperReminderTargetAt: number | null;
   minuteClock: number;
   onNightModeChange: (enabled: boolean) => void;
   onFeedRemindersChange: (enabled: boolean) => Promise<void>;
   onFeedIntervalChange: (minutes: number) => void;
+  onDiaperRemindersChange: (enabled: boolean) => Promise<void>;
+  onDiaperIntervalChange: (minutes: number) => void;
   onExport: () => void;
   onShare: () => void;
   onImport: (event: ChangeEvent<HTMLInputElement>) => void;
@@ -55,10 +58,13 @@ export default function SettingsScreen({
   reminders,
   notificationPermission,
   feedReminderTargetAt,
+  diaperReminderTargetAt,
   minuteClock,
   onNightModeChange,
   onFeedRemindersChange,
   onFeedIntervalChange,
+  onDiaperRemindersChange,
+  onDiaperIntervalChange,
   onExport,
   onShare,
   onImport,
@@ -165,6 +171,53 @@ export default function SettingsScreen({
                     <ToggleGroupItem value="240">4 hours</ToggleGroupItem>
                   </ToggleGroup>
                   <p>Follow your baby’s cues and clinician’s care plan.</p>
+                </div>
+              </>
+            )}
+
+            <ItemSeparator />
+            {/* Asked for by a user: "put a reminder to change diaper". Counts
+                from the last change, not from a feed. */}
+            <Item>
+              <ItemContent>
+                <ItemTitle>Nappy reminder</ItemTitle>
+                <ItemDescription id="diaper-reminder-status">
+                  {notificationPermission === "unsupported"
+                    ? "Not supported in this browser"
+                    : notificationPermission === "denied"
+                      ? "Blocked in browser settings"
+                      : reminders.diaperEnabled && diaperReminderTargetAt && diaperReminderTargetAt > minuteClock
+                        ? `Around ${formatTime(new Date(diaperReminderTargetAt).toISOString())}, if this app is still open`
+                        : "Prompt after the next change you log"}
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <Switch
+                  checked={Boolean(reminders.diaperEnabled)}
+                  disabled={notificationPermission === "unsupported" || notificationPermission === "denied"}
+                  onCheckedChange={(checked) => { track("diaper_reminders_toggled", { enabled: checked }); void onDiaperRemindersChange(checked); }}
+                  aria-label="Use nappy reminders"
+                  aria-describedby="diaper-reminder-status"
+                />
+              </ItemActions>
+            </Item>
+            {reminders.diaperEnabled && (
+              <>
+                <ItemSeparator />
+                <div className="reminder-options">
+                  <span className="field-label">Remind after</span>
+                  <ToggleGroup
+                    type="single"
+                    value={String(reminders.diaperIntervalMinutes ?? 120)}
+                    className="segmented three-way"
+                    aria-label="Nappy reminder interval"
+                    onValueChange={(value) => value && onDiaperIntervalChange(Number(value))}
+                  >
+                    <ToggleGroupItem value="90">90 min</ToggleGroupItem>
+                    <ToggleGroupItem value="120">2 hours</ToggleGroupItem>
+                    <ToggleGroupItem value="180">3 hours</ToggleGroupItem>
+                  </ToggleGroup>
+                  <p>A nudge, not a schedule — check whenever your baby seems uncomfortable.</p>
                 </div>
               </>
             )}

@@ -46,6 +46,7 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
   // being decremented at all once the phone sleeps the timers.
   const [endsAt, setEndsAt] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [failed, setFailed] = useState(false);
   const secondsLeft = endsAt === null ? null : Math.max(0, Math.ceil((endsAt - now) / 1000));
 
   // One element for the life of the component; the source swaps with the kind.
@@ -53,6 +54,10 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
     const audio = new Audio();
     audio.loop = true;
     audio.preload = "auto";
+    // iOS refuses to play media that could be fullscreen video unless this is
+    // set, even for audio-only sources.
+    audio.setAttribute("playsinline", "");
+    audio.crossOrigin = "anonymous";
     audioRef.current = audio;
     return () => {
       audio.pause();
@@ -63,6 +68,20 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = volume;
   }, [volume]);
+
+  // Render and attach the source AHEAD of the tap. iOS wants play() inside the
+  // gesture, and a lullaby takes long enough to synthesise that doing it in
+  // the handler can push the call past the window — which is exactly how the
+  // button ends up doing nothing at all.
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || playing) return;
+    const id = window.setTimeout(() => {
+      audio.src = mode === "noise" ? noiseUrl(kind) : lullabyUrl(tune);
+      audio.load();
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [mode, kind, tune, playing]);
 
   // The clock that drives the countdown, and the stop it exists to guarantee.
   // Both live in the interval callback rather than the effect body — the
@@ -81,18 +100,24 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
     return () => window.clearInterval(id);
   }, [playing, endsAt]);
 
-  async function start() {
+  function start() {
     const audio = audioRef.current;
     if (!audio) return;
-    audio.src = sourceUrl();
+    setFailed(false);
+    // The source is normally already attached by the effect above; this only
+    // does work on the very first tap, before that effect has run.
+    const wanted = sourceUrl();
+    if (audio.src !== wanted) audio.src = wanted;
     audio.volume = volume;
-    try {
-      await audio.play();
-    } catch {
-      // Autoplay refused, or no user gesture. Nothing to recover — the
-      // button is the gesture, so this only happens if the tab lost focus.
-      return;
-    }
+
+    // play() is called synchronously inside the gesture, never after an await.
+    audio.play().catch(() => {
+      setPlaying(false);
+      setEndsAt(null);
+      // Silence with no explanation is the worst outcome: the parent taps a
+      // button and decides the app is broken.
+      setFailed(true);
+    });
     setPlaying(true);
     setNow(Date.now());
     setEndsAt(timer === null ? null : Date.now() + timer * 60_000);
@@ -106,7 +131,7 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
         artist: "Baby Tracker",
       });
       navigator.mediaSession.setActionHandler("pause", () => stop());
-      navigator.mediaSession.setActionHandler("play", () => void start());
+      navigator.mediaSession.setActionHandler("play", () => start());
     }
   }
 
@@ -159,7 +184,7 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
                     audioRef.current.src = mode === "noise"
                       ? noiseUrl(option.key as NoiseKind)
                       : lullabyUrl(option.key as LullabyKind);
-                    void audioRef.current.play();
+                    audioRef.current.play().catch(() => setFailed(true));
                   }
                 }}
               >
@@ -206,12 +231,20 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
           </div>
         </div>
 
-        <Button className="soothe-action" onClick={() => (playing ? stop() : void start())}>
+        <Button className="soothe-action" onClick={() => (playing ? stop() : start())}>
           {playing ? <Pause size={16} aria-hidden="true" /> : <Play size={16} aria-hidden="true" />}
           {playing
             ? secondsLeft === null ? "Stop" : `Stop · ${formatLeft(secondsLeft)} left`
             : "Play"}
         </Button>
+
+        {failed && (
+          <p className="soothe-failed" role="alert">
+            Your phone would not start the sound. Turn the silent switch off, check the
+            volume, and try once more — some browsers also block audio until you have
+            interacted with the page.
+          </p>
+        )}
 
         <p className="soothe-safety">
           {mode === "lullaby" && "Played by the app, not a recording — traditional tunes, nothing to license. "}

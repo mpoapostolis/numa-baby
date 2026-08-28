@@ -92,11 +92,17 @@ export function sanitizeProfile(value: unknown): Profile | null {
 }
 
 function isValidReminderSettings(value: unknown): value is ReminderSettings {
-  return (
-    isRecord(value) &&
-    typeof value.feedEnabled === "boolean" &&
-    [120, 180, 240].includes(Number(value.feedIntervalMinutes))
-  );
+  if (!isRecord(value)) return false;
+  if (typeof value.feedEnabled !== "boolean") return false;
+  if (![120, 180, 240].includes(Number(value.feedIntervalMinutes))) return false;
+  // Nappy reminders arrived later: absent is valid and means off. A present
+  // but wrong value is rejected rather than coerced, same as everything else.
+  if (value.diaperEnabled !== undefined && typeof value.diaperEnabled !== "boolean") return false;
+  if (
+    value.diaperIntervalMinutes !== undefined &&
+    ![90, 120, 180].includes(Number(value.diaperIntervalMinutes))
+  ) return false;
+  return true;
 }
 
 export function parseStoredData(value: string): StoredData {
