@@ -116,15 +116,20 @@
   animation-delay: 2s;
 }
 
+/* Same rest-frame rule as companion-zzz, duplicated deliberately: this screen
+   must not depend on companion.css having loaded. */
 @keyframes onboarding-zzz {
-  0%,
-  100% {
-    opacity: 0.25;
+  0% {
+    opacity: 0.55;
     transform: translateY(0);
   }
   50% {
     opacity: 1;
     transform: translateY(-2px);
+  }
+  100% {
+    opacity: 0.55;
+    transform: translateY(0);
   }
 }
 

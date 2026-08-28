@@ -168,6 +168,12 @@ button:disabled {
   font-size: 0.9375rem;
 }
 
+/* THIS BLOCK DOES NOT DISABLE ANIMATIONS — IT COLLAPSES THEM. An 0.01ms
+   duration with iteration-count 1 means every keyframe runs once, instantly,
+   and LANDS ON ITS 100% FRAME. So the 100% frame of every keyframe here is
+   what a reduced-motion parent sees PERMANENTLY. Write every loop so its
+   100% frame is a correct, legible resting state — three pieces of artwork
+   were invisible for these users before anyone noticed. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

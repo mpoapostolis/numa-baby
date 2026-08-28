@@ -23,9 +23,12 @@
   animation: companion-breathe 5s ease-in-out infinite alternate;
 }
 
+/* Reversed on purpose: the animation alternates, so this is visually
+   identical — but it now COLLAPSES onto scale(1) instead of leaving a
+   reduced-motion companion permanently 2.5% oversized. */
 @keyframes companion-breathe {
-  from { transform: scale(1); }
-  to { transform: scale(1.025); }
+  from { transform: scale(1.025); }
+  to { transform: scale(1); }
 }
 
 .baby-companion .z {
@@ -36,9 +39,12 @@
   animation-delay: 2s;
 }
 
+/* 0% and 100% must match or the loop flickers each cycle — and 100% is also
+   the frame reduced-motion users are left on, so it has to be legible. */
 @keyframes companion-zzz {
-  0%, 100% { opacity: 0.25; transform: translateY(0); }
+  0% { opacity: 0.55; transform: translateY(0); }
   50% { opacity: 1; transform: translateY(-2px); }
+  100% { opacity: 0.55; transform: translateY(0); }
 }
 
 /* Content: the little heart floats off and returns. */
@@ -46,10 +52,14 @@
   animation: companion-heart 4s ease-in-out infinite;
 }
 
+/* This one ended at opacity 0, so the content mood's heart was invisible to
+   every reduced-motion parent — the drawing simply never existed for them.
+   It now rests visible and drifts, which also stops it vanishing for half of
+   each cycle for everyone else. */
 @keyframes companion-heart {
-  0%, 100% { opacity: 0; transform: translateY(4px); }
-  30%, 60% { opacity: 1; transform: translateY(0); }
-  90% { opacity: 0; transform: translateY(-6px); }
+  0% { opacity: 0.85; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-4px); }
+  100% { opacity: 0.85; transform: translateY(0); }
 }
 
 /* Noticing a fresh log: one heart lifts off the cheek and fades. One

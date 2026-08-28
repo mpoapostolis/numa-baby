@@ -51,14 +51,18 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
   // Headroom so the tallest bar never collides with the average label.
   const scaleMax = Math.max(peak, 1) * 1.15;
   const todayIndex = days.length - 1;
-  const total = values.reduce((sum, value) => sum + value, 0);
-  // Averaged over the days that actually have something, so a fortnight with
-  // three tracked days does not read as "mostly zero".
-  const trackedDays = values.filter((value) => value > 0).length;
+  // Averaged over the days that were LOGGED, not the days that happened to be
+  // non-zero. A day with feeds but no dirty nappy is a real zero and belongs
+  // in the denominator; leaving it out quietly inflates every average.
+  const loggedDays = days.filter((day) => !day.isEmpty);
+  const total = loggedDays.reduce((sum, day) => sum + series.value(day), 0);
+  const trackedDays = loggedDays.length;
   const average = trackedDays > 0 ? Math.round(total / trackedDays) : 0;
 
   const description = `${series.label} per day. ${days
-    .map((day) => `${fullDayFormat.format(day.date)}: ${series.value(day)}${series.unit ? ` ${series.unit}` : ""}`)
+    .map((day) => day.isEmpty
+      ? `${fullDayFormat.format(day.date)}: not logged`
+      : `${fullDayFormat.format(day.date)}: ${series.value(day)}${series.unit ? ` ${series.unit}` : ""}`)
     .join(", ")}.`;
 
   return (
@@ -118,14 +122,19 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
             <div
               className={index === todayIndex ? "trend-bar is-today" : "trend-bar"}
               key={days[index].date.toISOString()}
-              title={`${fullDayFormat.format(days[index].date)}: ${value}${series.unit ? ` ${series.unit}` : ""}`}
+              title={days[index].isEmpty
+                ? `${fullDayFormat.format(days[index].date)}: not logged`
+                : `${fullDayFormat.format(days[index].date)}: ${value}${series.unit ? ` ${series.unit}` : ""}`}
             >
-              {/* A logged day with a zero still gets a hairline, so an empty
-                  day and a zero day never look identical. */}
-              <span
-                className={value > 0 ? "trend-fill" : "trend-fill is-zero"}
-                style={{ height: value > 0 ? `${Math.max(3, (value / scaleMax) * 100)}%` : "2px" }}
-              />
+              {/* Three distinct states, because a day nobody logged is not a
+                  day with none: a bar, a hairline for a logged zero, and
+                  nothing at all for a day with no entries. */}
+              {days[index].isEmpty ? null : (
+                <span
+                  className={value > 0 ? "trend-fill" : "trend-fill is-zero"}
+                  style={{ height: value > 0 ? `${Math.max(3, (value / scaleMax) * 100)}%` : "2px" }}
+                />
+              )}
             </div>
           ))}
         </div>
