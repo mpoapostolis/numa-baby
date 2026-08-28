@@ -1,0 +1,17 @@
+{
+  // The Worker was never type-checked. tsconfig.json includes only `src`, so
+  // worker/*.ts was compiled by nothing but Wrangler at deploy time — which is
+  // to say, by nobody: a missing import sailed past `npm test`, past eslint,
+  // past the deploy, and only announced itself as a ReferenceError on the live
+  // site. This file is that hole closed.
+  //
+  // Separate from the app's config on purpose: the Worker has no DOM, and
+  // letting it borrow the DOM's type definitions is how you end up believing
+  // in a `window` that is not there.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": ["@cloudflare/workers-types"]
+  },
+  "include": ["worker"]
+}

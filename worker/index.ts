@@ -126,7 +126,7 @@ async function handleCreateFamily(env: Env, request: Request): Promise<Response>
   return json({ familyId, token, deviceId });
 }
 
-async function handleInvite(env: Env, request: Request, familyId: string): Promise<Response> {
+async function handleInvite(env: Env, familyId: string): Promise<Response> {
   const code = inviteCode();
   const expiresAt = new Date(Date.now() + INVITE_TTL_MS).toISOString();
   const client = db(env);
@@ -301,7 +301,7 @@ export default {
       }
 
       if (url.pathname === "/api/family/invite" && request.method === "POST") {
-        return await handleInvite(env, request, familyId);
+        return await handleInvite(env, familyId);
       }
       if (url.pathname === "/api/sync/pull" && request.method === "GET") {
         return await handlePull(env, request, familyId);
