@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#fdf5f2" />
-    <meta name="description" content="Private, local-first baby tracking. Log feeds, diapers, burping and growth with one hand — no accounts, no cloud, works offline." />
+    <meta name="description" content="Local-first baby tracking. Log feeds, diapers, burping and growth with one hand — no accounts, works offline, and your entries stay on your device unless you turn on Family Sync." />
     <meta name="application-name" content="Baby Tracker" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -30,7 +30,7 @@
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
         "name": "Baby Tracker",
-        "description": "Private, local-first baby tracking. Log feeds, diapers, burping and growth with one hand — no accounts, no cloud, works offline.",
+        "description": "Local-first baby tracking. Log feeds, diapers, burping and growth with one hand — no accounts, works offline, and your entries stay on your device unless you turn on Family Sync.",
         "applicationCategory": "HealthApplication",
         "operatingSystem": "Web",
         "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
@@ -46,12 +46,17 @@
     </div>
     <noscript>
       <p>
-        Baby Tracker is a free, private baby-logging app for tired parents. Record feeds,
-        diaper changes, burping, growth and gentle health notes with one hand — everything
-        stays on your device, works offline, and installs to your home screen. JavaScript
-        is required to use the app.
+        Baby Tracker is a free baby-logging app for tired parents. Record feeds, diaper
+        changes, burping, growth and gentle health notes with one hand. It works offline,
+        installs to your home screen, and needs no account: your entries stay on your
+        device unless you switch on Family Sync, which stores them in your family's own
+        space so a second phone can share the log. JavaScript is required to use the app.
       </p>
     </noscript>
+    <!-- Google tag (gtag.js). The configuration lives in /analytics.js so the
+         Content-Security-Policy can keep refusing inline scripts. -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-X94KW80ZGY"></script>
+    <script src="/analytics.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

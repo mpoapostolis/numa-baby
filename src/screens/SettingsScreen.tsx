@@ -203,9 +203,9 @@ export default function SettingsScreen({
       <Card className="privacy-card">
         <span><ShieldCheck size={18} /></span>
         {familySync.pairing ? (
-          <div><strong>Private to your family</strong><p>Entries stay on this phone and sync through your private family space in the cloud.</p></div>
+          <div><strong>Shared with your family</strong><p>Entries are stored in your family’s space in the cloud so both phones stay in step. Anonymous usage statistics help improve the app.</p></div>
         ) : (
-          <div><strong>Private on this device</strong><p>Your baby’s entries stay in this browser. Export a backup anytime.</p></div>
+          <div><strong>On this device</strong><p>Your baby’s entries stay in this browser until you turn on Family Sync. Anonymous usage statistics help improve the app.</p></div>
         )}
       </Card>
 

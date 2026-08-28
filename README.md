@@ -32,7 +32,12 @@ Not a medical device — always follow your paediatrician's advice.
 
 ## Privacy
 
-The current version has no account and no cloud database. Baby data stays in the browser's local storage on the device where it was entered. Private JSON backup and restore are available from the app.
+No account is required. By default baby data stays in the browser's local storage on the device where it was entered, and JSON backup and restore are available from the app.
+
+Two things do leave the device, and both are stated in the app:
+
+- **Family Sync (opt-in).** Turning it on stores your entries in your family's own space in a hosted database, so a second phone can share the log. Leave the family and the phone keeps its data and stops syncing.
+- **Anonymous usage statistics.** The app loads Google Analytics to count page views. It never receives your baby's entries — those are not sent anywhere except through Family Sync, if you enable it.
 
 ## Development
 
