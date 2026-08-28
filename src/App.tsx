@@ -435,6 +435,7 @@ export default function HomePage() {
             <Suspense fallback={screenFallback}>
               <InsightsScreen
                 activities={activities}
+                profile={profile}
                 ageDays={ageInDays(profile.birthDate, minuteClock)}
                 feedingMode={profile.feedingMode}
                 minuteClock={minuteClock}

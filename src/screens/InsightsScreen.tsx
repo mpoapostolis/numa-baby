@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { ExternalLink, PhoneCall, ShieldCheck, Sparkles } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ExternalLink, PhoneCall, ShieldCheck, Sparkles, Stethoscope } from "lucide-react";
 import { EmptyState } from "../components/EmptyState";
 import { GrowthChart } from "../components/GrowthChart";
 import { LittleBottle } from "../components/illustrations";
@@ -8,8 +8,11 @@ import { formatShortDay, formatTime, humanDuration, median } from "../domain/tim
 import { track } from "../domain/analytics";
 import { Insight, buildInsightInput, insightsFor } from "../domain/insightRules";
 import { guidanceFor } from "../domain/intakeGuide";
+import { buildVisitSummary } from "../domain/visitSummary";
+import { VisitSummarySheet } from "../components/VisitSummarySheet";
+import { Button } from "../components/ui/button";
 import { AAP_FORMULA_AMOUNT, NHS_ENOUGH_MILK } from "../domain/sources";
-import { Activity, FeedingMode } from "../domain/types";
+import { Activity, FeedingMode, Profile } from "../domain/types";
 import { ActivityStats } from "../hooks/useActivityStats";
 
 type InsightsScreenProps = {
@@ -17,6 +20,7 @@ type InsightsScreenProps = {
   // The rules engine is derived here rather than in App so it rides this
   // screen's lazy chunk — Today must not pay for advice it never shows.
   activities: Activity[];
+  profile: Profile;
   ageDays: number | null;
   feedingMode: FeedingMode;
   minuteClock: number;
@@ -68,6 +72,7 @@ function DurationFigure({ minutes }: { minutes: number }) {
 export default function InsightsScreen({
   stats,
   activities,
+  profile,
   ageDays,
   feedingMode,
   minuteClock,
@@ -84,6 +89,12 @@ export default function InsightsScreen({
       feedingMode,
     );
   }, [stats.recentDays, stats.latestGrowth, feedingMode]);
+
+  const [visitOpen, setVisitOpen] = useState(false);
+  const visit = useMemo(
+    () => buildVisitSummary(activities, minuteClock, 14),
+    [activities, minuteClock],
+  );
 
   const insights = useMemo(
     () => insightsFor(buildInsightInput({
@@ -142,6 +153,24 @@ export default function InsightsScreen({
       {/* The answer first, the evidence below it. Cards only appear when the
           log can support them honestly — silence here is a good sign, not a
           missing feature. */}
+      {/* One page a parent can hand across a desk. Placed first because the
+          appointment is the moment all of this stops being a hobby. */}
+      {visit.loggedDays > 0 && (
+        <Button variant="outline" className="visit-open" onClick={() => setVisitOpen(true)}>
+          <Stethoscope size={16} aria-hidden="true" />
+          Summary for the paediatrician
+        </Button>
+      )}
+
+      <VisitSummarySheet
+        open={visitOpen}
+        onOpenChange={setVisitOpen}
+        summary={visit}
+        profile={profile}
+        ageMonths={stats.babyAgeMonths}
+        now={minuteClock}
+      />
+
       {intake && (
         <figure className="chart-card intake-card">
           <figcaption>
