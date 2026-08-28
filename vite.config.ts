@@ -5,7 +5,11 @@ import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 import { sites } from "./build/sites-vite-plugin.ts";
 
+const APP_VERSION = new Date().toISOString().slice(0, 16).replace("T", " ");
+
 export default defineConfig({
+  // Stamped at build time so a bug report names the build it came from.
+  define: { __APP_VERSION__: JSON.stringify(APP_VERSION) },
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),

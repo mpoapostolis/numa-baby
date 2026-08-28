@@ -69,3 +69,17 @@ CREATE TABLE IF NOT EXISTS family_meta (
   profile TEXT,
   updated_at TEXT
 );
+
+-- Messages sent from the app's "need anything?" form. Deliberately thin: a
+-- message, and a contact ONLY if the sender chose to give one. No family id,
+-- no device id, nothing that ties a note back to a baby's log — someone
+-- reporting a bug should not be handing over their child's records with it.
+CREATE TABLE IF NOT EXISTS feedback (
+  id TEXT PRIMARY KEY,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  message TEXT NOT NULL,
+  contact TEXT,
+  -- Which build it came from, so a fixed bug can be told from a live one.
+  app_version TEXT,
+  handled INTEGER NOT NULL DEFAULT 0
+);

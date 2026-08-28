@@ -6,6 +6,7 @@
 // only emphasised point is today, because that is where the parent is.
 
 import { useState } from "react";
+import { track } from "../domain/analytics";
 import { DaySummary } from "../domain/daySummary";
 
 type Series = {
@@ -99,7 +100,7 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
             aria-selected={option.key === activeKey}
             className={option.key === activeKey ? "trend-tab is-active" : "trend-tab"}
             style={{ "--trend-hue": option.hue } as React.CSSProperties}
-            onClick={() => setActiveKey(option.key)}
+            onClick={() => { track("trend_series_changed", { series: option.key }); setActiveKey(option.key); }}
           >
             {option.label}
           </button>

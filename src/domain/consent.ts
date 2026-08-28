@@ -6,6 +6,8 @@
 // giving — so the choice is re-openable from Settings rather than being a
 // one-time gate the visitor can never revisit.
 
+import { setTrackingEnabled } from "./analytics";
+
 const KEY = "numa-baby-consent-v1";
 
 export type ConsentChoice = "granted" | "denied";
@@ -29,6 +31,7 @@ export function readConsent(): ConsentChoice | null {
 }
 
 export function saveConsent(choice: ConsentChoice) {
+  setTrackingEnabled(choice === "granted");
   try {
     window.localStorage.setItem(KEY, choice);
   } catch {

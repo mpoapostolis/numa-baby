@@ -12,6 +12,7 @@ import { TrendChart } from "../components/TrendChart";
 import { EmptyState } from "../components/EmptyState";
 import { LittleBottle, TinyStars } from "../components/illustrations";
 import { BabyCompanion, CompanionMood } from "../components/BabyCompanion";
+import { mlBucket, track } from "../domain/analytics";
 import { bracketOfAge, factOfTheDay } from "../domain/babyFacts";
 import { summarizeDay } from "../domain/daySummary";
 import { makeId } from "../domain/id";
@@ -242,7 +243,10 @@ export default function TodayScreen({
       amount: lastBottle.amount,
       milkType: lastBottle.milkType ?? "formula",
     };
-    if (onAdd(entry, `${lastBottle.amount} ml bottle saved`)) setReactionKey(entry.id);
+    if (onAdd(entry, `${lastBottle.amount} ml bottle saved`)) {
+      setReactionKey(entry.id);
+      track("bottle_logged", { source: "quick_repeat", amount: mlBucket(lastBottle.amount) });
+    }
   }
 
   function quickStartNursing(side: "left" | "right") {
@@ -253,11 +257,12 @@ export default function TodayScreen({
       startedAt: new Date().toISOString(),
       side,
     };
-    onAdd(entry, `Nursing started · ${side} side`);
+    if (onAdd(entry, `Nursing started · ${side} side`)) track("nursing_started", { side });
   }
 
   function stopNursing() {
     if (!activeNursing) return;
+    track("nursing_stopped", { side: activeNursing.side ?? "unknown" });
     onStopTimer(activeNursing.id);
   }
 
@@ -272,6 +277,7 @@ export default function TodayScreen({
       onAdd(entry, `${kind === "both" ? "Wet + dirty" : kind === "dirty" ? "Dirty" : "Wet"} diaper saved`)
     ) {
       setReactionKey(entry.id);
+      track("diaper_logged", { kind });
     }
   }
 
@@ -279,6 +285,7 @@ export default function TodayScreen({
   // reading is the whole point — nothing about it is totalled anywhere.
   function toggleBurp() {
     if (activeBurp) {
+      track("burp_stopped");
       onStopTimer(activeBurp.id);
       return;
     }
@@ -287,7 +294,7 @@ export default function TodayScreen({
       type: "burp",
       startedAt: new Date().toISOString(),
     };
-    onAdd(entry, "Burping timer started");
+    if (onAdd(entry, "Burping timer started")) track("burp_started");
   }
 
   const selectedDay = new Date(minuteClock);
@@ -402,6 +409,7 @@ export default function TodayScreen({
                     <a
                       key={source.url}
                       className="fact-source"
+                      onClick={() => track("source_opened", { name: source.name })}
                       href={source.url}
                       target="_blank"
                       rel="noopener noreferrer"

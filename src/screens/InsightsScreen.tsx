@@ -5,6 +5,7 @@ import { GrowthChart } from "../components/GrowthChart";
 import { LittleBottle } from "../components/illustrations";
 import { activityTitle } from "../domain/activityDisplay";
 import { formatShortDay, formatTime, humanDuration, median } from "../domain/time";
+import { track } from "../domain/analytics";
 import { Insight, buildInsightInput, insightsFor } from "../domain/insightRules";
 import { Activity, FeedingMode } from "../domain/types";
 import { ActivityStats } from "../hooks/useActivityStats";
@@ -43,7 +44,7 @@ function InsightCard({ insight }: { insight: Insight }) {
         <p className="insight-advice">{insight.advice}</p>
         <p className="insight-sources">
           {insight.sources.map((source) => (
-            <a key={source.url} className="fact-source" href={source.url} target="_blank" rel="noopener noreferrer">
+            <a key={source.url} className="fact-source" href={source.url} onClick={() => track("source_opened", { name: source.name })} target="_blank" rel="noopener noreferrer">
               {source.name} <ExternalLink size={12} aria-hidden="true" />
             </a>
           ))}

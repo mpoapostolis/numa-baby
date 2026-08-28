@@ -1,6 +1,7 @@
 /// <reference types="@cloudflare/workers-types" />
 import { createClient } from "@libsql/client/web";
 import { adminLogout, adminPage, handleAdminLogin, handleAdminStats } from "./admin";
+import { handleFeedback } from "./feedback";
 
 // Family Sync API — the doorman between the PWA and the Turso database.
 // Same origin as the static app: /api/* is handled here, everything else
@@ -272,6 +273,11 @@ export default {
       }
       if (url.pathname === "/api/family/join" && request.method === "POST") {
         return await handleJoin(env, request);
+      }
+      // Unauthenticated on purpose: the people most likely to need this are
+      // the ones who never paired a second phone.
+      if (url.pathname === "/api/feedback" && request.method === "POST") {
+        return await handleFeedback(db(env), request);
       }
 
       const familyId = await authFamily(env, request);

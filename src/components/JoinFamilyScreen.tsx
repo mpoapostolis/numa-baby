@@ -11,6 +11,7 @@ import { useState } from "react";
 import { Users } from "lucide-react";
 import { Button } from "./ui/button";
 import { BabyFace } from "./illustrations";
+import { track } from "../domain/analytics";
 import { FamilySync } from "../hooks/useFamilySync";
 
 type JoinFamilyScreenProps = {
@@ -30,6 +31,7 @@ export default function JoinFamilyScreen({ code, familySync, onJoined, onSkip }:
     setBusy(true);
     setFailed(false);
     const joined = await familySync.joinFamily(code, "This phone");
+    track("family_join_attempted", { ok: joined, source: "scanned_qr" });
     if (joined) onJoined();
     else setFailed(true);
     setBusy(false);

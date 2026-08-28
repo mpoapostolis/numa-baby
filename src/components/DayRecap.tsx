@@ -8,6 +8,7 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ActivityGlyph } from "./ActivityGlyph";
+import { track } from "../domain/analytics";
 import { Button } from "./ui/button";
 import { DaySummary } from "../domain/daySummary";
 import { formatTime, humanDuration } from "../domain/time";
@@ -108,7 +109,7 @@ export function DayRecap({ summary, title, stepper }: DayRecapProps) {
           <Button
             variant="ghost"
             className="recap-step"
-            onClick={stepper.onPrev}
+            onClick={() => { track("recap_day_stepped", { direction: "back" }); stepper.onPrev(); }}
             disabled={!stepper.canPrev}
             aria-label="Previous day"
           >
@@ -121,7 +122,7 @@ export function DayRecap({ summary, title, stepper }: DayRecapProps) {
           <Button
             variant="ghost"
             className="recap-step"
-            onClick={stepper.onNext}
+            onClick={() => { track("recap_day_stepped", { direction: "forward" }); stepper.onNext(); }}
             disabled={!stepper.canNext}
             aria-label="Next day"
           >

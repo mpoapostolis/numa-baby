@@ -21,7 +21,9 @@ import {
 import { Switch } from "../components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "../components/ui/toggle-group";
 import { FamilySyncCard } from "../components/FamilySyncCard";
+import { FeedbackCard } from "../components/FeedbackCard";
 import { SettingsAction } from "../components/SettingsAction";
+import { track } from "../domain/analytics";
 import { ConsentChoice, readConsent, saveConsent } from "../domain/consent";
 import { formatTime } from "../domain/time";
 import { FamilySync } from "../hooks/useFamilySync";
@@ -95,7 +97,7 @@ export default function SettingsScreen({
             value={nightMode ? "dark" : "light"}
             className="appearance-options"
             aria-label="Application appearance"
-            onValueChange={(value) => value && onNightModeChange(value === "dark")}
+            onValueChange={(value) => { if (!value) return; track("theme_changed", { theme: value }); onNightModeChange(value === "dark"); }}
           >
             <ToggleGroupItem value="light"><Sun /><span><strong>Light</strong><small>Bright and clear</small></span></ToggleGroupItem>
             <ToggleGroupItem value="dark"><Moon /><span><strong>Night</strong><small>Warm and dim for 3am</small></span></ToggleGroupItem>
@@ -110,7 +112,7 @@ export default function SettingsScreen({
         </CardHeader>
         <CardContent>
           <ItemGroup className="settings-action-list" role="group" aria-label="Baby profile settings">
-            <SettingsAction title={profile.name} description={feedingModeLabel} icon={<Baby />} onClick={onOpenProfile} />
+            <SettingsAction title={profile.name} description={feedingModeLabel} icon={<Baby />} onClick={() => { track("profile_opened"); onOpenProfile(); }} />
           </ItemGroup>
         </CardContent>
       </Card>
@@ -140,7 +142,7 @@ export default function SettingsScreen({
                 <Switch
                   checked={reminders.feedEnabled}
                   disabled={notificationPermission === "unsupported" || notificationPermission === "denied"}
-                  onCheckedChange={(checked) => void onFeedRemindersChange(checked)}
+                  onCheckedChange={(checked) => { track("feed_reminders_toggled", { enabled: checked }); void onFeedRemindersChange(checked); }}
                   aria-label="Use feed reminders"
                   aria-describedby="feed-reminder-status"
                 />
@@ -184,18 +186,18 @@ export default function SettingsScreen({
         </CardHeader>
         <CardContent>
           <ItemGroup className="settings-action-list" role="group" aria-label="Backup actions">
-            <SettingsAction title="Share with partner" description="Send today's log — their app merges it, nothing gets replaced" icon={<Share2 />} onClick={onShare} />
+            <SettingsAction title="Share with partner" description="Send today's log — their app merges it, nothing gets replaced" icon={<Share2 />} onClick={() => { track("data_shared"); onShare(); }} />
             <ItemSeparator />
-            <SettingsAction title="Download backup" description="Saves a file with all your entries — keep it in a synced folder to be safe" icon={<Download />} onClick={onExport} />
+            <SettingsAction title="Download backup" description="Saves a file with all your entries — keep it in a synced folder to be safe" icon={<Download />} onClick={() => { track("backup_downloaded"); onExport(); }} />
             <ItemSeparator />
-            <SettingsAction title="Restore a backup" description="Merges a backup file from any device" icon={<Upload />} onClick={() => importRef.current?.click()} />
+            <SettingsAction title="Restore a backup" description="Merges a backup file from any device" icon={<Upload />} onClick={() => { track("backup_restore_opened"); importRef.current?.click(); }} />
             <ItemSeparator />
             <SettingsAction
               className="settings-action-danger"
               title="Erase everything and start over"
               description="Deletes every entry on this device — download a backup first"
               icon={<Trash2 />}
-              onClick={onEraseAll}
+              onClick={() => { track("erase_all_opened"); onEraseAll(); }}
             />
           </ItemGroup>
         </CardContent>
@@ -220,6 +222,7 @@ export default function SettingsScreen({
               if (!value) return;
               saveConsent(value as ConsentChoice);
               setConsent(value as ConsentChoice);
+              track("consent_changed", { choice: value });
             }}
           >
             <ToggleGroupItem value="granted">Allowed</ToggleGroupItem>
@@ -227,6 +230,8 @@ export default function SettingsScreen({
           </ToggleGroup>
         </CardContent>
       </Card>
+
+      <FeedbackCard />
 
       <Card className="privacy-card">
         <span><ShieldCheck size={18} /></span>
@@ -237,7 +242,7 @@ export default function SettingsScreen({
         )}
       </Card>
 
-      <p className="version-note">Baby Tracker · Local-first and private</p>
+      <p className="version-note">Baby Tracker · build {__APP_VERSION__}</p>
     </section>
   );
 }

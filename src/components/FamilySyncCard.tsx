@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/
 import { InputGroup, InputGroupInput } from "./ui/input-group";
 import { QrCode } from "./QrCode";
 import { FamilySync } from "../hooks/useFamilySync";
+import { track } from "../domain/analytics";
 import { inviteLink } from "../domain/familyPairing";
 import { InviteResult } from "../domain/syncTransport";
 import { formatTime } from "../domain/time";
@@ -55,6 +56,7 @@ export function FamilySyncCard({
   async function handleCreate() {
     setBusy(true);
     const created = await createFamily(deviceLabel);
+    track("family_create_attempted", { ok: created });
     if (created) {
       const code = await createInvite();
       if (code) {
@@ -66,6 +68,7 @@ export function FamilySyncCard({
   }
 
   async function handleNewCode() {
+    track("invite_code_requested");
     setBusy(true);
     const code = await createInvite();
     if (code) {
@@ -79,6 +82,7 @@ export function FamilySyncCard({
     if (!/^\d{6}$/.test(joinValue)) return;
     setBusy(true);
     const joined = await joinFamily(joinValue, deviceLabel);
+    track("family_join_attempted", { ok: joined, source: "typed_code" });
     if (joined) {
       setView("closed");
       setJoinValue("");
@@ -89,6 +93,7 @@ export function FamilySyncCard({
 
   function handleLeave() {
     if (!window.confirm("Leave Family Sync? This phone keeps its data but stops syncing.")) return;
+    track("family_left");
     setView("closed");
     setInvite(null);
     leaveFamily();

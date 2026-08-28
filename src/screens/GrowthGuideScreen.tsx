@@ -2,6 +2,7 @@ import { ArrowLeft, ExternalLink, PhoneCall, ShieldCheck } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { ActivityGlyph } from "../components/ActivityGlyph";
 import { SproutChart } from "../components/illustrations";
+import { track } from "../domain/analytics";
 import { CareCard, WATCH_FOR, careForAge } from "../domain/careGuidance";
 import { ageInDays } from "../domain/time";
 import {
@@ -49,7 +50,7 @@ function CareCardView({ card }: { card: CareCard }) {
         <h3 className="care-title">{card.title}</h3>
         <p className="care-body">{card.body}</p>
         <p className="care-action">{card.action}</p>
-        <a className="fact-source" href={card.source.url} target="_blank" rel="noopener noreferrer">
+        <a className="fact-source" onClick={() => track("source_opened", { name: card.source.name })} href={card.source.url} target="_blank" rel="noopener noreferrer">
           {card.source.name} <ExternalLink size={12} aria-hidden="true" />
         </a>
       </div>

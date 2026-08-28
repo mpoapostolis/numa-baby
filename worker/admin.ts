@@ -105,7 +105,7 @@ export async function handleAdminStats(
     return noStore(JSON.stringify({ error: "Not signed in." }), "application/json", 401);
   }
 
-  const [totals, families, daily, invites] = await Promise.all([
+  const [totals, families, daily, invites, feedback] = await Promise.all([
     client.execute(`
       select
         (select count(*) from families) as families,
@@ -141,6 +141,12 @@ export async function handleAdminStats(
         sum(case when used_at is null and expires_at > strftime('%Y-%m-%dT%H:%M:%fZ','now') then 1 else 0 end) as open
       from invites
     `),
+    // What people wrote in, newest first. Unlike a log entry, a message is
+    // something someone deliberately sent to be read.
+    client.execute(`
+      select substr(created_at, 1, 16) as sent, message, contact, app_version
+      from feedback order by created_at desc limit 50
+    `).catch(() => ({ rows: [] })),
   ]);
 
   return noStore(
@@ -149,6 +155,7 @@ export async function handleAdminStats(
       invites: invites.rows[0],
       families: families.rows,
       daily: daily.rows,
+      feedback: feedback.rows,
       generatedAt: new Date(now).toISOString(),
     }),
     "application/json",
@@ -223,6 +230,10 @@ export function adminPage(): Response {
       <p class="muted" style="margin-bottom:10px">Entries synced per day · last 14 days</p>
       <div class="bars" id="bars"></div>
     </div>
+    <div class="card" id="fbcard" style="display:none">
+      <p class="muted" style="margin-bottom:10px">Messages</p>
+      <div id="fb"></div>
+    </div>
     <div class="card" style="overflow-x:auto">
       <p class="muted" style="margin-bottom:6px">Families</p>
       <table><thead><tr><th>Family</th><th>Created</th><th>Devices</th><th>Entries</th><th>Last entry</th></tr></thead>
@@ -233,6 +244,9 @@ export function adminPage(): Response {
 </main>
 <script>
 const $ = (id) => document.getElementById(id);
+// Messages are text a stranger typed: escaped, never trusted as markup.
+const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 async function load() {
   const res = await fetch("/api/admin/stats");
   if (!res.ok) return false;
@@ -248,6 +262,15 @@ async function load() {
   $("fams").innerHTML = d.families.map((f) =>
     '<tr><td>' + f.family + '</td><td>' + f.created + '</td><td>' + f.devices +
     '</td><td>' + f.entries + '</td><td>' + (f.last_entry || "—") + '</td></tr>').join("");
+  const fb = d.feedback || [];
+  if (fb.length) {
+    $("fbcard").style.display = "block";
+    $("fb").innerHTML = fb.map((m) =>
+      '<div style="border-top:1px solid var(--line);padding:10px 0">' +
+      '<div class="muted">' + m.sent + (m.contact ? ' · ' + esc(m.contact) : '') +
+      (m.app_version ? ' · build ' + esc(m.app_version) : '') + '</div>' +
+      '<div style="white-space:pre-wrap;margin-top:4px">' + esc(m.message) + '</div></div>').join("");
+  }
   $("stamp").textContent = "Generated " + d.generatedAt;
   $("login").style.display = "none";
   $("dash").style.display = "grid";

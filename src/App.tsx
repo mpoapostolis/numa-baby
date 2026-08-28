@@ -28,6 +28,7 @@ import OnboardingScreen from "./screens/OnboardingScreen";
 import TodayScreen from "./screens/TodayScreen";
 import { Activity, ActivityType, Sheet, Tab } from "./domain/types";
 import { JOIN_CODE_PATTERN } from "./domain/familyPairing";
+import { track, suppressTracking } from "./domain/analytics";
 import { readConsent } from "./domain/consent";
 import { ageInDays } from "./domain/time";
 import { useActivityStats } from "./hooks/useActivityStats";
@@ -86,7 +87,11 @@ function readIncomingJoinCode(): string | null {
 }
 
 export default function HomePage() {
-  const [debugMode] = useState(() => new URLSearchParams(window.location.search).has("debug"));
+  const [debugMode] = useState(() => {
+    const on = new URLSearchParams(window.location.search).has("debug");
+    if (on) suppressTracking();
+    return on;
+  });
   const [incomingJoinCode, setIncomingJoinCode] = useState(readIncomingJoinCode);
   // A scanned link opens straight on Settings, where Family Sync lives. Read
   // from the state above, never from the hash — by now it has been stripped.
@@ -202,10 +207,12 @@ export default function HomePage() {
   // Every navigation leaves the guide, so returning to Insights later starts
   // at the Insights content — never a stale sub-screen.
   const navigateTo = useCallback((tab: Tab) => {
+    track("tab_viewed", { tab });
     setActiveTab(tab);
   }, []);
 
   function openSheet(next: Exclude<Sheet, null>, nursingMode: "timer" | "manual" = "timer") {
+    track("sheet_opened", { sheet: next, mode: nursingMode });
     sheetTriggerRef.current = document.activeElement instanceof HTMLElement
       ? document.activeElement
       : null;
@@ -215,6 +222,7 @@ export default function HomePage() {
   }
 
   const openEdit = useCallback((activity: Activity) => {
+    track("entry_edit_opened", { type: activity.type });
     sheetTriggerRef.current = document.activeElement instanceof HTMLElement
       ? document.activeElement
       : null;
@@ -423,7 +431,14 @@ export default function HomePage() {
           ))}
         </nav>
 
-        {consent === null && <ConsentBanner onChoose={setConsent} />}
+        {consent === null && (
+          <ConsentBanner
+            onChoose={(choice) => {
+              setConsent(choice);
+              track("consent_answered", { choice });
+            }}
+          />
+        )}
 
         <Toaster
           theme={nightMode ? "dark" : "light"}
