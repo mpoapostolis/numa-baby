@@ -17,6 +17,15 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-08-29",
+    title: "Sounds for the twenty minutes before sleep",
+    items: [
+      "White noise and lullabies, played by the app rather than downloaded — and they keep going with the screen off.",
+      "A timer so it stops on its own, because “I’ll turn it off in a minute” at 3am means it runs until morning.",
+      "The volume opens low, with the AAP’s own note about sound levels beside it.",
+    ],
+  },
+  {
     id: "2026-08-28",
     title: "Milk against weight, and losing a phone safely",
     items: [

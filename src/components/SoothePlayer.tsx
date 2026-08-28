@@ -17,6 +17,7 @@ import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 import { track } from "../domain/analytics";
 import { NOISE_KINDS, NoiseKind, TIMER_CHOICES, TimerChoice, noiseUrl } from "../domain/soothe";
+import { LULLABIES, LullabyKind, lullabyUrl } from "../domain/lullaby";
 
 const AAP_NOISE = {
   name: "AAP · Sounds the alarm on excessive noise",
@@ -31,7 +32,13 @@ function formatLeft(seconds: number) {
 
 export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [mode, setMode] = useState<"noise" | "lullaby">("noise");
   const [kind, setKind] = useState<NoiseKind>("brown");
+  const [tune, setTune] = useState<LullabyKind>("brahms");
+
+  // One place decides what is playing, so swapping a sound mid-play and
+  // starting fresh can never disagree about the source.
+  const sourceUrl = () => (mode === "noise" ? noiseUrl(kind) : lullabyUrl(tune));
   const [playing, setPlaying] = useState(false);
   const [volume, setVolume] = useState(0.35);
   const [timer, setTimer] = useState<TimerChoice>(30);
@@ -77,7 +84,7 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
   async function start() {
     const audio = audioRef.current;
     if (!audio) return;
-    audio.src = noiseUrl(kind);
+    audio.src = sourceUrl();
     audio.volume = volume;
     try {
       await audio.play();
@@ -89,12 +96,15 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
     setPlaying(true);
     setNow(Date.now());
     setEndsAt(timer === null ? null : Date.now() + timer * 60_000);
-    track("soothe_started", { kind, timer: timer ?? 0 });
+    track("soothe_started", { mode, sound: mode === "noise" ? kind : tune, timer: timer ?? 0 });
 
     // Lock-screen controls, so it can be stopped without unlocking a phone
     // in a dark room with a baby on one arm.
     if ("mediaSession" in navigator) {
-      navigator.mediaSession.metadata = new MediaMetadata({ title: "White noise", artist: "Baby Tracker" });
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: mode === "noise" ? "White noise" : "Lullaby",
+        artist: "Baby Tracker",
+      });
       navigator.mediaSession.setActionHandler("pause", () => stop());
       navigator.mediaSession.setActionHandler("play", () => void start());
     }
@@ -104,39 +114,60 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
     audioRef.current?.pause();
     setPlaying(false);
     setEndsAt(null);
-    track("soothe_stopped", { kind });
+    track("soothe_stopped", { mode });
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="soothe-dialog">
-        <DialogTitle>White noise</DialogTitle>
+        <DialogTitle>Sounds</DialogTitle>
         <DialogDescription>
           Keeps playing with the screen off. Set a timer — at 3am “I’ll turn it off in a minute”
           means it runs until morning.
         </DialogDescription>
 
-        <div className="soothe-kinds" role="radiogroup" aria-label="Sound">
-          {NOISE_KINDS.map((option) => (
+        <div className="soothe-modes" role="tablist" aria-label="Kind of sound">
+          {(["noise", "lullaby"] as const).map((option) => (
             <button
-              key={option.key}
+              key={option}
               type="button"
-              role="radio"
-              aria-checked={option.key === kind}
-              className={option.key === kind ? "soothe-kind is-active" : "soothe-kind"}
-              onClick={() => {
-                setKind(option.key);
-                // Swapping while playing must not stop the sound.
-                if (playing && audioRef.current) {
-                  audioRef.current.src = noiseUrl(option.key);
-                  void audioRef.current.play();
-                }
-              }}
+              role="tab"
+              aria-selected={mode === option}
+              className={mode === option ? "soothe-mode is-active" : "soothe-mode"}
+              onClick={() => setMode(option)}
             >
-              <strong>{option.label}</strong>
-              <small>{option.description}</small>
+              {option === "noise" ? "White noise" : "Lullabies"}
             </button>
           ))}
+        </div>
+
+        <div className="soothe-kinds" role="radiogroup" aria-label="Sound">
+          {(mode === "noise" ? NOISE_KINDS : LULLABIES).map((option) => {
+            const selected = mode === "noise" ? option.key === kind : option.key === tune;
+            return (
+              <button
+                key={option.key}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                className={selected ? "soothe-kind is-active" : "soothe-kind"}
+                onClick={() => {
+                  if (mode === "noise") setKind(option.key as NoiseKind);
+                  else setTune(option.key as LullabyKind);
+                  // Swapping while playing must not stop the sound.
+                  if (playing && audioRef.current) {
+                    audioRef.current.src = mode === "noise"
+                      ? noiseUrl(option.key as NoiseKind)
+                      : lullabyUrl(option.key as LullabyKind);
+                    void audioRef.current.play();
+                  }
+                }}
+              >
+                <strong>{option.label}</strong>
+                <small>{option.description}</small>
+              </button>
+            );
+          })}
         </div>
 
         <label className="soothe-field">
@@ -183,6 +214,7 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
         </Button>
 
         <p className="soothe-safety">
+          {mode === "lullaby" && "Played by the app, not a recording — traditional tunes, nothing to license. "}
           Keep it quiet and across the room rather than beside the cot. The AAP has raised
           concerns about sound levels from infant sleep machines and suggests talking to your
           paediatrician about safe use.{" "}

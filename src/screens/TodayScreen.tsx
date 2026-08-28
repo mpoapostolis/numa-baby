@@ -679,8 +679,8 @@ export default function TodayScreen({
           >
             <span className="action-icon" aria-hidden="true"><Waves /></span>
             <span className="log-copy">
-              <strong>White noise</strong>
-              <small>Plays with the screen off</small>
+              <strong>Sounds</strong>
+              <small>White noise and lullabies</small>
             </span>
             <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
           </Button>

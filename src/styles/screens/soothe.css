@@ -93,3 +93,31 @@
   line-height: 1.5;
   color: var(--ink-3);
 }
+
+/* Noise or lullabies: two words, one row, no menu. */
+.soothe-modes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--muted);
+}
+
+.soothe-mode {
+  min-height: 40px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.soothe-mode.is-active {
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: 0 1px 2px oklch(0 0 0 / 0.06);
+}
