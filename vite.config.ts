@@ -59,9 +59,14 @@ export default defineConfig({
     host: "127.0.0.1",
     port: 3000,
     strictPort: true,
-    // Dev-only: /api lives in the deployed worker (same-origin in production).
+    // Dev-only. /api and /admin live in the Worker, which Vite does not run —
+    // without this they fall through to the SPA and render the app instead.
     proxy: {
       "/api": {
+        target: "https://numa-baby.mpoapostolis.workers.dev",
+        changeOrigin: true,
+      },
+      "/admin": {
         target: "https://numa-baby.mpoapostolis.workers.dev",
         changeOrigin: true,
       },
