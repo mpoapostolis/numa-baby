@@ -5,7 +5,12 @@
   "main": "worker/index.ts",
   "assets": {
     "directory": "./dist",
-    "not_found_handling": "single-page-application",
+    // Not "single-page-application": that answered EVERY unknown URL with the
+    // app shell and a 200, so /llms.txt, a typo and a dead inbound link were
+    // all soft 404s — a page that says nothing, indexed as if it said
+    // something. The one real client route, /handoff, is emitted as its own
+    // file by scripts/prerender.mjs, so nothing needs the catch-all any more.
+    "not_found_handling": "404-page",
     "binding": "ASSETS",
     "run_worker_first": ["/api/*", "/admin"]
   },

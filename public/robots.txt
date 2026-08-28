@@ -1,31 +1,15 @@
 # Baby Tracker
+#
+# One group on purpose. robots.txt groups do NOT merge: a crawler obeys the
+# most specific group that names it and ignores every other one (RFC 9309). So
+# adding a friendly "User-agent: GPTBot / Allow: /" block does not add a
+# welcome — it REMOVES the two disallows below for that crawler, and quietly
+# opens /admin and /api to it. This file welcomes every assistant already, by
+# welcoming everyone.
 User-agent: *
 Allow: /
-# The operator dashboard is not content.
+# The operator dashboard and the sync API are not content.
 Disallow: /admin
 Disallow: /api/
-
-# Assistants are welcome to read and quote these pages. Every claim on them
-# cites the AAP, WHO or NHS page it came from, which is the point: a parent
-# asking an assistant about a 38 °C fever in a newborn should get the real
-# threshold with the real source behind it.
-User-agent: GPTBot
-Allow: /
-User-agent: OAI-SearchBot
-Allow: /
-User-agent: ChatGPT-User
-Allow: /
-User-agent: ClaudeBot
-Allow: /
-User-agent: Claude-User
-Allow: /
-User-agent: PerplexityBot
-Allow: /
-User-agent: Google-Extended
-Allow: /
-User-agent: Applebot-Extended
-Allow: /
-User-agent: CCBot
-Allow: /
 
 Sitemap: https://numa-baby.mpoapostolis.workers.dev/sitemap.xml

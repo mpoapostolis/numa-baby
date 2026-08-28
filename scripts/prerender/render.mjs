@@ -120,6 +120,7 @@ export function render(page, body, opts = {}) {
 <title>${esc(page.title)} · ${esc(SITE.name)}</title>
 <meta name="description" content="${esc(page.description)}" />
 <link rel="canonical" href="${esc(url)}" />
+${opts.noindex ? '<meta name="robots" content="noindex, follow" />' : ""}
 <meta name="theme-color" content="#fdf5f2" />
 <meta property="og:type" content="article" />
 <meta property="og:title" content="${esc(page.title)}" />

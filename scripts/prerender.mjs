@@ -7,7 +7,7 @@
 //   node scripts/prerender.mjs
 
 import { execFileSync } from "node:child_process";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
@@ -170,6 +170,31 @@ emit(INDEX_PAGE.slug, render(INDEX_PAGE, `
 <li><a href="/${MILK_PAGE.slug}">How much milk does my baby need?</a></li>
 <li><a href="/${SOURCES_PAGE.slug}">Every source behind these pages</a></li>
 </ul>`, { sources: [], crumb: "Guides", updated: SOURCES_CHECKED }));
+
+// --- the app's own routes, and the page for everything else ---------------
+// /handoff is a real client route (domain/handoff.ts), so it needs a real file
+// now that unknown URLs 404 instead of falling back to the shell.
+copyFileSync(join(dist, "index.html"), join(dist, "handoff.html"));
+
+// A 404 that says so, with somewhere to go. It is deliberately NOT in the
+// sitemap and carries noindex — a not-found page that gets indexed is how a
+// site ends up ranking for its own mistakes.
+writeFileSync(join(dist, "404.html"), render(
+  {
+    slug: "404",
+    title: "Page not found",
+    h1: "That page is not here",
+    description: "The page you were looking for does not exist on Baby Tracker.",
+    lead: "The address may have changed, or the link may have been mistyped. Everything this site holds is listed below.",
+  },
+  `<h2>What is here</h2>
+<ul>${STAGES.map((s) => `<li><a href="/${s.slug}">${esc(s.title)}</a></li>`).join("")}
+<li><a href="/${DOCTOR_PAGE.slug}">When to call a doctor about your baby</a></li>
+<li><a href="/${MILK_PAGE.slug}">How much milk does my baby need?</a></li>
+<li><a href="/${SOURCES_PAGE.slug}">Every source behind these pages</a></li>
+</ul>`,
+  { sources: [], crumb: "Not found", updated: SOURCES_CHECKED, noindex: true },
+));
 
 // --- sitemap, robots, llms ----------------------------------------------
 const urls = ["", ...pages];
