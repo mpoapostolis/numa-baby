@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Copy, Users } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
@@ -7,7 +7,7 @@ import { QrCode } from "./QrCode";
 import { FamilySync } from "../hooks/useFamilySync";
 import { track } from "../domain/analytics";
 import { inviteLink } from "../domain/familyPairing";
-import { InviteResult } from "../domain/syncTransport";
+import { FamilyDevice, InviteResult } from "../domain/syncTransport";
 import { formatTime } from "../domain/time";
 import { Profile } from "../domain/types";
 
@@ -41,7 +41,8 @@ export function FamilySyncCard({
   incomingCode = null,
   onIncomingCodeUsed,
 }: FamilySyncCardProps) {
-  const { pairing, status, createFamily, createInvite, joinFamily, leaveFamily } = familySync;
+  const { pairing, status, createFamily, createInvite, joinFamily, leaveFamily, listDevices, revokeDevice } = familySync;
+  const [devices, setDevices] = useState<FamilyDevice[] | null>(null);
   // A scanned link lands straight on the join step with the code already in
   // the box: the partner's whole job becomes one tap on Join.
   const [view, setView] = useState<View>(incomingCode ? "join" : "closed");
@@ -50,6 +51,27 @@ export function FamilySyncCard({
   const [busy, setBusy] = useState(false);
 
   const deviceLabel = profile.name.trim() ? `${profile.name.trim()}’s tracker` : "This phone";
+
+  // Fetched once the card is paired, and refreshed after a revocation so the
+  // list never shows a phone that no longer holds a key. The unpaired case
+  // needs no reset — `paired` already gates the whole block from rendering.
+  useEffect(() => {
+    if (!pairing) return;
+    let cancelled = false;
+    void listDevices().then((found) => {
+      if (!cancelled) setDevices(found);
+    });
+    return () => { cancelled = true; };
+  }, [pairing, listDevices]);
+
+  async function removeDevice(target: { deviceId: string } | { all: true }) {
+    const confirmed = "all" in target
+      ? window.confirm("Sign out every other phone? They will each need a fresh invite code to come back.")
+      : window.confirm("Remove this phone from the family? It keeps its own data but stops syncing.");
+    if (!confirmed) return;
+    track("device_revoked", { scope: "all" in target ? "all_others" : "one" });
+    if (await revokeDevice(target)) setDevices(await listDevices());
+  }
   const paired = Boolean(pairing);
   const partnerJoined = (status.deviceCount ?? 0) >= 2;
 
@@ -191,6 +213,46 @@ export function FamilySyncCard({
               <Button variant="outline" disabled={busy} onClick={() => void handleNewCode()}>Show invite code</Button>
               <Button variant="ghost" className="family-leave" onClick={handleLeave}>Leave family</Button>
             </div>
+          </div>
+        )}
+
+        {/* Phones with a key to this family. Until this list existed, a lost
+            phone kept syncing for ever — "Leave family" only ever spoke to
+            the phone doing the leaving. */}
+        {paired && devices && devices.length > 0 && (
+          <div className="family-devices">
+            <p className="t-label">Phones in this family</p>
+            <ul className="family-device-list">
+              {devices.map((device) => (
+                <li key={device.id}>
+                  <span className="family-device-name">
+                    {device.label || "A phone"}
+                    {device.isThisDevice && <span className="family-device-you"> · this one</span>}
+                  </span>
+                  <span className="family-device-meta">
+                    {device.last_seen ? `last synced ${device.last_seen}` : `joined ${device.joined}`}
+                  </span>
+                  {!device.isThisDevice && device.revocable > 0 && (
+                    <Button
+                      variant="ghost"
+                      className="family-device-remove"
+                      onClick={() => void removeDevice({ deviceId: device.id })}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {devices.length > 1 && (
+              <Button
+                variant="outline"
+                className="family-revoke-all"
+                onClick={() => void removeDevice({ all: true })}
+              >
+                Lost a phone? Sign out all the others
+              </Button>
+            )}
           </div>
         )}
       </CardContent>

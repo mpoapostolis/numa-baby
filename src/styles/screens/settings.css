@@ -445,3 +445,60 @@
   color: var(--glyph-health);
   font-size: 0.8125rem;
 }
+
+/* The phones holding a key to this family. Listing them is what makes losing
+   one recoverable — and seeing "last synced" is how a parent recognises which
+   row is the phone they left on the bus. */
+.family-devices {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.family-device-list {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  list-style: none;
+}
+
+.family-device-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 12px;
+}
+
+.family-device-name {
+  grid-column: 1;
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.family-device-you {
+  color: var(--ink-3);
+}
+
+.family-device-meta {
+  grid-column: 1;
+  grid-row: 2;
+  color: var(--ink-3);
+  font-size: 0.75rem;
+}
+
+.family-device-remove {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  min-height: 44px;
+  color: var(--ink-2);
+}
+
+/* The lost-phone button: full width, plainly worded, never styled as danger —
+   it is a sensible precaution, not a catastrophe. */
+.family-revoke-all {
+  width: 100%;
+  margin-top: 4px;
+  font-size: 0.8125rem;
+}

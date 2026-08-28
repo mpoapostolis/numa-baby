@@ -71,3 +71,30 @@ export function pullSince(token: string, since: string, deviceId: string): Promi
 export function pushBatch(token: string, body: PushBody): Promise<PushResult> {
   return request("/api/sync/push", { method: "POST", body: JSON.stringify(body) }, token);
 }
+
+export type FamilyDevice = {
+  id: string;
+  label: string;
+  joined: string;
+  last_seen: string | null;
+  /** 0 for phones paired before revocation existed — they cannot be picked off individually. */
+  revocable: number;
+  isThisDevice: boolean;
+};
+
+/** Hand this phone's own key back, so the server stops accepting it. */
+export function leaveFamily(token: string): Promise<{ ok: true }> {
+  return request("/api/family/leave", { method: "POST" }, token);
+}
+
+export function listDevices(token: string): Promise<{ devices: FamilyDevice[] }> {
+  return request("/api/family/devices", { method: "GET" }, token);
+}
+
+/** Remove one phone, or — for a phone that is genuinely lost — every other one. */
+export function revokeDevice(
+  token: string,
+  target: { deviceId: string } | { all: true },
+): Promise<{ ok: true }> {
+  return request("/api/family/devices/revoke", { method: "POST", body: JSON.stringify(target) }, token);
+}

@@ -2,6 +2,12 @@
 import { createClient } from "@libsql/client/web";
 import { adminLogout, adminPage, handleAdminLogin, handleAdminStats } from "./admin";
 import { handleFeedback } from "./feedback";
+import {
+  ensureDeviceLink,
+  handleLeave,
+  handleListDevices,
+  handleRevokeDevice,
+} from "./devices";
 
 // Family Sync API — the doorman between the PWA and the Turso database.
 // Same origin as the static app: /api/* is handled here, everything else
@@ -60,7 +66,9 @@ async function sha256(value: string): Promise<string> {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function authFamily(env: Env, request: Request): Promise<string | null> {
+type Caller = { familyId: string; tokenHash: string };
+
+async function authFamily(env: Env, request: Request): Promise<Caller | null> {
   const header = request.headers.get("authorization") ?? "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
   if (!token) return null;
@@ -69,7 +77,9 @@ async function authFamily(env: Env, request: Request): Promise<string | null> {
     sql: "SELECT family_id FROM device_tokens WHERE token_hash = ?",
     args: [hash],
   });
-  return result.rows.length ? String(result.rows[0].family_id) : null;
+  return result.rows.length
+    ? { familyId: String(result.rows[0].family_id), tokenHash: hash }
+    : null;
 }
 
 async function touchDevice(env: Env, familyId: string, deviceId: string | undefined) {
@@ -81,6 +91,7 @@ async function touchDevice(env: Env, familyId: string, deviceId: string | undefi
 }
 
 async function handleCreateFamily(env: Env, request: Request): Promise<Response> {
+  await ensureDeviceLink(db(env));
   const body = (await request.json().catch(() => ({}))) as { deviceLabel?: string };
   const familyId = crypto.randomUUID();
   const token = randomToken();
@@ -94,10 +105,11 @@ async function handleCreateFamily(env: Env, request: Request): Promise<Response>
         args: [familyId, tokenHash],
       },
       // Every device carries its own token: losing one phone never forces
-      // the other to re-pair.
+      // the other to re-pair — and the device_id is what makes revoking just
+      // that one possible.
       {
-        sql: "INSERT INTO device_tokens (family_id, token_hash) VALUES (?, ?)",
-        args: [familyId, tokenHash],
+        sql: "INSERT INTO device_tokens (family_id, token_hash, device_id) VALUES (?, ?, ?)",
+        args: [familyId, tokenHash, deviceId],
       },
       {
         sql: "INSERT INTO devices (id, family_id, label) VALUES (?, ?, ?)",
@@ -128,6 +140,7 @@ async function handleInvite(env: Env, request: Request, familyId: string): Promi
 }
 
 async function handleJoin(env: Env, request: Request): Promise<Response> {
+  await ensureDeviceLink(db(env));
   const body = (await request.json().catch(() => ({}))) as { code?: string; deviceLabel?: string };
   const code = String(body.code ?? "").trim();
   if (!/^\d{6}$/.test(code)) return bad("Enter the 6-digit code from the other phone.");
@@ -149,8 +162,8 @@ async function handleJoin(env: Env, request: Request): Promise<Response> {
     [
       { sql: "UPDATE invites SET used_at = ? WHERE code = ?", args: [new Date().toISOString(), code] },
       {
-        sql: "INSERT INTO device_tokens (family_id, token_hash) VALUES (?, ?)",
-        args: [familyId, await sha256(token)],
+        sql: "INSERT INTO device_tokens (family_id, token_hash, device_id) VALUES (?, ?, ?)",
+        args: [familyId, await sha256(token), deviceId],
       },
       {
         sql: "INSERT INTO devices (id, family_id, label) VALUES (?, ?, ?)",
@@ -280,8 +293,20 @@ export default {
         return await handleFeedback(db(env), request);
       }
 
-      const familyId = await authFamily(env, request);
-      if (!familyId) return bad("Not paired. Create or join a family first.", 401);
+      const caller = await authFamily(env, request);
+      if (!caller) return bad("Not paired. Create or join a family first.", 401);
+      const { familyId, tokenHash } = caller;
+
+      // Handing a key back, and taking one away from a phone that is gone.
+      if (url.pathname === "/api/family/leave" && request.method === "POST") {
+        return await handleLeave(db(env), familyId, tokenHash);
+      }
+      if (url.pathname === "/api/family/devices" && request.method === "GET") {
+        return await handleListDevices(db(env), familyId, tokenHash);
+      }
+      if (url.pathname === "/api/family/devices/revoke" && request.method === "POST") {
+        return await handleRevokeDevice(db(env), familyId, tokenHash, request);
+      }
 
       if (url.pathname === "/api/family/invite" && request.method === "POST") {
         return await handleInvite(env, request, familyId);

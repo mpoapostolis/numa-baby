@@ -330,8 +330,13 @@ export function useFamilySync({ debugMode, bootState, persistVersion, readPersis
   }
 
   function leaveFamily() {
-    // Local goodbye only — the API has no unregister endpoint; the family's
-    // data stays on the server for the remaining devices.
+    // Hand the key back first, then forget locally. Fire-and-forget on
+    // purpose: if the network is down, the local goodbye must still happen —
+    // a parent tapping "leave" should never be blocked by connectivity. The
+    // stale token is then cleared by the other phone's "sign out all".
+    const current = pairing;
+    if (current) void transport.leaveFamily(current.token).catch(() => undefined);
+
     const l = live.current;
     window.clearTimeout(l.pushTimer);
     l.revoked = false;
@@ -340,7 +345,37 @@ export function useFamilySync({ debugMode, bootState, persistVersion, readPersis
     setStatus({ phase: "idle", lastSyncAt: null, deviceCount: null });
   }
 
-  return { pairing, status, createFamily, createInvite, joinFamily, leaveFamily };
+  /** The family's phones, for the revoke list. Null when not paired. */
+  async function listDevices() {
+    if (!pairing) return null;
+    try {
+      return (await transport.listDevices(pairing.token)).devices;
+    } catch {
+      return null;
+    }
+  }
+
+  async function revokeDevice(target: { deviceId: string } | { all: true }) {
+    if (!pairing) return false;
+    try {
+      await transport.revokeDevice(pairing.token, target);
+      return true;
+    } catch {
+      showToast("Could not remove that phone — try again when you have signal.");
+      return false;
+    }
+  }
+
+  return {
+    pairing,
+    status,
+    createFamily,
+    createInvite,
+    joinFamily,
+    leaveFamily,
+    listDevices,
+    revokeDevice,
+  };
 }
 
 export type FamilySync = ReturnType<typeof useFamilySync>;

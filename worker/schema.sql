@@ -25,6 +25,10 @@ CREATE TABLE IF NOT EXISTS families (
 CREATE TABLE IF NOT EXISTS device_tokens (
   family_id TEXT NOT NULL REFERENCES families(id),
   token_hash TEXT PRIMARY KEY,
+  -- Which phone this key belongs to, so one can be revoked without
+  -- disturbing the others. Null on rows minted before revocation existed;
+  -- those can still hand themselves back, or be cleared by "sign out all".
+  device_id TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
