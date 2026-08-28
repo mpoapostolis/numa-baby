@@ -25,7 +25,6 @@ import { ConsentBanner } from "./components/ConsentBanner";
 import { FeedbackBubble } from "./components/FeedbackBubble";
 import { WhatsNew } from "./components/WhatsNew";
 import { LogSheet } from "./components/LogSheet";
-import JoinFamilyScreen from "./components/JoinFamilyScreen";
 import OnboardingScreen from "./screens/OnboardingScreen";
 import TodayScreen from "./screens/TodayScreen";
 import { Activity, ActivityType, Sheet, Tab } from "./domain/types";
@@ -46,6 +45,8 @@ const TimelineScreen = lazy(() => import("./screens/TimelineScreen"));
 const InsightsScreen = lazy(() => import("./screens/InsightsScreen"));
 const GrowthGuideScreen = lazy(() => import("./screens/GrowthGuideScreen"));
 const SettingsScreen = lazy(() => import("./screens/SettingsScreen"));
+// Only ever rendered for someone arriving from a scanned invite.
+const JoinFamilyScreen = lazy(() => import("./components/JoinFamilyScreen"));
 
 // A future-dated feed from a restored backup must never arm a timer that wraps
 // the 32-bit setTimeout ceiling and fires instantly.
@@ -291,12 +292,14 @@ export default function HomePage() {
   // baby that already exists.
   if (bootState === "onboarding" && incomingJoinCode && !familySync.pairing) {
     return (
-      <JoinFamilyScreen
-        code={incomingJoinCode}
-        familySync={familySync}
-        onJoined={completeJoin}
-        onSkip={() => setIncomingJoinCode(null)}
-      />
+      <Suspense fallback={screenFallback}>
+        <JoinFamilyScreen
+          code={incomingJoinCode}
+          familySync={familySync}
+          onJoined={completeJoin}
+          onSkip={() => setIncomingJoinCode(null)}
+        />
+      </Suspense>
     );
   }
 

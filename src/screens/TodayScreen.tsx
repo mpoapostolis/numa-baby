@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { ChevronRight, ExternalLink, ShieldCheck, Square, Thermometer, Weight } from "lucide-react";
+import { Suspense, lazy, useState } from "react";
+import { ChevronRight, ExternalLink, ShieldCheck, Square, Thermometer, Waves, Weight } from "lucide-react";
 
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -9,6 +9,11 @@ import { ActivityRow } from "../components/ActivityRow";
 import { DayBand } from "../components/DayBand";
 import { DayRecap } from "../components/DayRecap";
 import { TrendChart } from "../components/TrendChart";
+// The noise generator is only needed once someone asks for it, so it stays
+// out of the bundle every parent downloads.
+const SoothePlayer = lazy(() =>
+  import("../components/SoothePlayer").then((m) => ({ default: m.SoothePlayer })),
+);
 import { EmptyState } from "../components/EmptyState";
 import { LittleBottle, TinyStars } from "../components/illustrations";
 import { BabyCompanion, CompanionMood } from "../components/BabyCompanion";
@@ -218,6 +223,7 @@ export default function TodayScreen({
   // today, 1 is yesterday. Bounded by the first thing ever logged so the
   // arrows never step into blank prehistory — or into tomorrow.
   const [dayOffset, setDayOffset] = useState(0);
+  const [sootheOpen, setSootheOpen] = useState(false);
 
   const forecastFeedSheet: "bottle" | "nursing" = profile.feedingMode === "breast"
     ? "nursing"
@@ -668,6 +674,18 @@ export default function TodayScreen({
           </Button>
           <Button
             variant="ghost"
+            className="log-row log-row-secondary action-soothe"
+            onClick={() => { track("soothe_opened"); setSootheOpen(true); }}
+          >
+            <span className="action-icon" aria-hidden="true"><Waves /></span>
+            <span className="log-copy">
+              <strong>White noise</strong>
+              <small>Plays with the screen off</small>
+            </span>
+            <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
+          </Button>
+          <Button
+            variant="ghost"
             className="log-row log-row-secondary action-health"
             onClick={() => onOpenSheet("health")}
           >
@@ -680,6 +698,11 @@ export default function TodayScreen({
           </Button>
         </section>
       </div>
+      {sootheOpen && (
+        <Suspense fallback={null}>
+          <SoothePlayer open={sootheOpen} onOpenChange={setSootheOpen} />
+        </Suspense>
+      )}
     </section>
   );
 }

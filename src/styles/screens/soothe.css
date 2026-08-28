@@ -1,0 +1,95 @@
+/* The white-noise dialog. Loaded with the player itself, so the bundle every
+   parent downloads at 3am never carries a control most of them will not open.
+
+   The volume opens low and the safety line is part of the panel, not a
+   footnote — a control that can be left running all night beside a cot has to
+   carry its own caution. */
+/* The white-noise dialog. The volume opens low and the safety line is part of
+   the panel, not a footnote — a control that can be left running all night
+   beside a cot has to carry its own caution. */
+.soothe-dialog {
+  display: grid;
+  gap: 16px;
+}
+
+.soothe-kinds {
+  display: grid;
+  gap: 8px;
+}
+
+.soothe-kind {
+  display: grid;
+  gap: 1px;
+  padding: 12px;
+  min-height: 56px;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.soothe-kind strong {
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.soothe-kind small {
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+}
+
+.soothe-kind.is-active {
+  border-color: color-mix(in oklab, var(--signal) 45%, var(--border));
+  background: color-mix(in oklab, var(--signal) 8%, var(--card));
+}
+
+.soothe-field {
+  display: grid;
+  gap: 8px;
+}
+
+.soothe-field input[type="range"] {
+  width: 100%;
+  accent-color: var(--signal);
+  min-height: 44px;
+}
+
+.soothe-timers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.soothe-timer {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.soothe-timer.is-active {
+  border-color: color-mix(in oklab, var(--signal) 45%, var(--border));
+  background: color-mix(in oklab, var(--signal) var(--glyph-wash), var(--card));
+  color: var(--signal);
+}
+
+.soothe-action {
+  min-height: 56px;
+  width: 100%;
+}
+
+.soothe-safety {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--ink-3);
+}

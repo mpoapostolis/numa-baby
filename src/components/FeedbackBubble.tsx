@@ -9,10 +9,16 @@
 // banner sits in the same corner, and a parent mid-log should not be
 // competing with a feedback button.
 
-import { useState } from "react";
+import { Suspense, lazy, useState } from "react";
 import { MessageCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
-import { FEEDBACK_BLURB, FeedbackForm } from "./FeedbackCard";
+// The form itself is only needed once someone taps — the bubble is not.
+const FeedbackForm = lazy(() =>
+  import("./FeedbackCard").then((m) => ({ default: m.FeedbackForm })),
+);
+const FEEDBACK_BLURB =
+  "Something broken, missing, or just annoying? It goes straight to the person who built " +
+  "this — one dad, evenings, between feeds.";
 import { track } from "../domain/analytics";
 
 export function FeedbackBubble({ hidden }: { hidden: boolean }) {
@@ -39,7 +45,9 @@ export function FeedbackBubble({ hidden }: { hidden: boolean }) {
           <DialogDescription>{FEEDBACK_BLURB}</DialogDescription>
           {/* Closing on send would hide the thank-you, so the dialog stays
               open and its own X closes it once that has been read. */}
-          <FeedbackForm />
+          <Suspense fallback={null}>
+            <FeedbackForm />
+          </Suspense>
         </DialogContent>
       </Dialog>
     </>
