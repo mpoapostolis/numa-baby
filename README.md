@@ -55,6 +55,50 @@ Set `TURSO_DATABASE_URL` in `wrangler.jsonc` and the token as a secret:
 turso db tokens create <database> | npx wrangler secret put TURSO_AUTH_TOKEN
 ```
 
+## The operator dashboard
+
+`/admin` shows what the sync service is doing: how many families exist, how
+many are still logging, how deep usage goes, the pairing funnel, and the
+messages people have sent through the app. It is **aggregate only** — no entry
+contents, no baby names, no device labels. Family ids are truncated.
+
+It exists only if you give it a password. Without one, `/admin` and every
+`/api/admin/*` route answer `404`:
+
+```bash
+npx wrangler secret put ADMIN_PASSWORD
+```
+
+Two optional secrets tighten it further, and both can be removed again:
+
+```bash
+# A one-time code as well as the password. Run the script first — it generates
+# the secret on your machine, shows a QR for your authenticator app, and never
+# writes it anywhere.
+node scripts/admin-totp.mjs
+npx wrangler secret put ADMIN_TOTP_SECRET
+
+# Only these addresses may even see the page; everyone else gets a 404.
+npx wrangler secret put ADMIN_ALLOW_IPS   # e.g. 203.0.113.7, 198.51.100.4
+```
+
+Guessing is what the lockout stops, not the password's own strength. The budget
+is spent **before** the password is looked at, in one atomic statement, so a
+thousand simultaneous guesses draw a thousand different numbers and only the
+first few are ever compared — counting failures afterwards would have let all
+thousand through. Five tries per address per quarter hour, twenty across the
+whole endpoint, and the door shuts. Each subsequent lock on the same address
+doubles, up to a day.
+
+The shared lock never doubles, because it is the one a stranger could trip on
+purpose to shut *you* out too. If `ADMIN_TOTP_SECRET` is set, a current
+one-time code walks straight past it — a botnet cannot make one, and whoever
+can is the person the door is for. Without the second factor, `ADMIN_ALLOW_IPS`
+is the way to make that attack impossible instead.
+
+Every attempt, right or wrong, is listed on the dashboard with its address and
+country.
+
 ## Development
 
 Requires Node.js `>=22.13.0`.

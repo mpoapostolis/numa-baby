@@ -87,3 +87,49 @@ CREATE TABLE IF NOT EXISTS feedback (
   app_version TEXT,
   handled INTEGER NOT NULL DEFAULT 0
 );
+
+-- ---------------------------------------------------------------------------
+-- The operator's door. These four are created by the worker on first use as
+-- well, so an older database heals itself; they are written down here for the
+-- same reason as everything above — a database that cannot be rebuilt from
+-- this repository is a database held hostage by itself.
+
+-- A signed-in browser. Only the hash of the cookie is kept, so a leak of this
+-- table hands nobody a working session, and "sign out everywhere" is a DELETE
+-- rather than a hope.
+CREATE TABLE IF NOT EXISTS admin_sessions (
+  id_hash TEXT PRIMARY KEY,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  last_seen_at TEXT,
+  ip TEXT, country TEXT, user_agent TEXT
+);
+
+-- The thing that actually stops a brute force. One row per address plus one
+-- row for the endpoint as a whole, so buying more addresses buys fewer extra
+-- guesses than it looks. `strikes` never resets, which is what makes the lock
+-- double instead of forgiving a patient attacker every fifteen minutes.
+CREATE TABLE IF NOT EXISTS admin_lockouts (
+  scope TEXT PRIMARY KEY,
+  failures INTEGER NOT NULL DEFAULT 0,
+  strikes INTEGER NOT NULL DEFAULT 0,
+  window_start TEXT NOT NULL,
+  locked_until TEXT
+);
+
+-- Every knock at the door, right or wrong, so the dashboard can show who has
+-- been trying. No password is ever recorded, correct or otherwise.
+CREATE TABLE IF NOT EXISTS admin_audit (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  at TEXT NOT NULL,
+  event TEXT NOT NULL,
+  ip TEXT, country TEXT, asn TEXT, user_agent TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_at ON admin_audit(at);
+
+-- Spent one-time codes, so a code read over a shoulder cannot be used in the
+-- seconds it has left. Rows are cleared once they are older than any window.
+CREATE TABLE IF NOT EXISTS admin_totp_used (
+  counter INTEGER PRIMARY KEY,
+  at TEXT NOT NULL
+);

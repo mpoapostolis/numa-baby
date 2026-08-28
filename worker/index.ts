@@ -1,6 +1,6 @@
 /// <reference types="@cloudflare/workers-types" />
 import { createClient } from "@libsql/client/web";
-import { adminLogout, adminPage, handleAdminLogin, handleAdminStats } from "./admin";
+import { handleAdmin } from "./admin";
 import { handleFeedback } from "./feedback";
 import {
   ensureDeviceLink,
@@ -23,6 +23,11 @@ type Env = {
   TURSO_AUTH_TOKEN: string;
   /** Operator password for /admin. Unset means the page does not exist. */
   ADMIN_PASSWORD?: string;
+  /** Optional second factor. Set it and the password alone will not get in. */
+  ADMIN_TOTP_SECRET?: string;
+  /** Optional comma-separated allowlist. Set it and every other address is
+      told /admin does not exist. */
+  ADMIN_ALLOW_IPS?: string;
 };
 
 const INVITE_TTL_MS = 15 * 60 * 1000;
@@ -255,25 +260,12 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
-    // The operator page and its endpoints. With no ADMIN_PASSWORD set they
-    // return 404 rather than an unguarded dashboard — a secret that was never
-    // configured must not become an open door.
-    const isAdmin = url.pathname === "/admin" || url.pathname.startsWith("/api/admin/");
-    if (isAdmin) {
-      const secret = env.ADMIN_PASSWORD;
-      if (!secret) return new Response("Not found", { status: 404 });
-      const now = Date.now();
-      if (url.pathname === "/admin") return adminPage();
-      if (url.pathname === "/api/admin/login" && request.method === "POST") {
-        return await handleAdminLogin(secret, request, now);
-      }
-      if (url.pathname === "/api/admin/logout" && request.method === "POST") {
-        return adminLogout();
-      }
-      if (url.pathname === "/api/admin/stats" && request.method === "GET") {
-        return await handleAdminStats(db(env), secret, request, now);
-      }
-      return new Response("Not found", { status: 404 });
+    // The operator page and its endpoints, gated in one place: allowlist,
+    // then lockout, then password, then one-time code. With no ADMIN_PASSWORD
+    // set the whole thing answers 404 — a secret that was never configured
+    // must not become an open door.
+    if (url.pathname === "/admin" || url.pathname.startsWith("/api/admin/")) {
+      return await handleAdmin(db(env), env, request, url, Date.now());
     }
 
     if (!url.pathname.startsWith("/api/")) {

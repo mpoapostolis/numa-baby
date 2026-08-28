@@ -1,301 +1,280 @@
 /// <reference types="@cloudflare/workers-types" />
-// The operator's window onto the sync service: how many families exist, how
-// many phones are paired, whether anyone synced today. Served entirely from
-// the Worker so none of it reaches the parent-facing bundle or the service
-// worker cache.
+// The operator's door and the room behind it.
 //
-// Deliberately AGGREGATE ONLY. Every row in `activities` is a health record
-// about somebody's baby, and an operations dashboard is not a reason to read
-// one. Nothing here selects `payload`, and nothing here selects a device
-// label — labels are derived from a baby's name.
-//
-// Auth: a password held as a Worker secret (never in the database — the
-// database is the thing being protected), compared in constant time, then
-// exchanged for a short-lived HMAC-signed cookie so the password is sent once.
+// This file is only the routing and the order of the gates; the lock itself
+// lives in adminAuth.ts, the questions asked of the database in adminStats.ts,
+// and the page in adminPage.ts.
 
 import { Client } from "@libsql/client/web";
+import {
+  audit,
+  callerOf,
+  clearAttempts,
+  createSession,
+  destroySession,
+  ensureAdminTables,
+  GLOBAL_MAX_ATTEMPTS,
+  ipAllowed,
+  IP_MAX_ATTEMPTS,
+  randomId,
+  reserveAttempt,
+  sessionValid,
+  SESSION_TTL_SECONDS,
+  verifyPassword,
+  verifyTotp,
+  type Caller,
+} from "./adminAuth";
+import { adminPageHtml } from "./adminPage";
+import { collectStats } from "./adminStats";
 
-const SESSION_TTL_SECONDS = 12 * 60 * 60;
-const COOKIE = "nb_admin";
+export type AdminEnv = {
+  /** Unset means the page does not exist at all. */
+  ADMIN_PASSWORD?: string;
+  /** Set it and the password stops being enough on its own. */
+  ADMIN_TOTP_SECRET?: string;
+  /** Set it and every other address is told there is nothing here. */
+  ADMIN_ALLOW_IPS?: string;
+};
 
-function timingSafeEqual(a: string, b: string): boolean {
-  // Compare over a fixed length so a wrong password cannot be found one
-  // character at a time by watching how long the answer takes.
-  const encoder = new TextEncoder();
-  const left = encoder.encode(a);
-  const right = encoder.encode(b);
-  const length = Math.max(left.length, right.length);
-  let diff = left.length ^ right.length;
-  for (let i = 0; i < length; i++) diff |= (left[i] ?? 0) ^ (right[i] ?? 0);
-  return diff === 0;
+const COOKIE_FLAGS = "Path=/; HttpOnly; Secure; SameSite=Strict";
+
+/**
+ * The page has no dependencies, so it is allowed no connections: the only
+ * script and style that may run are the two carrying this nonce.
+ *
+ * `style-src-attr` is not decoration. A nonce covers `<style>` and never
+ * `style=""`, and under CSP3 style-src-attr falls back to style-src — so
+ * without that line the browser silently drops every bar height on the page
+ * and all ten charts render flat, with nothing in the console to say why. The
+ * attribute values are numbers this worker computes; no database text ever
+ * reaches them.
+ */
+export function adminCsp(nonce: string): string {
+  return [
+    "default-src 'none'",
+    `script-src 'nonce-${nonce}'`,
+    `style-src 'nonce-${nonce}'`,
+    "style-src-attr 'unsafe-inline'",
+    "connect-src 'self'",
+    "base-uri 'none'",
+    "form-action 'none'",
+    "frame-ancestors 'none'",
+  ].join("; ");
 }
 
-async function hmac(secret: string, message: string): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message));
-  return [...new Uint8Array(signature)].map((b) => b.toString(16).padStart(2, "0")).join("");
+function headers(extra: HeadersInit = {}): HeadersInit {
+  return {
+    "cache-control": "no-store",
+    "x-robots-tag": "noindex, nofollow",
+    "referrer-policy": "no-referrer",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    ...extra,
+  };
 }
 
-async function mintSession(secret: string, now: number): Promise<string> {
-  const expires = String(Math.floor(now / 1000) + SESSION_TTL_SECONDS);
-  return `${expires}.${await hmac(secret, expires)}`;
-}
-
-async function sessionValid(secret: string, cookie: string | null, now: number): Promise<boolean> {
-  if (!cookie) return false;
-  const value = cookie.split("; ").find((part) => part.startsWith(`${COOKIE}=`))?.slice(COOKIE.length + 1);
-  if (!value) return false;
-  const [expires, signature] = value.split(".");
-  if (!expires || !signature) return false;
-  if (Number(expires) * 1000 < now) return false;
-  return timingSafeEqual(signature, await hmac(secret, expires));
-}
-
-function noStore(body: string, contentType: string, status = 200, extra: HeadersInit = {}): Response {
-  return new Response(body, {
+function json(data: unknown, status = 200, extra: HeadersInit = {}): Response {
+  return new Response(JSON.stringify(data), {
     status,
-    headers: {
-      "content-type": contentType,
-      "cache-control": "no-store",
-      // An operations page must never be indexed, framed, or referred out.
-      "x-robots-tag": "noindex, nofollow",
-      "referrer-policy": "no-referrer",
-      "x-frame-options": "DENY",
-      ...extra,
-    },
+    headers: headers({ "content-type": "application/json", ...extra }),
   });
 }
 
-export async function handleAdminLogin(
-  secret: string,
-  request: Request,
-  now: number,
-): Promise<Response> {
-  const body = (await request.json().catch(() => ({}))) as { password?: unknown };
-  const supplied = typeof body.password === "string" ? body.password : "";
-  if (!timingSafeEqual(supplied, secret)) {
-    // One message, one status, whether the password was empty or merely wrong.
-    return noStore(JSON.stringify({ error: "Wrong password." }), "application/json", 401);
-  }
-  const session = await mintSession(secret, now);
-  return noStore(JSON.stringify({ ok: true }), "application/json", 200, {
-    "set-cookie": `${COOKIE}=${session}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_TTL_SECONDS}`,
+/** The answer to "there is nothing here", used both for an unconfigured
+    password and for an address that is not on the list — an attacker learns
+    the same thing from both, which is nothing. */
+function notFound(): Response {
+  return new Response("Not found", { status: 404, headers: headers() });
+}
+
+function tooManyTries(remainingMs: number): Response {
+  const minutes = Math.max(1, Math.ceil(remainingMs / 60_000));
+  return json({ error: `Too many attempts. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.` }, 429, {
+    "retry-after": String(Math.ceil(remainingMs / 1000)),
   });
 }
 
-export function adminLogout(): Response {
-  return noStore(JSON.stringify({ ok: true }), "application/json", 200, {
-    "set-cookie": `${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`,
-  });
+async function readBody(request: Request): Promise<Record<string, unknown>> {
+  const body = await request.json().catch(() => ({}));
+  return body && typeof body === "object" ? (body as Record<string, unknown>) : {};
 }
 
-export async function handleAdminStats(
+// ---------------------------------------------------------------------------
+
+async function login(
   client: Client,
-  secret: string,
+  env: AdminEnv,
   request: Request,
+  caller: Caller,
   now: number,
 ): Promise<Response> {
-  if (!(await sessionValid(secret, request.headers.get("cookie"), now))) {
-    return noStore(JSON.stringify({ error: "Not signed in." }), "application/json", 401);
-  }
+  const secret = env.ADMIN_PASSWORD as string;
+  const ipScope = `ip:${caller.ip}`;
 
-  const [totals, families, daily, invites, feedback] = await Promise.all([
-    client.execute(`
-      select
-        (select count(*) from families) as families,
-        (select count(*) from devices) as devices,
-        (select count(*) from activities) as entries,
-        (select count(*) from activities where deleted = 1) as tombstones,
-        (select count(*) from family_meta) as profiles
-    `),
-    // Per family: size and recency only. No payloads, no labels, and the id
-    // is truncated so the page is useful without being a directory of who.
-    client.execute(`
-      select
-        substr(f.id, 1, 8) as family,
-        substr(f.created_at, 1, 10) as created,
-        (select count(*) from devices d where d.family_id = f.id) as devices,
-        (select count(*) from activities a where a.family_id = f.id) as entries,
-        (select substr(max(a.updated_at), 1, 10) from activities a where a.family_id = f.id) as last_entry
-      from families f
-      order by f.created_at desc
-    `),
-    // Entries per day over the last fortnight — the one line that answers
-    // "is this still being used".
-    client.execute(`
-      select substr(updated_at, 1, 10) as day, count(*) as entries
-      from activities
-      where updated_at >= datetime('now', '-14 days')
-      group by day order by day
-    `),
-    client.execute(`
-      select
-        count(*) as total,
-        sum(case when used_at is not null then 1 else 0 end) as used,
-        sum(case when used_at is null and expires_at > strftime('%Y-%m-%dT%H:%M:%fZ','now') then 1 else 0 end) as open
-      from invites
-    `),
-    // What people wrote in, newest first. Unlike a log entry, a message is
-    // something someone deliberately sent to be read.
-    client.execute(`
-      select substr(created_at, 1, 16) as sent, message, contact, app_version
-      from feedback order by created_at desc limit 50
-    `).catch(() => ({ rows: [] })),
+  await ensureAdminTables(client);
+
+  // The budget is spent HERE, before a single character is compared, and each
+  // scope moves its counter in one atomic statement. A thousand simultaneous
+  // guesses therefore draw a thousand different numbers and only the first few
+  // are allowed to go on and be checked. Counting failures after the check —
+  // the obvious way to write this — would have let all thousand through.
+  const [byAddress, overall] = await Promise.all([
+    reserveAttempt(client, ipScope, now, IP_MAX_ATTEMPTS, true),
+    reserveAttempt(client, "global", now, GLOBAL_MAX_ATTEMPTS, false),
   ]);
+  // Not audited: a refusal costs nothing to send, so writing a row for each
+  // one would hand an attacker a way to grow the table for free. The lock
+  // itself is on the dashboard, and so are the attempts that caused it.
+  if (!byAddress.allowed) return tooManyTries(byAddress.retryAfterMs);
 
-  return noStore(
-    JSON.stringify({
-      totals: totals.rows[0],
-      invites: invites.rows[0],
-      families: families.rows,
-      daily: daily.rows,
-      feedback: feedback.rows,
-      generatedAt: new Date(now).toISOString(),
-    }),
-    "application/json",
-  );
-}
+  const body = await readBody(request);
+  const password = typeof body.password === "string" ? body.password : "";
+  const code = typeof body.code === "string" ? body.code.trim() : "";
 
-// One self-contained page: no bundle, no framework, no third-party script,
-// and the same Petal & Porcelain palette so it does not feel like a different
-// product bolted on.
-export function adminPage(): Response {
-  return noStore(
-    `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="robots" content="noindex, nofollow" />
-<title>Baby Tracker — service</title>
-<style>
-  :root {
-    color-scheme: light dark;
-    --bg: #fdf5f2; --card: #fffdfc; --ink: #221a1d; --ink-2: #6b5a60;
-    --line: #ecdcd6; --signal: #8d2f57;
+  const passwordOk = await verifyPassword(secret, password);
+
+  // The one-time code, if one is configured. Note what is NOT here: an early
+  // return when the password was wrong. Skipping this work in that case would
+  // make a right password measurably slower than a wrong one, which is exactly
+  // the oracle the second factor exists to remove — so the same work happens
+  // either way, and the two answers are combined at the end.
+  let codeOk = true;
+  // Set only by a code that was genuine AND unspent — something a stranger
+  // cannot manufacture at any price.
+  let codeProven = false;
+  if (env.ADMIN_TOTP_SECRET) {
+    const counter = await verifyTotp(env.ADMIN_TOTP_SECRET, code, now);
+    if (counter === null) {
+      codeOk = false;
+    } else {
+      // A code is good once, whoever presented it. Someone reading it off a
+      // shoulder or a screen share cannot use it in the seconds it has left.
+      const claim = await client.execute({
+        sql: "INSERT INTO admin_totp_used (counter, at) VALUES (?, ?) ON CONFLICT(counter) DO NOTHING",
+        args: [counter, new Date(now).toISOString()],
+      });
+      if (claim.rowsAffected) codeProven = true;
+      else codeOk = false;
+    }
   }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg: #120c0f; --card: #1c1418; --ink: #f4e9ec; --ink-2: #b3a0a7; --line: #33262b; --signal: #f0a8c0; }
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; padding: 24px; background: var(--bg); color: var(--ink);
-    font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, sans-serif; }
-  main { max-width: 900px; margin: 0 auto; display: grid; gap: 20px; }
-  h1 { font-size: 1.4rem; margin: 0; font-weight: 600; }
-  .muted { color: var(--ink-2); font-size: .8125rem; margin: 0; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 16px; }
-  .stat b { display: block; font-size: 1.9rem; font-weight: 600; line-height: 1.1; }
-  .stat span { color: var(--ink-2); font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; }
-  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-  th { text-align: left; font-size: .7rem; text-transform: uppercase; letter-spacing: .06em;
-    color: var(--ink-2); font-weight: 500; padding: 6px 8px; }
-  td { padding: 8px; border-top: 1px solid var(--line); font-size: .875rem; }
-  input, button { font: inherit; border-radius: 10px; border: 1px solid var(--line); padding: 12px 14px; }
-  input { width: 100%; background: var(--bg); color: var(--ink); font-size: 16px; }
-  button { background: var(--signal); color: #fff; border: 0; font-weight: 500; cursor: pointer; min-height: 48px; }
-  .row { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-  .bars { display: flex; align-items: flex-end; gap: 3px; height: 64px; }
-  .bars i { flex: 1; background: var(--signal); opacity: .75; border-radius: 3px 3px 0 0; min-height: 2px; }
-  .err { color: #b3261e; font-size: .8125rem; margin: 8px 0 0; }
-  .hide { display: none; }
-</style>
-</head>
-<body>
-<main>
-  <div class="row">
-    <div>
-      <h1>Baby Tracker · service</h1>
-      <p class="muted">Aggregate only — no entry contents, no device names.</p>
-    </div>
-    <button id="out" class="hide" style="background:transparent;color:var(--ink-2);border:1px solid var(--line)">Sign out</button>
-  </div>
 
-  <form id="login" class="card">
-    <label class="muted" for="pw">Admin password</label>
-    <input id="pw" type="password" autocomplete="current-password" style="margin-top:8px" />
-    <button style="margin-top:12px;width:100%">Sign in</button>
-    <p id="err" class="err hide"></p>
-  </form>
+  // The shared lock is the one a stranger can trip deliberately, and tripping
+  // it would shut the owner out along with them. So it is the one lock a
+  // current one-time code walks past — a botnet cannot produce one, and
+  // whoever can is the person this door is for. The per-address lock above is
+  // not negotiable this way.
+  if (!overall.allowed && !codeProven) return tooManyTries(overall.retryAfterMs);
 
-  <div id="dash" class="hide" style="display:none">
-    <div class="card"><div class="grid" id="totals"></div></div>
-    <div class="card">
-      <p class="muted" style="margin-bottom:10px">Entries synced per day · last 14 days</p>
-      <div class="bars" id="bars"></div>
-    </div>
-    <div class="card" id="fbcard" style="display:none">
-      <p class="muted" style="margin-bottom:10px">Messages</p>
-      <div id="fb"></div>
-    </div>
-    <div class="card" style="overflow-x:auto">
-      <p class="muted" style="margin-bottom:6px">Families</p>
-      <table><thead><tr><th>Family</th><th>Created</th><th>Devices</th><th>Entries</th><th>Last entry</th></tr></thead>
-      <tbody id="fams"></tbody></table>
-    </div>
-    <p class="muted" id="stamp"></p>
-  </div>
-</main>
-<script>
-const $ = (id) => document.getElementById(id);
-// Messages are text a stranger typed: escaped, never trusted as markup.
-const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (c) =>
-  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-async function load() {
-  const res = await fetch("/api/admin/stats");
-  if (!res.ok) return false;
-  const d = await res.json();
-  $("totals").innerHTML = [
-    ["Families", d.totals.families], ["Devices", d.totals.devices],
-    ["Entries", d.totals.entries], ["Profiles", d.totals.profiles],
-    ["Deleted", d.totals.tombstones], ["Open invites", d.invites.open ?? 0],
-  ].map(([k, v]) => '<div class="stat"><b>' + v + '</b><span>' + k + '</span></div>').join("");
-  const max = Math.max(1, ...d.daily.map((x) => x.entries));
-  $("bars").innerHTML = d.daily.map((x) =>
-    '<i style="height:' + Math.round((x.entries / max) * 100) + '%" title="' + x.day + ': ' + x.entries + '"></i>').join("");
-  $("fams").innerHTML = d.families.map((f) =>
-    '<tr><td>' + f.family + '</td><td>' + f.created + '</td><td>' + f.devices +
-    '</td><td>' + f.entries + '</td><td>' + (f.last_entry || "—") + '</td></tr>').join("");
-  const fb = d.feedback || [];
-  if (fb.length) {
-    $("fbcard").style.display = "block";
-    $("fb").innerHTML = fb.map((m) =>
-      '<div style="border-top:1px solid var(--line);padding:10px 0">' +
-      '<div class="muted">' + m.sent + (m.contact ? ' · ' + esc(m.contact) : '') +
-      (m.app_version ? ' · build ' + esc(m.app_version) : '') + '</div>' +
-      '<div style="white-space:pre-wrap;margin-top:4px">' + esc(m.message) + '</div></div>').join("");
+  if (!passwordOk || !codeOk) {
+    // The dashboard is allowed to know which half was wrong. The person at the
+    // door is not: one message, one status, no count of tries left — a counter
+    // is a map of how hard to push.
+    await audit(client, passwordOk ? "login_bad_code" : "login_bad", caller, now);
+    return json({ error: "Wrong password or code." }, 401);
   }
-  $("stamp").textContent = "Generated " + d.generatedAt;
-  $("login").style.display = "none";
-  $("dash").style.display = "grid";
-  $("dash").className = "";
-  $("out").className = "";
-  return true;
-}
-$("login").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const res = await fetch("/api/admin/login", {
-    method: "POST", headers: { "content-type": "application/json" },
-    body: JSON.stringify({ password: $("pw").value }),
+
+  const session = await createSession(client, caller, now);
+  await Promise.all([
+    clearAttempts(client, ipScope, true),
+    clearAttempts(client, "global", false),
+    audit(client, "login_ok", caller, now),
+    client
+      .execute({
+        sql: "DELETE FROM admin_totp_used WHERE at < ?",
+        args: [new Date(now - 10 * 60_000).toISOString()],
+      })
+      .catch(() => undefined),
+  ]);
+  return json({ ok: true }, 200, {
+    "set-cookie": `nb_admin=${session}; ${COOKIE_FLAGS}; Max-Age=${SESSION_TTL_SECONDS}`,
   });
-  if (res.ok) { $("pw").value = ""; await load(); return; }
-  $("err").textContent = "Wrong password.";
-  $("err").className = "err";
-});
-$("out").addEventListener("click", async () => {
-  await fetch("/api/admin/logout", { method: "POST" });
-  location.reload();
-});
-load();
-</script>
-</body>
-</html>`,
-    "text/html; charset=utf-8",
-  );
+}
+
+// ---------------------------------------------------------------------------
+
+export async function handleAdmin(
+  client: Client,
+  env: AdminEnv,
+  request: Request,
+  url: URL,
+  now: number,
+): Promise<Response> {
+  try {
+    return await route(client, env, request, url, now);
+  } catch (error) {
+    // If the database cannot be reached, the budget cannot be spent — and an
+    // attempt that was never paid for must never be checked. Failing shut is
+    // the only safe direction here, and the reason says nothing.
+    console.error("admin error", url.pathname, error);
+    return json({ error: "The service is not answering. Try again shortly." }, 503);
+  }
+}
+
+async function route(
+  client: Client,
+  env: AdminEnv,
+  request: Request,
+  url: URL,
+  now: number,
+): Promise<Response> {
+  // No password configured means no dashboard — a secret nobody set must
+  // never become an open door.
+  if (!env.ADMIN_PASSWORD) return notFound();
+
+  const caller = callerOf(request);
+  // Deliberately before anything else, and deliberately silent: a blocked
+  // address gets a 404 without a database round trip, so it cannot fill the
+  // audit table or cost anything by trying.
+  if (!ipAllowed(env.ADMIN_ALLOW_IPS, caller.ip)) return notFound();
+
+  if (url.pathname === "/admin" && request.method === "GET") {
+    const nonce = randomId();
+    return new Response(adminPageHtml(nonce), {
+      headers: headers({
+        "content-type": "text/html; charset=utf-8",
+        "content-security-policy": adminCsp(nonce),
+      }),
+    });
+  }
+
+  if (url.pathname === "/api/admin/login" && request.method === "POST") {
+    return await login(client, env, request, caller, now);
+  }
+
+  if (url.pathname === "/api/admin/logout" && request.method === "POST") {
+    const body = await readBody(request);
+    await ensureAdminTables(client);
+    // "Everywhere" empties the session table, so it is the one thing here that
+    // a stranger must not be able to reach: without a live session this can
+    // only delete the row matching a cookie the caller already holds, which
+    // is to say their own, which is to say nothing.
+    const signedIn = await sessionValid(client, request, now);
+    await destroySession(client, request, signedIn && body.all === true);
+    return json({ ok: true }, 200, { "set-cookie": `nb_admin=; ${COOKIE_FLAGS}; Max-Age=0` });
+  }
+
+  // Everything past here needs a live session.
+  await ensureAdminTables(client);
+  if (!(await sessionValid(client, request, now))) {
+    return json({ error: "Not signed in." }, 401);
+  }
+
+  if (url.pathname === "/api/admin/stats" && request.method === "GET") {
+    return json(await collectStats(client, now));
+  }
+
+  // The one write the dashboard makes: a message can be ticked off. Nothing
+  // here deletes anything — not a message, and certainly not a family's log.
+  if (url.pathname === "/api/admin/feedback" && request.method === "POST") {
+    const body = await readBody(request);
+    const id = typeof body.id === "string" ? body.id : "";
+    if (!id) return json({ error: "Which message?" }, 400);
+    await client.execute({
+      sql: "UPDATE feedback SET handled = ? WHERE id = ?",
+      args: [body.handled ? 1 : 0, id],
+    });
+    return json({ ok: true });
+  }
+
+  return notFound();
 }
