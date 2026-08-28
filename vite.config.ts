@@ -41,6 +41,10 @@ export default defineConfig({
         clientsClaim: true,
         importScripts: ["/notification-sw.js"],
         navigateFallback: "/index.html",
+        // Without this the service worker answers EVERY navigation with the
+        // cached app shell — including /admin and /api, which live in the
+        // Worker and must reach the network.
+        navigateFallbackDenylist: [/^\/admin/, /^\/api\//],
         globPatterns: ["**/*.{html,js,css,png,svg,webmanifest}"],
         globIgnores: ["**/og-baby-tracker.png"],
         sourcemap: false,
