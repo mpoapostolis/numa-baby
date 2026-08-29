@@ -182,7 +182,7 @@ export default function SettingsScreen({
                 from the last change, not from a feed. */}
             <Item>
               <ItemContent>
-                <ItemTitle>Nappy reminder</ItemTitle>
+                <ItemTitle>Diaper reminder</ItemTitle>
                 <ItemDescription id="diaper-reminder-status">
                   {notificationPermission === "unsupported"
                     ? "Not supported in this browser"
@@ -198,7 +198,7 @@ export default function SettingsScreen({
                   checked={Boolean(reminders.diaperEnabled)}
                   disabled={notificationPermission === "unsupported" || notificationPermission === "denied"}
                   onCheckedChange={(checked) => { track("diaper_reminders_toggled", { enabled: checked }); void onDiaperRemindersChange(checked); }}
-                  aria-label="Use nappy reminders"
+                  aria-label="Use diaper reminders"
                   aria-describedby="diaper-reminder-status"
                 />
               </ItemActions>
@@ -212,7 +212,7 @@ export default function SettingsScreen({
                     type="single"
                     value={String(reminders.diaperIntervalMinutes ?? 120)}
                     className="segmented three-way"
-                    aria-label="Nappy reminder interval"
+                    aria-label="Diaper reminder interval"
                     onValueChange={(value) => value && onDiaperIntervalChange(Number(value))}
                   >
                     <ToggleGroupItem value="90">90 min</ToggleGroupItem>

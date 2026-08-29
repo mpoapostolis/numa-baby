@@ -645,7 +645,12 @@ export default function HomePage() {
 
         {/* Hidden while the consent banner owns the same corner, and while a
             log sheet is open — nothing competes with the 3am flow. */}
-        <FeedbackBubble hidden={consent === null || sheet !== null} />
+        {/* Not on Today. The bubble is fixed 48px above the nav on the right —
+            the one patch of glass a one-handed thumb reaches without
+            re-gripping — and Today is the screen where that patch is needed
+            for logging. As the tiles scroll they pass underneath it. Settings
+            carries the same form in full, so nothing is lost but the ambush. */}
+        <FeedbackBubble hidden={consent === null || sheet !== null || activeTab === "today"} />
 
         {consent === null && (
           <ConsentBanner

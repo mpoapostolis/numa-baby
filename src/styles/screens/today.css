@@ -207,6 +207,16 @@
   gap: 24px;
 }
 
+/* Reading material goes last.
+   The stage card is 447px tall — measured — and it sat directly above "Since
+   last feed" and "Coming up", which are the two things a parent actually
+   glances at. Four hundred and forty-seven pixels of encyclopedia between the
+   buttons and the answer. It is good writing and it keeps its place on the
+   screen; it just stops being in the way of the clock. */
+.today-main > .fact-card {
+  order: 1;
+}
+
 /* 3am rule: in any single-column rendering the log buttons come FIRST — the
    first tap target must sit in the top third, before the clock block.
    That holds whether or not a timer is running, because a running timer is

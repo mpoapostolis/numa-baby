@@ -44,7 +44,7 @@ export default function JoinFamilyScreen({ code, familySync, onJoined, onSkip }:
       <h1 id="join-heading" className="t-title-1">Join your family log</h1>
       <p className="t-body join-copy">
         This phone will share one log with the phone that showed you the code — every feed,
-        nappy and note, on both.
+        diaper and note, on both.
       </p>
       <p className="join-code figure">{code}</p>
 

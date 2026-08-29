@@ -313,7 +313,7 @@ export default function TodayScreen({
   if (sortedActivities.some((activity) => activity.type === "diaper")) {
     comingUp.push({
       type: "diaper",
-      label: "Nappy",
+      label: "Diaper",
       forecast: forecasts.diaper,
       // Nappies are the noisiest of the three and the forecast stays quiet
       // whenever the changes do not fall into a rhythm — so this line has to
@@ -749,7 +749,7 @@ export default function TodayScreen({
                 variant="ghost"
                 className="tile-chip"
                 onClick={() => onOpenSheet("diaper")}
-                aria-label="Log a nappy change at a different time"
+                aria-label="Log a diaper change at a different time"
               >
                 Past
               </Button>
