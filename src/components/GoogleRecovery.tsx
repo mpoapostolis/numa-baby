@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { Mail, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "./ui/dialog";
 import { InputGroup, InputGroupInput } from "./ui/input-group";
 import { loadAuthHint } from "../domain/authHint";
 import { emailRecoverRequest } from "../domain/syncTransport";
@@ -144,6 +145,22 @@ export function ProtectWithGoogle({ familySync, immediate = false }: { familySyn
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paired]);
 
+  // A pending join that needs the person's merge-or-adopt decision first;
+  // holding the credential while a REAL dialog (never a browser alert)
+  // presents the honest options.
+  const [mergeChoice, setMergeChoice] = useState<{ credential: string; count: number } | null>(null);
+
+  async function joinGuardedFamily(credential: string, discardLocal: boolean) {
+    const outcome = await familySync.googleContinue(credential, "This phone", { discardLocal });
+    track("google_protect_probe", { outcome, discardLocal });
+    if (outcome === "joined") {
+      const guard = await familySync.recoveryEmail();
+      if (guard) setEmail(guard);
+    }
+    setBusy(false);
+    return outcome;
+  }
+
   async function handleCredential(credential: string) {
     setBusy(true);
     // The lesson of the owner's own two phones: if this account already
@@ -151,18 +168,16 @@ export function ProtectWithGoogle({ familySync, immediate = false }: { familySyn
     // fresh family first left his second device green-pilled on an orphan
     // copy while the real log lived elsewhere. Probe before creating.
     if (!familySync.pairing) {
-      const outcome = await familySync.googleContinue(credential, "This phone");
-      track("google_protect_probe", { outcome });
-      if (outcome === "joined") {
-        const guard = await familySync.recoveryEmail();
-        if (guard) setEmail(guard);
-        setBusy(false);
+      const count = familySync.localEntryCount();
+      if (count > 0) {
+        // Entries at stake: the decision gets a real dialog. The credential
+        // waits in state; nothing happens until a button is chosen.
+        setMergeChoice({ credential, count });
         return;
       }
-      if (outcome === "failed") {
-        setBusy(false);
-        return;
-      }
+      const outcome = await joinGuardedFamily(credential, false);
+      if (outcome !== "none") return;
+      setBusy(true);
       // "none": genuinely the first device — create, then bind below.
       if (!(await familySync.createFamily("This phone"))) {
         setBusy(false);
@@ -172,24 +187,10 @@ export function ProtectWithGoogle({ familySync, immediate = false }: { familySyn
     const linked = await familySync.googleProtect(credential);
     track("google_protect", { ok: Boolean(linked && linked !== "elsewhere"), elsewhere: linked === "elsewhere" });
     if (linked === "elsewhere") {
-      // The owner's rule, verbatim: Continue with Google must land every
-      // device on whatever the cloud holds for that account. This device is
-      // in a different family — ask once, then switch: leave, rejoin as the
-      // account's family, merge this phone's entries up, pull the latest.
-      const move = window.confirm(
-        "This Google account's log lives in another family. Switch this phone to it? " +
-        "Entries on this phone will merge into that log — nothing is deleted.",
-      );
-      if (move) {
-        familySync.leaveFamily();
-        const outcome = await familySync.googleContinue(credential, "This phone");
-        track("google_protect_switch", { outcome });
-        if (outcome === "joined") {
-          const guard = await familySync.recoveryEmail();
-          if (guard) setEmail(guard);
-        }
-      }
-      setBusy(false);
+      // The account's log lives in another family: same real dialog, with
+      // leaving the current family folded into whichever choice is made.
+      familySync.leaveFamily();
+      setMergeChoice({ credential, count: familySync.localEntryCount() });
       return;
     }
     if (linked) setEmail(linked);
@@ -252,6 +253,42 @@ export function ProtectWithGoogle({ familySync, immediate = false }: { familySyn
         back. Works with Google or any email address — and nothing from your log
         is ever shared with anyone. The guard is optional and removable.
       </p>
+
+      <Dialog open={mergeChoice !== null} onOpenChange={(next) => { if (!next) { setMergeChoice(null); setBusy(false); } }}>
+        <DialogContent className="merge-choice">
+          <DialogTitle>
+            This phone has {mergeChoice?.count} {mergeChoice?.count === 1 ? "entry" : "entries"} of its own
+          </DialogTitle>
+          <DialogDescription>
+            Your account&rsquo;s log lives in the cloud. Choose what happens to the
+            entries on this phone — nothing in the cloud is deleted either way.
+          </DialogDescription>
+          <DialogFooter className="merge-choice-actions">
+            <Button
+              onClick={() => {
+                const held = mergeChoice;
+                setMergeChoice(null);
+                if (held) void joinGuardedFamily(held.credential, false);
+              }}
+            >
+              Merge them into my cloud log
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                const held = mergeChoice;
+                setMergeChoice(null);
+                if (held) void joinGuardedFamily(held.credential, true);
+              }}
+            >
+              Take the cloud log only — discard these
+            </Button>
+            <Button variant="ghost" onClick={() => { setMergeChoice(null); setBusy(false); }}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

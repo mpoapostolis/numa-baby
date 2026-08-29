@@ -441,6 +441,14 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     persistSnapshot(persistedStateRef.current.activities);
   }
 
+  /** Adopt-the-cloud-copy: drop every local entry and the profile claim in
+      one stroke, for a device joining a family it wants to mirror, not
+      pollute. Never called without the person choosing it in a dialog. */
+  function dropLocalForAdoption() {
+    persistedStateRef.current.profileUpdatedAt = undefined;
+    persistSnapshot([]);
+  }
+
   function stampProfileForSync() {
     const current = persistedStateRef.current;
     const isEmptyDefault = current.profile.name === "" && current.profile.birthDate === "";
@@ -867,6 +875,7 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     completeJoin,
     stampProfileForSync,
     demoteProfileForJoin,
+    dropLocalForAdoption,
     changeFeedReminders,
     changeFeedReminderInterval,
     changeDiaperReminders,

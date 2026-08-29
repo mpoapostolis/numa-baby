@@ -1,3 +1,5 @@
+// Ships with this lazy chunk, not the app shell — the budget rule.
+import "../styles/screens/onboarding.css";
 import {
   ArrowLeftRight,
   Check,

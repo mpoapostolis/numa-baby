@@ -1497,3 +1497,29 @@ body:has(.feedback-bubble) .content {
   font-size: 0.8125rem;
   line-height: 1.45;
 }
+
+/* Filter rows go full-bleed and scroll-snap on phones. Lives here, not in
+   timeline.css: Settings wears the same rail, and timeline.css ships with
+   the Timeline chunk. */
+@media (width < 768px) {
+  /* Full-bleed scroll-snap rail: the row scrolls, the page never does. */
+  .filter-row {
+    width: auto;
+    flex-wrap: nowrap;
+    margin: 0 calc(-1 * clamp(16px, 4vw, 32px));
+    padding: 0 clamp(16px, 4vw, 32px);
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: clamp(16px, 4vw, 32px);
+    scrollbar-width: none;
+  }
+
+  .filter-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filter-row [data-slot="toggle-group-item"] {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+  }
+}

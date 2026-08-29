@@ -47,6 +47,8 @@ type FamilySyncOptions = {
   backfillVersion: number;
   /** Strip the local profile claim before a join — the family's name wins. */
   demoteProfileForJoin: () => void;
+  /** Drop local entries AND the profile claim — chosen adoption of the cloud copy. */
+  dropLocalForAdoption: () => void;
   /** Oldest updatedAt among the last merge's incoming entries ("" = none). */
   backfillOldestAt: string;
   readPersisted: () => { activities: Activity[]; profile: Profile; profileUpdatedAt?: string };
@@ -97,7 +99,7 @@ type LiveSync = {
   backfilled: boolean;
 };
 
-export function useFamilySync({ debugMode, bootState, persistVersion, backfillVersion, backfillOldestAt, readPersisted, stampProfileForSync, demoteProfileForJoin, mergeRemote, showToast }: FamilySyncOptions) {
+export function useFamilySync({ debugMode, bootState, persistVersion, backfillVersion, backfillOldestAt, readPersisted, stampProfileForSync, demoteProfileForJoin, dropLocalForAdoption, mergeRemote, showToast }: FamilySyncOptions) {
   const [pairing, setPairing] = useState<FamilyPairing | null>(() => (debugMode ? null : loadPairing()));
   const [status, setStatus] = useState<SyncStatus>(() => ({
     phase: "idle",
@@ -432,22 +434,23 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
    * exists anywhere does protecting mean creating something new. The 404 is
    * an answer here, never an error to toast.
    */
-  async function googleContinue(credential: string, label: string): Promise<"joined" | "none" | "failed"> {
+  /** How many live entries this device holds — the UI asks before a join. */
+  function localEntryCount(): number {
+    return readPersisted().activities.filter((a) => !a.deleted).length;
+  }
+
+  async function googleContinue(
+    credential: string,
+    label: string,
+    options: { discardLocal?: boolean } = {},
+  ): Promise<"joined" | "none" | "failed"> {
     if (debugMode) return "failed";
-    // Joining an existing log with local entries is a decision, not a side
-    // effect: a phone full of test taps must not quietly pollute months of
-    // a real record. Cancel means stop — erase first if a clean adoption of
-    // the cloud copy is what's wanted.
-    const localEntries = readPersisted().activities.filter((a) => !a.deleted).length;
-    if (localEntries > 0 && !window.confirm(
-      `This phone has ${localEntries} ${localEntries === 1 ? "entry" : "entries"} of its own. ` +
-      "Continue will MERGE them into your cloud log on every device. " +
-      "If you'd rather take the cloud log as-is, cancel, use \u201CErase everything\u201D first, then continue.",
-    )) {
-      return "failed";
-    }
     try {
-      demoteProfileForJoin();
+      // The merge-or-adopt decision was made in a real dialog upstream —
+      // this hook only executes it. Discard drops entries AND the profile
+      // claim; merge keeps entries and drops only the claim.
+      if (options.discardLocal) dropLocalForAdoption();
+      else demoteProfileForJoin();
       beginPairing(await transport.googleRecover(credential, label), label);
       saveAuthHint({ method: "google" });
       showToast("Welcome back — your log is on its way.");
@@ -550,6 +553,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     googleUnprotect,
     googleRecover,
     googleContinue,
+    localEntryCount,
     emailProtect,
     emailRedeem,
     recoveryEmail,

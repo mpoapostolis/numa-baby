@@ -207,3 +207,16 @@
 .welcome-back-body .google-host {
   margin-inline: auto;
 }
+
+/* The merge-or-adopt decision: three honest buttons, stacked, no alert. */
+.merge-choice-actions {
+  display: grid;
+  gap: 8px;
+  justify-items: stretch;
+}
+
+.merge-choice-actions button {
+  height: auto;
+  min-height: 44px;
+  white-space: normal;
+}

@@ -16,7 +16,9 @@ import { ConsentBanner } from "./components/ConsentBanner";
 import { InAppEscape } from "./components/InAppEscape";
 import { milestoneFor, milestoneSeen } from "./domain/milestones";
 import { FeedbackBubble } from "./components/FeedbackBubble";
-import OnboardingScreen from "./screens/OnboardingScreen";
+// Lazy: a returning family boots straight to Today and never downloads the
+// welcome pitch; only a genuinely fresh (or recovering) visit pays for it.
+const OnboardingScreen = lazy(() => import("./screens/OnboardingScreen"));
 import TodayScreen from "./screens/TodayScreen";
 import { Activity, ActivityType, Sheet, Tab } from "./domain/types";
 import { JOIN_CODE_PATTERN } from "./domain/familyPairing";
@@ -224,6 +226,7 @@ export default function HomePage() {
     readPersisted,
     stampProfileForSync,
     demoteProfileForJoin,
+    dropLocalForAdoption,
     exportData,
     exportPayload,
     sharePartner,
@@ -244,6 +247,7 @@ export default function HomePage() {
     readPersisted,
     stampProfileForSync,
     demoteProfileForJoin,
+    dropLocalForAdoption,
     mergeRemote,
     showToast,
   });
@@ -545,6 +549,7 @@ export default function HomePage() {
   if (bootState === "onboarding" || bootState === "recovery") {
     return (
       <>
+      <Suspense fallback={screenFallback}>
       <OnboardingScreen
         mode={bootState}
         profile={profile}
@@ -562,6 +567,7 @@ export default function HomePage() {
         onDownloadRecovery={downloadRecovery}
         onResetRecovery={resetUnreadableData}
       />
+      </Suspense>
       {/* No consent question on this screen, deliberately.
           This is the first ten seconds for everyone who arrives from a link,
           and it is a good ten seconds — an illustration, a headline, three
