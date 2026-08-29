@@ -1115,7 +1115,10 @@
    underneath it. */
 .consent-banner {
   position: fixed;
-  z-index: 60;
+  /* Below the dialog layer (50), not above it. At 60 this painted on top of
+     every open log sheet — the sheet had the screen, and a cookie question was
+     drawn across it. */
+  z-index: 45;
   left: 0;
   right: 0;
   bottom: calc(72px + env(safe-area-inset-bottom));
@@ -1128,9 +1131,38 @@
   animation: consent-rise 260ms ease-out;
 }
 
-/* Room for it, so the last card on any screen stays reachable while it is up. */
-body:has(.consent-banner) .content {
-  padding-bottom: 180px;
+/* Room for the floating things in the bottom corner, so the last card on any
+   screen stays reachable while one is up.
+   One rule, not one per overlay: they share a corner and the same property, so
+   separate rules would let source order decide instead of height whenever two
+   are on screen at once — and the banner and the update toast can be.
+   The number is generous on purpose. The banner is 147px at 411px wide and
+   167px at 360px where the copy takes a fourth line, and it floats 72px off
+   the bottom; 180px was 39px short, so the last line of Settings, Guide,
+   Timeline and Insights could not be scrolled clear of it — including the
+   build stamp and Timeline's own "Show more logs" button. */
+body:has(.consent-banner) .content,
+body:has(.pwa-toast) .content {
+  padding-bottom: 264px;
+}
+
+/* One question at a time. Both of these dock to the bottom corner, and the
+   toast is mounted in main.tsx as a sibling of the app, so it knew nothing
+   about the banner and painted straight over its Accept/No thanks buttons — a
+   first-time visitor with an update pending could not answer the question at
+   all. Consent is one tap and then gone for good; the update can wait for it.
+   Done in CSS because the toast lives outside the tree that holds the consent
+   state, and :has is reactive on its own: the moment the banner unmounts the
+   toast is back, with no event to wire or re-render to trigger. */
+body:has(.consent-banner) .pwa-toast {
+  display: none;
+}
+
+/* The bubble is smaller: 48px tall at 84px off the bottom. It still had a
+   48x36 patch of the last line under it at full scroll on every screen that
+   shows it. */
+body:has(.feedback-bubble) .content {
+  padding-bottom: calc(152px + env(safe-area-inset-bottom));
 }
 
 @media (width >= 720px) {

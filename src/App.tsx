@@ -551,7 +551,11 @@ export default function HomePage() {
 
         {recoveredNotice && (
           <div className="banner-stack">
-            <div className="debug-banner" role="alert">
+            {/* Its own class: the debug banner clips its small text to one
+                line with an ellipsis, which is fine for "Fake data only" and
+                wrong for a sentence explaining that entries could not be read.
+                A message about lost data must not itself be cut off. */}
+            <div className="debug-banner recovered-banner" role="alert">
               <span><ShieldCheck /><span><strong>Some entries were skipped</strong><small>{recoveredNotice}</small></span></span>
               <Button variant="outline" size="sm" onClick={dismissRecoveredNotice}>OK</Button>
             </div>
@@ -704,7 +708,7 @@ export default function HomePage() {
           hidden={consent === null || sheet !== null || activeTab === "today" || activeTab === "more"}
         />
 
-        {consent === null && (
+        {consent === null && sheet === null && (
           <ConsentBanner
             onChoose={(choice) => {
               setConsent(choice);

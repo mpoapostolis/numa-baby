@@ -53,5 +53,16 @@ test("keeps the initial production UI bundle lightweight", async () => {
   // +7KB allowance over the old 165_000 pin: safety fixes (fever advice on the
   // edit path, single-timer guards, recovery banners) plus the W3 accessibility
   // work (visible focus indicators, reduced-motion, accessible names).
-  assert.ok(totalGzip < 172_000, `Initial JS + CSS is ${totalGzip} gzip bytes`);
+  //
+  // +500B on top of that for the overlay-clearance rules: the consent banner,
+  // the update toast and the feedback bubble each float over the bottom corner
+  // and were covering the last line of real screens.
+  //
+  // Worth knowing before this is raised again: 31KB gzip of the 172KB is CSS,
+  // and insights/settings/growth-guide/timeline stylesheets are all eager even
+  // though their screens are lazy. Splitting them is worth ~6KB, far more than
+  // any shaving here — but they share classes with eager components
+  // (insights.css with TodayScreen, timeline.css with ActivityRow), so it is a
+  // real refactor and not a line move. Do that before granting more headroom.
+  assert.ok(totalGzip < 172_500, `Initial JS + CSS is ${totalGzip} gzip bytes`);
 });

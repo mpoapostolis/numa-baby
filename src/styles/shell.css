@@ -582,3 +582,10 @@
     width: auto;
   }
 }
+
+/* A notice about entries that could not be read must not itself be truncated. */
+.recovered-banner small {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+}

@@ -97,7 +97,10 @@
 
 .range-scale {
   position: relative;
-  height: 34px;
+  /* Its labels are absolutely positioned, so this height is the only thing
+     holding the row open — and two stacked lines need 36px, not 34. The
+     overflow was landing on whatever card followed. */
+  height: 38px;
   color: var(--ink-3);
   font-size: 0.75rem;
   font-feature-settings: "tnum" 1;

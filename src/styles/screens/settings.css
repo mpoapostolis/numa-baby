@@ -183,6 +183,14 @@
   white-space: nowrap;
 }
 
+/* Except the one that erases everything. At 360px — the default width of most
+   Galaxy phones — this truncated to "Erase everything and start ov…", which is
+   a different and unfinished sentence on the row that deletes a year of
+   entries. It wraps instead. */
+.settings-action-danger .settings-action-copy strong {
+  white-space: normal;
+}
+
 /* Descriptions carry safety copy ("download a backup first") — clamp to two
    lines instead of mid-sentence ellipsis on narrow phones. */
 .settings-action-copy small {

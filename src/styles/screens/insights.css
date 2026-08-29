@@ -324,12 +324,19 @@
   width: 100%;
   min-width: 0;
   overflow-x: auto;
+  /* Opens at the newest end. The chart is 560px wide inside a ~344px window on
+     a phone and the latest point is pinned to the right, so the one
+     measurement anybody opens this card to see was the one off the edge. An
+     RTL scroll container starts at its right edge, which costs nothing at
+     runtime; the svg is set back to ltr so its labels read normally. */
+  direction: rtl;
 }
 
 .growth-line-chart svg {
   width: 100%;
   min-width: 560px;
   height: auto;
+  direction: ltr;
 }
 
 .growth-gridline {
