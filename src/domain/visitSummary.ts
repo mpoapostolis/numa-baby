@@ -9,7 +9,7 @@
 // NO entries and reports them, because "3 wet nappies a day" means something
 // completely different if four of the fourteen days were never logged.
 
-import { DaySummary, summarizeDays } from "./daySummary";
+import { DaySummary, summarizeDays, hasRoutineCare } from "./daySummary";
 import { median } from "./time";
 import { Activity } from "./types";
 
@@ -40,9 +40,10 @@ export type VisitSummary = {
   gramsPerWeek: number | null;
 };
 
-/** Median over the days that were actually logged — blanks would drag it to zero. */
+/** Median over the days that carry routine care — blanks would drag it to
+    zero, and so would a day holding only a growth check or a solids entry. */
 function perLoggedDay(days: DaySummary[], pick: (day: DaySummary) => number): number | null {
-  const values = days.filter((day) => !day.isEmpty).map(pick);
+  const values = days.filter(hasRoutineCare).map(pick);
   return values.length ? median(values) : null;
 }
 
@@ -52,7 +53,10 @@ export function buildVisitSummary(
   windowDays = 14,
 ): VisitSummary {
   const days = summarizeDays(activities, new Date(now), windowDays, now);
-  const logged = days.filter((day) => !day.isEmpty);
+  // Routine care, not any entry at all: a day holding only a growth check or
+  // a solids entry has no feed/nappy story to tell, and printing its zeros
+  // would read as "logged, and nothing happened".
+  const logged = days.filter(hasRoutineCare);
 
   const weights = activities
     .filter((activity) => activity.type === "growth" && activity.weightGrams)

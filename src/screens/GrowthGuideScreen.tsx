@@ -245,7 +245,7 @@ export default function GrowthGuideScreen({
           {latestGrowth && latestKg !== undefined && (
             <p className="guide-latest">
               <span className="guide-latest-dot" aria-hidden="true" />
-              {name}’s latest: <span className="guide-latest-value">{latestKg.toFixed(2)} kg</span> ({latestDateFormat.format(new Date(latestGrowth.startedAt))})
+              {name}’s latest: <span className="guide-latest-value">{kg(latestKg)} {unitWord}</span> ({latestDateFormat.format(new Date(latestGrowth.startedAt))})
             </p>
           )}
           {!profile.sex && <p className="t-meta">Range shown covers girls and boys.</p>}

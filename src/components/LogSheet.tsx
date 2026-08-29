@@ -181,6 +181,10 @@ export function LogSheet({
   const editing = sheet === "edit" ? editingActivity : null;
   const units = useUnits();
   const stepper = bottleStepper(units);
+  // 4.1 + 0.5 is 4.6000000000000005 in floating point, and String() would put
+  // that on the Save button. One decimal is the resolution of the whole scale.
+  const stepDraft = (value: number) =>
+    String(Math.round(Math.min(stepper.max, Math.max(stepper.min, value)) * 10) / 10);
   const presets = presetsFor(units);
   // Growth fields: metric props straight from the schema, or the same bounds
   // through the same conversion the values take.
@@ -189,12 +193,35 @@ export function LogSheet({
   // The crossing for measurements, plus the error text in the units the
   // person is actually typing — a US-mode refusal that talks about grams
   // would read as nonsense.
+  // The crossing back to metric — with the untouched-field guard that keeps
+  // "storage is metric, forever" true in the only place it could quietly
+  // break. In US mode the edit draft is seeded through a LOSSY display
+  // conversion (one-decimal ounces, two-decimal pounds); converting that
+  // seed straight back would rewrite values the person never touched
+  // (120 ml became 121 on a note-only edit), and at the schema's weight
+  // bounds it made a valid record unsaveable. So a field whose draft string
+  // still IS its own seed keeps the original stored value, exactly.
+  function metricMeasurement(name: MeasurementName) {
+    const original = editing?.[name];
+    if (original !== undefined && draft[name] === metricToMeasurementDraft(name, original, units)) {
+      return String(original);
+    }
+    return measurementToMetric(name, draft[name], units);
+  }
   function metricGrowthDraft() {
     return {
-      weightGrams: measurementToMetric("weightGrams", draft.weightGrams, units),
-      lengthCm: measurementToMetric("lengthCm", draft.lengthCm, units),
-      headCm: measurementToMetric("headCm", draft.headCm, units),
+      weightGrams: metricMeasurement("weightGrams"),
+      lengthCm: metricMeasurement("lengthCm"),
+      headCm: metricMeasurement("headCm"),
     };
+  }
+  // The same guard for the bottle amount.
+  function draftAmountMl(): number {
+    if (editing?.type === "bottle" && editing.amount !== undefined
+        && draft.bottleAmount === mlToBottleDraft(editing.amount, units)) {
+      return editing.amount;
+    }
+    return bottleDraftToMl(draft.bottleAmount, units);
   }
   function localiseError(outcome: SheetError) {
     if (units === "us" && (outcome.field === "weightGrams" || outcome.field === "lengthCm" || outcome.field === "headCm")) {
@@ -441,7 +468,7 @@ export function LogSheet({
         type: editing.type,
         start: draft.logTime,
         end: timed ? draft.endTime : undefined,
-        amount: draft.bottleAmount.trim() === "" ? undefined : bottleDraftToMl(draft.bottleAmount, units),
+        amount: draft.bottleAmount.trim() === "" ? undefined : draftAmountMl(),
         ...metricGrowthDraft(),
         temperatureC: draft.temperatureC,
         note: draft.note,
@@ -505,9 +532,9 @@ export function LogSheet({
           <Field className="amount-field">
             <FieldLabel>Amount</FieldLabel>
             <ButtonGroup className="amount-control" aria-label="Bottle amount">
-              <Button type="button" variant="outline" aria-label="Decrease amount" disabled={Number(draft.bottleAmount) <= stepper.min} onClick={() => setDraft((current) => ({ ...current, bottleAmount: String(Math.max(stepper.min, (Number(current.bottleAmount) || stepper.min) - stepper.step)) }))}><Minus /></Button>
+              <Button type="button" variant="outline" aria-label="Decrease amount" disabled={Number(draft.bottleAmount) <= stepper.min} onClick={() => setDraft((current) => ({ ...current, bottleAmount: stepDraft((Number(current.bottleAmount) || stepper.min) - stepper.step) }))}><Minus /></Button>
               <ButtonGroupText role="status" aria-live="polite" aria-atomic="true"><strong>{draft.bottleAmount}</strong><span>{stepper.unit}</span></ButtonGroupText>
-              <Button type="button" variant="outline" aria-label="Increase amount" disabled={Number(draft.bottleAmount) >= stepper.max} onClick={() => setDraft((current) => ({ ...current, bottleAmount: String(Math.min(stepper.max, (Number(current.bottleAmount) || 0) + stepper.step)) }))}><Plus /></Button>
+              <Button type="button" variant="outline" aria-label="Increase amount" disabled={Number(draft.bottleAmount) >= stepper.max} onClick={() => setDraft((current) => ({ ...current, bottleAmount: stepDraft((Number(current.bottleAmount) || 0) + stepper.step) }))}><Plus /></Button>
             </ButtonGroup>
             <ToggleGroup type="single" value={draft.bottleAmount} className="preset-row" aria-label="Preset amounts" onValueChange={(value) => value && patch({ bottleAmount: value })}>
               {presets.map((amount, index) => {
@@ -797,6 +824,20 @@ export function LogSheet({
                 <ToggleGroupItem value="dirty"><span className="dot-icon" aria-hidden="true">●</span><strong>Dirty</strong><Check className="choice-check" /></ToggleGroupItem>
                 <ToggleGroupItem value="both"><span className="both-icon" aria-hidden="true"><Droplet size={18} />●</span><strong>Both</strong><Check className="choice-check" /></ToggleGroupItem>
               </ToggleGroup>
+            </Field>
+          )}
+
+          {editing.type === "solid" && (
+            <Field className="medicine-field">
+              <FieldLabel htmlFor="edit-solid-food">What did they eat?</FieldLabel>
+              <InputGroup>
+                <InputGroupInput
+                  id="edit-solid-food"
+                  value={draft.foodText}
+                  maxLength={NOTE_MAX_LENGTH}
+                  onChange={(event) => { patch({ foodText: event.target.value }); setFormError(null); }}
+                />
+              </InputGroup>
             </Field>
           )}
 

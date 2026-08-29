@@ -25,7 +25,10 @@ export const RELEASES: Release[] = [
       "Forms tell you why when they refuse something. They used to just sit there.",
       "One nursing session can be both sides. It was one or the other, which made every both-sides feed look like two.",
       "Medicine has somewhere to live, so “did you already give it” has an answer.",
-      "White noise plays on iPhone now — it was going to the channel the silent switch mutes.",
+      "Ounces, pounds and inches — pick US units in Settings and every screen speaks them. Your entries stay exactly as they are.",
+      "Solids can be logged once they start — what went in, and how it went.",
+      "A packing checklist for going out lives in the Guide, and “Install on this phone” lives in Settings.",
+      "White noise and lullabies are gone: they never played reliably on phones, and a soother that pretends is worse than none.",
     ],
   },
   {
@@ -44,15 +47,6 @@ export const RELEASES: Release[] = [
       "Sleep tracking and the next-sleep prediction are back. Burping stays, so you have both. Every sleep you logged before is still there and counts again.",
       "The Diaper tile shows how long since the last change, and there is now a nappy reminder in Settings.",
       "Sleep is back in the daily recap, the 14-day chart and the Timeline filter.",
-    ],
-  },
-  {
-    id: "2026-08-29",
-    title: "Sounds for the twenty minutes before sleep",
-    items: [
-      "White noise and lullabies, played by the app rather than downloaded — and they keep going with the screen off.",
-      "A timer so it stops on its own, because “I’ll turn it off in a minute” at 3am means it runs until morning.",
-      "The volume opens low, with the AAP’s own note about sound levels beside it.",
     ],
   },
   {

@@ -191,6 +191,7 @@ export function DayRecapLine({ summary }: { summary: DaySummary }) {
   if (summary.wet > 0) parts.push(`${summary.wet} wet`);
   if (summary.dirty > 0) parts.push(`${summary.dirty} dirty`);
   if (summary.sleepMinutes > 0) parts.push(`${humanDuration(summary.sleepMinutes)} sleep`);
+  if (summary.solids > 0) parts.push(`${summary.solids} ${summary.solids === 1 ? "solid" : "solids"}`);
   if (parts.length === 0) return null;
   return <p className="recap-line">{parts.join(" · ")}</p>;
 }

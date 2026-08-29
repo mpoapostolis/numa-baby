@@ -51,10 +51,11 @@ export function HandoffScreen({
             the app losing everything, so the empty case explains instead. */}
         {entryCount === 0 && (
           <p className="handoff-problem" role="alert">
-            This browser’s copy is empty. If you have been using the installed
-            app from your home screen, your log lives inside it — open the
-            installed app, tap “Move my log” there, and it will hand you a
-            backup file that carries everything.
+            This browser’s copy is empty, so there is nothing to send from
+            here. If you have been using the installed app from your home
+            screen, your log lives inside it — open the installed app, go to
+            Settings → <strong>Download backup</strong>, then choose
+            “Restore a backup” at the new address. Everything comes across.
           </p>
         )}
 
@@ -83,7 +84,9 @@ export function HandoffScreen({
             </Button>
           ) : (
             <Button
-              disabled={state === "sending"}
+              // Sending zero entries would "succeed", and success would read
+              // as the app losing everything. The empty case explains instead.
+              disabled={state === "sending" || entryCount === 0}
               onClick={() => {
                 setState("sending");
                 void onSend().then((outcome) => {

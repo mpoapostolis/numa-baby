@@ -291,3 +291,20 @@ describe("solid food entries", () => {
     expect(isValidActivity({ ...base, food: "x".repeat(241) })).toBe(false);
   });
 });
+
+describe("activity types from newer builds", () => {
+  // The version-skew rule: a partner phone one build behind must KEEP rows of
+  // a type it does not know yet, or a family's shared history grows silent
+  // holes. Solids proved this the night they shipped.
+  it("keeps a bounded unknown type instead of dropping the row", () => {
+    const fromTheFuture = { id: "f1", type: "teething", startedAt: "2026-08-29T10:00:00.000Z", note: "first tooth!" };
+    expect(isValidActivity(fromTheFuture)).toBe(true);
+  });
+
+  it("still rejects unbounded or non-string types", () => {
+    const base = { id: "f2", startedAt: "2026-08-29T10:00:00.000Z" };
+    expect(isValidActivity({ ...base, type: "" })).toBe(false);
+    expect(isValidActivity({ ...base, type: "x".repeat(33) })).toBe(false);
+    expect(isValidActivity({ ...base, type: 7 })).toBe(false);
+  });
+});

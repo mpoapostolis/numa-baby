@@ -292,7 +292,7 @@ test("sharePartner shares the full list, tombstones included, and toasts", async
   });
   restore();
 
-  expect(sharedFile?.name).toMatch(/^baby-tracker-backup-\d{4}-\d{2}-\d{2}\.json$/);
+  expect(sharedFile?.name).toMatch(/^numalog-backup-\d{4}-\d{2}-\d{2}\.json$/);
   expect(sharedFile?.type).toBe("application/json");
   const payload = JSON.parse(await sharedFile!.text()) as { activities: Activity[]; profile: { name: string } };
   // The share is a sync artifact: the tombstone must travel so the partner's

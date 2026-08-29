@@ -243,11 +243,6 @@ export default function TodayScreen({
   // today, 1 is yesterday. Bounded by the first thing ever logged so the
   // arrows never step into blank prehistory — or into tomorrow.
   const [dayOffset, setDayOffset] = useState(0);
-  // White noise has to survive its own sheet being closed. Rendering the
-  // player only while the sheet is open unmounted the <audio> element the
-  // moment a parent tapped away — so the one thing they opened it for stopped,
-  // in the dark, with a baby half asleep. Once opened it stays mounted for the
-
   const forecastFeedSheet: "bottle" | "nursing" = profile.feedingMode === "breast"
     ? "nursing"
     : profile.feedingMode === "bottle"

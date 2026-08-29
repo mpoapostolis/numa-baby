@@ -11,8 +11,13 @@ export function activityTitle(activity: Activity) {
   if (activity.type === "health") return activity.temperatureC ? "Temperature" : "Health note";
   if (activity.type === "medicine") return activity.medicine?.trim() || "Medicine";
   if (activity.type === "solid") return activity.food?.trim() || "Solid food";
-  if (activity.diaperKind === "both") return "Wet + dirty diaper";
-  return activity.diaperKind === "dirty" ? "Dirty diaper" : "Wet diaper";
+  if (activity.type === "diaper") {
+    if (activity.diaperKind === "both") return "Wet + dirty diaper";
+    return activity.diaperKind === "dirty" ? "Dirty diaper" : "Wet diaper";
+  }
+  // An activity type from a build newer than this one. Naming it honestly
+  // beats mislabelling it as a nappy, which is what falling through did.
+  return "Entry";
 }
 
 function includeNote(detail: string, note?: string) {

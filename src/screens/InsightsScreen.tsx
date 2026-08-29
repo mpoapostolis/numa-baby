@@ -106,8 +106,9 @@ export default function InsightsScreen({
       ageMonths: stats.babyAgeMonths,
       feedingMode,
       now: minuteClock,
+      units,
     })),
-    [activities, stats.recentDays, stats.babyAgeMonths, ageDays, feedingMode, minuteClock],
+    [activities, stats.recentDays, stats.babyAgeMonths, ageDays, feedingMode, minuteClock, units],
   );
   const {
     typicalGap,

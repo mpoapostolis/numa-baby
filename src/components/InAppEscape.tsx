@@ -11,7 +11,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { SquareArrowOutUpRight } from "lucide-react";
 import { Button } from "./ui/button";
-import { inAppBrowser } from "../domain/install";
+import { inAppBrowser, inAppBrowserName } from "../domain/install";
 import { track } from "../domain/analytics";
 
 const DISMISSED_KEY = "numalog-inapp-dismissed-v1";
@@ -30,22 +30,27 @@ export function InAppEscape() {
   if (!trapped || hidden) return null;
 
   return (
-    <div className="inapp-escape" role="status">
+    <div className="banner-stack">
+      <div className="inapp-escape" role="status">
       <p>
-        <strong>You’re in Facebook’s built-in browser.</strong> It can’t install
-        the app, and it keeps your entries inside Facebook — open this in Safari
-        or Chrome so your baby’s log is safe. Tap <strong>⋯</strong> →{" "}
-        <strong>Open in browser</strong>, or copy the link:
+        <strong>You’re in {inAppBrowserName()}’s built-in browser.</strong> It
+        can’t install the app, and it keeps your entries inside {inAppBrowserName()} —
+        open this in Safari or Chrome so your baby’s log is safe. Tap{" "}
+        <strong>⋯</strong> → <strong>Open in browser</strong>, or copy the link:
       </p>
       <div className="inapp-escape-actions">
         <Button
           size="sm"
           onClick={() => {
             track("inapp_copy_link");
-            void navigator.clipboard?.writeText(window.location.origin).then(
-              () => toast("Link copied — paste it in Safari or Chrome"),
-              () => toast(window.location.origin),
-            );
+            if (navigator.clipboard) {
+              void navigator.clipboard.writeText(window.location.origin).then(
+                () => toast("Link copied — paste it in Safari or Chrome"),
+                () => toast(window.location.origin),
+              );
+            } else {
+              toast(window.location.origin);
+            }
           }}
         >
           <SquareArrowOutUpRight /> Copy link
@@ -64,6 +69,7 @@ export function InAppEscape() {
         >
           Continue here anyway
         </Button>
+      </div>
       </div>
     </div>
   );

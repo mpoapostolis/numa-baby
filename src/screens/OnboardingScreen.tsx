@@ -40,7 +40,8 @@ import { Toaster } from "../components/ui/sonner";
 import { Switch } from "../components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "../components/ui/toggle-group";
 import { localDateInput } from "../domain/time";
-import { handoffPeers, handoffSendUrl, originLabel } from "../domain/handoff";
+import { handoffPeers, handoffSendUrl, moveTarget, originLabel } from "../domain/handoff";
+import { inAppBrowser } from "../domain/install";
 import { FeedingMode, Profile } from "../domain/types";
 
 const HANDOFF_OFFER_SEEN = "numalog-handoff-offer-v1";
@@ -85,6 +86,12 @@ export default function OnboardingScreen({
   // never nags someone who really is new.
   const [handoffOffer, setHandoffOffer] = useState(() => {
     if (!handoffPeers(window.location.origin).length) return false;
+    // Only at the app's home address: on the OLD origin the same dialog read
+    // backwards — "already using numalog.app?" — and offered to pull a log in
+    // the wrong direction. And never inside a social-app webview: the escape
+    // notice owns that moment, and a handoff steered INTO the webview would
+    // land the entries in its walled-off storage.
+    if (moveTarget(window.location.origin) !== null || inAppBrowser()) return false;
     try {
       return window.localStorage.getItem(HANDOFF_OFFER_SEEN) === null;
     } catch {

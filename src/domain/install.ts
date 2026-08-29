@@ -31,11 +31,18 @@ export function canPromptInstall(): boolean {
 export async function promptInstall(): Promise<"accepted" | "dismissed" | "unavailable"> {
   const prompt = deferredPrompt;
   if (!prompt) return "unavailable";
-  await prompt.prompt();
-  const choice = await prompt.userChoice;
-  // One shot per capture: Chrome will fire the event again later if declined.
-  deferredPrompt = null;
-  return choice.outcome;
+  try {
+    await prompt.prompt();
+    const choice = await prompt.userChoice;
+    return choice.outcome;
+  } catch {
+    // A prompt the browser refuses to show again is a dead tap unless the
+    // caller falls back to instructions — "unavailable" tells it to.
+    return "unavailable";
+  } finally {
+    // One shot per capture: Chrome will fire the event again later if declined.
+    deferredPrompt = null;
+  }
 }
 
 /**
@@ -51,8 +58,26 @@ export function inAppBrowser(): boolean {
   return /FBAN|FBAV|FB_IAB|Instagram|Messenger/i.test(ua);
 }
 
-/** iOS Safari has no install prompt: the path is Share -> Add to Home Screen. */
-export function isIosSafari(): boolean {
+/** Which app's webview, for copy that doesn't call Instagram "Facebook". */
+export function inAppBrowserName(): string {
   const ua = navigator.userAgent;
-  return /iPhone|iPad|iPod/.test(ua) && !inAppBrowser();
+  if (/Instagram/i.test(ua)) return "Instagram";
+  if (/Messenger/i.test(ua)) return "Messenger";
+  return "Facebook";
+}
+
+/**
+ * An iOS/iPadOS device — where installing means Safari's Share sheet.
+ * iPadOS lies: it sends a Macintosh user agent, and the tell is a Mac that
+ * claims more than one touch point.
+ */
+export function isIosDevice(): boolean {
+  const ua = navigator.userAgent;
+  if (/iPhone|iPad|iPod/.test(ua)) return true;
+  return /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+}
+
+/** Actually Safari, not Chrome-or-Firefox-wearing-WebKit. */
+export function isIosSafariItself(): boolean {
+  return isIosDevice() && !/CriOS|FxiOS|EdgiOS|OPT\//.test(navigator.userAgent) && !inAppBrowser();
 }

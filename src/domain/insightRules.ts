@@ -15,7 +15,7 @@
 //
 // Pure: no React, no clock of its own — `now` is always passed in.
 
-import { DaySummary } from "./daySummary";
+import { DaySummary, hasRoutineCare } from "./daySummary";
 import { humanDuration, median } from "./time";
 import { typicalWeeklyGain } from "./growthReference";
 import {
@@ -35,6 +35,7 @@ import {
   NHS_WEIGHT,
 } from "./sources";
 import { Activity, FeedingMode } from "./types";
+import { UnitSystem, formatVolume } from "./units";
 
 export type InsightTone = "seek-care" | "suggest" | "reassure";
 
@@ -62,6 +63,8 @@ export type InsightInput = {
   weights: Activity[];
   latestTemperatureC?: number;
   latestTemperatureAt?: string;
+  /** Display units for the card bodies; the arithmetic stays metric. */
+  units: UnitSystem;
   lastFeedAt?: string;
   lastDirtyAt?: string;
   /** Millilitres of every bottle logged with an amount in the window. */
@@ -132,9 +135,11 @@ type Rule = {
 // arithmetic: a day nobody logged is not a day with no feeds, and a change
 // measured against two days of data is a coincidence with a percentage sign.
 
-/** Complete days that actually carry a log. An untracked day says nothing. */
+/** Days that carry ROUTINE care — feeds, nappies, sleep. A day holding only
+    a growth check or a solids entry is not evidence about feeding rhythm,
+    and counting its zeros manufactured "feeds have eased off" advisories. */
 function daysWithAnything(days: DaySummary[]): DaySummary[] {
-  return days.filter((day) => !day.isEmpty);
+  return days.filter(hasRoutineCare);
 }
 
 /** Mean of a metric across days, or null when there are too few to mean it. */
@@ -346,7 +351,7 @@ const RULES: Rule[] = [
     tone: "suggest",
     priority: 76,
     sources: [AAP_FORMULA_AMOUNT],
-    evaluate: ({ feedingMode, ageDays, days }) => {
+    evaluate: ({ feedingMode, ageDays, days, units }) => {
       if (feedingMode === "breast" || ageDays === null || ageDays >= 365) return null;
       const bottleDays = days.filter((day) => day.ml > 0);
       if (bottleDays.length < 3) return null;
@@ -354,7 +359,7 @@ const RULES: Rule[] = [
       if (typical <= 960) return null;
       return {
         title: "Bottle totals are running above the usual daily guide",
-        body: `Your median bottle day is about ${typical} ml. AAP: babies generally do not need more than about 960 ml of formula in 24 hours.`,
+        body: `Your median bottle day is about ${formatVolume(typical, units)}. AAP: babies generally do not need more than about ${formatVolume(960, units)} of formula in 24 hours.`,
         advice:
           "Mention the daily total at your next appointment. Keep following fullness cues — never push the last of a bottle to hit or avoid a number.",
       };
@@ -365,14 +370,14 @@ const RULES: Rule[] = [
     tone: "suggest",
     priority: 68,
     sources: [AAP_BURPING],
-    evaluate: ({ recentBottleMl, recentBurps, days }) => {
+    evaluate: ({ recentBottleMl, recentBurps, days, units }) => {
       if (recentBottleMl.length < 6 || recentBurps > 0) return null;
       if (days.filter((day) => day.bottles > 0).length < 3) return null;
       const typical = median(recentBottleMl);
       if (typical < 90) return null;
       return {
         title: "Worth a pause halfway through the bottle",
-        body: `Your typical bottle is about ${typical} ml. AAP suggests burping about every 60 to 90 ml rather than once at the end.`,
+        body: `Your typical bottle is about ${formatVolume(typical, units)}. AAP suggests burping about every ${formatVolume(60, units)} to ${formatVolume(90, units)} rather than once at the end.`,
         advice:
           "Try one pause halfway through the next bottle, and rotate the holds: on your shoulder, sitting on your lap, or face-down across your lap.",
       };
@@ -580,8 +585,9 @@ export function buildInsightInput(options: {
   ageMonths: number | null;
   feedingMode: FeedingMode;
   now: number;
+  units: UnitSystem;
 }): InsightInput {
-  const { activities, recentDays, ageDays, ageMonths, feedingMode, now } = options;
+  const { activities, recentDays, ageDays, ageMonths, feedingMode, now, units } = options;
   const weekAgo = now - 7 * DAY;
 
   let latestTemperature: Activity | undefined;
@@ -617,6 +623,7 @@ export function buildInsightInput(options: {
   weights.sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
 
   return {
+    units,
     ageDays,
     ageMonths,
     feedingMode,

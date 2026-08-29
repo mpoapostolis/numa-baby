@@ -13,7 +13,7 @@ import { Card, CardContent } from "./ui/card";
 import { ItemGroup } from "./ui/item";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 import { SettingsAction } from "./SettingsAction";
-import { canPromptInstall, inAppBrowser, isIosSafari, promptInstall } from "../domain/install";
+import { canPromptInstall, inAppBrowser, inAppBrowserName, isIosDevice, isIosSafariItself, promptInstall } from "../domain/install";
 import { isStandalone } from "../domain/platform";
 import { track } from "../domain/analytics";
 
@@ -38,7 +38,11 @@ export function InstallGuide() {
             setExplaining(true);
             return;
           }
-          void promptInstall().then((outcome) => track("install_prompt_done", { outcome }));
+          void promptInstall().then((outcome) => {
+            track("install_prompt_done", { outcome });
+            // The browser refused after all — the instructions still exist.
+            if (outcome === "unavailable") setExplaining(true);
+          });
         }}
           />
         </ItemGroup>
@@ -46,21 +50,28 @@ export function InstallGuide() {
 
       <Dialog open={explaining} onOpenChange={setExplaining}>
         <DialogContent>
-          <DialogTitle>{trapped ? "First, leave the Facebook browser" : "Two taps away"}</DialogTitle>
+          <DialogTitle>{trapped ? `First, leave the ${inAppBrowserName()} browser` : "Two taps away"}</DialogTitle>
           {trapped ? (
             <DialogDescription>
-              You’re inside Facebook’s built-in browser, which can’t install
-              apps — and worse, it keeps your entries inside Facebook’s own
+              You’re inside {inAppBrowserName()}’s built-in browser, which can’t
+              install apps — and worse, it keeps your entries inside its own
               storage. Tap the <strong>⋯</strong> menu in the corner and choose{" "}
               <strong>Open in browser</strong> (or copy the link below and paste
               it into Safari or Chrome), then install from there.
             </DialogDescription>
-          ) : isIosSafari() ? (
+          ) : isIosSafariItself() ? (
             <DialogDescription>
-              In Safari, tap the <strong>Share</strong> button{" "}
+              Tap the <strong>Share</strong> button{" "}
               <Share size={14} aria-hidden="true" /> below, then choose{" "}
               <strong>Add to Home Screen</strong>. That’s the whole install —
               full screen, offline, and your log is safest there.
+            </DialogDescription>
+          ) : isIosDevice() ? (
+            <DialogDescription>
+              On an iPhone or iPad the install lives in Safari: open{" "}
+              <strong>numalog.app</strong> there, tap the <strong>Share</strong>{" "}
+              button <Share size={14} aria-hidden="true" />, then{" "}
+              <strong>Add to Home Screen</strong>.
             </DialogDescription>
           ) : (
             <DialogDescription>
@@ -73,10 +84,15 @@ export function InstallGuide() {
           {trapped && (
             <Button
               onClick={() => {
-                void navigator.clipboard?.writeText(window.location.origin).then(
-                  () => toast("Link copied — paste it in Safari or Chrome"),
-                  () => toast(window.location.origin),
-                );
+                if (navigator.clipboard) {
+                  void navigator.clipboard.writeText(window.location.origin).then(
+                    () => toast("Link copied — paste it in Safari or Chrome"),
+                    () => toast(window.location.origin),
+                  );
+                } else {
+                  // No clipboard in this webview: showing the address IS the fallback.
+                  toast(window.location.origin);
+                }
               }}
             >
               <SquareArrowOutUpRight /> Copy the app’s link

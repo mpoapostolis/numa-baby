@@ -10,18 +10,6 @@ import {
 } from "./activitySchema";
 import { Activity, ActivityType, Profile, ReminderSettings, StoredData } from "./types";
 
-const activityTypes = new Set<ActivityType>([
-  "bottle",
-  "nursing",
-  "diaper",
-  "burp",
-  "sleep",
-  "growth",
-  "health",
-  "medicine",
-  "solid",
-]);
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -49,7 +37,16 @@ function invalidStoredNumber(name: NumericFieldName, value: unknown) {
 
 export function isValidActivity(value: unknown): value is Activity {
   if (!isRecord(value)) return false;
-  if (typeof value.id !== "string" || !value.id || !activityTypes.has(value.type as ActivityType)) {
+  // The type check is deliberately tolerant of UNKNOWN type strings. When a
+  // new activity type ships (solids did tonight), a partner phone still on
+  // the previous build pulls those rows over sync — and a strict membership
+  // test made it drop them silently while its cursor advanced past them, a
+  // hole in the family's shared history with no error anywhere. An unknown
+  // but bounded type string is far more likely to be the future than an
+  // attack; every field this build DOES know stays strictly checked, and the
+  // UI renders unknown types as a plain note-bearing entry.
+  if (typeof value.id !== "string" || !value.id) return false;
+  if (typeof value.type !== "string" || value.type.length === 0 || value.type.length > 32) {
     return false;
   }
   if (!isValidDate(value.startedAt) || (value.endedAt !== undefined && !isValidDate(value.endedAt))) {

@@ -89,6 +89,13 @@ const EMPTY = {
  * @param now the clock to clamp running timers against (the minute clock, so
  *            every figure on screen rolls over together)
  */
+/** Feeds, nappies or sleep — the rhythm data. A day holding only a growth
+    check or a solids entry is logged, but it is not evidence about feeding
+    or nappy rhythm, and its zeros must not drag those medians. */
+export function hasRoutineCare(day: DaySummary): boolean {
+  return day.feeds > 0 || day.diapers > 0 || day.naps > 0 || day.sleepMinutes > 0;
+}
+
 export function summarizeDay(activities: Activity[], day: Date, now: number): DaySummary {
   const date = new Date(day);
   date.setHours(0, 0, 0, 0);

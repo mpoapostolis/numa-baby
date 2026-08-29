@@ -13,6 +13,7 @@ import { Printer, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
 import { track } from "../domain/analytics";
+import { hasRoutineCare } from "../domain/daySummary";
 import { VisitSummary } from "../domain/visitSummary";
 import { expectedWeightRange, typicalWeeklyGain } from "../domain/growthReference";
 import { formatBabyAge } from "../domain/time";
@@ -134,9 +135,9 @@ export function VisitSummarySheet({ open, onOpenChange, summary, profile, ageMon
               </thead>
               <tbody>
                 {summary.days.map((day) => (
-                  <tr key={day.date.toISOString()} className={day.isEmpty ? "is-blank" : undefined}>
+                  <tr key={day.date.toISOString()} className={hasRoutineCare(day) ? undefined : "is-blank"}>
                     <td>{dateFormat.format(day.date)}</td>
-                    {day.isEmpty ? (
+                    {!hasRoutineCare(day) ? (
                       <td colSpan={4} className="visit-blank">not logged</td>
                     ) : (
                       <>

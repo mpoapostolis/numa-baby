@@ -563,8 +563,8 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     const exportProfile = debugMode ? { ...profile, isDemo: true } : profile;
     const payload = JSON.stringify({ profile: exportProfile, activities: persistedStateRef.current.activities, nightMode, reminders, onboardingComplete: true, exportedAt: new Date().toISOString() }, null, 2);
     const name = debugMode
-      ? `baby-tracker-DEBUG-${new Date().toISOString().slice(0, 10)}.json`
-      : `baby-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      ? `numalog-DEBUG-${new Date().toISOString().slice(0, 10)}.json`
+      : `numalog-backup-${new Date().toISOString().slice(0, 10)}.json`;
     return { payload, name };
   }
 
@@ -626,7 +626,7 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = `baby-tracker-recovery-${new Date().toISOString().slice(0, 10)}.json`;
+      anchor.download = `numalog-recovery-${new Date().toISOString().slice(0, 10)}.json`;
       anchor.click();
       URL.revokeObjectURL(url);
     } catch {

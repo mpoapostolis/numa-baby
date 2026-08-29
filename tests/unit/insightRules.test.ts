@@ -45,6 +45,7 @@ function day(offsetFromToday: number, fields: Partial<DaySummary> = {}): DaySumm
 
 function input(overrides: Partial<InsightInput> = {}): InsightInput {
   return {
+    units: "metric" as const,
     ageDays: 30,
     ageMonths: 1,
     feedingMode: "mixed",
@@ -210,6 +211,7 @@ describe("buildInsightInput", () => {
     ageMonths: 1,
     feedingMode: "mixed",
     now: NOW,
+    units: "metric",
   });
 
   it("strips today from the countable days", () => {
