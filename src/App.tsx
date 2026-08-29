@@ -223,6 +223,7 @@ export default function HomePage() {
     mergeRemote,
     readPersisted,
     stampProfileForSync,
+    demoteProfileForJoin,
     exportData,
     exportPayload,
     sharePartner,
@@ -242,6 +243,7 @@ export default function HomePage() {
     backfillOldestAt,
     readPersisted,
     stampProfileForSync,
+    demoteProfileForJoin,
     mergeRemote,
     showToast,
   });

@@ -45,6 +45,8 @@ type FamilySyncOptions = {
   // Bumped by the store on every successful persist — the push trigger.
   persistVersion: number;
   backfillVersion: number;
+  /** Strip the local profile claim before a join — the family's name wins. */
+  demoteProfileForJoin: () => void;
   /** Oldest updatedAt among the last merge's incoming entries ("" = none). */
   backfillOldestAt: string;
   readPersisted: () => { activities: Activity[]; profile: Profile; profileUpdatedAt?: string };
@@ -95,7 +97,7 @@ type LiveSync = {
   backfilled: boolean;
 };
 
-export function useFamilySync({ debugMode, bootState, persistVersion, backfillVersion, backfillOldestAt, readPersisted, stampProfileForSync, mergeRemote, showToast }: FamilySyncOptions) {
+export function useFamilySync({ debugMode, bootState, persistVersion, backfillVersion, backfillOldestAt, readPersisted, stampProfileForSync, demoteProfileForJoin, mergeRemote, showToast }: FamilySyncOptions) {
   const [pairing, setPairing] = useState<FamilyPairing | null>(() => (debugMode ? null : loadPairing()));
   const [status, setStatus] = useState<SyncStatus>(() => ({
     phase: "idle",
@@ -352,6 +354,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
   async function joinFamily(code: string, label: string): Promise<boolean> {
     if (debugMode) return false;
     try {
+      demoteProfileForJoin();
       beginPairing(await transport.joinFamily(code, label), label);
       return true;
     } catch (error) {
@@ -408,6 +411,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
   async function googleRecover(credential: string, label: string): Promise<boolean> {
     if (debugMode) return false;
     try {
+      demoteProfileForJoin();
       beginPairing(await transport.googleRecover(credential, label), label);
       saveAuthHint({ method: "google" });
       // The parent must SEE the rescue working, not deduce it from entries
@@ -430,7 +434,20 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
    */
   async function googleContinue(credential: string, label: string): Promise<"joined" | "none" | "failed"> {
     if (debugMode) return "failed";
+    // Joining an existing log with local entries is a decision, not a side
+    // effect: a phone full of test taps must not quietly pollute months of
+    // a real record. Cancel means stop — erase first if a clean adoption of
+    // the cloud copy is what's wanted.
+    const localEntries = readPersisted().activities.filter((a) => !a.deleted).length;
+    if (localEntries > 0 && !window.confirm(
+      `This phone has ${localEntries} ${localEntries === 1 ? "entry" : "entries"} of its own. ` +
+      "Continue will MERGE them into your cloud log on every device. " +
+      "If you'd rather take the cloud log as-is, cancel, use \u201CErase everything\u201D first, then continue.",
+    )) {
+      return "failed";
+    }
     try {
+      demoteProfileForJoin();
       beginPairing(await transport.googleRecover(credential, label), label);
       saveAuthHint({ method: "google" });
       showToast("Welcome back — your log is on its way.");
@@ -463,6 +480,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
       const outcome = await transport.emailRedeem(token, label);
       saveAuthHint({ method: "email", email: outcome.email });
       if ("confirmed" in outcome) return "confirmed";
+      demoteProfileForJoin();
       beginPairing(outcome, label);
       showToast("Welcome back — your log is on its way.");
       return "recovered";

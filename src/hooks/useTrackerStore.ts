@@ -431,6 +431,16 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
   // Stamping once, at pairing, makes the existing profile syncable without
   // touching a single entry. A phone that JOINS must never call this: its
   // profile has to lose to the family's.
+  /** The counterpart of stampProfileForSync, for JOINS: strip this device's
+      profile claim entirely, so the family's own identity wins the merge and
+      nothing local ever pushes over it. persistSnapshot cannot express
+      "explicitly undefined" through its default parameter, so the ref is
+      adjusted first and persisted as-is. */
+  function demoteProfileForJoin() {
+    persistedStateRef.current.profileUpdatedAt = undefined;
+    persistSnapshot(persistedStateRef.current.activities);
+  }
+
   function stampProfileForSync() {
     const current = persistedStateRef.current;
     const isEmptyDefault = current.profile.name === "" && current.profile.birthDate === "";
@@ -856,6 +866,7 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     completeOnboarding,
     completeJoin,
     stampProfileForSync,
+    demoteProfileForJoin,
     changeFeedReminders,
     changeFeedReminderInterval,
     changeDiaperReminders,
