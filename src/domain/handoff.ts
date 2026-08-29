@@ -36,6 +36,7 @@
  * then there is nowhere to move a log TO, and the offer never appears.
  */
 export const PRODUCTION_ORIGINS: readonly string[] = [
+  "https://numalog.app",
   "https://numa-baby.mpoapostolis.workers.dev",
 ];
 

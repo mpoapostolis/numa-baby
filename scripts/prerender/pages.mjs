@@ -11,7 +11,7 @@
 // it is the same one the app shows.
 
 export const SITE = {
-  origin: "https://numa-baby.mpoapostolis.workers.dev",
+  origin: "https://numalog.app",
   name: "Baby Tracker",
   tagline: "Calm, private baby logging",
 };

@@ -260,6 +260,13 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
+    // One address in the address bar. www is registered only to catch typing;
+    // everything it might serve lives at the apex.
+    if (url.hostname === "www.numalog.app") {
+      url.hostname = "numalog.app";
+      return Response.redirect(url.toString(), 301);
+    }
+
     // The operator page and its endpoints, gated in one place: allowlist,
     // then lockout, then password, then one-time code. With no ADMIN_PASSWORD
     // set the whole thing answers 404 — a secret that was never configured

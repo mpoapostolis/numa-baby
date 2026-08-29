@@ -12,4 +12,4 @@ Allow: /
 Disallow: /admin
 Disallow: /api/
 
-Sitemap: https://numa-baby.mpoapostolis.workers.dev/sitemap.xml
+Sitemap: https://numalog.app/sitemap.xml

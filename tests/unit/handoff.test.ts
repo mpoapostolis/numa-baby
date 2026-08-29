@@ -66,11 +66,13 @@ describe("handoffPeers", () => {
     expect(handoffPeers(DEV)).toEqual([DEV_OTHER]);
   });
 
-  it("offers nothing while there is only one real address", () => {
-    // Until a domain is bought there is nowhere to move a log to, so the app
-    // must not offer. A production build listing "localhost:3000" would be
-    // nonsense on a stranger's phone.
-    expect(handoffPeers(PROD)).toEqual([]);
+  it("offers the app's other real address, and never a dev one", () => {
+    // numalog.app was bought on 2026-08-29 and joined the production band, so
+    // each production address offers exactly the other. What must still never
+    // happen is a production build offering "localhost:3000" — that would be
+    // nonsense on a stranger's phone, or worse, whatever is listening there.
+    expect(handoffPeers(PROD)).toEqual(["https://numa-baby.mpoapostolis.workers.dev"]);
+    expect(handoffPeers("https://numa-baby.mpoapostolis.workers.dev")).toEqual([PROD]);
   });
 });
 

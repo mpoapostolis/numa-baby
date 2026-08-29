@@ -2,6 +2,16 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "numa-baby",
   "compatibility_date": "2026-08-06",
+  // The apex is the address; www exists only so a typed "www." still lands
+  // (the worker 301s it to the apex before anything else runs). The old
+  // workers.dev address keeps serving on purpose — every installed PWA out
+  // there has its data under that origin, and the handoff flow is how a
+  // family moves, one tap, when THEY choose. No blind redirect: a redirect
+  // moves the page but not localStorage, which reads as losing everything.
+  "routes": [
+    { "pattern": "numalog.app", "custom_domain": true },
+    { "pattern": "www.numalog.app", "custom_domain": true }
+  ],
   "main": "worker/index.ts",
   "assets": {
     "directory": "./dist",
