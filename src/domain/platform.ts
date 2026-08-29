@@ -13,3 +13,14 @@
 export function isIosStandalone(): boolean {
   return (navigator as Navigator & { standalone?: boolean }).standalone === true;
 }
+
+/**
+ * Installed anywhere. The move banner hides here entirely — the owner's call,
+ * and the right one: inside an installed app there is no one-tap move (on iOS
+ * the storage partition makes the link a trap, and on Android the "moved"
+ * person still opens the old app from their home screen every day). The
+ * browser-tab visitors, whose tap genuinely works, keep the banner.
+ */
+export function isStandalone(): boolean {
+  return isIosStandalone() || window.matchMedia("(display-mode: standalone)").matches;
+}

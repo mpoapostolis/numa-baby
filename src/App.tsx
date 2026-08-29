@@ -561,7 +561,7 @@ export default function HomePage() {
 
         {moveTarget(window.location.origin) !== null && (
           <Suspense fallback={null}>
-            <MoveBanner paired={Boolean(familySync.pairing)} onDownloadBackup={exportData} />
+            <MoveBanner />
           </Suspense>
         )}
 
