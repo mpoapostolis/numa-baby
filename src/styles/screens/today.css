@@ -209,20 +209,14 @@
 
 /* 3am rule: in any single-column rendering the log buttons come FIRST — the
    first tap target must sit in the top third, before the clock block.
-   While a timer runs, the running clock leads and the buttons follow it
-   immediately. Same 720px threshold as the two-column layout below. */
+   That holds whether or not a timer is running, because a running timer is
+   drawn inside the tile that started it. Same 720px threshold as the
+   two-column layout below. */
 @container (width < 720px) {
-  .today-dashboard:not(.has-live) > .log-column { order: -1; }
-
-  /* The hearth holds the running timers but lives inside .today-main, a
-     sibling of the tiles — so ordering it could only move it WITHIN that
-     subtree, never above or below the tiles. Flattening the wrapper puts both
-     in the same grid, where they can finally be ordered against each other:
-     the clock that is counting, then the buttons, then everything else. Both
-     grids already use gap: 24px, so the spacing survives the flattening. */
-  .today-dashboard.has-live > .today-main { display: contents; }
-  .today-dashboard.has-live .hearth { order: -2; }
-  .today-dashboard.has-live > .log-column { order: -1; }
+  /* Unconditional now. A running timer lives in its own tile, so the tiles
+     ARE the live state — there is no second place for a clock to be, and
+     nothing to reorder when one starts. */
+  .today-dashboard > .log-column { order: -1; }
 
   /* Growth + Health are daytime rows — side by side they cost half the
      nightly scroll. Unconditional: the tile grid must not change shape at the
@@ -425,6 +419,43 @@
   color: var(--ink-3);
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
+}
+
+/* A tile that is currently a stopwatch. It keeps its place in the grid and its
+   own hue; what changes is that it is obviously LIVE — a stronger edge, a
+   numeral big enough to read at arm's length in the dark, and a stop button
+   wide enough to hit without aiming. */
+.quick-tile.is-running {
+  border-color: color-mix(in oklab, var(--tile-hue, var(--signal)) 48%, var(--border));
+  background: linear-gradient(
+    160deg,
+    color-mix(in oklab, var(--tile-hue, var(--border)) 14%, var(--card)),
+    var(--card) 70%
+  );
+}
+
+.tile-elapsed {
+  margin: 6px 12px 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.tile-started {
+  margin: 2px 12px 0;
+  color: var(--ink-3);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.quick-tile.is-running .tile-stop {
+  height: auto;
+  min-height: 48px;
+  margin: 10px 12px 12px;
+  font-size: 0.8125rem;
+  font-weight: 550;
 }
 
 .tile-sleep { --tile-hue: var(--glyph-sleep); }

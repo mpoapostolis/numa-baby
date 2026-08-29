@@ -106,26 +106,6 @@ function GapFigure({ startedAt, now }: { startedAt?: string; now: number }) {
   return <DurationFigure minutes={minutes} />;
 }
 
-// The Hearth while a nursing timer runs: the same block becomes the live
-// timer — the only display-size numeral on screen. Digits changing are the
-// only motion; the second clock lives here so the rest of Today ticks by
-// the minute.
-function NursingHearth({ activity, onStop }: { activity: Activity; onStop: () => void }) {
-  const now = useSecondClock();
-  return (
-    <div className="hearth-clock">
-      <span className="t-label hearth-live-label">
-        Nursing · {activity.side === "left" ? "Left" : "Right"}
-      </span>
-      <p className="figure hearth-figure t-display">{liveDuration(activity.startedAt, now)}</p>
-      <p className="hearth-meta">Started {formatTime(activity.startedAt)}</p>
-      <Button className="hearth-stop" onClick={onStop} aria-label="Stop nursing timer">
-        <Square size={14} fill="currentColor" aria-hidden="true" /> Stop
-      </Button>
-    </div>
-  );
-}
-
 // A running burp is a stopwatch you watch: the seconds tick in place, so a
 // parent holding the baby upright after a feed can see exactly how long it
 // has been without doing arithmetic on a start time.
@@ -134,8 +114,43 @@ function LiveClock({ startedAt }: { startedAt: string }) {
   return <span className="timer-clock t-numeral">{liveDuration(startedAt, now)}</span>;
 }
 
-// Active timers (and any orphaned one from older data) render as a 56px
-// row below the Hearth — never a second display-size numeral.
+// A running timer stays in the tile that started it.
+//
+// It used to vanish from the grid and reappear as a row somewhere else, which
+// meant the tiles reflowed under a thumb mid-tap and the thing just started
+// was the one thing not on screen. One place per activity, always the same
+// place: tap Sleep and the Sleep tile becomes the clock.
+function TimerTile({ activity, onStop }: { activity: Activity; onStop: () => void }) {
+  const isSleep = activity.type === "sleep";
+  const isBurp = activity.type === "burp";
+  const title = isSleep
+    ? "Sleeping"
+    : isBurp
+      ? "Burping"
+      : `Nursing · ${activity.side === "left" ? "Left" : "Right"}`;
+  const stopLabel = isSleep ? "Wake up" : isBurp ? "Done" : "Stop";
+  return (
+    <div className={`quick-tile tile-${activity.type} is-running`}>
+      <div className="tile-head">
+        <span className={`activity-glyph glyph-${activity.type}`} aria-hidden="true">
+          <ActivityGlyph type={activity.type} />
+        </span>
+        <span className="tile-title">{title}</span>
+      </div>
+      {/* Seconds, because a stopwatch that only moves once a minute looks
+          stopped — and looking stopped is how a parent taps it twice. */}
+      <p className="tile-elapsed"><LiveClock startedAt={activity.startedAt} /></p>
+      <p className="tile-started">Started {formatTime(activity.startedAt)}</p>
+      <Button className="tile-stop" onClick={onStop} aria-label={`Stop ${activity.type} timer`}>
+        <Square size={14} fill="currentColor" aria-hidden="true" /> {stopLabel}
+      </Button>
+    </div>
+  );
+}
+
+// Kept for a timer whose tile is not on screen — a nursing session still
+// running for a family that has since switched to bottles only. Rare, and it
+// must never become invisible.
 function TimerRow({
   activity,
   now,
@@ -237,7 +252,13 @@ export default function TodayScreen({
       ? "bottle"
       : lastFeed?.type === "nursing" ? "nursing" : "bottle";
 
-  const secondaryTimers = activeTimers.filter((timer) => timer.id !== activeNursing?.id);
+  // Every timer now runs in its own tile, so a row is only for one that has
+  // no tile on screen — a nursing session still going for a family that has
+  // since switched to bottles only. Rare, and it must never go invisible.
+  const nursingTileShown = profile.feedingMode !== "bottle";
+  const homelessTimers = activeTimers.filter((timer) =>
+    timer.type === "nursing" ? !nursingTileShown : timer.type !== "sleep" && timer.type !== "burp",
+  );
   const gapElapsed = lastFeed
     ? minutesBetween(lastFeed.startedAt, new Date(minuteClock).toISOString())
     : 0;
@@ -518,9 +539,7 @@ export default function TodayScreen({
             </aside>
           )}
           <div className="hearth">
-            {activeNursing ? (
-              <NursingHearth activity={activeNursing} onStop={stopNursing} />
-            ) : !lastFeed ? (
+            {!lastFeed ? (
               // First run: no em-dash figure pretending to be data — a calm
               // welcome instead.
               <div className="hearth-clock hearth-empty">
@@ -544,7 +563,7 @@ export default function TodayScreen({
               </div>
             )}
 
-            {secondaryTimers.map((timer) => (
+            {homelessTimers.map((timer) => (
               <TimerRow
                 key={timer.id}
                 activity={timer}
@@ -662,6 +681,10 @@ export default function TodayScreen({
               </div>
             )}
 
+            {profile.feedingMode !== "bottle" && activeNursing && (
+              <TimerTile activity={activeNursing} onStop={stopNursing} />
+            )}
+
             {profile.feedingMode !== "bottle" && !activeNursing && (
               <div className="quick-tile tile-nurse">
                 <div className="tile-head">
@@ -720,6 +743,8 @@ export default function TodayScreen({
               </div>
             </div>
 
+            {activeSleep && <TimerTile activity={activeSleep} onStop={() => onStopTimer(activeSleep.id)} />}
+
             {!activeSleep && (
               <div className="quick-tile tile-sleep">
                 <button
@@ -734,6 +759,8 @@ export default function TodayScreen({
                 </button>
               </div>
             )}
+
+            {activeBurp && <TimerTile activity={activeBurp} onStop={() => onStopTimer(activeBurp.id)} />}
 
             {!activeBurp && (
               <div className="quick-tile tile-burp">
