@@ -8,6 +8,10 @@
   // there has its data under that origin, and the handoff flow is how a
   // family moves, one tap, when THEY choose. No blind redirect: a redirect
   // moves the page but not localStorage, which reads as losing everything.
+  // Adding routes silently turns the workers.dev address OFF unless this is
+  // pinned on. That address is where every existing family's data lives —
+  // it must keep serving for as long as one of them is on it.
+  "workers_dev": true,
   "routes": [
     { "pattern": "numalog.app", "custom_domain": true },
     { "pattern": "www.numalog.app", "custom_domain": true }
