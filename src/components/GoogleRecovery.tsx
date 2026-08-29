@@ -146,10 +146,25 @@ export function ProtectWithGoogle({ familySync, immediate = false }: { familySyn
 
   async function handleCredential(credential: string) {
     setBusy(true);
-    // The one-tap path: no sync yet -> the same gesture turns it on.
+    // The lesson of the owner's own two phones: if this account already
+    // guards a family, "protect" on a new device means JOIN IT — creating a
+    // fresh family first left his second device green-pilled on an orphan
+    // copy while the real log lived elsewhere. Probe before creating.
     if (!familySync.pairing) {
-      const created = await familySync.createFamily("This phone");
-      if (!created) {
+      const outcome = await familySync.googleContinue(credential, "This phone");
+      track("google_protect_probe", { outcome });
+      if (outcome === "joined") {
+        const guard = await familySync.recoveryEmail();
+        if (guard) setEmail(guard);
+        setBusy(false);
+        return;
+      }
+      if (outcome === "failed") {
+        setBusy(false);
+        return;
+      }
+      // "none": genuinely the first device — create, then bind below.
+      if (!(await familySync.createFamily("This phone"))) {
         setBusy(false);
         return;
       }

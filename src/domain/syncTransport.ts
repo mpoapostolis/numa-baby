@@ -15,9 +15,11 @@ export class PairingRevokedError extends Error {
 
 // Non-OK, non-401: the message is the server's own user-facing copy.
 export class ApiError extends Error {
-  constructor(message: string) {
+  readonly status: number;
+  constructor(message: string, status = 0) {
     super(message);
     this.name = "ApiError";
+    this.status = status;
   }
 }
 
@@ -46,7 +48,7 @@ async function request<T>(path: string, init: RequestInit, token?: string): Prom
   const response = await fetch(path, { ...init, headers });
   if (response.status === 401) throw new PairingRevokedError();
   const body = (await response.json().catch(() => null)) as { error?: string } | null;
-  if (!response.ok) throw new ApiError(body?.error || "Sync request failed");
+  if (!response.ok) throw new ApiError(body?.error || "Sync request failed", response.status);
   if (!body) throw new ApiError("Sync request failed");
   return body as T;
 }

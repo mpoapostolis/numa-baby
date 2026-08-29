@@ -1,13 +1,4 @@
-import {
-  BarChart3,
-  ChevronRight,
-  Clock,
-  Home,
-  Ruler,
-  Settings,
-  ShieldCheck,
-  Stethoscope,
-} from "lucide-react";
+import { BarChart3, ChevronRight, Clock, Home, Newspaper, Ruler, Settings, ShieldCheck, Stethoscope } from "lucide-react";
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "./components/ui/button";
@@ -71,6 +62,7 @@ const HandoffScreen = lazy(() => import("./screens/HandoffScreen").then((m) => (
 const BackupNudgeCard = lazy(() => import("./components/BackupNudge").then((m) => ({ default: m.BackupNudgeCard })));
 // The one-time cloud-protection announcement for families that predate it.
 const ProtectIntro = lazy(() => import("./components/ProtectIntro").then((m) => ({ default: m.ProtectIntro })));
+const NewsDialog = lazy(() => import("./components/NewsDialog").then((m) => ({ default: m.NewsDialog })));
 
 // A future-dated feed from a restored backup must never arm a timer that wraps
 // the 32-bit setTimeout ceiling and fires instantly.
@@ -154,6 +146,7 @@ export default function HomePage() {
   // The on-this-phone-only pill summons the protect dialog directly —
   // incremented per tap so a re-tap remounts a fresh one.
   const [protectAsk, setProtectAsk] = useState(0);
+  const [newsOpen, setNewsOpen] = useState(false);
   // Read once per visit: the intro marks itself seen on any dismissal.
   const [protectIntroDone] = useState(() => {
     try {
@@ -598,6 +591,15 @@ export default function HomePage() {
                 : activeTab[0].toUpperCase() + activeTab.slice(1)}
             </span>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="topbar-news"
+            aria-label="News and updates"
+            onClick={() => { track("news_opened", { from: "topbar" }); setNewsOpen(true); }}
+          >
+            <Newspaper />
+          </Button>
           <Button variant="ghost" className="baby-identity" aria-label="Baby profile" onClick={() => openSheet("profile")}>
             <span className="baby-avatar"><BabyFace size={22} /></span>
             <span>
@@ -806,6 +808,11 @@ export default function HomePage() {
             entries, consent question answered, no sheet open), never during
             its own first minutes. The component retires itself for families
             already guarded. */}
+        {newsOpen && (
+          <Suspense fallback={null}>
+            <NewsDialog open={newsOpen} onOpenChange={setNewsOpen} />
+          </Suspense>
+        )}
         {protectAsk > 0 && (
           <Suspense fallback={null}>
             <ProtectIntro key={protectAsk} familySync={familySync} forced onClosed={() => setProtectAsk(0)} />

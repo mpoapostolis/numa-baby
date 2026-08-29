@@ -593,3 +593,13 @@
   white-space: normal;
   text-overflow: clip;
 }
+
+/* The newspaper in the topbar — quiet until tapped. */
+.topbar-news {
+  color: var(--ink-3);
+}
+
+.topbar-news:hover,
+.topbar-news:focus-visible {
+  color: var(--ink-1);
+}

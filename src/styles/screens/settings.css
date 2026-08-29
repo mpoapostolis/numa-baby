@@ -491,28 +491,4 @@
 }
 
 
-/* The news dialog: the changelog, readable back to the beginning. */
-.news-dialog {
-  max-height: min(80dvh, 640px);
-  overflow-y: auto;
-}
-
-.news-list {
-  display: grid;
-  gap: 20px;
-}
-
-.news-release h3 {
-  font-size: 0.9375rem;
-  font-weight: 600;
-}
-
-.news-release ul {
-  margin: 8px 0 0;
-  padding-left: 18px;
-  display: grid;
-  gap: 6px;
-  color: var(--ink-2);
-  font-size: 0.8125rem;
-}
 

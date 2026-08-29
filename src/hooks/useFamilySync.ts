@@ -418,6 +418,28 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     }
   }
 
+  /**
+   * The continue-with-Google front door for the PROTECT surface. If this
+   * account already guards a family, the right move is to JOIN it — that is
+   * what "continue" means — and the latest data follows. Only when no guard
+   * exists anywhere does protecting mean creating something new. The 404 is
+   * an answer here, never an error to toast.
+   */
+  async function googleContinue(credential: string, label: string): Promise<"joined" | "none" | "failed"> {
+    if (debugMode) return "failed";
+    try {
+      beginPairing(await transport.googleRecover(credential, label), label);
+      saveAuthHint({ method: "google" });
+      showToast("Welcome back — your log is on its way.");
+      return "joined";
+    } catch (error) {
+      if (error instanceof transport.ApiError && error.status === 404) return "none";
+      markFailed(error);
+      showToast(error instanceof transport.ApiError ? error.message : OFFLINE_MESSAGE);
+      return "failed";
+    }
+  }
+
   async function emailProtect(email: string): Promise<boolean> {
     const p = live.current.pairing;
     if (!p || debugMode) return false;
@@ -506,6 +528,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     googleProtect,
     googleUnprotect,
     googleRecover,
+    googleContinue,
     emailProtect,
     emailRedeem,
     recoveryEmail,
