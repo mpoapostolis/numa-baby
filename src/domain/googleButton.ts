@@ -50,5 +50,15 @@ export async function mountGoogleButton(
 ): Promise<void> {
   const id = await loadGoogleId();
   id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: (r) => onCredential(r.credential) });
-  id.renderButton(host, { type: "standard", theme: "outline", size: "large", text: "continue_with", width: 280 });
+  // Google's iframe paints its own background. In night mode the outline
+  // theme is a white sticker on a dark page — filled_black belongs there;
+  // outline stays for daylight. (The app toggles .dark on <html>.)
+  const dark = document.documentElement.classList.contains("dark");
+  id.renderButton(host, {
+    type: "standard",
+    theme: dark ? "filled_black" : "outline",
+    size: "large",
+    text: "continue_with",
+    width: 280,
+  });
 }

@@ -15,6 +15,10 @@
 
 .google-host {
   min-height: 44px;
+  width: fit-content;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: 6px;
 }
 
 .google-protected {
@@ -111,8 +115,7 @@
 
 /* The Google iframe and the email row read as one column of equals. */
 .restore-doors .google-host {
-  display: flex;
-  justify-content: center;
+  margin-inline: auto;
 }
 
 .door-divider {
