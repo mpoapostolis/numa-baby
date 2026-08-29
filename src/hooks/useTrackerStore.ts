@@ -63,6 +63,12 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
   // Bumped on every successful persist. The sync engine watches it to know
   // "something was written locally" without reaching into this hook's internals.
   const [persistVersion, setPersistVersion] = useState(0);
+  // Bumped only when entries arrive that this device did not just write — an
+  // imported backup, or a log walked over from the app's other web address.
+  // Family Sync watches it because those entries carry their ORIGINAL
+  // timestamps, which sit below its push cursor and would otherwise never be
+  // sent. See domain/syncCursor.ts.
+  const [backfillVersion, setBackfillVersion] = useState(0);
   // Always-current mirror of every persisted slice. Undo callbacks and post-await
   // code read from here so they never write a stale render's snapshot to storage.
   // Synced inside persistSnapshot and the load paths — never from render.
@@ -744,6 +750,9 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
         setReminders(merged.reminders);
         setStorageWarning(null);
         setBootState("ready");
+        // History has been rewritten underneath the sync cursor: whatever came
+        // in is dated when it was first logged, not now.
+        if (summary.added > 0 || summary.updated > 0) setBackfillVersion((v) => v + 1);
         const counts = `Merged: ${summary.added} new, ${summary.updated} updated, ${summary.unchanged} unchanged`;
         showToast(parsed.droppedActivities > 0
           ? `${counts} — ${parsed.droppedActivities} unreadable ${parsed.droppedActivities === 1 ? "entry" : "entries"} skipped`
@@ -817,6 +826,7 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     storagePersisted,
     recoveredNotice,
     persistVersion,
+    backfillVersion,
     mergeRemote,
     readPersisted,
     addActivity,

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { FamilyPairing, clearPairing, loadPairing, savePairing } from "../domain/familyPairing";
+import { selectPushDelta } from "../domain/syncCursor";
 import * as transport from "../domain/syncTransport";
 import { Activity, BootState, Profile } from "../domain/types";
 import { activityUpdatedAt, isValidActivity, sanitizeProfile } from "../domain/validate";
@@ -36,6 +37,7 @@ type FamilySyncOptions = {
   bootState: BootState;
   // Bumped by the store on every successful persist — the push trigger.
   persistVersion: number;
+  backfillVersion: number;
   readPersisted: () => { activities: Activity[]; profile: Profile; profileUpdatedAt?: string };
   /** Makes an unstamped legacy profile syncable. Only ever called on create. */
   stampProfileForSync: () => void;
@@ -77,9 +79,14 @@ type LiveSync = {
   pushBusy: boolean;
   pushAgain: boolean;
   revoked: boolean;
+  // Set when entries have been merged in that this device did not write, and
+  // cleared only once a push has carried the whole log across. It survives a
+  // failed push on purpose: a restore that never reached the partner must be
+  // retried, not forgotten.
+  backfilled: boolean;
 };
 
-export function useFamilySync({ debugMode, bootState, persistVersion, readPersisted, stampProfileForSync, mergeRemote, showToast }: FamilySyncOptions) {
+export function useFamilySync({ debugMode, bootState, persistVersion, backfillVersion, readPersisted, stampProfileForSync, mergeRemote, showToast }: FamilySyncOptions) {
   const [pairing, setPairing] = useState<FamilyPairing | null>(() => (debugMode ? null : loadPairing()));
   const [status, setStatus] = useState<SyncStatus>(() => ({
     phase: "idle",
@@ -89,7 +96,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, readPersis
   // Mutable sync internals, mirroring persistedStateRef's pattern: async code
   // reads pairing and in-flight flags from here, never from a render snapshot.
   // Only read inside effects and callbacks — never during render.
-  const live = useRef<LiveSync>({ pairing, pushTimer: 0, pullBusy: false, pushBusy: false, pushAgain: false, revoked: false });
+  const live = useRef<LiveSync>({ pairing, pushTimer: 0, pullBusy: false, pushBusy: false, pushAgain: false, revoked: false, backfilled: false });
 
   function adoptPairing(next: FamilyPairing | null) {
     live.current.pairing = next;
@@ -177,12 +184,13 @@ export function useFamilySync({ debugMode, bootState, persistVersion, readPersis
       return;
     }
     const { activities, profile, profileUpdatedAt } = readPersisted();
-    // Delta selection: everything written since the last successful push.
-    // Over-selection is safe (the server upsert is idempotent and LWW-guarded);
-    // under-selection never happens because the cursor only advances after a
-    // confirmed accept.
-    const lastMs = before.lastPushedAt ? new Date(before.lastPushedAt).getTime() : -1;
-    const delta = activities.filter((activity) => new Date(activityUpdatedAt(activity)).getTime() > lastMs);
+    // Delta selection: everything written since the last successful push —
+    // unless a backup has been merged in, in which case the whole log goes,
+    // because imported entries are dated when they were first logged and sit
+    // below the cursor. See domain/syncCursor.ts for why that is the safe
+    // direction to be wrong in.
+    const backfilled = l.backfilled;
+    const delta = selectPushDelta(activities, before.lastPushedAt, backfilled);
     const sendProfile = Boolean(profileUpdatedAt) && profileUpdatedAt !== before.lastPushedProfileAt;
     if (!delta.length && !sendProfile) return;
     l.pushBusy = true;
@@ -216,6 +224,8 @@ export function useFamilySync({ debugMode, bootState, persistVersion, readPersis
       if (maxStamp > now) maxStamp = now;
       const cur = live.current.pairing;
       if (!cur || cur.token !== before.token) return;
+      // The whole log is across; the cursor can be trusted again.
+      if (backfilled) live.current.backfilled = false;
       adoptPairing({
         ...cur,
         lastPushedAt: maxStamp,
@@ -259,6 +269,21 @@ export function useFamilySync({ debugMode, bootState, persistVersion, readPersis
     // tear down the heartbeat on every keystroke.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debugMode, paired, bootState]);
+
+  // BACKFILL trigger: a merged backup bumps backfillVersion. The flag is
+  // raised here rather than inside the merge because the store cannot reach
+  // this hook — it is built first, and hands its counters forward.
+  //
+  // Mount does not count: a bare `useState(0)` on a fresh render is not an
+  // import, and treating it as one would resend the entire log on every boot.
+  const seenBackfill = useRef(backfillVersion);
+  useEffect(() => {
+    if (backfillVersion === seenBackfill.current) return;
+    seenBackfill.current = backfillVersion;
+    live.current.backfilled = true;
+    // No schedulePush here: the same merge persists, so persistVersion bumps
+    // alongside this and the effect below already queues the push.
+  }, [backfillVersion]);
 
   // PUSH trigger: every successful local persist bumps persistVersion; the 2s
   // debounce folds a burst of quick logs into one request. Re-running on
