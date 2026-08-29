@@ -691,12 +691,18 @@ export default function HomePage() {
 
         {/* Hidden while the consent banner owns the same corner, and while a
             log sheet is open — nothing competes with the 3am flow. */}
-        {/* Not on Today. The bubble is fixed 48px above the nav on the right —
-            the one patch of glass a one-handed thumb reaches without
-            re-gripping — and Today is the screen where that patch is needed
-            for logging. As the tiles scroll they pass underneath it. Settings
-            carries the same form in full, so nothing is lost but the ambush. */}
-        <FeedbackBubble hidden={consent === null || sheet !== null || activeTab === "today"} />
+        {/* Not on Today, not on Settings.
+            It is a fixed 48px circle above the nav on the right, so it sits on
+            top of whatever scrolls under it — on Settings it was covering the
+            word "on" in the middle of a sentence about reminders, which is
+            exactly the kind of thing that makes a whole app look broken in a
+            screenshot. Today is worse: that patch of glass is the one a
+            one-handed thumb reaches without re-gripping, and it is needed for
+            logging. Both screens already have a way in — Settings carries the
+            feedback form in full — so nothing is lost but the ambush. */}
+        <FeedbackBubble
+          hidden={consent === null || sheet !== null || activeTab === "today" || activeTab === "more"}
+        />
 
         {consent === null && (
           <ConsentBanner

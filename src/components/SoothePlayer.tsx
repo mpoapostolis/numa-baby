@@ -44,9 +44,6 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
   const [kind, setKind] = useState<NoiseKind>("brown");
   const [tune, setTune] = useState<LullabyKind>("brahms");
 
-  // One place decides what is playing, so swapping a sound mid-play and
-  // starting fresh can never disagree about the source.
-  const sourceUrl = () => (mode === "noise" ? noiseUrl(kind) : lullabyUrl(tune));
   const [playing, setPlaying] = useState(false);
   const [volume, setVolume] = useState(0.35);
   const [timer, setTimer] = useState<TimerChoice>(30);
@@ -55,6 +52,9 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
   const [endsAt, setEndsAt] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [failed, setFailed] = useState(false);
+  // Whether the element already holds the sound that is selected. The tap must
+  // never be the thing that synthesises it.
+  const [ready, setReady] = useState(false);
   const secondsLeft = endsAt === null ? null : Math.max(0, Math.ceil((endsAt - now) / 1000));
 
   // One element for the life of the component; the source swaps with the kind.
@@ -86,11 +86,24 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || playing) return;
+    // Synthesising a lullaby is real work — twenty-odd seconds of samples — and
+    // on a mid-range phone it is long enough to push a play() past the window
+    // in which the browser still counts it as a user gesture. So the button is
+    // not tappable until the sound is attached, and the tap itself does nothing
+    // but play. That is the difference between "it does nothing when I press
+    // it" and it working.
+    let cancelled = false;
     const id = window.setTimeout(() => {
+      if (cancelled) return;
       audio.src = mode === "noise" ? noiseUrl(kind) : lullabyUrl(tune);
       audio.load();
+      if (!cancelled) setReady(true);
     }, 0);
-    return () => window.clearTimeout(id);
+    return () => {
+      cancelled = true;
+      setReady(false);
+      window.clearTimeout(id);
+    };
   }, [mode, kind, tune, playing]);
 
   // The clock that drives the countdown, and the stop it exists to guarantee.
@@ -125,10 +138,9 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
       // Older WebKit, or a browser that has the property but refuses the value.
       // The hint under the controls covers it.
     }
-    // The source is normally already attached by the effect above; this only
-    // does work on the very first tap, before that effect has run.
-    const wanted = sourceUrl();
-    if (audio.src !== wanted) audio.src = wanted;
+    // No generating here. The effect above attaches the source and only then
+    // enables the button, so by the time this runs the element already holds
+    // the right sound and the gesture is spent on play() alone.
     audio.volume = volume;
 
     // play() is called synchronously inside the gesture, never after an await.
@@ -252,11 +264,20 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
           </div>
         </div>
 
-        <Button className="soothe-action" onClick={() => (playing ? stop() : start())}>
+        {/* Disabled until the sound is attached. A tap that arrives while the
+            lullaby is still being synthesised would spend its gesture on the
+            synthesis and get refused for the play — the button appearing to do
+            nothing, which is exactly what was reported. It says what it is
+            waiting for instead. */}
+        <Button
+          className="soothe-action"
+          disabled={!playing && !ready}
+          onClick={() => (playing ? stop() : start())}
+        >
           {playing ? <Pause size={16} aria-hidden="true" /> : <Play size={16} aria-hidden="true" />}
           {playing
             ? secondsLeft === null ? "Stop" : `Stop · ${formatLeft(secondsLeft)} left`
-            : "Play"}
+            : ready ? "Play" : "Preparing the sound…"}
         </Button>
 
         {failed && (
