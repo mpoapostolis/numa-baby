@@ -478,7 +478,10 @@ export default function TodayScreen({
             : "awake";
 
   return (
-    <section className="screen today-screen" aria-labelledby="today-heading">
+    <section
+      className={`screen today-screen${sortedActivities.length ? "" : " is-empty"}`}
+      aria-labelledby="today-heading"
+    >
       {/* Welcome hero: the companion's face greets first, the age counter
           does the maths ("Mia is 2 weeks old · day 15"), and one verified,
           age-matched fact sits underneath with its source in plain sight. */}

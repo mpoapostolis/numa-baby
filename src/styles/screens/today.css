@@ -217,6 +217,16 @@
   order: 1;
 }
 
+/* Except when there is nothing else. In an app with no entries the recap, the
+   trend chart, the day band and both forecasts are all suppressed, so the
+   stage card is being held below an empty hearth, a one-line safety note and a
+   blank Recent card — measured at y=1278 of a 1763px page. That is nearly two
+   screens of nothing before the one block that shows the app knows what week
+   this baby is in. First, then, until there is real data to outrank it. */
+.today-screen.is-empty .today-main > .fact-card {
+  order: -1;
+}
+
 /* 3am rule: in any single-column rendering the log buttons come FIRST — the
    first tap target must sit in the top third, before the clock block.
    That holds whether or not a timer is running, because a running timer is
@@ -228,17 +238,16 @@
      nothing to reorder when one starts. */
   .today-dashboard > .log-column { order: -1; }
 
-  /* Growth + Health are daytime rows — side by side they cost half the
-     nightly scroll. Unconditional: the tile grid must not change shape at the
-     moment a timer starts. */
+  /* The occasional rows — Growth, Sounds, Medicine, Health — used to sit two
+     abreast to save vertical space. At 375px that left each one 62px for its
+     words, so five of the eight labels on the first screen were truncated:
+     "Weight, l…", "White no…", "Vitamin D, parace…". A row whose label is
+     cut off is a row nobody can read, and saving a thumb-flick is not worth
+     that. One per line. */
   .today-dashboard > .log-column {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
-  }
-
-  .today-dashboard > .log-column > .quick-grid {
-    grid-column: 1 / -1;
   }
 
   /* The band's colored lane icons already key the strip — the legend is

@@ -131,21 +131,14 @@ export default function OnboardingScreen({
                 }}
               >
                 <FieldGroup>
+                  {/* First, and not labelled "optional" — not because it is
+                      required (nothing here is) but because it is the one
+                      answer that changes what the app can do. Without a birth
+                      date there is no age, so the day count, the age-matched
+                      stage list and every sourced fact simply do not render:
+                      the app looks emptier than it is, for want of one tap. */}
                   <Field>
-                    <FieldLabel htmlFor={nameId}>Name <span className="optional-label">Optional</span></FieldLabel>
-                    <InputGroup>
-                      <InputGroupInput
-                        id={nameId}
-                        autoFocus
-                        maxLength={80}
-                        value={draft.name}
-                        placeholder="Baby’s name"
-                        onChange={(event) => setDraft({ ...draft, name: event.target.value })}
-                      />
-                    </InputGroup>
-                  </Field>
-                  <Field>
-                    <FieldLabel htmlFor={birthDateId}>Date of birth <span className="optional-label">Optional</span></FieldLabel>
+                    <FieldLabel htmlFor={birthDateId}>Date of birth</FieldLabel>
                     <InputGroup>
                       <InputGroupInput
                         id={birthDateId}
@@ -155,7 +148,31 @@ export default function OnboardingScreen({
                         onChange={(event) => setDraft({ ...draft, birthDate: event.target.value })}
                       />
                     </InputGroup>
+                    <FieldDescription>
+                      Does the day count, and matches the guidance to this exact week. You can skip it.
+                    </FieldDescription>
                   </Field>
+                  <Field>
+                    <FieldLabel htmlFor={nameId}>Name <span className="optional-label">Optional</span></FieldLabel>
+                    <InputGroup>
+                      <InputGroupInput
+                        id={nameId}
+                        // No autoFocus. Focusing a field scrolls the page to it,
+                        // and this page is a landing page: the drawing, the
+                        // eyebrow, the headline and the paragraph saying what
+                        // the app IS all sat above the viewport before anyone
+                        // saw them — measured at scrollY 442 on a phone, with a
+                        // keyboard over what was left. Saving one tap is not
+                        // worth throwing away the only ten seconds this app gets
+                        // with someone who has never heard of it.
+                        maxLength={80}
+                        value={draft.name}
+                        placeholder="Baby’s name"
+                        onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+                      />
+                    </InputGroup>
+                  </Field>
+
                   <Field>
                     <FieldLabel asChild><span id={sexLabelId}>Girl or boy <span className="optional-label">Optional</span></span></FieldLabel>
                     <ToggleGroup
