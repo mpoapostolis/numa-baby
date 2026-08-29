@@ -33,8 +33,10 @@
     // real address can never see.
     "run_worker_first": true
   },
+  "send_email": [{ "name": "EMAIL" }],
   "vars": {
-    "TURSO_DATABASE_URL": "https://numa-baby-sync-mpoapostolis.aws-eu-west-1.turso.io"
+    "TURSO_DATABASE_URL": "https://numa-baby-sync-mpoapostolis.aws-eu-west-1.turso.io",
+    "GOOGLE_CLIENT_ID": "705272946048-nprhdf7r57ufsvu20hvschnb733oivp2.apps.googleusercontent.com"
   },
   "observability": {
     "enabled": true

@@ -10,7 +10,7 @@ import {
   Sun,
   Upload,
 } from "lucide-react";
-import { ChangeEvent, useId, useRef, useState } from "react";
+import { ChangeEvent, Suspense, lazy, useId, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -43,6 +43,11 @@ import { localDateInput } from "../domain/time";
 import { handoffPeers, handoffSendUrl, moveTarget, originLabel } from "../domain/handoff";
 import { inAppBrowser } from "../domain/install";
 import { FeedingMode, Profile } from "../domain/types";
+import { FamilySync } from "../hooks/useFamilySync";
+
+const RestoreWithGoogle = lazy(() =>
+  import("../components/GoogleRecovery").then((m) => ({ default: m.RestoreWithGoogle })),
+);
 
 const HANDOFF_OFFER_SEEN = "numalog-handoff-offer-v1";
 
@@ -51,6 +56,8 @@ export default function OnboardingScreen({
   profile,
   nightMode,
   storageWarning,
+  familySync,
+  onGoogleRestored,
   onNightModeChange,
   onComplete,
   onRestore,
@@ -61,6 +68,8 @@ export default function OnboardingScreen({
   profile: Profile;
   nightMode: boolean;
   storageWarning: string | null;
+  familySync: FamilySync;
+  onGoogleRestored: () => void;
   onNightModeChange: (enabled: boolean) => void;
   onComplete: (profile: Profile) => boolean;
   onRestore: (event: ChangeEvent<HTMLInputElement>) => void;
@@ -252,6 +261,12 @@ export default function OnboardingScreen({
                 {storageWarning && <div className="onboarding-alert" role="alert">{storageWarning}</div>}
                 <Button type="submit" size="lg" className="onboarding-primary">Start tracking <ChevronRight /></Button>
                 <Button type="button" variant="ghost" onClick={() => restoreRef.current?.click()}><Upload /> Restore a backup</Button>
+                {/* The disaster door: a verified Google sign-in re-joins the
+                    family whose guard it is, and everything comes back over
+                    the sync. Lazy — Google's script loads only on the tap. */}
+                <Suspense fallback={null}>
+                  <RestoreWithGoogle familySync={familySync} onRestored={onGoogleRestored} />
+                </Suspense>
                 {/* Whoever arrives here from the app's older web address has a
                     full log sitting in a browser store this page cannot see —
                     different origin, different storage. Asking them to invent

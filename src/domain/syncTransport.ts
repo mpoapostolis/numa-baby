@@ -63,6 +63,42 @@ export function joinFamily(code: string, deviceLabel: string): Promise<PairResul
   return request("/api/family/join", { method: "POST", body: JSON.stringify({ code, deviceLabel }) });
 }
 
+// --- Google recovery -------------------------------------------------------
+// The credential is Google's signed "this person owns that address"; nothing
+// from the log travels the other way. See worker/googleAuth.ts for the vows.
+
+export function googleLink(token: string, credential: string): Promise<{ email: string }> {
+  return request("/api/family/google-link", { method: "POST", body: JSON.stringify({ credential }) }, token);
+}
+
+export function googleUnlink(token: string): Promise<{ ok: true }> {
+  return request("/api/family/google-unlink", { method: "POST" }, token);
+}
+
+export function recoveryStatus(token: string): Promise<{ email: string | null }> {
+  return request("/api/family/recovery-status", { method: "GET" }, token);
+}
+
+export function googleRecover(credential: string, deviceLabel: string): Promise<PairResult> {
+  return request("/api/family/google-recover", { method: "POST", body: JSON.stringify({ credential, deviceLabel }) });
+}
+
+export function emailLink(token: string, email: string): Promise<{ sent: true }> {
+  return request("/api/family/email-link", { method: "POST", body: JSON.stringify({ email }) }, token);
+}
+
+export function emailRecoverRequest(email: string): Promise<{ sent: true }> {
+  return request("/api/family/email-recover-request", { method: "POST", body: JSON.stringify({ email }) });
+}
+
+/** Redeeming a link token: a 'confirm' tap returns {confirmed}, a recovery tap a full pairing. */
+export function emailRedeem(
+  token: string,
+  deviceLabel: string,
+): Promise<(PairResult & { email: string }) | { confirmed: true; email: string }> {
+  return request("/api/family/email-redeem", { method: "POST", body: JSON.stringify({ token, deviceLabel }) });
+}
+
 export function pullSince(token: string, since: string, deviceId: string): Promise<PullResult> {
   const query = `since=${encodeURIComponent(since)}&device=${encodeURIComponent(deviceId)}`;
   return request(`/api/sync/pull?${query}`, { method: "GET" }, token);

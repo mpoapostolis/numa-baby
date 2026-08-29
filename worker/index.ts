@@ -3,6 +3,17 @@ import { createClient } from "@libsql/client/web";
 import { handleAdmin } from "./admin";
 import { handleFeedback } from "./feedback";
 import {
+  handleEmailLink,
+  handleEmailRecoverRequest,
+  handleEmailRedeem,
+} from "./magicLink";
+import {
+  handleGoogleLink,
+  handleGoogleRecover,
+  handleGoogleUnlink,
+  handleRecoveryStatus,
+} from "./googleRecovery";
+import {
   ensureDeviceLink,
   handleLeave,
   handleListDevices,
@@ -23,6 +34,18 @@ type Env = {
   TURSO_AUTH_TOKEN: string;
   /** Operator password for /admin. Unset means the page does not exist. */
   ADMIN_PASSWORD?: string;
+  /** Public OAuth client id. Unset means Google recovery does not exist. */
+  GOOGLE_CLIENT_ID?: string;
+  /** Email Sending binding. Unset means magic-link recovery does not exist. */
+  EMAIL?: {
+    send: (message: {
+      to: string;
+      from: { email: string; name: string };
+      subject: string;
+      text: string;
+      html?: string;
+    }) => Promise<unknown>;
+  };
   /** Optional second factor. Set it and the password alone will not get in. */
   ADMIN_TOTP_SECRET?: string;
   /** Optional comma-separated allowlist. Set it and every other address is
@@ -124,6 +147,30 @@ async function handleCreateFamily(env: Env, request: Request): Promise<Response>
     "write",
   );
   return json({ familyId, token, deviceId });
+}
+
+// One place mints device keys, however the person proved themselves — an
+// invite code from a partner's phone, or a Google credential after a
+// disaster. Divergence here is how one door gets weaker than the other.
+async function mintDevice(env: Env, familyId: string, deviceLabel: string) {
+  const client = db(env);
+  await ensureDeviceLink(client);
+  const token = randomToken();
+  const deviceId = crypto.randomUUID();
+  await client.batch(
+    [
+      {
+        sql: "INSERT INTO device_tokens (family_id, token_hash, device_id) VALUES (?, ?, ?)",
+        args: [familyId, await sha256(token), deviceId],
+      },
+      {
+        sql: "INSERT INTO devices (id, family_id, label) VALUES (?, ?, ?)",
+        args: [deviceId, familyId, deviceLabel.slice(0, 60)],
+      },
+    ],
+    "write",
+  );
+  return { familyId, token, deviceId };
 }
 
 async function handleInvite(env: Env, familyId: string): Promise<Response> {
@@ -291,6 +338,23 @@ export default {
       if (url.pathname === "/api/feedback" && request.method === "POST") {
         return await handleFeedback(db(env), request);
       }
+      // Also unauthenticated, also on purpose: the phone that held the token
+      // is the thing that was lost. The verified Google credential is the key.
+      if (url.pathname === "/api/family/google-recover" && request.method === "POST") {
+        return await handleGoogleRecover(db(env), request, env.GOOGLE_CLIENT_ID, json, (familyId, label) =>
+          mintDevice(env, familyId, label),
+        );
+      }
+      // The magic-link pair: asking for a link needs no auth (the inbox is
+      // the lock), and redeeming one carries its own proof.
+      if (url.pathname === "/api/family/email-recover-request" && request.method === "POST") {
+        return await handleEmailRecoverRequest(db(env), request, env.EMAIL, url.origin, json);
+      }
+      if (url.pathname === "/api/family/email-redeem" && request.method === "POST") {
+        return await handleEmailRedeem(db(env), request, json, (familyId, label) =>
+          mintDevice(env, familyId, label),
+        );
+      }
 
       const caller = await authFamily(env, request);
       if (!caller) return bad("Not paired. Create or join a family first.", 401);
@@ -307,6 +371,18 @@ export default {
         return await handleRevokeDevice(db(env), familyId, tokenHash, request);
       }
 
+      if (url.pathname === "/api/family/google-link" && request.method === "POST") {
+        return await handleGoogleLink(db(env), request, familyId, env.GOOGLE_CLIENT_ID, json);
+      }
+      if (url.pathname === "/api/family/google-unlink" && request.method === "POST") {
+        return await handleGoogleUnlink(db(env), familyId, json);
+      }
+      if (url.pathname === "/api/family/recovery-status" && request.method === "GET") {
+        return await handleRecoveryStatus(db(env), familyId, json);
+      }
+      if (url.pathname === "/api/family/email-link" && request.method === "POST") {
+        return await handleEmailLink(db(env), request, familyId, env.EMAIL, url.origin, json);
+      }
       if (url.pathname === "/api/family/invite" && request.method === "POST") {
         return await handleInvite(env, familyId);
       }

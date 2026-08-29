@@ -139,3 +139,39 @@ CREATE TABLE IF NOT EXISTS admin_known (
   last_seen_at TEXT,
   ip TEXT, country TEXT, user_agent TEXT
 );
+
+-- "Continue with Google": one Google account may guard one family. The sub
+-- is Google's stable account id (survives an email change); the email is
+-- kept for showing the person which address guards their log. Nothing else
+-- from Google is stored, ever.
+CREATE TABLE IF NOT EXISTS recovery_identities (
+  google_sub TEXT PRIMARY KEY,
+  family_id TEXT NOT NULL REFERENCES families(id),
+  email TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+-- Magic-link recovery: which address guards which family, the outstanding
+-- one-time tokens (hashes only), and the per-address send budget. The
+-- worker modules create these lazily with IDENTICAL DDL; this file is the
+-- canonical record.
+CREATE TABLE IF NOT EXISTS recovery_emails (
+  email TEXT PRIMARY KEY,
+  family_id TEXT NOT NULL REFERENCES families(id),
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS magic_tokens (
+  token_hash TEXT PRIMARY KEY,
+  email TEXT NOT NULL,
+  family_id TEXT,
+  purpose TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  used_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS magic_budget (
+  email TEXT PRIMARY KEY,
+  window_start TEXT NOT NULL,
+  sends INTEGER NOT NULL
+);

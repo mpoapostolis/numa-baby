@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/
 import { InputGroup, InputGroupInput } from "./ui/input-group";
 import { QrCode } from "./QrCode";
 import { FamilySync } from "../hooks/useFamilySync";
+import { ProtectWithGoogle } from "./GoogleRecovery";
 import { track } from "../domain/analytics";
 import { inviteLink } from "../domain/familyPairing";
 import { FamilyDevice, InviteResult } from "../domain/syncTransport";
@@ -255,6 +256,10 @@ export function FamilySyncCard({
             )}
           </div>
         )}
+        {/* The guard rides the same card as the sync it protects. With no
+            pairing yet, its one tap creates the family first — cloud copy
+            and recovery in a single gesture. */}
+        <ProtectWithGoogle familySync={familySync} />
       </CardContent>
     </Card>
   );

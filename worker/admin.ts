@@ -95,6 +95,17 @@ function tooManyTries(remainingMs: number): Response {
   });
 }
 
+// Same 6-digit, rejection-sampled code as the in-app invite path mints.
+function recoveryInviteCode(): string {
+  const buf = new Uint32Array(1);
+  let n = 0;
+  do {
+    crypto.getRandomValues(buf);
+    n = buf[0];
+  } while (n >= 4_000_000_000);
+  return String(n % 1_000_000).padStart(6, "0");
+}
+
 async function readBody(request: Request): Promise<Record<string, unknown>> {
   const body = await request.json().catch(() => ({}));
   return body && typeof body === "object" ? (body as Record<string, unknown>) : {};
@@ -249,6 +260,70 @@ async function route(
 
   if (url.pathname === "/api/admin/stats" && request.method === "GET") {
     return json(await collectStats(client, now));
+  }
+
+  // Recovery: the manual rescue, made 30 seconds instead of a shell session.
+  //
+  // This exists because "restore with the baby's name and birthday" must
+  // NEVER be a public page — a baby's name and birth date are the most
+  // public facts a family broadcasts, and together they would hand the
+  // family's entire log to any estranged relative who knows them. Behind
+  // the admin session the same lookup is safe: a human is in the loop, the
+  // attempt is audited, and the lockout machinery guards the door.
+  //
+  // The answer is deliberately thin. Zero or many matches reports only the
+  // count — no names, no dates, nothing to enumerate against. Exactly one
+  // match mints the same single-use, expiring invite the "Share with
+  // partner" button would have minted on the phone that was lost.
+  if (url.pathname === "/api/admin/recovery" && request.method === "POST") {
+    const body = await readBody(request);
+    const name = typeof body.name === "string" ? body.name.trim().toLowerCase() : "";
+    const birthDate = typeof body.birthDate === "string" ? body.birthDate.trim().slice(0, 10) : "";
+    if (!name || !/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) {
+      return json({ error: "A name and a YYYY-MM-DD birth date, exactly as the parent entered them." }, 400);
+    }
+    await audit(client, "recovery_lookup", callerOf(request), now);
+    const metas = await client.execute({ sql: "SELECT family_id, profile FROM family_meta", args: [] });
+    const matches: string[] = [];
+    for (const row of metas.rows) {
+      try {
+        const profile = JSON.parse(String(row.profile ?? "null")) as { name?: string; birthDate?: string } | null;
+        if (
+          profile &&
+          String(profile.name ?? "").trim().toLowerCase() === name &&
+          String(profile.birthDate ?? "").slice(0, 10) === birthDate
+        ) {
+          matches.push(String(row.family_id));
+        }
+      } catch {
+        // An unreadable profile is not this family.
+      }
+    }
+    if (matches.length !== 1) return json({ matches: matches.length });
+    const familyId = matches[0];
+    const stats = await client.execute({
+      sql: "SELECT COUNT(*) AS entries, MAX(updated_at) AS last FROM activities WHERE family_id = ?",
+      args: [familyId],
+    });
+    const code = recoveryInviteCode();
+    // One live invite per family — same rule as the in-app path.
+    await client.batch(
+      [
+        { sql: "DELETE FROM invites WHERE family_id = ?", args: [familyId] },
+        {
+          sql: "INSERT INTO invites (code, family_id, expires_at) VALUES (?, ?, ?)",
+          args: [code, familyId, new Date(now + 48 * 3600_000).toISOString()],
+        },
+      ],
+      "write",
+    );
+    await audit(client, "recovery_code_minted", callerOf(request), now);
+    return json({
+      matches: 1,
+      code,
+      entries: Number(stats.rows[0]?.entries ?? 0),
+      lastEntryAt: stats.rows[0]?.last ?? null,
+    });
   }
 
   // The one write the dashboard makes: a message can be ticked off. Nothing

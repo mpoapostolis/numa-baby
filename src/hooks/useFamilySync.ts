@@ -342,6 +342,84 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     }
   }
 
+  // Google recovery: the same three verbs the invite path has, plus the
+  // disaster door. All of them ride the existing pairing machinery — a
+  // recovered device IS a joined device.
+  async function googleProtect(credential: string): Promise<string | null> {
+    const p = live.current.pairing;
+    if (!p || debugMode) return null;
+    try {
+      const { email } = await transport.googleLink(p.token, credential);
+      return email;
+    } catch (error) {
+      markFailed(error);
+      showToast(error instanceof transport.ApiError ? error.message : OFFLINE_MESSAGE);
+      return null;
+    }
+  }
+
+  async function googleUnprotect(): Promise<boolean> {
+    const p = live.current.pairing;
+    if (!p || debugMode) return false;
+    try {
+      await transport.googleUnlink(p.token);
+      return true;
+    } catch (error) {
+      markFailed(error);
+      return false;
+    }
+  }
+
+  async function recoveryEmail(): Promise<string | null> {
+    const p = live.current.pairing;
+    if (!p || debugMode) return null;
+    try {
+      return (await transport.recoveryStatus(p.token)).email;
+    } catch {
+      // Status is decoration; a failed read must not mark the pairing bad.
+      return null;
+    }
+  }
+
+  async function googleRecover(credential: string, label: string): Promise<boolean> {
+    if (debugMode) return false;
+    try {
+      beginPairing(await transport.googleRecover(credential, label), label);
+      return true;
+    } catch (error) {
+      markFailed(error);
+      showToast(error instanceof transport.ApiError ? error.message : OFFLINE_MESSAGE);
+      return false;
+    }
+  }
+
+  async function emailProtect(email: string): Promise<boolean> {
+    const p = live.current.pairing;
+    if (!p || debugMode) return false;
+    try {
+      await transport.emailLink(p.token, email);
+      return true;
+    } catch (error) {
+      markFailed(error);
+      showToast(error instanceof transport.ApiError ? error.message : OFFLINE_MESSAGE);
+      return false;
+    }
+  }
+
+  async function emailRedeem(token: string, label: string): Promise<"confirmed" | "recovered" | null> {
+    if (debugMode) return null;
+    try {
+      const outcome = await transport.emailRedeem(token, label);
+      if ("confirmed" in outcome) return "confirmed";
+      beginPairing(outcome, label);
+      return "recovered";
+    } catch (error) {
+      markFailed(error);
+      showToast(error instanceof transport.ApiError ? error.message : OFFLINE_MESSAGE);
+      return null;
+    }
+  }
+
   async function createInvite(): Promise<transport.InviteResult | null> {
     const p = live.current.pairing;
     if (!p || debugMode) return null;
@@ -397,6 +475,12 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     createFamily,
     createInvite,
     joinFamily,
+    googleProtect,
+    googleUnprotect,
+    googleRecover,
+    emailProtect,
+    emailRedeem,
+    recoveryEmail,
     leaveFamily,
     listDevices,
     revokeDevice,

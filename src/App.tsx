@@ -68,6 +68,8 @@ const HandoffScreen = lazy(() => import("./screens/HandoffScreen").then((m) => (
 // pure function and stays here; the card itself has no business in the bundle
 // a parent downloads at 3am.
 const BackupNudgeCard = lazy(() => import("./components/BackupNudge").then((m) => ({ default: m.BackupNudgeCard })));
+// The one-time cloud-protection announcement for families that predate it.
+const ProtectIntro = lazy(() => import("./components/ProtectIntro").then((m) => ({ default: m.ProtectIntro })));
 
 // A future-dated feed from a restored backup must never arm a timer that wraps
 // the 32-bit setTimeout ceiling and fires instantly.
@@ -122,6 +124,20 @@ function readIncomingJoinCode(): string | null {
   return match[1];
 }
 
+// Magic-link taps arrive the same way: "/#confirm-email=…" binds an address,
+// "/#recover=…" restores a family onto a fresh phone. Read once, strip, so a
+// refresh never replays a redeem that already spent its token.
+function readMagicToken(): { purpose: "confirm" | "recover"; token: string } | null {
+  const match = /#(confirm-email|recover)=([0-9a-f]{32})$/.exec(window.location.hash);
+  if (!match) return null;
+  window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  return { purpose: match[1] === "recover" ? "recover" : "confirm", token: match[2] };
+}
+
+// Read (and strip) at module load — exactly once per page visit, before any
+// render can race it.
+const tappedMagicLink = readMagicToken();
+
 export default function HomePage() {
   const [debugMode] = useState(() => {
     const on = new URLSearchParams(window.location.search).has("debug");
@@ -129,6 +145,15 @@ export default function HomePage() {
     return on;
   });
   const [incomingJoinCode, setIncomingJoinCode] = useState(readIncomingJoinCode);
+  const magicTokenRef = useRef(tappedMagicLink);
+  // Read once per visit: the intro marks itself seen on any dismissal.
+  const [protectIntroDone] = useState(() => {
+    try {
+      return window.localStorage.getItem("numalog-protect-intro-v1") !== null;
+    } catch {
+      return true;
+    }
+  });
   // A scanned link opens straight on Settings, where Family Sync lives. Read
   // from the state above, never from the hash — by now it has been stripped.
   const [activeTab, setActiveTab] = useState<Tab>(incomingJoinCode ? "more" : "today");
@@ -217,6 +242,27 @@ export default function HomePage() {
     mergeRemote,
     showToast,
   });
+
+  // A tapped magic link. The confirm kind is safe in any state — it only
+  // marks an address as this family's guard. The recover kind REPLACES the
+  // pairing, so it only acts on a phone with nothing to lose (onboarding);
+  // anywhere else it explains itself instead of silently mixing two logs.
+  useEffect(() => {
+    const tapped = magicTokenRef.current;
+    if (!tapped || bootState === "loading") return;
+    magicTokenRef.current = null;
+    if (tapped.purpose === "recover" && bootState !== "onboarding") {
+      showToast("This phone already has a log — recovery links are for a fresh phone.");
+      return;
+    }
+    void familySync.emailRedeem(tapped.token, "This phone").then((outcome) => {
+      track("magic_link_redeemed", { purpose: tapped.purpose, ok: outcome !== null });
+      if (outcome === "confirmed") showToast("Recovery email confirmed — your log is protected.");
+      if (outcome === "recovered") completeJoin();
+    });
+    // Runs once per tapped link, as soon as boot settles.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bootState]);
 
   // Asked once there is something worth losing, and not before — the rules
   // live in domain/backupNudge.ts. Recomputed on the minute clock so a
@@ -484,6 +530,8 @@ export default function HomePage() {
         profile={profile}
         nightMode={nightMode}
         storageWarning={storageWarning}
+        familySync={familySync}
+        onGoogleRestored={completeJoin}
         onNightModeChange={changeNightMode}
         onComplete={completeOnboarding}
         onRestore={(event) => importData(event)}
@@ -712,6 +760,17 @@ export default function HomePage() {
         <FeedbackBubble
           hidden={consent === null || sheet !== null || activeTab === "today" || activeTab === "more"}
         />
+
+        {/* The protect announcement: once, only to a settled family (real
+            entries, consent question answered, no sheet open), never during
+            its own first minutes. The component retires itself for families
+            already guarded. */}
+        {consent !== null && sheet === null && !protectIntroDone &&
+          activities.filter((activity) => !activity.deleted).length >= 5 && (
+          <Suspense fallback={null}>
+            <ProtectIntro familySync={familySync} />
+          </Suspense>
+        )}
 
         {consent === null && sheet === null && (
           <ConsentBanner

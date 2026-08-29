@@ -318,6 +318,15 @@ export function adminPageHtml(nonce: string): string {
       parts.push('<div class="card"><h2>Messages · ' + d.feedback.length + '</h2>' + msgs + '</div>');
     }
 
+    parts.push('<div class="card"><h2>Recover a family</h2>' +
+      '<p class="muted" style="margin-bottom:8px">For a parent who lost their phone or deleted the app but had Family Sync on. ' +
+      'Exact name and birth date as they entered them; one match mints a single-use 48h join link. Every lookup is audited.</p>' +
+      '<form id="recover" class="recover-row">' +
+      '<input id="rec-name" placeholder="Baby name" autocomplete="off" />' +
+      '<input id="rec-dob" type="date" />' +
+      '<button type="submit">Find &amp; mint link</button></form>' +
+      '<p id="rec-out" class="muted" style="margin-top:8px"></p></div>');
+
     parts.push('<div class="card"><h2>Families · ' + d.families.length + '</h2>' +
       table([{ label: "Id" }, { label: "Created" }, { label: "Phones", num: 1 },
              { label: "Entries", num: 1 }, { label: "Deleted", num: 1 },
@@ -383,16 +392,47 @@ export function adminPageHtml(nonce: string): string {
     }
   }
 
+  // Re-wired after every render: the form is rebuilt with the dashboard.
+  function wireRecovery() {
+    var form = $("recover");
+    if (!form) return;
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var out = $("rec-out");
+      out.textContent = "Looking\u2026";
+      fetch("/api/admin/recovery", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: $("rec-name").value, birthDate: $("rec-dob").value }),
+      }).then(function (res) { return res.json(); }).then(function (r) {
+        if (r.error) { out.textContent = r.error; return; }
+        if (r.matches === 0) { out.textContent = "No family matches that name and date."; return; }
+        if (r.matches > 1) {
+          out.textContent = r.matches + " families match \u2014 refusing to guess. Ask the parent for something more.";
+          return;
+        }
+        var link = "https://numalog.app/#join=" + r.code;
+        out.innerHTML = "One match \u00b7 " + r.entries + " entries, last " + esc(String(r.lastEntryAt || "\u2014")) +
+          "<br><strong>" + link + "</strong><br>Single use, expires in 48 hours. Send it to the parent; " +
+          "opening it on their phone rejoins their family and downloads everything.";
+      }).catch(function () { out.textContent = "Something went wrong."; });
+    });
+  }
+
   function load() {
     return fetch("/api/admin/stats").then(function (res) {
       if (!res.ok) return false;
       return res.json().then(function (d) {
         last = d;
         render(d);
+        wireRecovery();
         $("gate").className = "gate hide";
         $("dash").className = "";
         $("head").className = "row";
-        if (!timer) timer = setInterval(function () { load(); }, 60000);
+        // Five minutes, and only while the tab is actually looked at. At
+        // 60s this dashboard alone was ~1M row-reads per open hour — the
+        // operator watching the numbers WAS most of the numbers.
+        if (!timer) timer = setInterval(function () { if (!document.hidden) load(); }, 300000);
         return true;
       });
     }).catch(function () { return false; });
