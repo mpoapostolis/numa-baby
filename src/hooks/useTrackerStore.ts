@@ -825,7 +825,7 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
   }
 
   // Deliberate, confirmed, total erase — the only way back to onboarding.
-  function eraseAllData() {
+  function eraseAllData(): boolean {
     // Count only live entries — tombstones are invisible bookkeeping and would
     // inflate the number a parent is asked to confirm deleting.
     const count = liveActivities(persistedStateRef.current.activities).length;
@@ -834,7 +834,7 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
       !window.confirm(
         `Erase all of ${name}'s data from this device? ${count} ${count === 1 ? "entry" : "entries"} will be deleted. Download a backup first if you may ever need it — this cannot be undone.`,
       )
-    ) return;
+    ) return false;
     try {
       window.localStorage.removeItem(STORAGE_KEY);
       window.localStorage.removeItem(RECOVERY_KEY);
@@ -846,8 +846,10 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
       });
       setStorageWarning(null);
       showToast("Everything erased. Starting fresh.");
+      return true;
     } catch {
       showToast("This browser blocked the erase. Nothing was changed.");
+      return false;
     }
   }
 

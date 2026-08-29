@@ -774,20 +774,17 @@ export default function HomePage() {
                 onImport={importData}
                 onOpenProfile={() => openSheet("profile")}
                 onEraseAll={() => {
-                  // Erase means a CLEAN start. The pairing lives under its
-                  // own key and used to survive the wipe — so "start over"
-                  // quietly rejoined the old family and pulled everything
-                  // back down, which reads as an erase that didn't take.
-                  // Leave first (hands the key back), then wipe, then drop
-                  // the device-local hints that belong to the previous life.
+                  // ONE confirm gates EVERYTHING. The audit caught the
+                  // original order committing the worst possible sin: leave
+                  // and sweep ran before/regardless of the confirm, so
+                  // CANCEL still unpaired the phone and deleted the blob —
+                  // cancel-as-wipe. Now nothing at all happens unless
+                  // eraseAllData reports that the person confirmed and the
+                  // blob is gone; only then does the device leave its
+                  // family and every numa-/numalog- key follow. The cloud
+                  // copy belongs to the family's other devices either way.
+                  if (!eraseAllData()) return;
                   familySync.leaveFamily();
-                  eraseAllData();
-                  // The owner's rule, in capitals at the time: erasing
-                  // everything erases EVERYTHING from this device. Every key
-                  // this app ever wrote goes — consent, hints, seen-flags,
-                  // units, milestones, all of it. The cloud copy (if any)
-                  // belongs to the family's OTHER devices and is not ours to
-                  // take from here; this device simply forgets it existed.
                   try {
                     const doomed: string[] = [];
                     for (let i = 0; i < window.localStorage.length; i += 1) {
@@ -796,7 +793,7 @@ export default function HomePage() {
                     }
                     doomed.forEach((key) => window.localStorage.removeItem(key));
                   } catch {
-                    // The blob and pairing are already gone; the rest is best-effort.
+                    // The blob is already gone; the sweep is best-effort.
                   }
                 }}
                 familySync={familySync}
