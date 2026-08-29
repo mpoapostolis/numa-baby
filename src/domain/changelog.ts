@@ -17,6 +17,18 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-09-01",
+    title: "Twenty pairs of eyes went over this app",
+    items: [
+      "A running timer now stays in the tile that started it — no more hunting for the clock you just started.",
+      "You can log a sleep or a nappy change that already happened. Before, you had to have pressed a button at the time.",
+      "Forms tell you why when they refuse something. They used to just sit there.",
+      "One nursing session can be both sides. It was one or the other, which made every both-sides feed look like two.",
+      "Medicine has somewhere to live, so “did you already give it” has an answer.",
+      "White noise plays on iPhone now — it was going to the channel the silent switch mutes.",
+    ],
+  },
+  {
     id: "2026-08-31",
     title: "What is probably next, in one place",
     items: [
