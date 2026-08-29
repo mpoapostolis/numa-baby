@@ -49,7 +49,16 @@ export type ReminderSettings = {
   diaperIntervalMinutes?: number;
 };
 
-export type Sheet = null | "bottle" | "nursing" | "diaper" | "growth" | "health" | "profile" | "edit";
+export type Sheet =
+  | null
+  | "bottle"
+  | "nursing"
+  | "diaper"
+  | "sleep"
+  | "growth"
+  | "health"
+  | "profile"
+  | "edit";
 
 export type StoredData = {
   activities: Activity[];

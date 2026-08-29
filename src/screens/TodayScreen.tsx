@@ -741,6 +741,18 @@ export default function TodayScreen({
                 <Button variant="outline" onClick={() => quickLogDiaper("dirty")} aria-label="Log dirty diaper">Dirty</Button>
                 <Button variant="outline" onClick={() => quickLogDiaper("both")} aria-label="Log wet and dirty diaper">Both</Button>
               </div>
+              {/* The diaper sheet — kind, time and a note — has existed since
+                  the beginning with nothing anywhere that opened it. The three
+                  buttons above log at NOW; this is the one for the change an
+                  hour ago that nobody had a hand free for. */}
+              <Button
+                variant="ghost"
+                className="tile-chip"
+                onClick={() => onOpenSheet("diaper")}
+                aria-label="Log a nappy change at a different time"
+              >
+                Past
+              </Button>
             </div>
 
             {activeSleep && <TimerTile activity={activeSleep} onStop={() => onStopTimer(activeSleep.id)} />}
@@ -757,6 +769,17 @@ export default function TodayScreen({
                   <span className="tile-title">Sleep</span>
                   <span className="tile-sub">Start the timer</span>
                 </button>
+                {/* The night you meant to log at the time. Without this the
+                    only way to record a sleep was to have pressed a button as
+                    it began, which is not how most nights go. */}
+                <Button
+                  variant="ghost"
+                  className="tile-chip"
+                  onClick={() => onOpenSheet("sleep")}
+                  aria-label="Add a sleep that has already finished"
+                >
+                  Past
+                </Button>
               </div>
             )}
 

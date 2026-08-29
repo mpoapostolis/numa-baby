@@ -1,15 +1,4 @@
-import {
-  Baby,
-  Check,
-  Droplet,
-  Heart,
-  Milk,
-  Minus,
-  Plus,
-  Thermometer,
-  Trash2,
-  Weight,
-} from "lucide-react";
+import { Baby, Check, Droplet, Heart, Milk, Minus, Moon, Plus, Thermometer, Trash2, Weight } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import {
   AlertDialog,
@@ -260,6 +249,29 @@ export function LogSheet({
     if (onAdd(entry, message)) onClose();
   }
 
+  // A sleep that already happened. Until now the only way to record one was
+  // to have pressed a button while it started — so a parent who realised at
+  // six that the baby went down at ten had nowhere to put the night that had
+  // just happened, which is most nights.
+  function saveSleep() {
+    const outcome = validateDraft(
+      { type: "sleep", start: draft.logTime, end: draft.endTime, note: draft.note },
+      { requireEnd: true },
+    );
+    if (!outcome.ok) {
+      showFormError(outcome);
+      return;
+    }
+    const entry: Activity = {
+      id: makeId(),
+      type: "sleep",
+      startedAt: outcome.value.startedAt,
+      endedAt: outcome.value.endedAt,
+      note: outcome.value.note,
+    };
+    if (onAdd(entry, "Sleep saved")) onClose();
+  }
+
   function saveDiaper(kind: DiaperKind) {
     const outcome = validateDraft({ type: "diaper", start: draft.logTime, note: draft.note }, { clampTime: true });
     if (!outcome.ok) return;
@@ -444,6 +456,39 @@ export function LogSheet({
             <Button type="submit" className="primary-button sheet-primary">
               {draft.nursingEntryMode === "timer" ? `Start ${draft.nursingSide} timer` : `Save ${draft.nursingSide} session`}
             </Button>
+          </DialogFooter>
+        </SheetForm>
+      )}
+
+      {sheet === "sleep" && (
+        <SheetForm onSubmit={saveSleep}>
+          <LogDialogHeader
+            icon={<Moon />}
+            eyebrow="Past sleep"
+            title="Add a sleep"
+            description="A stretch that has already finished — the night you meant to log at the time."
+          />
+          <div className="measurement-row nursing-time-row">
+            <TimeField
+              value={draft.logTime}
+              label="Fell asleep"
+              inputRef={startRef}
+              error={formError?.field === "start"}
+              onChange={(value) => { patch({ logTime: value }); setFormError(null); }}
+            />
+            <TimeField
+              value={draft.endTime}
+              label="Woke up"
+              inputRef={endRef}
+              error={formError?.field === "end"}
+              onChange={(value) => { patch({ endTime: value }); setFormError(null); }}
+            />
+          </div>
+          <NoteField value={draft.note} onChange={(value) => patch({ note: value })} />
+          <FormError message={formError?.message ?? null} />
+          <DialogFooter>
+            <p className="sheet-footer-note">A stretch that crosses midnight is counted whole, on the evening it began.</p>
+            <Button type="submit" className="primary-button sheet-primary">Save sleep</Button>
           </DialogFooter>
         </SheetForm>
       )}

@@ -164,6 +164,18 @@ export function SheetForm({ children, onSubmit }: { children: React.ReactNode; o
   return (
     <form
       className="sheet-form"
+      // The app validates, not the browser.
+      //
+      // Every time field carries max={now} so the native picker greys out
+      // future dates — a good hint. But a value past that max also fails NATIVE
+      // constraint validation, which blocks the submit event outright: the
+      // app's own validator never ran, so the careful sentence it would have
+      // shown ("the end time must be after the start and not in the future")
+      // could never appear. Every sheet in the app refused a future time in
+      // silence. The max stays, because it still shapes the picker; the
+      // browser just no longer gets to veto the submit before anyone is told
+      // why.
+      noValidate
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit();
