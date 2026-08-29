@@ -469,10 +469,12 @@ export default function TodayScreen({
         </div>
       </header>
 
-      {/* has-live is nursing-only: the live nursing figure + Stop ARE the 3am
-          state. A background sleep timer is not — tiles stay first for the
-          wake-up that follows tracked sleep. */}
-      <div className={`today-dashboard${activeNursing ? " has-live" : ""}`}>
+      {/* ANY running timer, not just nursing. A sleep or burping timer used to
+          leave the tiles on top and put the running clock below them, so the
+          thing a parent had just started was off the bottom of the screen and
+          had to be scrolled to. Whatever is counting is what they came back to
+          look at. */}
+      <div className={`today-dashboard${activeTimers.length > 0 ? " has-live" : ""}`}>
         <div className="today-main">
           {/* The fact rides in today-main: on mobile the tap tiles order
               first, so the reading material sits just after the buttons —

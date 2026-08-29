@@ -209,25 +209,31 @@
 
 /* 3am rule: in any single-column rendering the log buttons come FIRST — the
    first tap target must sit in the top third, before the clock block.
-   Except while NURSING runs (has-live is nursing-only): the live figure and
-   its Stop button are the 3am state then. A background sleep timer never
-   demotes the tiles. Same 720px threshold as the two-column layout below. */
+   While a timer runs, the running clock leads and the buttons follow it
+   immediately. Same 720px threshold as the two-column layout below. */
 @container (width < 720px) {
   .today-dashboard:not(.has-live) > .log-column { order: -1; }
 
-  /* While a timer runs the live figure and its Stop button ARE the 3am
-     state, so they lead — otherwise they sat below a 432px fact card. */
-  .today-dashboard.has-live .hearth { order: -1; }
+  /* The hearth holds the running timers but lives inside .today-main, a
+     sibling of the tiles — so ordering it could only move it WITHIN that
+     subtree, never above or below the tiles. Flattening the wrapper puts both
+     in the same grid, where they can finally be ordered against each other:
+     the clock that is counting, then the buttons, then everything else. Both
+     grids already use gap: 24px, so the spacing survives the flattening. */
+  .today-dashboard.has-live > .today-main { display: contents; }
+  .today-dashboard.has-live .hearth { order: -2; }
+  .today-dashboard.has-live > .log-column { order: -1; }
 
   /* Growth + Health are daytime rows — side by side they cost half the
-     nightly scroll. */
-  .today-dashboard:not(.has-live) > .log-column {
+     nightly scroll. Unconditional: the tile grid must not change shape at the
+     moment a timer starts. */
+  .today-dashboard > .log-column {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
 
-  .today-dashboard:not(.has-live) > .log-column > .quick-grid {
+  .today-dashboard > .log-column > .quick-grid {
     grid-column: 1 / -1;
   }
 
