@@ -9,6 +9,7 @@
 // sends to a server, straight from this browser to the other address.
 
 import { useState } from "react";
+import "../styles/screens/handoff.css";
 import { ArrowRight, Download, ShieldCheck } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { originLabel } from "../domain/handoff";

@@ -37,7 +37,6 @@ import {
   readHandoffTarget,
 } from "./domain/handoff";
 import { backupNudge } from "./domain/backupNudge";
-import { BackupNudgeCard } from "./components/BackupNudge";
 import { readConsent } from "./domain/consent";
 import { ageInDays } from "./domain/time";
 import { useActivityStats } from "./hooks/useActivityStats";
@@ -64,6 +63,10 @@ const LogSheet = lazy(() => import("./components/LogSheet").then((m) => ({ defau
 // Only reached by someone deliberately moving their log to the app's other web
 // address, which most people will do once or never.
 const HandoffScreen = lazy(() => import("./screens/HandoffScreen").then((m) => ({ default: m.HandoffScreen })));
+// Shown after twenty entries and then rarely. The decision to show it is a
+// pure function and stays here; the card itself has no business in the bundle
+// a parent downloads at 3am.
+const BackupNudgeCard = lazy(() => import("./components/BackupNudge").then((m) => ({ default: m.BackupNudgeCard })));
 
 // A future-dated feed from a restored backup must never arm a timer that wraps
 // the 32-bit setTimeout ceiling and fires instantly.
@@ -562,6 +565,7 @@ export default function HomePage() {
             rules live in domain/backupNudge.ts so they can be tested rather
             than argued about. */}
         {pendingBackupNudge && (
+          <Suspense fallback={null}>
           <BackupNudgeCard
             nudge={pendingBackupNudge}
             onBackup={() => { track("backup_nudge_accepted"); exportData(); }}
@@ -572,6 +576,7 @@ export default function HomePage() {
               setBackupDismissedAt(at);
             }}
           />
+          </Suspense>
         )}
 
         <main className="content">
