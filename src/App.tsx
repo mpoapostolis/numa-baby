@@ -22,6 +22,7 @@ import { Toaster } from "./components/ui/sonner";
 import { AppSidebar } from "./components/AppSidebar";
 import { BabyFace, SleepingBaby } from "./components/illustrations";
 import { ConsentBanner } from "./components/ConsentBanner";
+import { InAppEscape } from "./components/InAppEscape";
 import { FeedbackBubble } from "./components/FeedbackBubble";
 import OnboardingScreen from "./screens/OnboardingScreen";
 import TodayScreen from "./screens/TodayScreen";
@@ -558,6 +559,8 @@ export default function HomePage() {
             </div>
           </div>
         )}
+
+        <InAppEscape />
 
         {moveTarget(window.location.origin) !== null && (
           <Suspense fallback={null}>

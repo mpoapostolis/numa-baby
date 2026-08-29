@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "../components/ui/dialog";
 import { BabyFace, NurseryScene, TinyStars } from "../components/illustrations";
+import { InAppEscape } from "../components/InAppEscape";
 import { Button } from "../components/ui/button";
 import {
   Card,
@@ -112,6 +113,8 @@ export default function OnboardingScreen({
           <Switch id={nightModeId} checked={nightMode} onCheckedChange={onNightModeChange} aria-label="Use night mode" />
         </label>
       </header>
+
+      <InAppEscape />
 
       {mode === "recovery" ? (
         <div className="recovery-region">

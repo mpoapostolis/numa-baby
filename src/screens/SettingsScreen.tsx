@@ -22,6 +22,7 @@ import { Switch } from "../components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "../components/ui/toggle-group";
 import { FamilySyncCard } from "../components/FamilySyncCard";
 import { FeedbackCard } from "../components/FeedbackCard";
+import { InstallGuide } from "../components/InstallGuide";
 import { SettingsAction } from "../components/SettingsAction";
 import { track } from "../domain/analytics";
 import { ConsentChoice, readConsent, saveConsent } from "../domain/consent";
@@ -124,6 +125,11 @@ export default function SettingsScreen({
           </ItemGroup>
         </CardContent>
       </Card>
+
+      {/* Rendered only while NOT installed — the component hides itself in
+          standalone mode. First thing after the profile because "is this an
+          app?" was the most-asked question where these families come from. */}
+      <InstallGuide />
 
       <Card className="settings-group reminder-settings">
         <CardHeader>
