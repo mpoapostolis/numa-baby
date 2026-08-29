@@ -14,12 +14,20 @@
   gap: 8px;
 }
 
-.filter-row {
+/* Eight filters, 637px of them, in a 375px phone. The ToggleGroup ships
+   `flex-wrap: nowrap` and `overflow-x: auto` of its own, which won over the
+   wrap declared here — so half the filters (Burp, Sleep, Growth, Health) sat
+   off the right edge with nothing on screen to suggest they existed. A
+   scrolling strip with no affordance is a hidden feature.
+   Specificity raised deliberately so the wrap actually applies: two rows of
+   chips shows all eight at once, which is the point of a filter. */
+.timeline-controls .filter-row {
   width: 100%;
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-start;
   gap: 8px;
+  overflow-x: visible;
 }
 
 .filter-row [data-slot="toggle-group-item"] {

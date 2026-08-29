@@ -126,6 +126,10 @@ export default function InsightsScreen({
   );
   const medianMl = median(weekly.filter((day) => day.ml > 0).map((day) => day.ml));
   const todayIndex = weekly.length - 1;
+  // "a, b and c" — an Oxford-comma-free list, because this is a sentence a
+  // person reads, not a data dump.
+  const listOf = (items: string[]) =>
+    items.length <= 1 ? items[0] : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
   // Fresh install: with nothing in any tile, the strip would lead with four
   // dashes — skip it and let the rhythm card's EmptyState lead instead.
   const hasSummaryData = Boolean(
@@ -133,7 +137,16 @@ export default function InsightsScreen({
   );
 
   // Partial data keeps the full four-tile grid (per-tile hiding causes daily
-  // layout shift); each dash is decorative with an SR explanation.
+  // layout shift); each dash is decorative with an SR explanation. But three
+  // dashes beside one number reads as a broken screen rather than a young one,
+  // so when any tile is waiting the strip says what it is waiting FOR.
+  const waitingFor = [
+    typicalGap ? null : "a few more feeds",
+    averageFeeds ? null : "a day or two",
+    bottleMlToday > 0 ? null : "a bottle today",
+    latestGrowth?.weightGrams ? null : "a weight",
+  ].filter(Boolean) as string[];
+
   const emptyTile = (
     <strong className="t-numeral is-empty">
       <span aria-hidden="true">—</span>
@@ -275,6 +288,12 @@ export default function InsightsScreen({
             <span className="t-label">Latest weight</span>
           </div>
         </div>
+      )}
+
+      {hasSummaryData && waitingFor.length > 0 && (
+        <p className="insight-waiting">
+          The dashes fill in on their own — they are waiting on {listOf(waitingFor)}.
+        </p>
       )}
 
       {showBottles && (

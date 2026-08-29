@@ -764,3 +764,12 @@
   .visit-coverage { background: #f2f2f2; }
   .visit-table { page-break-inside: avoid; }
 }
+
+/* Three dashes beside one number reads as a broken screen. One quiet line
+   turns it into a young one. */
+.insight-waiting {
+  margin: -8px 0 0;
+  color: var(--ink-3);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
