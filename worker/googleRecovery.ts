@@ -141,9 +141,19 @@ export async function handleGoogleRecover(
   const identity = await identityFrom(body, clientId, json);
   if (identity instanceof Response) return identity;
   await ensureTable(client);
+  // The sub is the primary key; the verified address is the shared lock —
+  // a family guarded by this email through the OTHER door opens here too.
+  await client
+    .execute(
+      "CREATE TABLE IF NOT EXISTS recovery_emails (email TEXT PRIMARY KEY, family_id TEXT NOT NULL REFERENCES families(id), created_at TEXT NOT NULL)",
+    )
+    .catch(() => undefined);
   const rows = await client.execute({
-    sql: "SELECT family_id FROM recovery_identities WHERE google_sub = ?",
-    args: [identity.sub],
+    sql: `SELECT family_id, created_at FROM recovery_identities WHERE google_sub = ?
+          UNION ALL
+          SELECT family_id, created_at FROM recovery_emails WHERE email = ?
+          ORDER BY created_at DESC LIMIT 1`,
+    args: [identity.sub, identity.email],
   });
   if (!rows.rows.length) {
     return json({ error: "No log is protected by this Google account. If you used a different address, sign in with that one." }, 404);

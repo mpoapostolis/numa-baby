@@ -182,9 +182,19 @@ export async function handleEmailRecoverRequest(
   await ensureTables(client);
   const now = Date.now();
   if (!(await reserveSend(client, email, now))) return json({ sent: true });
+  // Either registry counts: an address Google verified guards its family
+  // just as firmly as one that proved its inbox — the doors share the lock.
+  await client
+    .execute(
+      "CREATE TABLE IF NOT EXISTS recovery_identities (google_sub TEXT PRIMARY KEY, family_id TEXT NOT NULL REFERENCES families(id), email TEXT NOT NULL, created_at TEXT NOT NULL)",
+    )
+    .catch(() => undefined);
   const guard = await client.execute({
-    sql: "SELECT family_id FROM recovery_emails WHERE email = ?",
-    args: [email],
+    sql: `SELECT family_id, created_at FROM recovery_emails WHERE email = ?
+          UNION ALL
+          SELECT family_id, created_at FROM recovery_identities WHERE email = ?
+          ORDER BY created_at DESC LIMIT 1`,
+    args: [email, email],
   });
   const guarded = guard.rows.length > 0;
   let token = "";
