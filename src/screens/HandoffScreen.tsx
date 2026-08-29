@@ -61,7 +61,9 @@ export function HandoffScreen({
 
         <ul className="handoff-facts">
           <li>Nothing is uploaded. The entries travel inside the link, which no browser sends to a server.</li>
-          <li>This copy stays here too. Nothing is deleted from this address.</li>
+          <li>This copy stays here too. Nothing is deleted from this address — and keep any
+            installed icon until the new address shows your entries: deleting an installed
+            app deletes its storage with it.</li>
           <li>You will be asked to confirm again on the other side before anything is merged.</li>
         </ul>
 

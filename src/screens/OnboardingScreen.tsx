@@ -279,7 +279,9 @@ export default function OnboardingScreen({
               Numalog moved here. Your entries are still safe at the old address — one tap
               brings your whole log over, and nothing is deleted from the old one. If you
               used the installed app from your home screen, move with a backup file
-              instead: its entries can’t travel by link.
+              instead: its entries can’t travel by link. Either way, keep the old app or
+              icon until you can SEE your entries here — an installed app’s storage is
+              deleted with it.
             </DialogDescription>
             <DialogFooter>
               <Button
