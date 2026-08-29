@@ -1,5 +1,5 @@
 import { Suspense, lazy, useState } from "react";
-import { ChevronRight, ExternalLink, Milk, ShieldCheck, Square, Thermometer, Waves, Weight } from "lucide-react";
+import { ChevronRight, ExternalLink, Milk, Pill, ShieldCheck, Square, Thermometer, Waves, Weight } from "lucide-react";
 
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -260,6 +260,7 @@ export default function TodayScreen({
   // Every timer now runs in its own tile, so a row is only for one that has
   // no tile on screen — a nursing session still going for a family that has
   // since switched to bottles only. Rare, and it must never go invisible.
+  const lastMedicine = sortedActivities.find((activity) => activity.type === "medicine");
   const nursingTileShown = profile.feedingMode !== "bottle";
   const homelessTimers = activeTimers.filter((timer) =>
     timer.type === "nursing" ? !nursingTileShown : timer.type !== "sleep" && timer.type !== "burp",
@@ -846,6 +847,25 @@ export default function TodayScreen({
             <span className="log-copy">
               <strong>Sounds</strong>
               <small>White noise and lullabies</small>
+            </span>
+            <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
+          </Button>
+          {/* The whole point is the timestamp. "Has she already had it, and did
+              you give it or did I" is the question two exhausted people in one
+              house get wrong, and it is the one mistake here that matters. */}
+          <Button
+            variant="ghost"
+            className="log-row log-row-secondary action-medicine"
+            onClick={() => onOpenSheet("medicine")}
+          >
+            <span className="action-icon" aria-hidden="true"><Pill /></span>
+            <span className="log-copy">
+              <strong>Medicine</strong>
+              <small>
+                {lastMedicine
+                  ? `${lastMedicine.medicine?.trim() || "Last dose"} · ${humanDuration(minutesBetween(lastMedicine.startedAt, new Date(minuteClock).toISOString()))} ago`
+                  : "Vitamin D, paracetamol, drops"}
+              </small>
             </span>
             <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
           </Button>

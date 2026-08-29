@@ -237,3 +237,32 @@ describe("a nursing session that used both sides", () => {
     })).toBe(false);
   });
 });
+
+describe("a medicine dose", () => {
+  it("records what was given and when", () => {
+    expect(isValidActivity({
+      id: "m1",
+      type: "medicine",
+      startedAt: "2026-08-29T08:00:00.000Z",
+      medicine: "Vitamin D drops",
+      dose: "one drop",
+    })).toBe(true);
+  });
+
+  it("keeps the dose as free text, because this app must not do paediatric dosing", () => {
+    // "half a sachet" is a real answer and no number can hold it.
+    expect(isValidActivity({
+      id: "m2",
+      type: "medicine",
+      startedAt: "2026-08-29T08:00:00.000Z",
+      medicine: "Paracetamol",
+      dose: "2.5 ml from the syringe on the box",
+    })).toBe(true);
+  });
+
+  it("refuses a name or dose that is not a bounded string", () => {
+    const base = { id: "m3", type: "medicine", startedAt: "2026-08-29T08:00:00.000Z" };
+    expect(isValidActivity({ ...base, medicine: 42 })).toBe(false);
+    expect(isValidActivity({ ...base, dose: "x".repeat(NOTE_MAX_LENGTH + 1) })).toBe(false);
+  });
+});

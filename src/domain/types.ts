@@ -2,7 +2,7 @@
 // touches is defined here so the validators, the fixtures and the app agree on
 // one shape.
 
-export type ActivityType = "bottle" | "nursing" | "diaper" | "burp" | "sleep" | "growth" | "health";
+export type ActivityType = "bottle" | "nursing" | "diaper" | "burp" | "sleep" | "growth" | "health" | "medicine";
 export type DiaperKind = "wet" | "dirty" | "both";
 export type FeedingMode = "mixed" | "breast" | "bottle";
 export type Tab = "today" | "timeline" | "insights" | "guide" | "more";
@@ -22,6 +22,14 @@ export type Activity = {
   lengthCm?: number;
   headCm?: number;
   temperatureC?: number;
+  /** What was given. Free text on purpose: this app records what a parent says
+      they gave and when. It does not know doses, must not check them, and must
+      never imply it has. The value is entirely "has this already been given,
+      and when" — the question two tired people in one house get wrong. */
+  medicine?: string;
+  /** How much, as the parent would say it: "2.5 ml", "one drop", "half a
+      sachet". Deliberately not a number with units. */
+  dose?: string;
   note?: string;
   // Sync-ready metadata. Absent on legacy rows: a missing updatedAt is treated
   // as equal to startedAt (activityUpdatedAt in validate.ts) and stored data is
@@ -57,6 +65,7 @@ export type Sheet =
   | "nursing"
   | "diaper"
   | "sleep"
+  | "medicine"
   | "growth"
   | "health"
   | "profile"

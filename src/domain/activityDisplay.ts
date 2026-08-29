@@ -8,6 +8,7 @@ export function activityTitle(activity: Activity) {
   if (activity.type === "sleep") return activity.endedAt ? "Sleep" : "Sleeping now";
   if (activity.type === "growth") return "Growth check";
   if (activity.type === "health") return activity.temperatureC ? "Temperature" : "Health note";
+  if (activity.type === "medicine") return activity.medicine?.trim() || "Medicine";
   if (activity.diaperKind === "both") return "Wet + dirty diaper";
   return activity.diaperKind === "dirty" ? "Dirty diaper" : "Wet diaper";
 }
@@ -40,6 +41,12 @@ export function activityDetail(activity: Activity) {
     const detail = activity.endedAt
       ? `${formatTime(activity.startedAt)}–${formatTime(activity.endedAt)} · ${humanDuration(minutesBetween(activity.startedAt, activity.endedAt))}`
       : `Started ${formatTime(activity.startedAt)} · ${timeAgo(activity.startedAt)}`;
+    return includeNote(detail, activity.note);
+  }
+  if (activity.type === "medicine") {
+    // The dose is shown exactly as it was typed. This app has no opinion about
+    // how much a baby should be given and must never look like it has one.
+    const detail = [activity.dose?.trim(), formatTime(activity.startedAt)].filter(Boolean).join(" · ");
     return includeNote(detail, activity.note);
   }
   if (activity.type === "growth") {

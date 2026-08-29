@@ -76,7 +76,7 @@ export default function TimelineScreen({
             onFilterChange(value as "all" | ActivityType);
           }}
         >
-          {(["all", "bottle", "nursing", "diaper", "burp", "sleep", "growth", "health"] as const).map((option) => (
+          {(["all", "bottle", "nursing", "diaper", "burp", "sleep", "medicine", "growth", "health"] as const).map((option) => (
             <ToggleGroupItem
               key={option}
               value={option}

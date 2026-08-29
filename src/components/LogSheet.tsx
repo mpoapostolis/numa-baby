@@ -1,4 +1,4 @@
-import { Baby, Check, Droplet, Heart, Milk, Minus, Moon, Plus, Thermometer, Trash2, Weight } from "lucide-react";
+import { Baby, Check, Droplet, Heart, Milk, Minus, Moon, Pill, Plus, Thermometer, Trash2, Weight } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import {
   AlertDialog,
@@ -27,6 +27,7 @@ import { DEFAULT_BOTTLE_ML, numericFieldProps } from "../domain/activitySchema";
 import { makeId } from "../domain/id";
 import { formatTime, formatTimelineDay, localDateInput } from "../domain/time";
 import { DraftErrorField, validateDraft } from "../domain/validate";
+import { NOTE_MAX_LENGTH } from "../domain/activitySchema";
 import { Activity, DiaperKind, FeedingMode, Profile, Sheet } from "../domain/types";
 import { ActivityGlyph } from "./ActivityGlyph";
 import { TemperatureAdvice } from "./TemperatureAdvice";
@@ -59,6 +60,8 @@ type SheetDraft = {
   logTime: string;
   endTime: string;
   nursingSide: "left" | "right" | "both";
+  medicineName: string;
+  doseText: string;
   nursingEntryMode: "timer" | "manual";
   diaperKind: DiaperKind;
 };
@@ -84,6 +87,8 @@ function initialSheetDraft(
     logTime: localDateInput(now),
     endTime: "",
     nursingSide: "left",
+    medicineName: "",
+    doseText: "",
     nursingEntryMode: "timer",
     diaperKind: "wet",
   };
@@ -102,6 +107,8 @@ function initialSheetDraft(
       logTime: localDateInput(new Date(editing.startedAt)),
       endTime: editing.endedAt ? localDateInput(new Date(editing.endedAt)) : "",
       nursingSide: editing.side ?? "left",
+      medicineName: editing.medicine ?? "",
+      doseText: editing.dose ?? "",
       diaperKind: editing.diaperKind ?? "wet",
     };
   }
@@ -274,6 +281,34 @@ export function LogSheet({
       note: outcome.value.note,
     };
     if (onAdd(entry, "Sleep saved")) onClose();
+  }
+
+  // What was given, and when. Nothing here checks a dose or suggests one:
+  // paediatric dosing depends on weight and on the specific preparation, and an
+  // app that guessed at it would be dangerous in exactly the situation it is
+  // meant to help with. The value is the timestamp — "has she already had it,
+  // and did you give it or did I" is the question two exhausted people in one
+  // house get wrong.
+  function saveMedicine() {
+    const name = draft.medicineName.trim();
+    if (!name) {
+      showFormError({ message: "Which medicine was it?", field: "start" });
+      return;
+    }
+    const outcome = validateDraft({ type: "medicine", start: draft.logTime, note: draft.note });
+    if (!outcome.ok) {
+      showFormError(outcome);
+      return;
+    }
+    const entry: Activity = {
+      id: makeId(),
+      type: "medicine",
+      startedAt: outcome.value.startedAt,
+      medicine: name.slice(0, NOTE_MAX_LENGTH),
+      dose: draft.doseText.trim().slice(0, NOTE_MAX_LENGTH) || undefined,
+      note: outcome.value.note,
+    };
+    if (onAdd(entry, `${name} logged`)) onClose();
   }
 
   function saveDiaper(kind: DiaperKind) {
@@ -504,6 +539,51 @@ export function LogSheet({
             <p className="sheet-footer-note">A stretch that crosses midnight is counted whole, on the evening it began.</p>
             <Button type="submit" className="primary-button sheet-primary">Save sleep</Button>
           </DialogFooter>
+        </SheetForm>
+      )}
+
+      {sheet === "medicine" && (
+        <SheetForm onSubmit={saveMedicine}>
+          <LogDialogHeader
+            icon={<Pill />}
+            eyebrow="Medicine"
+            title="Log a dose"
+            description="So the next person knows it has already been given."
+          />
+          <Field className="medicine-field">
+            <FieldLabel htmlFor="medicine-name">What was given</FieldLabel>
+            <InputGroup>
+              <InputGroupInput
+                id="medicine-name"
+                autoFocus
+                data-initial-focus
+                value={draft.medicineName}
+                maxLength={NOTE_MAX_LENGTH}
+                placeholder="Vitamin D drops, paracetamol…"
+                onChange={(event) => { patch({ medicineName: event.target.value }); setFormError(null); }}
+              />
+            </InputGroup>
+          </Field>
+          <Field className="medicine-field">
+            <FieldLabel htmlFor="medicine-dose">How much <span className="optional-label">Optional</span></FieldLabel>
+            <InputGroup>
+              <InputGroupInput
+                id="medicine-dose"
+                value={draft.doseText}
+                maxLength={NOTE_MAX_LENGTH}
+                placeholder="2.5 ml, one drop…"
+                onChange={(event) => patch({ doseText: event.target.value })}
+              />
+            </InputGroup>
+            <FieldDescription>
+              Written down exactly as you gave it. This app never suggests a dose — that comes from
+              the label or your doctor.
+            </FieldDescription>
+          </Field>
+          <TimeField value={draft.logTime} inputRef={startRef} error={formError?.field === "start"} onChange={(value) => { patch({ logTime: value }); setFormError(null); }} />
+          <NoteField value={draft.note} onChange={(value) => patch({ note: value })} />
+          <FormError message={formError?.message ?? null} />
+          <DialogFooter><Button type="submit" className="primary-button sheet-primary">Save dose</Button></DialogFooter>
         </SheetForm>
       )}
 

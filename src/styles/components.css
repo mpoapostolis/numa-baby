@@ -1383,3 +1383,9 @@
 .backup-nudge-actions [data-slot="button"] {
   min-height: 44px;
 }
+
+.action-medicine .action-icon,
+.glyph-medicine {
+  background: color-mix(in oklab, var(--glyph-health) var(--glyph-wash), var(--card));
+  color: var(--glyph-health);
+}
