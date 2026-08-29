@@ -52,6 +52,7 @@ export type DaySummary = {
 
   growthEntries: number;
   healthEntries: number;
+  solids: number;
   /** Anything at all logged on this day. */
   isEmpty: boolean;
 };
@@ -77,6 +78,7 @@ const EMPTY = {
   longestSleepMinutes: 0,
   growthEntries: 0,
   healthEntries: 0,
+  solids: 0,
 };
 
 /**
@@ -191,6 +193,9 @@ export function summarizeDay(activities: Activity[], day: Date, now: number): Da
       case "health":
         summary.healthEntries += 1;
         break;
+      case "solid":
+        summary.solids += 1;
+        break;
     }
   }
 
@@ -200,7 +205,8 @@ export function summarizeDay(activities: Activity[], day: Date, now: number): Da
     summary.naps === 0 &&
     summary.sleepMinutes === 0 &&
     summary.growthEntries === 0 &&
-    summary.healthEntries === 0;
+    summary.healthEntries === 0 &&
+    summary.solids === 0;
 
   return summary;
 }

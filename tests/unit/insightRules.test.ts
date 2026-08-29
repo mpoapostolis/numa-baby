@@ -37,6 +37,7 @@ function day(offsetFromToday: number, fields: Partial<DaySummary> = {}): DaySumm
     longestSleepMinutes: 0,
     growthEntries: 0,
     healthEntries: 0,
+    solids: 0,
     isEmpty: false,
     ...fields,
   };

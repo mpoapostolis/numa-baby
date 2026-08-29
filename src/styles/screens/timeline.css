@@ -30,33 +30,11 @@
   overflow-x: visible;
 }
 
-.filter-row [data-slot="toggle-group-item"] {
-  /* The button primitive ships a fixed height: min-height can raise this box
-     but never let it GROW, so wrapped content spills out of it. */
-  height: auto;
-  min-width: auto;
-  min-height: 44px;
-  padding: 0 16px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--card);
-  color: var(--ink-2);
-  font-size: 0.8125rem;
-}
 
-.filter-row [data-slot="toggle-group-item"][data-state="on"] {
-  border-color: color-mix(in oklab, var(--signal) 40%, var(--border));
-  background: var(--signal-quiet);
-  color: var(--signal);
-  box-shadow: none;
-}
 
-@media (hover: hover) and (pointer: fine) {
-  .filter-row [data-slot="toggle-group-item"]:hover:not([data-state="on"]) {
-    background: var(--muted);
-    color: var(--foreground);
-  }
-}
+
+
+
 
 .timeline-date,
 .timeline-day-heading {
@@ -66,15 +44,7 @@
   gap: 16px;
 }
 
-/* The day's totals under its heading — scrolling back through the week
-   answers "how did Tuesday go" without opening anything. */
-.recap-line {
-  margin: -4px 0 4px;
-  color: var(--ink-3);
-  font-size: 0.75rem;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
-}
+
 
 .timeline-date {
   margin: 0;
@@ -130,12 +100,7 @@
   margin: 0 16px;
 }
 
-/* Shared activity rows (Today + Timeline): trailing time + pencil at meta size. */
-.activity-row .activity-meta {
-  color: var(--ink-2);
-  font-size: 0.8125rem;
-  line-height: 1.45;
-}
+
 
 .load-more {
   width: min(100%, 320px);

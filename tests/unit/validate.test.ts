@@ -282,3 +282,12 @@ describe("future timestamps arriving from other devices", () => {
     expect(isValidActivity({ ...base, startedAt: okStart, endedAt: absurd })).toBe(false);
   });
 });
+
+describe("solid food entries", () => {
+  it("accepts a solid with food text, and rejects a blob-sized one", () => {
+    const base = { id: "s1", type: "solid", startedAt: "2026-08-29T10:00:00.000Z" };
+    expect(isValidActivity({ ...base, food: "banana" })).toBe(true);
+    expect(isValidActivity({ ...base })).toBe(true);
+    expect(isValidActivity({ ...base, food: "x".repeat(241) })).toBe(false);
+  });
+});

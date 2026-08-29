@@ -19,6 +19,7 @@ const activityTypes = new Set<ActivityType>([
   "growth",
   "health",
   "medicine",
+  "solid",
 ]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -62,6 +63,7 @@ export function isValidActivity(value: unknown): value is Activity {
   // types, and a stored blob is something a sync could hand us.
   if (value.medicine !== undefined && (typeof value.medicine !== "string" || value.medicine.length > NOTE_MAX_LENGTH)) return false;
   if (value.dose !== undefined && (typeof value.dose !== "string" || value.dose.length > NOTE_MAX_LENGTH)) return false;
+  if (value.food !== undefined && (typeof value.food !== "string" || value.food.length > NOTE_MAX_LENGTH)) return false;
   if (invalidStoredNumber("amount", value.amount)) return false;
   if (invalidStoredNumber("weightGrams", value.weightGrams)) return false;
   if (invalidStoredNumber("lengthCm", value.lengthCm)) return false;

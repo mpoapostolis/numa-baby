@@ -1,4 +1,4 @@
-import { Baby, Check, Droplet, Heart, Milk, Minus, Moon, Pill, Plus, Thermometer, Trash2, Weight } from "lucide-react";
+import { Baby, Check, Droplet, Heart, Milk, Minus, Moon, Pill, Plus, Thermometer, Trash2, Utensils, Weight } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import {
   AlertDialog,
@@ -76,6 +76,7 @@ type SheetDraft = {
   nursingSide: "left" | "right" | "both";
   medicineName: string;
   doseText: string;
+  foodText: string;
   nursingEntryMode: "timer" | "manual";
   diaperKind: DiaperKind;
 };
@@ -106,6 +107,7 @@ function initialSheetDraft(
     nursingSide: "left",
     medicineName: "",
     doseText: "",
+    foodText: "",
     nursingEntryMode: "timer",
     diaperKind: "wet",
   };
@@ -125,6 +127,7 @@ function initialSheetDraft(
       endTime: editing.endedAt ? localDateInput(new Date(editing.endedAt)) : "",
       nursingSide: editing.side ?? "left",
       medicineName: editing.medicine ?? "",
+      foodText: editing.food ?? "",
       doseText: editing.dose ?? "",
       diaperKind: editing.diaperKind ?? "wet",
     };
@@ -353,6 +356,27 @@ export function LogSheet({
     if (onAdd(entry, `${name} logged`)) onClose();
   }
 
+  function saveSolid() {
+    const food = draft.foodText.trim();
+    if (!food) {
+      showFormError({ message: "What did they eat?", field: "start" });
+      return;
+    }
+    const outcome = validateDraft({ type: "solid", start: draft.logTime, note: draft.note });
+    if (!outcome.ok) {
+      showFormError(outcome);
+      return;
+    }
+    const entry: Activity = {
+      id: makeId(),
+      type: "solid",
+      startedAt: outcome.value.startedAt,
+      food: food.slice(0, NOTE_MAX_LENGTH),
+      note: outcome.value.note,
+    };
+    if (onAdd(entry, `${food} logged`)) onClose();
+  }
+
   function saveDiaper(kind: DiaperKind) {
     const outcome = validateDraft({ type: "diaper", start: draft.logTime, note: draft.note }, { clampTime: true });
     if (!outcome.ok) return;
@@ -459,6 +483,14 @@ export function LogSheet({
       next.headCm = outcome.value.headCm;
     }
     if (next.type === "health") next.temperatureC = outcome.value.temperatureC;
+    if (next.type === "solid") {
+      const food = draft.foodText.trim();
+      if (!food) {
+        showFormError({ message: "What did they eat?", field: "start" });
+        return;
+      }
+      next.food = food.slice(0, NOTE_MAX_LENGTH);
+    }
 
     if (!onUpdate(next)) return;
     onClose();
@@ -624,6 +656,39 @@ export function LogSheet({
           <NoteField value={draft.note} onChange={(value) => patch({ note: value })} />
           <FormError message={formError?.message ?? null} />
           <DialogFooter><Button type="submit" className="primary-button sheet-primary">Save dose</Button></DialogFooter>
+        </SheetForm>
+      )}
+
+      {sheet === "solid" && (
+        <SheetForm onSubmit={saveSolid}>
+          <LogDialogHeader
+            icon={<Utensils />}
+            eyebrow="Solids"
+            title="Log a food"
+            description="What went in, and roughly when — tastes count."
+          />
+          <Field className="medicine-field">
+            <FieldLabel htmlFor="solid-food">What did they eat?</FieldLabel>
+            <InputGroup>
+              <InputGroupInput
+                id="solid-food"
+                autoFocus
+                data-initial-focus
+                value={draft.foodText}
+                maxLength={NOTE_MAX_LENGTH}
+                placeholder="Banana, carrot purée, rice cereal…"
+                onChange={(event) => { patch({ foodText: event.target.value }); setFormError(null); }}
+              />
+            </InputGroup>
+            <FieldDescription>
+              A record of firsts and reactions, not a nutrition score. Note anything unusual —
+              a rash or vomiting after a new food is worth telling your doctor about.
+            </FieldDescription>
+          </Field>
+          <TimeField value={draft.logTime} inputRef={startRef} error={formError?.field === "start"} onChange={(value) => { patch({ logTime: value }); setFormError(null); }} />
+          <NoteField value={draft.note} onChange={(value) => patch({ note: value })} placeholder="How it went — loved it, spat it out, small rash…" />
+          <FormError message={formError?.message ?? null} />
+          <DialogFooter><Button type="submit" className="primary-button sheet-primary">Save food</Button></DialogFooter>
         </SheetForm>
       )}
 

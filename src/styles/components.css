@@ -1338,6 +1338,13 @@ body:has(.feedback-bubble) .content {
   color: var(--glyph-health);
 }
 
+/* Solids share the feeding family's warmth. */
+.glyph-solid {
+  background: color-mix(in oklab, var(--glyph-bottle) var(--glyph-wash), var(--card));
+  color: var(--glyph-bottle);
+}
+
+
 /* The one-time thank-you note. Warm, but it sits in the flow like any other
    card — it earns attention with its words, not its position. */
 .thanks-card .thanks-heart {
@@ -1433,4 +1440,51 @@ body:has(.feedback-bubble) .content {
   margin: 0;
   color: var(--glyph-health);
   font-size: 0.8125rem;
+}
+
+/* Shared by Today's Recent list, the recap, and Settings' consent row —
+   they render from the shell, so these rules cannot ride the timeline chunk. */
+/* The day's totals under its heading — scrolling back through the week
+   answers "how did Tuesday go" without opening anything. */
+.recap-line {
+  margin: -4px 0 4px;
+  color: var(--ink-3);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.filter-row [data-slot="toggle-group-item"] {
+  /* The button primitive ships a fixed height: min-height can raise this box
+     but never let it GROW, so wrapped content spills out of it. */
+  height: auto;
+  min-width: auto;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+}
+
+.filter-row [data-slot="toggle-group-item"][data-state="on"] {
+  border-color: color-mix(in oklab, var(--signal) 40%, var(--border));
+  background: var(--signal-quiet);
+  color: var(--signal);
+  box-shadow: none;
+}
+
+/* Shared activity rows (Today + Timeline): trailing time + pencil at meta size. */
+.activity-row .activity-meta {
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .filter-row [data-slot="toggle-group-item"]:hover:not([data-state="on"]) {
+    background: var(--muted);
+    color: var(--foreground);
+  }
 }

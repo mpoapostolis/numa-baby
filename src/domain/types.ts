@@ -2,7 +2,7 @@
 // touches is defined here so the validators, the fixtures and the app agree on
 // one shape.
 
-export type ActivityType = "bottle" | "nursing" | "diaper" | "burp" | "sleep" | "growth" | "health" | "medicine";
+export type ActivityType = "bottle" | "nursing" | "diaper" | "burp" | "sleep" | "growth" | "health" | "medicine" | "solid";
 export type DiaperKind = "wet" | "dirty" | "both";
 export type FeedingMode = "mixed" | "breast" | "bottle";
 export type Tab = "today" | "timeline" | "insights" | "guide" | "more";
@@ -30,6 +30,9 @@ export type Activity = {
   /** How much, as the parent would say it: "2.5 ml", "one drop", "half a
       sachet". Deliberately not a number with units. */
   dose?: string;
+  /** What was eaten, for a solid-food entry. Free text like medicine: "banana",
+      "carrot purée, two spoons". The app records, it does not nutritionise. */
+  food?: string;
   note?: string;
   // Sync-ready metadata. Absent on legacy rows: a missing updatedAt is treated
   // as equal to startedAt (activityUpdatedAt in validate.ts) and stored data is
@@ -66,6 +69,7 @@ export type Sheet =
   | "diaper"
   | "sleep"
   | "medicine"
+  | "solid"
   | "growth"
   | "health"
   | "profile"

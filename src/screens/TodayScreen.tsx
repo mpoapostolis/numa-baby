@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronRight, ExternalLink, Milk, Pill, ShieldCheck, Square, Thermometer, Weight } from "lucide-react";
+import { ChevronRight, ExternalLink, Milk, Pill, ShieldCheck, Square, Thermometer, Utensils, Weight } from "lucide-react";
 
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -20,6 +20,7 @@ import { bracketOfAge, factOfTheDay } from "../domain/babyFacts";
 import { summarizeDay } from "../domain/daySummary";
 import { makeId } from "../domain/id";
 import {
+  ageInMonths,
   ageInDays,
   formatBabyAge,
   formatTime,
@@ -257,6 +258,7 @@ export default function TodayScreen({
   // no tile on screen — a nursing session still going for a family that has
   // since switched to bottles only. Rare, and it must never go invisible.
   const lastMedicine = sortedActivities.find((activity) => activity.type === "medicine");
+  const lastSolid = sortedActivities.find((activity) => activity.type === "solid");
   const nursingTileShown = profile.feedingMode !== "bottle";
   const homelessTimers = activeTimers.filter((timer) =>
     timer.type === "nursing" ? !nursingTileShown : timer.type !== "sleep" && timer.type !== "burp",
@@ -837,6 +839,27 @@ export default function TodayScreen({
               <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
             </Button>
           )}
+          {(() => {
+            const months = profile.birthDate ? ageInMonths(profile.birthDate) : null;
+            // Solids start around six months (AAP/NHS); the row shows a little
+            // early — four months — because "we just started tastes" is
+            // exactly when a parent goes looking for where to write it down.
+            if (months !== null && months < 4) return null;
+            return (
+              <Button
+                variant="ghost"
+                className="log-row log-row-secondary action-solid"
+                onClick={() => onOpenSheet("solid")}
+              >
+                <span className="action-icon" aria-hidden="true"><Utensils /></span>
+                <span className="log-copy">
+                  <strong>Solids</strong>
+                  <small>{lastSolid ? `${lastSolid.food?.trim() || "Last food"} · ${humanDuration(minutesBetween(lastSolid.startedAt, new Date(minuteClock).toISOString()))} ago` : "First tastes, purées, finger food"}</small>
+                </span>
+                <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
+              </Button>
+            );
+          })()}
           {/* The whole point is the timestamp. "Has she already had it, and did
               you give it or did I" is the question two exhausted people in one
               house get wrong, and it is the one mistake here that matters. */}

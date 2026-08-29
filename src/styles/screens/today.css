@@ -1335,3 +1335,9 @@
     padding: 0 8px;
   }
 }
+
+/* Solids: the feeding family's warmth on its own row. */
+.action-solid .action-icon {
+  background: color-mix(in oklab, var(--glyph-bottle) var(--glyph-wash), var(--card));
+  color: var(--glyph-bottle);
+}

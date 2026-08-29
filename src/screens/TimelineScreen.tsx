@@ -1,3 +1,5 @@
+// Ships with this lazy chunk, not the app shell — the budget rule.
+import "../styles/screens/timeline.css";
 import { useMemo } from "react";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
