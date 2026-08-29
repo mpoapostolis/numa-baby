@@ -1,6 +1,6 @@
 // Ships with this lazy chunk, not the app shell — the budget rule.
 import "../styles/screens/settings.css";
-import { ArrowLeftRight, Baby, Bell, Download, Moon, Share2, ShieldCheck, Sun, Trash2, Upload } from "lucide-react";
+import { ArrowLeftRight, Baby, Bell, Download, Moon, Ruler, Share2, ShieldCheck, Sun, Trash2, Upload } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
 import {
   Card,
@@ -28,6 +28,7 @@ import { InstallGuide } from "../components/InstallGuide";
 import { SettingsAction } from "../components/SettingsAction";
 import { track } from "../domain/analytics";
 import { ConsentChoice, readConsent, saveConsent } from "../domain/consent";
+import { UnitSystem, setUnits, useUnits } from "../domain/units";
 import { formatTime } from "../domain/time";
 import { FamilySync } from "../hooks/useFamilySync";
 import { handoffPeers, handoffSendUrl, originLabel } from "../domain/handoff";
@@ -79,6 +80,7 @@ export default function SettingsScreen({
   onIncomingCodeUsed,
 }: SettingsScreenProps) {
   const importRef = useRef<HTMLInputElement>(null);
+  const units = useUnits();
   const [handoffFrom] = useState(() => handoffPeers(window.location.origin)[0] ?? null);
   const [consent, setConsent] = useState<ConsentChoice | null>(readConsent);
   const feedingModeLabel = {
@@ -112,6 +114,19 @@ export default function SettingsScreen({
           >
             <ToggleGroupItem value="light"><Sun /><span><strong>Light</strong><small>Bright and clear</small></span></ToggleGroupItem>
             <ToggleGroupItem value="dark"><Moon /><span><strong>Night</strong><small>Warm and dim for 3am</small></span></ToggleGroupItem>
+          </ToggleGroup>
+          {/* Per-device on purpose: one parent thinking in ounces must not
+              flip the other parent's phone. Storage stays metric either way,
+              so switching back and forth costs nothing. */}
+          <ToggleGroup
+            type="single"
+            value={units}
+            className="appearance-options units-options"
+            aria-label="Measurement units"
+            onValueChange={(value) => { if (!value) return; track("units_changed", { units: value }); setUnits(value as UnitSystem); }}
+          >
+            <ToggleGroupItem value="metric"><Ruler /><span><strong>Metric</strong><small>ml · kg · cm</small></span></ToggleGroupItem>
+            <ToggleGroupItem value="us"><Ruler /><span><strong>US</strong><small>oz · lb · in</small></span></ToggleGroupItem>
           </ToggleGroup>
         </CardContent>
       </Card>

@@ -1301,10 +1301,6 @@
 
 /* The white-noise row sits with Growth and Health; its dialog styles ship
    with the lazy player instead. */
-.action-soothe .action-icon {
-  background: color-mix(in oklab, var(--glyph-sleep) var(--glyph-wash), var(--card));
-  color: var(--glyph-sleep);
-}
 
 /* Three segments inside half a narrow phone is 43px each — under the minimum
    for a thumb, and that thumb belongs to someone holding a baby with the other

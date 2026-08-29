@@ -5,6 +5,7 @@ import { Button } from "../components/ui/button";
 import { ActivityGlyph } from "../components/ActivityGlyph";
 import { SproutChart } from "../components/illustrations";
 import { track } from "../domain/analytics";
+import { gramsToLb, useUnits } from "../domain/units";
 import { CareCard, WATCH_FOR, careForAge } from "../domain/careGuidance";
 import { ageInDays } from "../domain/time";
 import {
@@ -23,7 +24,17 @@ import { Activity, Profile } from "../domain/types";
 
 const latestDateFormat = new Intl.DateTimeFormat("en", { month: "short", day: "numeric" });
 
-const kg = (value: number) => value.toFixed(1);
+// Number labels on the WHO band. The band's geometry stays in kilograms —
+// proportions have no unit — only the printed numbers convert.
+function useKgLabel() {
+  const units = useUnits();
+  return {
+    units,
+    kg: (value: number) => (units === "metric" ? value.toFixed(1) : gramsToLb(value * 1_000).toFixed(1)),
+    unitWord: units === "metric" ? "kg" : "lb",
+    longUnit: units === "metric" ? "kilograms" : "pounds",
+  };
+}
 
 type GrowthGuideScreenProps = {
   profile: Profile;
@@ -82,12 +93,13 @@ function ageHeading(months: number) {
 // P3–P97 as a horizontal band on a hairline, P50 as a tick, the baby's latest
 // weight as the only --signal element. Pure CSS on a padded linear scale.
 function RangeBar({ range, weightKg }: { range: WeightPercentiles; weightKg?: number }) {
+  const { kg, unitWord, longUnit } = useKgLabel();
   const pad = Math.max(0.4, (range.p97 - range.p3) * 0.14);
   const lo = range.p3 - pad;
   const hi = range.p97 + pad;
   const at = (value: number) => `${Math.min(100, Math.max(0, ((value - lo) / (hi - lo)) * 100))}%`;
-  const description = `Reference band from ${kg(range.p3)} to ${kg(range.p97)} kilograms, middle of the range ${kg(range.p50)} kilograms${
-    weightKg === undefined ? "" : `. Latest logged weight ${weightKg.toFixed(2)} kilograms`
+  const description = `Reference band from ${kg(range.p3)} to ${kg(range.p97)} ${longUnit}, middle of the range ${kg(range.p50)} ${longUnit}${
+    weightKg === undefined ? "" : `. Latest logged weight ${kg(weightKg)} ${longUnit}`
   }.`;
   return (
     <div className="range-bar" role="img" aria-label={description}>
@@ -99,7 +111,7 @@ function RangeBar({ range, weightKg }: { range: WeightPercentiles; weightKg?: nu
       <div className="range-scale">
         <span style={{ left: at(range.p3) }}><em>P3</em>{kg(range.p3)}</span>
         <span style={{ left: at(range.p50) }}><em>P50</em>{kg(range.p50)}</span>
-        <span style={{ left: at(range.p97) }}><em>P97</em>{kg(range.p97)} kg</span>
+        <span style={{ left: at(range.p97) }}><em>P97</em>{kg(range.p97)} {unitWord}</span>
       </div>
     </div>
   );
@@ -135,6 +147,7 @@ export default function GrowthGuideScreen({
   minuteClock,
   onBack,
 }: GrowthGuideScreenProps) {
+  const { kg, unitWord } = useKgLabel();
   const name = profile.name.trim() || "Baby";
   const careDays = ageInDays(profile.birthDate, minuteClock);
   const care = careDays === null ? null : careForAge(careDays);
@@ -219,7 +232,7 @@ export default function GrowthGuideScreen({
           <h2 className="t-label">{ageHeading(age)}</h2>
           <p className="guide-range-figure figure">
             {kg(range.p3)}–{kg(range.p97)}
-            <span className="unit">kg</span>
+            <span className="unit">{unitWord}</span>
           </p>
           <p className="t-meta guide-range-sub">Typical weight range at this age (WHO P3–P97)</p>
           {exactAge !== null && exactAge > MAX_REFERENCE_MONTHS && (
@@ -251,7 +264,7 @@ export default function GrowthGuideScreen({
                       <th scope="row">{month} mo</th>
                       <td>{kg(row.p3)}</td>
                       <td>{kg(row.p50)}</td>
-                      <td>{kg(row.p97)} kg</td>
+                      <td>{kg(row.p97)} {unitWord}</td>
                     </tr>
                   );
                 })}

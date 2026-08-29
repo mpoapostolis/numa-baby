@@ -7,6 +7,7 @@
 
 import { useState } from "react";
 import { track } from "../domain/analytics";
+import { mlToOz, useUnits } from "../domain/units";
 import { DaySummary } from "../domain/daySummary";
 
 type Series = {
@@ -38,6 +39,13 @@ const BAR_HEIGHT = 108;
 export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
   const [activeKey, setActiveKey] = useState(SERIES[0].key);
   const series = SERIES.find((s) => s.key === activeKey) ?? SERIES[0];
+  const units = useUnits();
+  // Bars are proportions, so only the WORDS convert: the millilitre series
+  // reads in ounces when the phone does, and every number goes through fmt.
+  const isVolume = series.key === "ml";
+  const unitLabel = isVolume && units === "us" ? "oz" : series.unit;
+  const fmt = (value: number) =>
+    isVolume && units === "us" ? String(Math.round(mlToOz(value) * 10) / 10) : String(value);
 
   // Days before anything was ever logged are not zero-milk days — they are
   // days this app was not being used. Plotting them as zero would draw a
@@ -63,7 +71,7 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
   const description = `${series.label} per day. ${days
     .map((day) => day.isEmpty
       ? `${fullDayFormat.format(day.date)}: not logged`
-      : `${fullDayFormat.format(day.date)}: ${series.value(day)}${series.unit ? ` ${series.unit}` : ""}`)
+      : `${fullDayFormat.format(day.date)}: ${fmt(series.value(day))}${unitLabel ? ` ${unitLabel}` : ""}`)
     .join(", ")}.`;
 
   return (
@@ -74,7 +82,7 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
           <p className="trend-average">
             {trackedDays > 0 ? (
               <>
-                <strong className="figure">{average}{series.unit && <span className="unit">{series.unit}</span>}</strong>
+                <strong className="figure">{fmt(average)}{unitLabel && <span className="unit">{unitLabel}</span>}</strong>
                 <span> a day on average</span>
               </>
             ) : (
@@ -84,7 +92,7 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
         </div>
         {trackedDays > 0 && (
           <span className="trend-peak">
-            peak {peak}{series.unit && <span className="unit">{series.unit}</span>}
+            peak {fmt(peak)}{unitLabel && <span className="unit">{unitLabel}</span>}
           </span>
         )}
       </header>
@@ -118,7 +126,7 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
               key={days[index].date.toISOString()}
               title={days[index].isEmpty
                 ? `${fullDayFormat.format(days[index].date)}: not logged`
-                : `${fullDayFormat.format(days[index].date)}: ${value}${series.unit ? ` ${series.unit}` : ""}`}
+                : `${fullDayFormat.format(days[index].date)}: ${fmt(value)}${unitLabel ? ` ${unitLabel}` : ""}`}
             >
               {/* Three distinct states, because a day nobody logged is not a
                   day with none: a bar, a hairline for a logged zero, and

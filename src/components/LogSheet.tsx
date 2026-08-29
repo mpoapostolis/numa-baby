@@ -24,6 +24,21 @@ import { InputGroup, InputGroupInput } from "./ui/input-group";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 import { activityTitle } from "../domain/activityDisplay";
 import { DEFAULT_BOTTLE_ML, numericFieldProps } from "../domain/activitySchema";
+import {
+  MeasurementName,
+  bottleDraftToMl,
+  bottlePresets as presetsFor,
+  bottleStepper,
+  formatVolume,
+  formatWeight,
+  measurementPlaceholder,
+  measurementToMetric,
+  metricToMeasurementDraft,
+  mlToBottleDraft,
+  usMeasurementError,
+  usMeasurementProps,
+  useUnits,
+} from "../domain/units";
 import { makeId } from "../domain/id";
 import { formatTime, formatTimelineDay, localDateInput } from "../domain/time";
 import { DraftErrorField, validateDraft } from "../domain/validate";
@@ -40,7 +55,6 @@ import {
   UnitField,
 } from "./fields";
 
-const bottlePresets = [60, 90, 120, 150];
 
 // A failed save carries the field it belongs to, so only that field is
 // painted invalid and receives focus.
@@ -73,11 +87,14 @@ function initialSheetDraft(
   editing: Activity | null,
   nursingMode: "timer" | "manual",
   lastBottle: Activity | undefined,
+  units: ReturnType<typeof useUnits>,
 ): SheetDraft {
   const now = new Date();
   const base: SheetDraft = {
     // Seed from the last saved bottle, clamped to the stepper's own range.
-    bottleAmount: String(Math.min(400, Math.max(10, lastBottle?.amount ?? DEFAULT_BOTTLE_ML))),
+    // In US mode every draft string is in display units — what the person
+    // typed is what the field shows — and crosses to metric once, on save.
+    bottleAmount: mlToBottleDraft(Math.min(400, Math.max(10, lastBottle?.amount ?? DEFAULT_BOTTLE_ML)), units),
     milkType: lastBottle?.milkType ?? "formula",
     note: "",
     weightGrams: "",
@@ -97,12 +114,12 @@ function initialSheetDraft(
       ...base,
       // The bottle seeds are gated on the type — editing a diaper must not
       // carry a bottle amount into the draft.
-      bottleAmount: editing.type === "bottle" ? String(editing.amount ?? DEFAULT_BOTTLE_ML) : base.bottleAmount,
+      bottleAmount: editing.type === "bottle" ? mlToBottleDraft(editing.amount ?? DEFAULT_BOTTLE_ML, units) : base.bottleAmount,
       milkType: editing.type === "bottle" ? editing.milkType ?? "formula" : base.milkType,
       note: editing.note ?? "",
-      weightGrams: editing.weightGrams ? String(editing.weightGrams) : "",
-      lengthCm: editing.lengthCm ? String(editing.lengthCm) : "",
-      headCm: editing.headCm ? String(editing.headCm) : "",
+      weightGrams: editing.weightGrams ? metricToMeasurementDraft("weightGrams", editing.weightGrams, units) : "",
+      lengthCm: editing.lengthCm ? metricToMeasurementDraft("lengthCm", editing.lengthCm, units) : "",
+      headCm: editing.headCm ? metricToMeasurementDraft("headCm", editing.headCm, units) : "",
       temperatureC: editing.temperatureC ? String(editing.temperatureC) : "",
       logTime: localDateInput(new Date(editing.startedAt)),
       endTime: editing.endedAt ? localDateInput(new Date(editing.endedAt)) : "",
@@ -159,8 +176,31 @@ export function LogSheet({
   showToast,
 }: LogSheetProps) {
   const editing = sheet === "edit" ? editingActivity : null;
+  const units = useUnits();
+  const stepper = bottleStepper(units);
+  const presets = presetsFor(units);
+  // Growth fields: metric props straight from the schema, or the same bounds
+  // through the same conversion the values take.
+  const measureProps = (name: MeasurementName) =>
+    units === "metric" ? numericFieldProps(name) : usMeasurementProps(name);
+  // The crossing for measurements, plus the error text in the units the
+  // person is actually typing — a US-mode refusal that talks about grams
+  // would read as nonsense.
+  function metricGrowthDraft() {
+    return {
+      weightGrams: measurementToMetric("weightGrams", draft.weightGrams, units),
+      lengthCm: measurementToMetric("lengthCm", draft.lengthCm, units),
+      headCm: measurementToMetric("headCm", draft.headCm, units),
+    };
+  }
+  function localiseError(outcome: SheetError) {
+    if (units === "us" && (outcome.field === "weightGrams" || outcome.field === "lengthCm" || outcome.field === "headCm")) {
+      return { ...outcome, message: usMeasurementError(outcome.field) };
+    }
+    return outcome;
+  }
   const [draft, setDraft] = useState<SheetDraft>(() =>
-    initialSheetDraft(sheet, editing, initialNursingMode, lastBottle),
+    initialSheetDraft(sheet, editing, initialNursingMode, lastBottle, units),
   );
   const [formError, setFormError] = useState<SheetError | null>(null);
   // One ref per failable field, so the error can land focus on the exact
@@ -212,7 +252,9 @@ export function LogSheet({
     // Clamp to the storage schema's own bounds — persisting an amount that
     // isValidActivity rejects would strand the whole store behind recovery.
     const outcome = validateDraft(
-      { type: "bottle", start: draft.logTime, amount: Number(draft.bottleAmount), note: draft.note },
+      // The one crossing: the display-units draft becomes millilitres here,
+      // and everything below — validation, storage, sync — stays metric.
+      { type: "bottle", start: draft.logTime, amount: bottleDraftToMl(draft.bottleAmount, units), note: draft.note },
       { clampTime: true, clampAmount: true },
     );
     if (!outcome.ok) return;
@@ -224,7 +266,7 @@ export function LogSheet({
       milkType: draft.milkType,
       note: outcome.value.note,
     };
-    if (onAdd(entry, `${outcome.value.amount} ml bottle saved`)) onClose();
+    if (onAdd(entry, `${formatVolume(outcome.value.amount ?? 0, units)} bottle saved`)) onClose();
   }
 
   function saveNursing() {
@@ -326,11 +368,11 @@ export function LogSheet({
 
   function saveGrowth() {
     const outcome = validateDraft(
-      { type: "growth", start: draft.logTime, weightGrams: draft.weightGrams, lengthCm: draft.lengthCm, headCm: draft.headCm, note: draft.note },
+      { type: "growth", start: draft.logTime, ...metricGrowthDraft(), note: draft.note },
       { clampTime: true },
     );
     if (!outcome.ok) {
-      showFormError(outcome);
+      showFormError(localiseError(outcome));
       return;
     }
 
@@ -343,7 +385,7 @@ export function LogSheet({
       headCm: outcome.value.headCm,
       note: outcome.value.note,
     };
-    if (onAdd(entry, `${((outcome.value.weightGrams ?? 0) / 1_000).toFixed(2)} kg saved`)) onClose();
+    if (onAdd(entry, `${formatWeight(outcome.value.weightGrams ?? 0, units)} saved`)) onClose();
   }
 
   function saveHealthNote() {
@@ -375,17 +417,15 @@ export function LogSheet({
         type: editing.type,
         start: draft.logTime,
         end: timed ? draft.endTime : undefined,
-        amount: draft.bottleAmount.trim() === "" ? undefined : Number(draft.bottleAmount),
-        weightGrams: draft.weightGrams,
-        lengthCm: draft.lengthCm,
-        headCm: draft.headCm,
+        amount: draft.bottleAmount.trim() === "" ? undefined : bottleDraftToMl(draft.bottleAmount, units),
+        ...metricGrowthDraft(),
         temperatureC: draft.temperatureC,
         note: draft.note,
       },
       { allowEqualEnd: true },
     );
     if (!outcome.ok) {
-      showFormError(outcome);
+      showFormError(localiseError(outcome));
       return;
     }
 
@@ -433,14 +473,14 @@ export function LogSheet({
           <Field className="amount-field">
             <FieldLabel>Amount</FieldLabel>
             <ButtonGroup className="amount-control" aria-label="Bottle amount">
-              <Button type="button" variant="outline" aria-label="Decrease amount" disabled={Number(draft.bottleAmount) <= 10} onClick={() => setDraft((current) => ({ ...current, bottleAmount: String(Math.max(10, (Number(current.bottleAmount) || 10) - 10)) }))}><Minus /></Button>
-              <ButtonGroupText role="status" aria-live="polite" aria-atomic="true"><strong>{draft.bottleAmount}</strong><span>ml</span></ButtonGroupText>
-              <Button type="button" variant="outline" aria-label="Increase amount" disabled={Number(draft.bottleAmount) >= 400} onClick={() => setDraft((current) => ({ ...current, bottleAmount: String(Math.min(400, (Number(current.bottleAmount) || 0) + 10)) }))}><Plus /></Button>
+              <Button type="button" variant="outline" aria-label="Decrease amount" disabled={Number(draft.bottleAmount) <= stepper.min} onClick={() => setDraft((current) => ({ ...current, bottleAmount: String(Math.max(stepper.min, (Number(current.bottleAmount) || stepper.min) - stepper.step)) }))}><Minus /></Button>
+              <ButtonGroupText role="status" aria-live="polite" aria-atomic="true"><strong>{draft.bottleAmount}</strong><span>{stepper.unit}</span></ButtonGroupText>
+              <Button type="button" variant="outline" aria-label="Increase amount" disabled={Number(draft.bottleAmount) >= stepper.max} onClick={() => setDraft((current) => ({ ...current, bottleAmount: String(Math.min(stepper.max, (Number(current.bottleAmount) || 0) + stepper.step)) }))}><Plus /></Button>
             </ButtonGroup>
             <ToggleGroup type="single" value={draft.bottleAmount} className="preset-row" aria-label="Preset amounts" onValueChange={(value) => value && patch({ bottleAmount: value })}>
-              {bottlePresets.map((amount, index) => {
-                const focused = amount === Number(draft.bottleAmount) || (index === 0 && !bottlePresets.includes(Number(draft.bottleAmount)));
-                return <ToggleGroupItem autoFocus={focused} data-initial-focus={focused ? "" : undefined} value={String(amount)} aria-label={`${amount} millilitres`} key={amount}>{amount}</ToggleGroupItem>;
+              {presets.map((amount, index) => {
+                const focused = amount === Number(draft.bottleAmount) || (index === 0 && !presets.includes(Number(draft.bottleAmount)));
+                return <ToggleGroupItem autoFocus={focused} data-initial-focus={focused ? "" : undefined} value={String(amount)} aria-label={`${amount} ${stepper.unit}`} key={amount}>{amount}</ToggleGroupItem>;
               })}
             </ToggleGroup>
           </Field>
@@ -453,7 +493,7 @@ export function LogSheet({
           </Field>
           <TimeField value={draft.logTime} onChange={(value) => patch({ logTime: value })} />
           <NoteField value={draft.note} onChange={(value) => patch({ note: value })} />
-          <DialogFooter><Button type="submit" className="primary-button sheet-primary">Save {draft.bottleAmount} ml</Button></DialogFooter>
+          <DialogFooter><Button type="submit" className="primary-button sheet-primary">Save {draft.bottleAmount} {stepper.unit}</Button></DialogFooter>
         </SheetForm>
       )}
 
@@ -608,10 +648,10 @@ export function LogSheet({
         <SheetForm onSubmit={saveGrowth}>
           <LogDialogHeader icon={<Weight />} eyebrow="Growth check" title="Add measurement" description="Weight now, length and head if you have them." />
           <FieldGroup className="measurement-fields">
-            <UnitField {...numericFieldProps("weightGrams")} value={draft.weightGrams} inputRef={weightRef} autoFocus invalid={formError?.field === "weightGrams"} onChange={(value) => { patch({ weightGrams: value }); setFormError(null); }} placeholder="3500" className="measurement-primary" />
+            <UnitField {...measureProps("weightGrams")} value={draft.weightGrams} inputRef={weightRef} autoFocus invalid={formError?.field === "weightGrams"} onChange={(value) => { patch({ weightGrams: value }); setFormError(null); }} placeholder={measurementPlaceholder("weightGrams", units)} className="measurement-primary" />
             <div className="measurement-row">
-              <UnitField {...numericFieldProps("lengthCm")} optional value={draft.lengthCm} inputRef={lengthRef} invalid={formError?.field === "lengthCm"} onChange={(value) => { patch({ lengthCm: value }); setFormError(null); }} placeholder="51.5" />
-              <UnitField {...numericFieldProps("headCm")} optional value={draft.headCm} inputRef={headRef} invalid={formError?.field === "headCm"} onChange={(value) => { patch({ headCm: value }); setFormError(null); }} placeholder="35.1" />
+              <UnitField {...measureProps("lengthCm")} optional value={draft.lengthCm} inputRef={lengthRef} invalid={formError?.field === "lengthCm"} onChange={(value) => { patch({ lengthCm: value }); setFormError(null); }} placeholder={measurementPlaceholder("lengthCm", units)} />
+              <UnitField {...measureProps("headCm")} optional value={draft.headCm} inputRef={headRef} invalid={formError?.field === "headCm"} onChange={(value) => { patch({ headCm: value }); setFormError(null); }} placeholder={measurementPlaceholder("headCm", units)} />
             </div>
           </FieldGroup>
           <TimeField value={draft.logTime} onChange={(value) => patch({ logTime: value })} />
@@ -649,7 +689,7 @@ export function LogSheet({
               <Field className="amount-field">
                 <UnitField {...numericFieldProps("amount")} value={draft.bottleAmount} inputRef={amountRef} autoFocus invalid={formError?.field === "amount"} onChange={(value) => { patch({ bottleAmount: value }); setFormError(null); }} className="measurement-primary" />
                 <ToggleGroup type="single" value={draft.bottleAmount} className="preset-row" aria-label="Preset amounts" onValueChange={(value) => { if (value) patch({ bottleAmount: value }); setFormError(null); }}>
-                  {bottlePresets.map((amount) => <ToggleGroupItem value={String(amount)} aria-label={`${amount} millilitres`} key={amount}>{amount}</ToggleGroupItem>)}
+                  {presets.map((amount) => <ToggleGroupItem value={String(amount)} aria-label={`${amount} ${stepper.unit}`} key={amount}>{amount}</ToggleGroupItem>)}
                 </ToggleGroup>
               </Field>
               <Field className="choice-field">

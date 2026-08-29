@@ -11,6 +11,7 @@ import {
 import { activityDetail, activityTitle } from "../domain/activityDisplay";
 import { formatTime } from "../domain/time";
 import { Activity } from "../domain/types";
+import { useUnits } from "../domain/units";
 import { ActivityGlyph } from "./ActivityGlyph";
 
 // Memoised: 80 timeline rows must not re-render on every minute tick. The
@@ -22,7 +23,7 @@ export const ActivityRow = memo(function ActivityRow({
   activity: Activity;
   onEdit: (activity: Activity) => void;
 }) {
-  const detail = activityDetail(activity);
+  const detail = activityDetail(activity, useUnits());
   return (
     <Item asChild size="sm" className="activity-row">
       <Button variant="ghost" className="activity-open" onClick={() => onEdit(activity)}>

@@ -1,5 +1,5 @@
-import { Suspense, lazy, useState } from "react";
-import { ChevronRight, ExternalLink, Milk, Pill, ShieldCheck, Square, Thermometer, Waves, Weight } from "lucide-react";
+import { useState } from "react";
+import { ChevronRight, ExternalLink, Milk, Pill, ShieldCheck, Square, Thermometer, Weight } from "lucide-react";
 
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -12,9 +12,6 @@ import { DayRecap } from "../components/DayRecap";
 import { TrendChart } from "../components/TrendChart";
 // The noise generator is only needed once someone asks for it, so it stays
 // out of the bundle every parent downloads.
-const SoothePlayer = lazy(() =>
-  import("../components/SoothePlayer").then((m) => ({ default: m.SoothePlayer })),
-);
 import { EmptyState } from "../components/EmptyState";
 import { LittleBottle, TinyStars } from "../components/illustrations";
 import { BabyCompanion, CompanionMood } from "../components/BabyCompanion";
@@ -33,6 +30,7 @@ import {
   minutesBetween,
 } from "../domain/time";
 import { Activity, DiaperKind, Profile, Sheet } from "../domain/types";
+import { UnitSystem, formatVolume, useUnits } from "../domain/units";
 import { ActivityStats } from "../hooks/useActivityStats";
 import { useSecondClock } from "../hooks/useMinuteClock";
 
@@ -44,9 +42,9 @@ const statusDateFormat = new Intl.DateTimeFormat("en", {
 
 // The Hearth meta line stays short: the last feed at a glance, not the full
 // timeline entry — ranges and edit affordances live in Recent and Timeline.
-function lastFeedSummary(feed: Activity) {
+function lastFeedSummary(feed: Activity, units: UnitSystem) {
   if (feed.type === "bottle") {
-    return `Bottle · ${feed.amount ?? 0} ml`;
+    return `Bottle · ${formatVolume(feed.amount ?? 0, units)}`;
   }
   const side = feed.side === "left" ? "left" : "right";
   return feed.endedAt
@@ -220,6 +218,7 @@ export default function TodayScreen({
   onEdit,
   onSeeTimeline,
 }: TodayScreenProps) {
+  const units = useUnits();
   const {
     sortedActivities,
     today,
@@ -243,13 +242,10 @@ export default function TodayScreen({
   // today, 1 is yesterday. Bounded by the first thing ever logged so the
   // arrows never step into blank prehistory — or into tomorrow.
   const [dayOffset, setDayOffset] = useState(0);
-  const [sootheOpen, setSootheOpen] = useState(false);
   // White noise has to survive its own sheet being closed. Rendering the
   // player only while the sheet is open unmounted the <audio> element the
   // moment a parent tapped away — so the one thing they opened it for stopped,
   // in the dark, with a baby half asleep. Once opened it stays mounted for the
-  // rest of the visit and the sheet is only its face.
-  const [sootheMounted, setSootheMounted] = useState(false);
 
   const forecastFeedSheet: "bottle" | "nursing" = profile.feedingMode === "breast"
     ? "nursing"
@@ -348,7 +344,7 @@ export default function TodayScreen({
       amount: lastBottle.amount,
       milkType: lastBottle.milkType ?? "formula",
     };
-    if (onAdd(entry, `${lastBottle.amount} ml bottle saved`)) {
+    if (onAdd(entry, `${formatVolume(lastBottle.amount ?? 0, units)} bottle saved`)) {
       setReactionKey(entry.id);
       track("bottle_logged", { source: "quick_repeat", amount: mlBucket(lastBottle.amount) });
     }
@@ -567,7 +563,7 @@ export default function TodayScreen({
                   <p className="figure hearth-figure t-display">
                     <GapFigure startedAt={lastFeed.startedAt} now={minuteClock} />
                   </p>
-                  <p className="hearth-meta">{lastFeedSummary(lastFeed)}</p>
+                  <p className="hearth-meta">{lastFeedSummary(lastFeed, units)}</p>
                 </div>
               </div>
             )}
@@ -673,7 +669,7 @@ export default function TodayScreen({
                   <span className="tile-title">Bottle</span>
                   <span className="tile-sub">
                     {lastBottle?.amount
-                      ? `${lastBottle.amount} ml · ${lastBottle.milkType === "expressed" ? "breast milk" : "formula"}`
+                      ? `${formatVolume(lastBottle.amount, units)} · ${lastBottle.milkType === "expressed" ? "breast milk" : "formula"}`
                       : "Log the first feed"}
                   </span>
                 </button>
@@ -841,18 +837,6 @@ export default function TodayScreen({
               <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
             </Button>
           )}
-          <Button
-            variant="ghost"
-            className="log-row log-row-secondary action-soothe"
-            onClick={() => { track("soothe_opened"); setSootheMounted(true); setSootheOpen(true); }}
-          >
-            <span className="action-icon" aria-hidden="true"><Waves /></span>
-            <span className="log-copy">
-              <strong>Sounds</strong>
-              <small>White noise and lullabies</small>
-            </span>
-            <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
-          </Button>
           {/* The whole point is the timestamp. "Has she already had it, and did
               you give it or did I" is the question two exhausted people in one
               house get wrong, and it is the one mistake here that matters. */}
@@ -886,11 +870,6 @@ export default function TodayScreen({
           </Button>
         </section>
       </div>
-      {sootheMounted && (
-        <Suspense fallback={null}>
-          <SoothePlayer open={sootheOpen} onOpenChange={setSootheOpen} />
-        </Suspense>
-      )}
     </section>
   );
 }

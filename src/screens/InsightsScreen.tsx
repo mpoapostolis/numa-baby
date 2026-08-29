@@ -4,6 +4,7 @@ import { EmptyState } from "../components/EmptyState";
 import { GrowthChart } from "../components/GrowthChart";
 import { LittleBottle } from "../components/illustrations";
 import { activityTitle } from "../domain/activityDisplay";
+import { formatVolume, formatWeight, useUnits, volumeParts } from "../domain/units";
 import { formatShortDay, formatTime, humanDuration, median } from "../domain/time";
 import { track } from "../domain/analytics";
 import { Insight, buildInsightInput, insightsFor } from "../domain/insightRules";
@@ -79,6 +80,7 @@ export default function InsightsScreen({
   onAddGrowth,
   onOpenGuide,
 }: InsightsScreenProps) {
+  const units = useUnits();
   // Milk against this baby's own weight, rather than a stranger's average.
   const intake = useMemo(() => {
     const bottleDays = stats.recentDays.filter((day) => day.ml > 0);
@@ -193,10 +195,10 @@ export default function InsightsScreen({
                   daily ceiling and the range IS a single number. "960-960 ml"
                   is a bug wearing the voice of guidance; "about 960 ml" is
                   what the source actually says there. */}
-              At {intake.weightKg.toFixed(2)} kg, the usual guide is about{" "}
+              At {formatWeight(intake.weightKg * 1_000, units)}, the usual guide is about{" "}
               {intake.lowMl === intake.highMl
-                ? `${intake.highMl} ml a day at most.`
-                : `${intake.lowMl}–${intake.highMl} ml a day.`}
+                ? `${formatVolume(intake.highMl, units)} a day at most.`
+                : `${units === "metric" ? `${intake.lowMl}–${intake.highMl} ml` : `${volumeParts(intake.lowMl, units).value}–${formatVolume(intake.highMl, units)}`} a day.`}
             </h2>
           </figcaption>
 
@@ -207,9 +209,9 @@ export default function InsightsScreen({
             role="img"
             aria-label={`${
               intake.lowMl === intake.highMl
-                ? `Reference ceiling ${intake.highMl} millilitres a day`
-                : `Reference band ${intake.lowMl} to ${intake.highMl} millilitres a day`
-            }. Your typical day is ${intake.typicalMl} millilitres, which is ${intake.position} the band.`}
+                ? `Reference ceiling ${formatVolume(intake.highMl, units)} a day`
+                : `Reference band ${formatVolume(intake.lowMl, units)} to ${formatVolume(intake.highMl, units)} a day`
+            }. Your typical day is ${formatVolume(intake.typicalMl, units)}, which is ${intake.position} the band.`}
           >
             {(() => {
               const span = Math.max(intake.highMl * 1.35, intake.typicalMl * 1.15);
@@ -232,7 +234,7 @@ export default function InsightsScreen({
           </div>
 
           <p className="intake-reading">
-            <strong className="figure">{intake.typicalMl}<span className="unit">ml</span></strong>
+            <strong className="figure">{volumeParts(intake.typicalMl, units).value}<span className="unit">{volumeParts(intake.typicalMl, units).unit}</span></strong>
             <span> is your typical day — {intake.position === "within"
               ? "inside that range"
               : intake.position === "below" ? "below it" : "above it"}.</span>
@@ -240,7 +242,7 @@ export default function InsightsScreen({
 
           <p className="intake-caveat">
             {intake.cappedByCeiling
-              ? "Capped at the 960 ml a day AAP gives as the usual maximum, whatever the weight suggests. "
+              ? `Capped at the ${formatVolume(960, units)} a day AAP gives as the usual maximum, whatever the weight suggests. `
               : ""}
             This counts bottles only, so any nursing sits outside it. Babies feed to appetite and
             a range is not a target — bring the number to your paediatrician rather than to a
@@ -286,7 +288,7 @@ export default function InsightsScreen({
           </div>
           <div>
             {bottleMlToday > 0 ? (
-              <strong className="t-numeral figure">{bottleMlToday} <span className="unit">ml</span></strong>
+              <strong className="t-numeral figure">{volumeParts(bottleMlToday, units).value} <span className="unit">{volumeParts(bottleMlToday, units).unit}</span></strong>
             ) : (
               emptyTile
             )}
@@ -316,7 +318,7 @@ export default function InsightsScreen({
           <figcaption>
             <div>
               <p className="t-label">Fig. 1 · Bottle volume</p>
-              <h2>Most bottle days total about {medianMl} ml.</h2>
+              <h2>Most bottle days total about {formatVolume(medianMl, units)}.</h2>
             </div>
           </figcaption>
           <div

@@ -17,6 +17,7 @@ import { VisitSummary } from "../domain/visitSummary";
 import { expectedWeightRange, typicalWeeklyGain } from "../domain/growthReference";
 import { formatBabyAge } from "../domain/time";
 import { Profile } from "../domain/types";
+import { formatKg, formatVolume, useUnits, weightParts } from "../domain/units";
 
 const dateFormat = new Intl.DateTimeFormat("en", { day: "numeric", month: "short" });
 const longDate = new Intl.DateTimeFormat("en", { day: "numeric", month: "long", year: "numeric" });
@@ -46,6 +47,7 @@ type Props = {
 };
 
 export function VisitSummarySheet({ open, onOpenChange, summary, profile, ageMonths, now }: Props) {
+  const units = useUnits();
   const name = profile.name.trim() || "Baby";
   const age = formatBabyAge(profile.birthDate, now);
   const first = summary.days[0]?.date;
@@ -86,7 +88,7 @@ export function VisitSummarySheet({ open, onOpenChange, summary, profile, ageMon
               <Figure value={show(summary.nursingMinutesPerDay)} unit="m" label="nursing a day" />
             </div>
             <p className="visit-note">
-              {summary.totalFeeds} feeds and {summary.totalMl} ml across the window. Millilitres
+              {summary.totalFeeds} feeds and {formatVolume(summary.totalMl, units)} across the window. Bottle volumes
               are bottles only.
             </p>
           </section>
@@ -106,7 +108,7 @@ export function VisitSummarySheet({ open, onOpenChange, summary, profile, ageMon
           <section className="visit-block">
             <h3>Growth</h3>
             <div className="visit-figures">
-              <Figure value={weightKg === null ? "—" : weightKg.toFixed(2)} unit="kg" label="latest weight" />
+              <Figure value={weightKg === null ? "—" : weightParts(weightKg * 1_000, units).value} unit={weightParts(0, units).unit} label="latest weight" />
               <Figure
                 value={summary.gramsPerWeek === null ? "—" : String(summary.gramsPerWeek)}
                 unit="g"
@@ -115,7 +117,7 @@ export function VisitSummarySheet({ open, onOpenChange, summary, profile, ageMon
             </div>
             <p className="visit-note">
               {band
-                ? `WHO reference at this age: ${band.p3.toFixed(1)}–${band.p97.toFixed(1)} kg (P3–P97), midpoint ${band.p50.toFixed(1)} kg.`
+                ? `WHO reference at this age: ${formatKg(band.p3, units)}–${formatKg(band.p97, units)} (P3–P97), midpoint ${formatKg(band.p50, units)}.`
                 : "No age on file, so no WHO reference is shown."}
               {gainBand
                 ? ` Typical gain ${gainBand.minGramsPerWeek}–${gainBand.maxGramsPerWeek} g a week.`

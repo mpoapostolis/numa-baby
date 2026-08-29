@@ -3,6 +3,7 @@ import { Button } from "./ui/button";
 import { EmptyState } from "./EmptyState";
 import { SproutChart } from "./illustrations";
 import { Activity } from "../domain/types";
+import { formatLength, formatWeight, useUnits, weightParts } from "../domain/units";
 
 // Hoisted like the formatters in domain/time.ts — constructing Intl per point
 // per render is the expensive path the extraction was meant to remove.
@@ -22,6 +23,7 @@ export function GrowthChart({
   onAdd: () => void;
   onOpenGuide: () => void;
 }) {
+  const units = useUnits();
   const visible = activities.slice(-7);
   const weights = visible.map((activity) => activity.weightGrams ?? 0);
   const minimum = weights.length ? Math.min(...weights) : 0;
@@ -41,7 +43,7 @@ export function GrowthChart({
   const takeaway = !visible.length
     ? "Measurements over time"
     : activities.length < 2
-      ? `${((latest.weightGrams ?? 0) / 1_000).toFixed(2)} kg at the first check.`
+      ? `${formatWeight(latest.weightGrams ?? 0, units)} at the first check.`
       : change > 0
         ? `Up ${change} g since the last check.`
         : change < 0
@@ -68,7 +70,7 @@ export function GrowthChart({
           <div className="growth-overview">
             <div>
               <span>Latest</span>
-              <strong>{((latest.weightGrams ?? 0) / 1_000).toFixed(2)} kg</strong>
+              <strong>{formatWeight(latest.weightGrams ?? 0, units)}</strong>
             </div>
             <div>
               <span>Since last check</span>
@@ -78,19 +80,19 @@ export function GrowthChart({
             </div>
             <div>
               <span>Length / head</span>
-              <strong>{latest.lengthCm ? `${latest.lengthCm} cm` : "—"} / {latest.headCm ? `${latest.headCm} cm` : "—"}</strong>
+              <strong>{latest.lengthCm ? formatLength(latest.lengthCm, units) : "—"} / {latest.headCm ? formatLength(latest.headCm, units) : "—"}</strong>
             </div>
           </div>
           <div className="growth-line-chart">
             <svg viewBox="0 0 640 180" role="img" aria-labelledby="growth-chart-title growth-chart-description">
               <title id="growth-chart-title">Recent weight measurements</title>
-              <desc id="growth-chart-description">A date-proportional line from {(minimum / 1_000).toFixed(2)} to {(maximum / 1_000).toFixed(2)} kilograms.</desc>
+              <desc id="growth-chart-description">A date-proportional line from {weightParts(minimum, units).value} to {weightParts(maximum, units).value} {weightParts(maximum, units).unit}.</desc>
               <line className="growth-gridline" x1="32" x2="608" y1="150" y2="150" />
               {points.length > 1 && <polyline className="growth-line" points={points.map((point) => `${point.x},${point.y}`).join(" ")} />}
               {points.map(({ activity, weight, x, y }) => (
                 <g key={activity.id}>
                   <circle className="growth-point" cx={x} cy={y} r="7" />
-                  <text className="growth-value" x={x} y={Math.max(18, y - 14)} textAnchor="middle">{(weight / 1_000).toFixed(2)}</text>
+                  <text className="growth-value" x={x} y={Math.max(18, y - 14)} textAnchor="middle">{weightParts(weight, units).value}</text>
                   <text className="growth-date" x={x} y="173" textAnchor="middle">{chartDateFormat.format(new Date(activity.startedAt))}</text>
                 </g>
               ))}
@@ -103,9 +105,9 @@ export function GrowthChart({
               {visible.map((activity) => (
                 <tr key={activity.id}>
                   <td>{tableDateFormat.format(new Date(activity.startedAt))}</td>
-                  <td>{activity.weightGrams} g</td>
-                  <td>{activity.lengthCm ? `${activity.lengthCm} cm` : "Not logged"}</td>
-                  <td>{activity.headCm ? `${activity.headCm} cm` : "Not logged"}</td>
+                  <td>{activity.weightGrams ? formatWeight(activity.weightGrams, units) : "Not logged"}</td>
+                  <td>{activity.lengthCm ? formatLength(activity.lengthCm, units) : "Not logged"}</td>
+                  <td>{activity.headCm ? formatLength(activity.headCm, units) : "Not logged"}</td>
                 </tr>
               ))}
             </tbody>

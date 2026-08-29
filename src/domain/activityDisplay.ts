@@ -1,5 +1,6 @@
 import { formatTime, humanDuration, minutesBetween, timeAgo } from "./time";
 import { Activity } from "./types";
+import { UnitSystem, formatLength, formatVolume, formatWeight } from "./units";
 
 export function activityTitle(activity: Activity) {
   if (activity.type === "bottle") return "Bottle";
@@ -17,10 +18,10 @@ function includeNote(detail: string, note?: string) {
   return note?.trim() ? `${detail} · ${note.trim()}` : detail;
 }
 
-export function activityDetail(activity: Activity) {
+export function activityDetail(activity: Activity, units: UnitSystem = "metric") {
   if (activity.type === "bottle") {
     return includeNote(
-      `${activity.amount ?? 0} ml · ${activity.milkType === "expressed" ? "breast milk" : "formula"}`,
+      `${formatVolume(activity.amount ?? 0, units)} · ${activity.milkType === "expressed" ? "breast milk" : "formula"}`,
       activity.note,
     );
   }
@@ -51,9 +52,9 @@ export function activityDetail(activity: Activity) {
   }
   if (activity.type === "growth") {
     const values = [
-      activity.weightGrams ? `${(activity.weightGrams / 1_000).toFixed(2)} kg` : null,
-      activity.lengthCm ? `${activity.lengthCm} cm long` : null,
-      activity.headCm ? `${activity.headCm} cm head` : null,
+      activity.weightGrams ? formatWeight(activity.weightGrams, units) : null,
+      activity.lengthCm ? `${formatLength(activity.lengthCm, units)} long` : null,
+      activity.headCm ? `${formatLength(activity.headCm, units)} head` : null,
     ].filter(Boolean);
     return includeNote(values.join(" · "), activity.note);
   }
