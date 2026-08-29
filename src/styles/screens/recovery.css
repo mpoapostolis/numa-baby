@@ -1,0 +1,164 @@
+/* The recovery surfaces — the protect block, the email row, the restore
+   dialog and the announce modal. Its own sheet because these render from
+   THREE different lazy chunks (Settings, the intro modal, onboarding's
+   restore dialog); living in settings.css meant onboarding got them raw. */
+
+/* The Google guard block inside the Family Sync card. */
+.google-protect {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.google-host {
+  min-height: 44px;
+}
+
+.google-protected {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.google-protected p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+}
+
+.google-protected svg {
+  width: 16px;
+  height: 16px;
+  color: var(--glyph-diaper);
+  flex: 0 0 16px;
+}
+
+.google-blocked {
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+}
+
+.email-protect-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.email-protect-row [data-slot="input-group"] {
+  height: auto;
+  min-height: 44px;
+  flex: 1 1 160px;
+}
+
+.google-sent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+}
+
+.google-sent svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  color: var(--glyph-diaper);
+}
+
+/* The one-time protect announcement. */
+.protect-intro .protect-intro-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: color-mix(in oklab, var(--glyph-diaper) var(--glyph-wash), var(--card));
+  color: var(--glyph-diaper);
+}
+
+.protect-intro .protect-intro-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.protect-intro .google-protect {
+  border-top: none;
+  padding-top: 0;
+}
+/* ---- The restore dialog, composed instead of stacked ---------------------- */
+
+.restore-doors {
+  display: grid;
+  gap: 16px;
+}
+
+.restore-doors .google-protect {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+  justify-items: stretch;
+}
+
+/* The Google iframe and the email row read as one column of equals. */
+.restore-doors .google-host {
+  display: flex;
+  justify-content: center;
+}
+
+.door-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ink-3);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.door-divider::before,
+.door-divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--border);
+}
+
+.door-rows {
+  display: grid;
+  gap: 4px;
+}
+
+.door-row {
+  justify-content: flex-start;
+  height: auto;
+  min-height: 44px;
+}
+
+.door-note {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+/* The email row: one joined control, never a stray button on its own line. */
+.email-protect-row {
+  flex-wrap: nowrap;
+  align-items: stretch;
+}
+
+.email-protect-row button {
+  height: auto;
+  min-height: 44px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}

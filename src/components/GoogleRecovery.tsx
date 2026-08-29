@@ -3,17 +3,46 @@
 // talks to Google until they open one of these, and someone who never
 // touches the feature never loads its script.
 
+import "../styles/screens/recovery.css";
 import { useEffect, useRef, useState } from "react";
 import { Mail, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
 import { InputGroup, InputGroupInput } from "./ui/input-group";
+import { loadAuthHint } from "../domain/authHint";
 import { emailRecoverRequest } from "../domain/syncTransport";
 import { mountGoogleButton } from "../domain/googleButton";
 import { track } from "../domain/analytics";
 import { FamilySync } from "../hooks/useFamilySync";
 
-/** The Google button, mounted when visible, with an honest failure state. */
+/** Offline is not an error, but neither door works without the network —
+    say so plainly instead of loading a button that cannot succeed, and come
+    back to life on our own the moment the connection returns. */
+function useOnline(): boolean {
+  const [online, setOnline] = useState(() => navigator.onLine);
+  useEffect(() => {
+    const up = () => setOnline(true);
+    const down = () => setOnline(false);
+    window.addEventListener("online", up);
+    window.addEventListener("offline", down);
+    return () => {
+      window.removeEventListener("online", up);
+      window.removeEventListener("offline", down);
+    };
+  }, []);
+  return online;
+}
+
+function OfflineNote({ what }: { what: string }) {
+  return (
+    <p className="google-blocked" role="status">
+      You’re offline — {what} needs the internet. Your entries are safe on
+      this phone meanwhile; this will wake up by itself when you’re back.
+    </p>
+  );
+}
+
+/** The Google button, mounted with an honest failure state. */
 function GoogleButtonHost({ onCredential }: { onCredential: (credential: string) => void }) {
   const host = useRef<HTMLDivElement | null>(null);
   const [blocked, setBlocked] = useState(false);
@@ -45,11 +74,13 @@ function GoogleButtonHost({ onCredential }: { onCredential: (credential: string)
 function EmailRow({
   label,
   onSend,
+  defaultEmail = "",
 }: {
   label: string;
   onSend: (email: string) => Promise<boolean>;
+  defaultEmail?: string;
 }) {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(defaultEmail);
   const [state, setState] = useState<"idle" | "busy" | "sent">("idle");
   if (state === "sent") {
     return (
@@ -92,8 +123,12 @@ export function ProtectWithGoogle({ familySync, immediate = false }: { familySyn
   const [email, setEmail] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // Google's script loads only after this tap — opening Settings costs
-  // nothing. The intro modal passes immediate: opening IT was the tap.
-  const [revealed, setRevealed] = useState(immediate);
+  // nothing. The intro modal passes immediate: opening IT was the tap. A
+  // device that has authenticated before skips the tap too — familiarity is
+  // the whole point of remembering.
+  const [hint] = useState(loadAuthHint);
+  const [revealed, setRevealed] = useState(immediate || hint !== null);
+  const online = useOnline();
   const paired = Boolean(familySync.pairing);
 
   useEffect(() => {
@@ -150,12 +185,18 @@ export function ProtectWithGoogle({ familySync, immediate = false }: { familySyn
 
   return (
     <div className="google-protect">
-      {revealed ? (
+      {!online ? (
+        <OfflineNote what="protecting your log" />
+      ) : revealed ? (
         <>
+          {hint?.method === "email" && hint.email && (
+            <p className="t-meta">Last time you used <strong>{hint.email}</strong>.</p>
+          )}
           <GoogleButtonHost onCredential={(credential) => void handleCredential(credential)} />
           <p className="t-meta">…or with any email address:</p>
           <EmailRow
             label="Send link"
+            defaultEmail={hint?.method === "email" ? hint.email ?? "" : ""}
             onSend={async (address) => {
               // The one-tap promise holds here too: no pairing -> create it.
               if (!familySync.pairing && !(await familySync.createFamily("This phone"))) return false;
@@ -188,7 +229,9 @@ export function RestoreWithGoogle({
   onRestored: () => void;
 }) {
   const [failed, setFailed] = useState<string | null>(null);
-  const [revealed, setRevealed] = useState(false);
+  const [hint] = useState(loadAuthHint);
+  const [revealed, setRevealed] = useState(hint !== null);
+  const online = useOnline();
 
   async function handleCredential(credential: string) {
     const ok = await familySync.googleRecover(credential, "This phone");
@@ -204,12 +247,18 @@ export function RestoreWithGoogle({
       </Button>
     );
   }
+  if (!online) {
+    return <OfflineNote what="restoring" />;
+  }
   return (
     <div className="google-protect">
+      {hint?.method === "email" && hint.email && (
+        <p className="t-meta">Last time you used <strong>{hint.email}</strong>.</p>
+      )}
       <GoogleButtonHost onCredential={(credential) => void handleCredential(credential)} />
-      <p className="t-meta">…or by email — the link that arrives restores everything:</p>
       <EmailRow
         label="Email me a link"
+        defaultEmail={hint?.method === "email" ? hint.email ?? "" : ""}
         onSend={async (address) => {
           track("email_recover_requested");
           try {

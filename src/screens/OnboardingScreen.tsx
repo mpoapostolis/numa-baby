@@ -15,7 +15,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogTitle,
 } from "../components/ui/dialog";
 import { BabyFace, NurseryScene, TinyStars } from "../components/illustrations";
@@ -48,8 +47,6 @@ import { FamilySync } from "../hooks/useFamilySync";
 const RestoreWithGoogle = lazy(() =>
   import("../components/GoogleRecovery").then((m) => ({ default: m.RestoreWithGoogle })),
 );
-
-const HANDOFF_OFFER_SEEN = "numalog-handoff-offer-v1";
 
 export default function OnboardingScreen({
   mode,
@@ -93,28 +90,13 @@ export default function OnboardingScreen({
   // button at the bottom of a form is not enough warning that "start
   // tracking" here means starting from zero. Declining is remembered, so it
   // never nags someone who really is new.
-  const [handoffOffer, setHandoffOffer] = useState(() => {
-    if (!handoffPeers(window.location.origin).length) return false;
-    // Only at the app's home address: on the OLD origin the same dialog read
-    // backwards — "already using numalog.app?" — and offered to pull a log in
-    // the wrong direction. And never inside a social-app webview: the escape
-    // notice owns that moment, and a handoff steered INTO the webview would
-    // land the entries in its walled-off storage.
-    if (moveTarget(window.location.origin) !== null || inAppBrowser()) return false;
-    try {
-      return window.localStorage.getItem(HANDOFF_OFFER_SEEN) === null;
-    } catch {
-      return true;
-    }
-  });
-  function declineHandoffOffer() {
-    setHandoffOffer(false);
-    try {
-      window.localStorage.setItem(HANDOFF_OFFER_SEEN, "1");
-    } catch {
-      // Remembering is a courtesy; the session state above still closes it.
-    }
-  }
+  // One dialog holds every way back: whoever has data will open it, whoever
+  // is genuinely new is never interrupted. (This replaced an auto-opening
+  // "already using the old address?" popup that greeted every stranger from
+  // the Facebook post with a question about an address they had never seen.)
+  const [restoreOpen, setRestoreOpen] = useState(false);
+  const showHandoffDoor =
+    handoffFrom !== null && moveTarget(window.location.origin) === null && !inAppBrowser();
 
   return (
     <main className="onboarding-shell">
@@ -260,58 +242,60 @@ export default function OnboardingScreen({
 
                 {storageWarning && <div className="onboarding-alert" role="alert">{storageWarning}</div>}
                 <Button type="submit" size="lg" className="onboarding-primary">Start tracking <ChevronRight /></Button>
-                <Button type="button" variant="ghost" onClick={() => restoreRef.current?.click()}><Upload /> Restore a backup</Button>
-                {/* The disaster door: a verified Google sign-in re-joins the
-                    family whose guard it is, and everything comes back over
-                    the sync. Lazy — Google's script loads only on the tap. */}
-                <Suspense fallback={null}>
-                  <RestoreWithGoogle familySync={familySync} onRestored={onGoogleRestored} />
-                </Suspense>
+                <Button type="button" variant="ghost" onClick={() => setRestoreOpen(true)}>
+                  <Upload /> I already have data — bring it back
+                </Button>
                 {/* Whoever arrives here from the app's older web address has a
                     full log sitting in a browser store this page cannot see —
                     different origin, different storage. Asking them to invent
                     a baby that already exists is the wrong first screen. */}
-                {handoffFrom && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => { window.location.href = handoffSendUrl(handoffFrom, window.location.origin); }}
-                  >
-                    <ArrowLeftRight /> Bring my log from {originLabel(handoffFrom)}
-                  </Button>
-                )}
+                
               </form>
             </CardContent>
           </Card>
         </div>
       )}
 
-      {mode === "onboarding" && handoffFrom && (
-        <Dialog open={handoffOffer} onOpenChange={(open) => { if (!open) declineHandoffOffer(); }}>
-          <DialogContent className="handoff-offer">
-            <DialogTitle>Already using {originLabel(handoffFrom)}?</DialogTitle>
+      {mode === "onboarding" && (
+        <Dialog open={restoreOpen} onOpenChange={setRestoreOpen}>
+          <DialogContent className="restore-doors">
+            <DialogTitle>Bring your log back</DialogTitle>
             <DialogDescription>
-              Numalog moved here. Your entries are still safe at the old address — one tap
-              brings your whole log over, and nothing is deleted from the old one. If you
-              used the installed app from your home screen, move with a backup file
-              instead: its entries can’t travel by link. Either way, keep the old app or
-              icon until you can SEE your entries here — an installed app’s storage is
-              deleted with it.
+              However you kept it, there is a way home. Nothing here deletes
+              anything, anywhere.
             </DialogDescription>
-            <DialogFooter>
-              <Button
-                size="lg"
-                onClick={() => { window.location.href = handoffSendUrl(handoffFrom, window.location.origin); }}
-              >
-                <ArrowLeftRight /> Bring my log over
+            {/* Door one, emphasized: the cloud — everything downloads and
+                stays synced from then on. */}
+            <Suspense fallback={null}>
+              <RestoreWithGoogle familySync={familySync} onRestored={onGoogleRestored} />
+            </Suspense>
+
+            <div className="door-divider" aria-hidden="true"><span>or from this phone</span></div>
+
+            <div className="door-rows">
+              <Button type="button" variant="ghost" className="door-row" onClick={() => { setRestoreOpen(false); restoreRef.current?.click(); }}>
+                <Upload /> Restore a backup file
               </Button>
-              <Button variant="ghost" onClick={declineHandoffOffer}>
-                I’m new here — start fresh
-              </Button>
-            </DialogFooter>
+              {showHandoffDoor && handoffFrom && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="door-row"
+                  onClick={() => { window.location.href = handoffSendUrl(handoffFrom, window.location.origin); }}
+                >
+                  <ArrowLeftRight /> Bring my log from {originLabel(handoffFrom)}
+                </Button>
+              )}
+            </div>
+
+            <p className="door-note">
+              Entries inside an installed home-screen app can’t travel by
+              link — for those, use a backup file or the cloud restore.
+            </p>
           </DialogContent>
         </Dialog>
       )}
+
       <Input ref={restoreRef} className="hidden-input" type="file" accept="application/json" onChange={onRestore} />
       <Toaster theme={nightMode ? "dark" : "light"} position="bottom-center" closeButton />
     </main>

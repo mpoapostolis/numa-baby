@@ -61,8 +61,20 @@ export async function handleGoogleLink(
   const identity = await identityFrom(body, clientId, json);
   if (identity instanceof Response) return identity;
   await ensureTable(client);
-  // One account, one family: re-linking moves the guard to wherever the
-  // signed-in device actually is — the phone in hand outranks history.
+  // The guard never moves silently. Re-linking on the SAME family refreshes
+  // the row; pointing at a DIFFERENT family is refused with the truth —
+  // otherwise a second phone tapping "Protect" would quietly strip recovery
+  // from a log that may have no other protection left.
+  const existing = await client.execute({
+    sql: "SELECT family_id FROM recovery_identities WHERE google_sub = ?",
+    args: [identity.sub],
+  });
+  if (existing.rows.length && String(existing.rows[0].family_id) !== familyId) {
+    return json({
+      error:
+        "This Google account already protects another log. To bring that log onto this phone, use Restore on a fresh phone or Join with a code — or remove its protection from the other device first.",
+    }, 409);
+  }
   await client.execute({
     sql: `INSERT INTO recovery_identities (google_sub, family_id, email, created_at)
           VALUES (?, ?, ?, ?)

@@ -24,6 +24,7 @@ import { Switch } from "../components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "../components/ui/toggle-group";
 import { FamilySyncCard } from "../components/FamilySyncCard";
 import { FeedbackCard } from "../components/FeedbackCard";
+import { AppNews } from "../components/AppNews";
 import { InstallGuide } from "../components/InstallGuide";
 import { SettingsAction } from "../components/SettingsAction";
 import { track } from "../domain/analytics";
@@ -53,6 +54,8 @@ type SettingsScreenProps = {
   onOpenProfile: () => void;
   onEraseAll: () => void;
   familySync: FamilySync;
+  /** Live entries on this phone, quoted by the cloud-safety line. */
+  entryCount: number;
   incomingJoinCode?: string | null;
   onIncomingCodeUsed?: () => void;
 };
@@ -76,6 +79,7 @@ export default function SettingsScreen({
   onOpenProfile,
   onEraseAll,
   familySync,
+  entryCount,
   incomingJoinCode,
   onIncomingCodeUsed,
 }: SettingsScreenProps) {
@@ -252,6 +256,7 @@ export default function SettingsScreen({
 
       <FamilySyncCard
         familySync={familySync}
+        entryCount={entryCount}
         profile={profile}
         incomingCode={incomingJoinCode}
         onIncomingCodeUsed={onIncomingCodeUsed}
@@ -264,6 +269,8 @@ export default function SettingsScreen({
         </CardHeader>
         <CardContent>
           <ItemGroup className="settings-action-list" role="group" aria-label="Backup actions">
+            <AppNews />
+            <ItemSeparator />
             <SettingsAction title="Share with partner" description="Send today's log — their app merges it, nothing gets replaced" icon={<Share2 />} onClick={() => { track("data_shared"); onShare(); }} />
             <ItemSeparator />
             <SettingsAction title="Download backup" description="Saves a file with all your entries — keep it in a synced folder to be safe" icon={<Download />} onClick={() => { track("backup_downloaded"); onExport(); }} />

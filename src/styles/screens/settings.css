@@ -490,95 +490,29 @@
   font-size: 0.8125rem;
 }
 
-/* The Google guard block inside the Family Sync card. */
-.google-protect {
+
+/* The news dialog: the changelog, readable back to the beginning. */
+.news-dialog {
+  max-height: min(80dvh, 640px);
+  overflow-y: auto;
+}
+
+.news-list {
   display: grid;
-  gap: 8px;
-  justify-items: start;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
+  gap: 20px;
 }
 
-.google-host {
-  min-height: 44px;
+.news-release h3 {
+  font-size: 0.9375rem;
+  font-weight: 600;
 }
 
-.google-protected {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
-}
-
-.google-protected p {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  color: var(--ink-2);
-  font-size: 0.8125rem;
-}
-
-.google-protected svg {
-  width: 16px;
-  height: 16px;
-  color: var(--glyph-diaper);
-  flex: 0 0 16px;
-}
-
-.google-blocked {
-  color: var(--ink-2);
-  font-size: 0.8125rem;
-}
-
-.email-protect-row {
-  display: flex;
-  gap: 8px;
-  width: 100%;
-}
-
-.email-protect-row [data-slot="input-group"] {
-  height: auto;
-  min-height: 44px;
-  flex: 1 1 160px;
-}
-
-.google-sent {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  color: var(--ink-2);
-  font-size: 0.8125rem;
-}
-
-.google-sent svg {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 16px;
-  color: var(--glyph-diaper);
-}
-
-/* The one-time protect announcement. */
-.protect-intro .protect-intro-icon {
+.news-release ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
   display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  background: color-mix(in oklab, var(--glyph-diaper) var(--glyph-wash), var(--card));
-  color: var(--glyph-diaper);
+  gap: 6px;
+  color: var(--ink-2);
+  font-size: 0.8125rem;
 }
 
-.protect-intro .protect-intro-icon svg {
-  width: 22px;
-  height: 22px;
-}
-
-.protect-intro .google-protect {
-  border-top: none;
-  padding-top: 0;
-}

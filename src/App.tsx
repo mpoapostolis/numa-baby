@@ -23,6 +23,7 @@ import { AppSidebar } from "./components/AppSidebar";
 import { BabyFace, SleepingBaby } from "./components/illustrations";
 import { ConsentBanner } from "./components/ConsentBanner";
 import { InAppEscape } from "./components/InAppEscape";
+import { milestoneFor, milestoneSeen } from "./domain/milestones";
 import { FeedbackBubble } from "./components/FeedbackBubble";
 import OnboardingScreen from "./screens/OnboardingScreen";
 import TodayScreen from "./screens/TodayScreen";
@@ -146,6 +147,10 @@ export default function HomePage() {
   });
   const [incomingJoinCode, setIncomingJoinCode] = useState(readIncomingJoinCode);
   const magicTokenRef = useRef(tappedMagicLink);
+  // Fresh from onboarding: the protect offer earns its one showing NOW, at
+  // the moment the parent has just invested in the setup — not after five
+  // entries like families that predate the feature.
+  const [justOnboarded, setJustOnboarded] = useState(false);
   // Read once per visit: the intro marks itself seen on any dismissal.
   const [protectIntroDone] = useState(() => {
     try {
@@ -218,6 +223,7 @@ export default function HomePage() {
     changeDiaperReminderInterval,
     persistVersion,
     backfillVersion,
+    backfillOldestAt,
     mergeRemote,
     readPersisted,
     stampProfileForSync,
@@ -237,6 +243,7 @@ export default function HomePage() {
     bootState,
     persistVersion,
     backfillVersion,
+    backfillOldestAt,
     readPersisted,
     stampProfileForSync,
     mergeRemote,
@@ -305,7 +312,22 @@ export default function HomePage() {
   const releasesToShow = seenRelease === null && sortedActivities.length === 0
     ? []
     : unseenReleases(seenRelease);
-  const showWhatsNew = activeTab === "today" && releasesToShow.length > 0;
+  // ---- The moment chain -------------------------------------------------
+  // Four surfaces used to compete for the same first glance — a birthday
+  // party, the protect announcement, the what's-new card and the backup
+  // nudge could all land on one open. One voice at a time, priority by
+  // urgency: a milestone has a date, protect happens once in an app's life,
+  // news can wait an open, and the nudge is quiet forever once the cloud
+  // holds a copy. Whatever yields today simply speaks on the next open.
+  const milestoneToday = (() => {
+    const found = milestoneFor(profile.birthDate, profile.name, minuteClock);
+    return found !== null && !milestoneSeen(found.id);
+  })();
+  const protectMoment =
+    !milestoneToday && consent !== null && sheet === null && !protectIntroDone &&
+    (justOnboarded || activities.filter((activity) => !activity.deleted).length >= 5);
+  const showWhatsNew =
+    activeTab === "today" && releasesToShow.length > 0 && !milestoneToday && !protectMoment;
 
   useEffect(() => {
     // Everything is new to someone who just arrived; greeting them with a
@@ -533,7 +555,11 @@ export default function HomePage() {
         familySync={familySync}
         onGoogleRestored={completeJoin}
         onNightModeChange={changeNightMode}
-        onComplete={completeOnboarding}
+        onComplete={(nextProfile) => {
+          const done = completeOnboarding(nextProfile);
+          if (done) setJustOnboarded(true);
+          return done;
+        }}
         onRestore={(event) => importData(event)}
         onDownloadRecovery={downloadRecovery}
         onResetRecovery={resetUnreadableData}
@@ -618,7 +644,7 @@ export default function HomePage() {
         {/* Asked once there is something worth losing, and not before. The
             rules live in domain/backupNudge.ts so they can be tested rather
             than argued about. */}
-        {pendingBackupNudge && (
+        {pendingBackupNudge && !milestoneToday && !protectMoment && !showWhatsNew && !familySync.pairing && (
           <Suspense fallback={null}>
           <BackupNudgeCard
             nudge={pendingBackupNudge}
@@ -706,6 +732,7 @@ export default function HomePage() {
           {activeTab === "more" && (
             <Suspense fallback={screenFallback}>
               <SettingsScreen
+                entryCount={activities.filter((activity) => !activity.deleted).length}
                 profile={profile}
                 nightMode={nightMode}
                 reminders={reminders}
@@ -765,8 +792,7 @@ export default function HomePage() {
             entries, consent question answered, no sheet open), never during
             its own first minutes. The component retires itself for families
             already guarded. */}
-        {consent !== null && sheet === null && !protectIntroDone &&
-          activities.filter((activity) => !activity.deleted).length >= 5 && (
+        {protectMoment && (
           <Suspense fallback={null}>
             <ProtectIntro familySync={familySync} />
           </Suspense>

@@ -23,22 +23,29 @@ type FamilySyncCardProps = {
   /** A code carried in from a scanned invite link, if any. */
   incomingCode?: string | null;
   onIncomingCodeUsed?: () => void;
+  /** Live entries on this phone — the number the safety line quotes. */
+  entryCount: number;
 };
 
 
 type View = "closed" | "code" | "join";
 
-function statusLine(phase: string, lastSyncAt: string | null): string {
+function statusLine(phase: string, lastSyncAt: string | null, entryCount: number): string {
   if (phase === "syncing") return "Syncing…";
-  if (phase === "offline") return "Offline — will retry on its own";
+  if (phase === "offline") return "Offline — will catch up on its own when you're back";
   if (phase === "revoked") return "Reconnect needed — ask the other phone for a fresh code";
-  if (lastSyncAt) return `Last synced ${formatTime(lastSyncAt)}`;
+  // The sentence a parent actually needs. Not sync jargon — the promise,
+  // with the number that makes it concrete.
+  if (lastSyncAt) {
+    return `All ${entryCount} ${entryCount === 1 ? "entry" : "entries"} safe in the cloud · synced ${formatTime(lastSyncAt)}`;
+  }
   return "Waiting for the first sync";
 }
 
 export function FamilySyncCard({
   familySync,
   profile,
+  entryCount,
   incomingCode = null,
   onIncomingCodeUsed,
 }: FamilySyncCardProps) {
@@ -129,7 +136,7 @@ export function FamilySyncCard({
         <CardDescription>
           {paired
             ? "Both phones see the same log, automatically."
-            : "Both phones see the same log — one creates the family, the other joins with a code."}
+            : "Right now your log lives on this phone only. Sync it to keep it safe in the cloud and share it with a partner."}
         </CardDescription>
       </CardHeader>
       <CardContent className="family-card-content">
@@ -208,7 +215,7 @@ export function FamilySyncCard({
               <strong>
                 Family Sync on{status.deviceCount ? ` · ${status.deviceCount} devices` : ""}
               </strong>
-              <small>{statusLine(status.phase, status.lastSyncAt)}</small>
+              <small>{statusLine(status.phase, status.lastSyncAt, entryCount)}</small>
             </div>
             <div className="family-actions">
               <Button variant="outline" disabled={busy} onClick={() => void handleNewCode()}>Show invite code</Button>

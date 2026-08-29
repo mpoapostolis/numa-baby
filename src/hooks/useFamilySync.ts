@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { FamilyPairing, clearPairing, loadPairing, savePairing } from "../domain/familyPairing";
+import {
+  FamilyPairing,
+  clearPairing,
+  loadPairing,
+  rewoundPushCursor,
+  savePairing,
+} from "../domain/familyPairing";
+import { saveAuthHint } from "../domain/authHint";
 import { selectPushDelta } from "../domain/syncCursor";
 import * as transport from "../domain/syncTransport";
 import { Activity, BootState, Profile } from "../domain/types";
@@ -38,6 +45,8 @@ type FamilySyncOptions = {
   // Bumped by the store on every successful persist — the push trigger.
   persistVersion: number;
   backfillVersion: number;
+  /** Oldest updatedAt among the last merge's incoming entries ("" = none). */
+  backfillOldestAt: string;
   readPersisted: () => { activities: Activity[]; profile: Profile; profileUpdatedAt?: string };
   /** Makes an unstamped legacy profile syncable. Only ever called on create. */
   stampProfileForSync: () => void;
@@ -86,7 +95,7 @@ type LiveSync = {
   backfilled: boolean;
 };
 
-export function useFamilySync({ debugMode, bootState, persistVersion, backfillVersion, readPersisted, stampProfileForSync, mergeRemote, showToast }: FamilySyncOptions) {
+export function useFamilySync({ debugMode, bootState, persistVersion, backfillVersion, backfillOldestAt, readPersisted, stampProfileForSync, mergeRemote, showToast }: FamilySyncOptions) {
   const [pairing, setPairing] = useState<FamilyPairing | null>(() => (debugMode ? null : loadPairing()));
   const [status, setStatus] = useState<SyncStatus>(() => ({
     phase: "idle",
@@ -281,8 +290,19 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     if (backfillVersion === seenBackfill.current) return;
     seenBackfill.current = backfillVersion;
     live.current.backfilled = true;
+    // THE CHA FIX. Merged entries keep their original updatedAt, which sits
+    // behind an advanced push cursor — so the pull side widened (backfilled
+    // above) while the push side silently skipped everything that had just
+    // arrived. Rewinding the cursor past the oldest incoming stamp makes the
+    // next push re-send from there; over-sending is safe (idempotent, LWW).
+    const p = live.current.pairing;
+    if (p) {
+      const rewound = rewoundPushCursor(p.lastPushedAt, backfillOldestAt);
+      if (rewound !== null) adoptPairing({ ...p, lastPushedAt: rewound });
+    }
     // No schedulePush here: the same merge persists, so persistVersion bumps
     // alongside this and the effect below already queues the push.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [backfillVersion]);
 
   // PUSH trigger: every successful local persist bumps persistVersion; the 2s
@@ -350,6 +370,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     if (!p || debugMode) return null;
     try {
       const { email } = await transport.googleLink(p.token, credential);
+      saveAuthHint({ method: "google", email });
       return email;
     } catch (error) {
       markFailed(error);
@@ -385,6 +406,10 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     if (debugMode) return false;
     try {
       beginPairing(await transport.googleRecover(credential, label), label);
+      saveAuthHint({ method: "google" });
+      // The parent must SEE the rescue working, not deduce it from entries
+      // trickling in. The pull that follows fills the screen underneath.
+      showToast("Welcome back — your log is on its way.");
       return true;
     } catch (error) {
       markFailed(error);
@@ -398,6 +423,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     if (!p || debugMode) return false;
     try {
       await transport.emailLink(p.token, email);
+      saveAuthHint({ method: "email", email });
       return true;
     } catch (error) {
       markFailed(error);
@@ -410,8 +436,10 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     if (debugMode) return null;
     try {
       const outcome = await transport.emailRedeem(token, label);
+      saveAuthHint({ method: "email", email: outcome.email });
       if ("confirmed" in outcome) return "confirmed";
       beginPairing(outcome, label);
+      showToast("Welcome back — your log is on its way.");
       return "recovered";
     } catch (error) {
       markFailed(error);

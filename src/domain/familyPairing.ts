@@ -33,6 +33,32 @@ export type FamilyPairing = {
 
 export const FAMILY_KEY = "numa-baby-family-v1";
 
+/**
+ * Where the push cursor must stand so that entries stamped at or after
+ * `oldestIncoming` get (re)sent. The Cha bug, named: entries arriving by
+ * MERGE — a restored backup, a shared-file import, a handoff — keep their
+ * original updatedAt, which sits BEHIND an advanced cursor, so the push
+ * loop's "everything newer than the cursor" filter skipped them forever.
+ * Both parents retried "Share with partner" for days; every retry merged
+ * locally and uploaded nothing, which is how two paired phones stayed
+ * different in the one direction nobody could see.
+ *
+ * Returns the rewound cursor, or null when no rewind is needed (cursor
+ * already behind the oldest incoming stamp, or no cursor yet — a fresh
+ * pairing pushes everything anyway). Over-sending is safe by design: the
+ * server upsert is idempotent and last-write-wins guarded.
+ */
+export function rewoundPushCursor(current: string, oldestIncoming: string): string | null {
+  if (!current || !oldestIncoming) return null;
+  const incomingMs = new Date(oldestIncoming).getTime();
+  if (!Number.isFinite(incomingMs)) return null;
+  const currentMs = new Date(current).getTime();
+  if (!Number.isFinite(currentMs) || currentMs < incomingMs) return null;
+  // One millisecond before the oldest incoming stamp: the strict "newer
+  // than" comparison in the push filter then includes it.
+  return new Date(incomingMs - 1).toISOString();
+}
+
 function asString(value: unknown): string {
   return typeof value === "string" ? value : "";
 }

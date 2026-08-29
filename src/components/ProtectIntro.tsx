@@ -8,7 +8,7 @@
 // and "Later" is a real answer: Settings keeps the doors forever.
 
 // Ships with this lazy chunk, not the app shell — the budget rule.
-import "../styles/screens/settings.css";
+import "../styles/screens/recovery.css";
 import { useEffect, useState } from "react";
 import { CloudUpload } from "lucide-react";
 import { Button } from "./ui/button";

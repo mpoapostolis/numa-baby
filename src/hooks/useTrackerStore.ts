@@ -69,6 +69,9 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
   // timestamps, which sit below its push cursor and would otherwise never be
   // sent. See domain/syncCursor.ts.
   const [backfillVersion, setBackfillVersion] = useState(0);
+  // The oldest updatedAt among the entries the last merge brought in — the
+  // sync hook rewinds its push cursor past this so they actually upload.
+  const [backfillOldestAt, setBackfillOldestAt] = useState("");
   // Always-current mirror of every persisted slice. Undo callbacks and post-await
   // code read from here so they never write a stale render's snapshot to storage.
   // Synced inside persistSnapshot and the load paths — never from render.
@@ -751,8 +754,22 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
         setStorageWarning(null);
         setBootState("ready");
         // History has been rewritten underneath the sync cursor: whatever came
-        // in is dated when it was first logged, not now.
-        if (summary.added > 0 || summary.updated > 0) setBackfillVersion((v) => v + 1);
+        // in is dated when it was first logged, not now. The oldest incoming
+        // stamp travels with the bump so the sync hook can rewind its PUSH
+        // cursor past it — without this, merged entries were pulled fine but
+        // never pushed, and two paired phones could drift apart forever (the
+        // exact mismatch one family chased for days).
+        if (summary.added > 0 || summary.updated > 0) {
+          const oldest = parsed.activities.reduce(
+            (low, activity) => {
+              const stamp = activityUpdatedAt(activity);
+              return low === "" || stamp < low ? stamp : low;
+            },
+            "",
+          );
+          setBackfillOldestAt(oldest);
+          setBackfillVersion((v) => v + 1);
+        }
         const counts = `Merged: ${summary.added} new, ${summary.updated} updated, ${summary.unchanged} unchanged`;
         showToast(parsed.droppedActivities > 0
           ? `${counts} — ${parsed.droppedActivities} unreadable ${parsed.droppedActivities === 1 ? "entry" : "entries"} skipped`
@@ -827,6 +844,7 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     recoveredNotice,
     persistVersion,
     backfillVersion,
+    backfillOldestAt,
     mergeRemote,
     readPersisted,
     addActivity,
