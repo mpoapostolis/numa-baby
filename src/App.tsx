@@ -487,18 +487,15 @@ export default function HomePage() {
         onDownloadRecovery={downloadRecovery}
         onResetRecovery={resetUnreadableData}
       />
-      {/* The landing screen is where most first-time visitors stop, so the
-          question has to be asked here too — not only once someone has
-          finished setting a baby up. */}
-      {consent === null && (
-        <ConsentBanner
-          onChoose={(choice) => {
-            setConsent(choice);
-            track("consent_answered", { choice, screen: "onboarding" });
-          }}
-        />
-      )}
-      <FeedbackBubble hidden={consent === null} />
+      {/* No consent question on this screen, deliberately.
+          This is the first ten seconds for everyone who arrives from a link,
+          and it is a good ten seconds — an illustration, a headline, three
+          lines about what the app does. A permissions dialog landing across
+          the middle of it was the SECOND thing a stranger saw, before the app
+          had given them anything, and it made a handsome page look broken.
+          Nothing is lost by waiting: analytics stays denied until somebody
+          says otherwise, so no measurement happens in the meantime. The
+          question is asked once they are in the app and it means something. */}
       </>
     );
   }
