@@ -13,14 +13,17 @@ import { Button } from "./components/ui/button";
 //
 // So two changes to how an update lands:
 //
-//   1. Look every hour, rather than only when the app is opened cold. A phone
-//      that lives on a home screen may not be opened cold for a week.
-//   2. If the offer is not taken, apply it the moment the app is put down.
-//      Never while a parent is looking at it — a page that reloads itself at
-//      3am while you are counting minutes is its own small betrayal — but the
-//      next time they open it, it is the current version.
+//   1. Look EVERY TIME the app is opened, not only on a cold start and not
+//      only once an hour. An installed app is opened by returning to it, and
+//      returning to it is the moment to ask whether it is still current.
+//   2. Apply a version that was already waiting at that moment — right then,
+//      while they are opening it, when a reload costs a flash and nothing else.
+//   3. Otherwise apply it when the app is put down. Never mid-use: a page that
+//      reloads itself at 3am while you are counting minutes is its own small
+//      betrayal.
 //
-// The prompt stays for anyone who wants it immediately.
+// Between them, the worst case is one session behind and the usual case is
+// none. The prompt stays for anyone who wants it sooner.
 
 /** A phone on a home screen may never be opened cold. Ask anyway. */
 const UPDATE_CHECK_MS = 60 * 60 * 1000;
@@ -31,6 +34,7 @@ export function PwaStatus() {
   const updateApp = useRef<() => Promise<void>>(async () => undefined);
   // Read by the visibility handler, which must not be re-bound on every render.
   const waiting = useRef(false);
+  const registration = useRef<ServiceWorkerRegistration | null>(null);
 
   useEffect(() => {
     const updateSW = registerSW({
@@ -40,23 +44,41 @@ export function PwaStatus() {
         waiting.current = true;
         setNeedsRefresh(true);
       },
-      onRegisteredSW: (_url, registration) => {
-        if (!registration) return;
-        window.setInterval(() => void registration.update(), UPDATE_CHECK_MS);
+      onRegisteredSW: (_url, reg) => {
+        if (!reg) return;
+        registration.current = reg;
+        // A backstop for an app left open all day, which a baby tracker often is.
+        window.setInterval(() => void reg.update(), UPDATE_CHECK_MS);
       },
     });
     updateApp.current = () => updateSW(true);
 
-    // Applied on the way out, so the reload is never something a parent
-    // watches happen.
-    const applyWhenAway = () => {
-      if (document.visibilityState === "hidden" && waiting.current) {
+    const onVisibilityChange = () => {
+      const ready = waiting.current || Boolean(registration.current?.waiting);
+
+      if (document.visibilityState === "hidden") {
+        // On the way out: apply, so the next open is current.
+        if (ready) {
+          waiting.current = false;
+          void updateApp.current();
+        }
+        return;
+      }
+
+      // Coming back to it. If a version was already waiting, this is the
+      // cheapest possible moment to take it — they are opening the app, so a
+      // reload reads as the app opening.
+      if (ready) {
         waiting.current = false;
         void updateApp.current();
+        return;
       }
+      // Nothing waiting: ask. This is the check that was previously only
+      // happening on a cold start, which an installed app rarely gets.
+      void registration.current?.update();
     };
-    document.addEventListener("visibilitychange", applyWhenAway);
-    return () => document.removeEventListener("visibilitychange", applyWhenAway);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
   }, []);
 
   useEffect(() => {
