@@ -26,7 +26,12 @@
     // file by scripts/prerender.mjs, so nothing needs the catch-all any more.
     "not_found_handling": "404-page",
     "binding": "ASSETS",
-    "run_worker_first": ["/api/*", "/admin"]
+    // Everything, not just /api and /admin: the www->apex redirect lives in
+    // the worker, and with a path list the asset layer answers "/" on
+    // www.numalog.app before the worker ever runs — serving the whole app on
+    // a second origin, where a family's log would land in a localStorage the
+    // real address can never see.
+    "run_worker_first": true
   },
   "vars": {
     "TURSO_DATABASE_URL": "https://numa-baby-sync-mpoapostolis.aws-eu-west-1.turso.io"

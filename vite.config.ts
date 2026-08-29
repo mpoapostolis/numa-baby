@@ -31,6 +31,12 @@ export default defineConfig({
         start_url: "/",
         scope: "/",
         display: "standalone",
+        // One-handed at 3am is the whole design; sideways is never that.
+        orientation: "portrait",
+        categories: ["health", "lifestyle", "medical"],
+        // There is no native app to prefer, and saying so explicitly is what
+        // lets store packagers (TWA) treat the PWA as the real thing.
+        prefer_related_applications: false,
         background_color: "#fdf5f2",
         theme_color: "#fdf5f2",
         icons: [
