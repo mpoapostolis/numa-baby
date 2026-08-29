@@ -1,8 +1,8 @@
-# Baby Tracker
+# Numalog
 
 A calm, local-first baby tracker designed for one tired hand at 3am.
 
-**Live app: [numa-baby.mpoapostolis.workers.dev](https://numa-baby.mpoapostolis.workers.dev)** — free, no account, installable as a PWA.
+**Live app: [numalog.app](https://numalog.app)** — free, no account, installable as a PWA. (The original address, [numa-baby.mpoapostolis.workers.dev](https://numa-baby.mpoapostolis.workers.dev), keeps working — every family that started there can stay there.)
 
 Built by a new dad for his own daughter, because every baby app we tried wanted a subscription or showed ads between diaper logs. Full disclosure: the codebase is 100% vibe coded (written with Claude Code). It turned out genuinely useful, so feel free to use it.
 
