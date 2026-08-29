@@ -453,7 +453,11 @@
   position: fixed;
   right: 16px;
   bottom: 16px;
-  z-index: 80;
+  /* Above the nav (45), below the dialog layer (50). At 80 this painted on
+     top of every open log sheet — with dead buttons, since modal dialogs turn
+     off pointer events on the body. It is also display:none entirely while a
+     sheet is open (components.css), so the z-index is the belt to that brace. */
+  z-index: 48;
   width: min(calc(100vw - 32px), 420px);
   display: flex;
   align-items: center;

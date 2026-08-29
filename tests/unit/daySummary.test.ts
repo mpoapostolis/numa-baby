@@ -373,3 +373,28 @@ describe("the longest stretch, which is the number parents actually quote", () =
     expect(summary.hasStaleTimer).toBe(true);
   });
 });
+
+describe("summarizeDays across midnight", () => {
+  // The bug this pins: bucketing by start day alone meant the morning half of
+  // a night sleep vanished from the trend, while summarizeDay — fed one day
+  // at a time elsewhere on the same screen — counted it. Two numbers about
+  // the same morning disagreed on one screen.
+  it("credits the morning half of a night sleep to the morning's day", () => {
+    const now = new Date("2026-08-29T12:00:00").getTime();
+    const endDay = new Date("2026-08-29T12:00:00");
+    const night = {
+      id: "night",
+      type: "sleep",
+      startedAt: new Date("2026-08-28T22:00:00").toISOString(),
+      endedAt: new Date("2026-08-29T06:00:00").toISOString(),
+    } as Activity;
+
+    const days = summarizeDays([night], endDay, 2, now);
+    expect(days[0].sleepMinutes).toBe(120); // 22:00-24:00
+    expect(days[1].sleepMinutes).toBe(360); // 00:00-06:00
+    // The stretch itself still belongs, whole, to the evening it began.
+    expect(days[0].longestSleepMinutes).toBe(480);
+    expect(days[1].longestSleepMinutes).toBe(0);
+    expect(days[1].naps).toBe(0);
+  });
+});

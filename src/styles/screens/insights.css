@@ -563,6 +563,13 @@
   border-right: 1px solid color-mix(in oklch, var(--glyph-bottle) 55%, transparent);
 }
 
+/* The band once both ends sit on the daily ceiling: a rounded cap mark, not
+   a 2px accident of two borders meeting. */
+.intake-band.intake-cap {
+  border-radius: 6px;
+  background: color-mix(in oklch, var(--glyph-bottle) 40%, transparent);
+}
+
 /* The family's own figure: the one petal mark on the whole chart. */
 .intake-marker {
   position: absolute;

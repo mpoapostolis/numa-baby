@@ -678,6 +678,15 @@
   text-align: left;
 }
 
+/* The medicine line is user text plus " · 4h 20m ago", and the timestamp is
+   the whole reason the row exists — "has she had it, and when". A 23-character
+   name (the field allows 240) pushed it past the right-edge ellipsis, so the
+   one part a parent came to read was the first part deleted. Wrapping is the
+   coming-row precedent: an extra line costs less than a missing answer. */
+.action-medicine .log-copy small {
+  white-space: normal;
+}
+
 .log-row-secondary .log-chevron {
   flex: 0 0 auto;
   color: var(--ink-3);

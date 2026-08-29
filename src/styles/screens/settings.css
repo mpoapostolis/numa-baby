@@ -224,7 +224,10 @@
 .privacy-card {
   min-height: 92px;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  /* Two tracks for two children. The third `auto` this used to declare had
+     nothing in it, but grid still laid out the gutter in front of it — 16px
+     of dead space on the card's right edge, paid for by the paragraph. */
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 16px;
 }
@@ -315,7 +318,19 @@
   gap: 8px;
 }
 
-.family-join-row input {
+/* The wrapper ships h-8 (32px) from the primitive while the input inside is
+   raised to 44px by the coarse-pointer rule — a control 12px taller than the
+   box drawn around it, top-aligned next to a 44px Join button. Same guard as
+   every other fixed-height primitive in this file: let it grow. */
+.family-join-row [data-slot="input-group"] {
+  height: auto;
+  min-height: 44px;
+}
+
+/* The :not() chain mirrors the coarse-pointer input rule in components.css —
+   that rule is (0,3,1) and this must outrank it, or the six-digit code the
+   whole exchange revolves around renders at 16px instead of hero size. */
+.family-join-row input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
   font-size: 1.375rem;
   letter-spacing: 0.35em;
   font-variant-numeric: tabular-nums;

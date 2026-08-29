@@ -111,13 +111,6 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
         role="img"
         aria-label={description}
       >
-        {/* The average is the reading that makes a bar mean something: a day
-            is only "a lot" against the fortnight it sits in. */}
-        {trackedDays > 0 && (
-          <div className="trend-mean" style={{ bottom: `${(average / scaleMax) * 100}%` }}>
-            <span>avg</span>
-          </div>
-        )}
         <div className="trend-bars">
           {values.map((value, index) => (
             <div
@@ -138,6 +131,21 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
               )}
             </div>
           ))}
+          {/* The average is the reading that makes a bar mean something: a day
+              is only "a lot" against the fortnight it sits in. It lives INSIDE
+              the bars container for two load-bearing reasons. Percentages: an
+              absolute child of .trend-plot resolves bottom:% against the
+              padding box (108px) while the bars resolve height:% against the
+              content box (98px) — two scales 10% apart, so a bar exactly on
+              average drew visibly below the line and the line overstated every
+              average. In here both resolve against the same box. Paint order:
+              as a later sibling of the bars it paints over them, so today's
+              opaque bar can no longer erase the "avg" label. */}
+          {trackedDays > 0 && (
+            <div className="trend-mean" style={{ bottom: `${(average / scaleMax) * 100}%` }}>
+              <span>avg</span>
+            </div>
+          )}
         </div>
       </div>
 

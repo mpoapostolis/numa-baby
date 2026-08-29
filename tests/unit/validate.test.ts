@@ -266,3 +266,19 @@ describe("a medicine dose", () => {
     expect(isValidActivity({ ...base, dose: "x".repeat(NOTE_MAX_LENGTH + 1) })).toBe(false);
   });
 });
+
+describe("future timestamps arriving from other devices", () => {
+  const base = { id: "x", type: "bottle", amount: 120 };
+
+  it("tolerates ordinary clock skew — rejection here is data loss", () => {
+    const skewed = new Date(Date.now() + 5 * 60_000).toISOString();
+    expect(isValidActivity({ ...base, startedAt: skewed })).toBe(true);
+  });
+
+  it("rejects a stamp from the far future before it can pin the timeline", () => {
+    const absurd = new Date(Date.now() + 365 * 24 * 3600_000).toISOString();
+    expect(isValidActivity({ ...base, startedAt: absurd })).toBe(false);
+    const okStart = new Date(Date.now() - 3600_000).toISOString();
+    expect(isValidActivity({ ...base, startedAt: okStart, endedAt: absurd })).toBe(false);
+  });
+});

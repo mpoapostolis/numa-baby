@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useEffect, useId, useRef } from "react";
 import {
   DialogDescription,
   DialogHeader,
@@ -156,8 +156,19 @@ export function UnitField({
 }
 
 export function FormError({ message }: { message: string | null }) {
+  // The tall sheets (past nursing, timed edits) overflow their scrollport
+  // before this ever renders, and it renders at the very bottom — measured
+  // fully behind the sticky footer at 375x812. The focused field gets a red
+  // ring, but the sentence saying WHAT is wrong was 100% invisible, and
+  // nothing scrolled to it: the focus target was already in view, so focus()
+  // moved nothing. So the message walks itself into view; the scroll-margin
+  // in components.css keeps it clear of the footer it was hiding behind.
+  const ref = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (message) ref.current?.scrollIntoView({ block: "nearest" });
+  }, [message]);
   if (!message) return null;
-  return <FieldError className="form-error" id="sheet-error">{message}</FieldError>;
+  return <FieldError ref={ref} className="form-error" id="sheet-error">{message}</FieldError>;
 }
 
 export function SheetForm({ children, onSubmit }: { children: React.ReactNode; onSubmit: () => void }) {

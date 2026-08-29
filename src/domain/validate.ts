@@ -29,6 +29,19 @@ function isValidDate(value: unknown): value is string {
   return typeof value === "string" && Number.isFinite(new Date(value).getTime());
 }
 
+/* Two days, not zero. Every entry arriving over sync or in a backup comes
+   from somebody's phone clock, and phone clocks drift — a partner's device a
+   few minutes fast must never have its feeds silently discarded, because
+   rejection here IS data loss. What this fences out is the other thing
+   entirely: a corrupt or fabricated stamp years in the future, which would
+   sit at the top of the timeline forever and poison every forecast median.
+   The local quick-log path stays stricter (safeStartedAt clamps to now). */
+const FUTURE_TOLERANCE_MS = 48 * 60 * 60 * 1000;
+
+function tooFarInFuture(value: string) {
+  return new Date(value).getTime() > Date.now() + FUTURE_TOLERANCE_MS;
+}
+
 function invalidStoredNumber(name: NumericFieldName, value: unknown) {
   return value !== undefined && (typeof value !== "number" || outsideStoredBounds(name, value));
 }
@@ -39,6 +52,9 @@ export function isValidActivity(value: unknown): value is Activity {
     return false;
   }
   if (!isValidDate(value.startedAt) || (value.endedAt !== undefined && !isValidDate(value.endedAt))) {
+    return false;
+  }
+  if (tooFarInFuture(value.startedAt) || (value.endedAt !== undefined && tooFarInFuture(value.endedAt))) {
     return false;
   }
   if (value.note !== undefined && (typeof value.note !== "string" || value.note.length > NOTE_MAX_LENGTH)) return false;

@@ -189,8 +189,14 @@ export default function InsightsScreen({
           <figcaption>
             <p className="t-label">Milk against weight</p>
             <h2>
+              {/* Past ~6.4 kg both ends of the 150-200 ml/kg rule hit the
+                  daily ceiling and the range IS a single number. "960-960 ml"
+                  is a bug wearing the voice of guidance; "about 960 ml" is
+                  what the source actually says there. */}
               At {intake.weightKg.toFixed(2)} kg, the usual guide is about{" "}
-              {intake.lowMl}–{intake.highMl} ml a day.
+              {intake.lowMl === intake.highMl
+                ? `${intake.highMl} ml a day at most.`
+                : `${intake.lowMl}–${intake.highMl} ml a day.`}
             </h2>
           </figcaption>
 
@@ -199,16 +205,25 @@ export default function InsightsScreen({
           <div
             className="intake-bar"
             role="img"
-            aria-label={`Reference band ${intake.lowMl} to ${intake.highMl} millilitres a day. Your typical day is ${intake.typicalMl} millilitres, which is ${intake.position} the band.`}
+            aria-label={`${
+              intake.lowMl === intake.highMl
+                ? `Reference ceiling ${intake.highMl} millilitres a day`
+                : `Reference band ${intake.lowMl} to ${intake.highMl} millilitres a day`
+            }. Your typical day is ${intake.typicalMl} millilitres, which is ${intake.position} the band.`}
           >
             {(() => {
               const span = Math.max(intake.highMl * 1.35, intake.typicalMl * 1.15);
               const at = (value: number) => `${Math.min(100, (value / span) * 100)}%`;
               return (
                 <>
+                  {/* A collapsed band leaves 2px of borders — thinner than
+                      the marker beside it. Once the ends meet it is drawn as
+                      a deliberate cap mark instead. */}
                   <div
-                    className="intake-band"
-                    style={{ left: at(intake.lowMl), width: `calc(${at(intake.highMl)} - ${at(intake.lowMl)})` }}
+                    className={intake.lowMl === intake.highMl ? "intake-band intake-cap" : "intake-band"}
+                    style={intake.lowMl === intake.highMl
+                      ? { left: `calc(${at(intake.highMl)} - 6px)`, width: "12px" }
+                      : { left: at(intake.lowMl), width: `calc(${at(intake.highMl)} - ${at(intake.lowMl)})` }}
                   />
                   <span className="intake-marker" style={{ left: at(intake.typicalMl) }} />
                 </>

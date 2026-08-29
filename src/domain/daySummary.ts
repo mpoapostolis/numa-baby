@@ -231,6 +231,24 @@ export function summarizeDays(
   for (const activity of activities) {
     const bucket = buckets.get(dayKey(new Date(activity.startedAt)));
     if (bucket) bucket.push(activity);
+    // A sleep belongs to every day it touches, not just the one it started
+    // on. summarizeDay already counts only the minutes inside each day — but
+    // it can only do that for activities it is handed, and this pass was
+    // handing a 22:00-06:00 night to Monday alone. Tuesday's trend bar showed
+    // zero morning sleep while the DayRecap on the same screen, fed one day
+    // at a time, showed six hours: two answers about the same morning.
+    if (activity.type === "sleep") {
+      const endMs = activity.endedAt ? new Date(activity.endedAt).getTime() : now;
+      const cursor = new Date(activity.startedAt);
+      cursor.setHours(0, 0, 0, 0);
+      // Bounded walk: a stale timer is capped by `now`, and anything longer
+      // than the whole window cannot touch more buckets than exist.
+      for (let step = 0; step < count; step++) {
+        cursor.setDate(cursor.getDate() + 1);
+        if (cursor.getTime() >= endMs) break;
+        buckets.get(dayKey(cursor))?.push(activity);
+      }
+    }
   }
 
   return days.map((date) => summarizeDay(buckets.get(dayKey(date)) ?? [], date, now));

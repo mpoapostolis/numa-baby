@@ -727,6 +727,9 @@
   background: var(--danger-soft);
   color: var(--foreground);
   font-size: 0.8125rem;
+  /* Clearance for the sticky footer (up to ~129px with a footer note) so
+     scrollIntoView lands the message above it, not behind it. */
+  scroll-margin-bottom: 150px;
 }
 
 .health-alert {
@@ -1154,7 +1157,8 @@ body:has(.pwa-toast) .content {
    Done in CSS because the toast lives outside the tree that holds the consent
    state, and :has is reactive on its own: the moment the banner unmounts the
    toast is back, with no event to wire or re-render to trigger. */
-body:has(.consent-banner) .pwa-toast {
+body:has(.consent-banner) .pwa-toast,
+body:has(.bottom-sheet) .pwa-toast {
   display: none;
 }
 
