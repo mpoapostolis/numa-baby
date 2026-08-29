@@ -1,5 +1,5 @@
 import { Suspense, lazy, useState } from "react";
-import { ChevronRight, ExternalLink, Milk, Pill, ShieldCheck, Square, Thermometer, Utensils, Weight } from "lucide-react";
+import { ChevronRight, CloudOff, ExternalLink, Milk, Pill, ShieldCheck, Square, Thermometer, Utensils, Weight } from "lucide-react";
 
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -211,6 +211,10 @@ type TodayScreenProps = {
   onManualNursing: () => void;
   onEdit: (activity: Activity) => void;
   onSeeTimeline: () => void;
+  /** Whether this device's log also lives in the cloud (paired/protected). */
+  cloudSynced: boolean;
+  /** Tap on the on-this-phone-only note — lands where protection lives. */
+  onOpenProtection: () => void;
 };
 
 export default function TodayScreen({
@@ -224,6 +228,8 @@ export default function TodayScreen({
   onManualNursing,
   onEdit,
   onSeeTimeline,
+  cloudSynced,
+  onOpenProtection,
 }: TodayScreenProps) {
   const units = useUnits();
   // Computed per render against the minute clock, so a party that starts at
@@ -501,6 +507,15 @@ export default function TodayScreen({
         <div className="welcome-copy">
           <span className="welcome-greeting t-label">{greeting()}</span>
           <h1 id="today-heading" className="t-title-1 welcome-headline">{headline}</h1>
+          {/* The quiet truth about where the data lives. A state, not a
+              nudge: it is small, it is always there while it is true, and it
+              disappears the moment the cloud holds a copy. One tap lands on
+              the fix. */}
+          {!cloudSynced && (
+            <button type="button" className="cloud-note" onClick={onOpenProtection}>
+              <CloudOff size={12} aria-hidden="true" /> On this phone only
+            </button>
+          )}
           <p className="welcome-date">
             {statusDateFormat.format(new Date(minuteClock))}
             {babyDays !== null && <span className="welcome-day-count">Day {babyDays + 1}</span>}

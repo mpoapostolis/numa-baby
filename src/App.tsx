@@ -684,6 +684,8 @@ export default function HomePage() {
               onManualNursing={() => openSheet("nursing", "manual")}
               onEdit={openEdit}
               onSeeTimeline={() => navigateTo("timeline")}
+              cloudSynced={Boolean(familySync.pairing)}
+              onOpenProtection={() => navigateTo("more")}
             />
           )}
 

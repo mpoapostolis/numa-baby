@@ -1339,3 +1339,26 @@
   background: color-mix(in oklab, var(--glyph-bottle) var(--glyph-wash), var(--card));
   color: var(--glyph-bottle);
 }
+
+/* Where the data lives, said quietly and constantly while it is true. */
+.cloud-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  margin-top: 2px;
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: none;
+  color: var(--ink-3);
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.cloud-note:hover,
+.cloud-note:focus-visible {
+  color: var(--ink-2);
+  border-color: var(--border-strong);
+}
