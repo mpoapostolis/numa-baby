@@ -11,7 +11,7 @@ import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "no
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
-  DOCTOR_PAGE, INDEX_PAGE, MILK_PAGE, SITE, SOURCES_CHECKED, SOURCES_PAGE, STAGES,
+  BAG_PAGE, DOCTOR_PAGE, INDEX_PAGE, MILK_PAGE, SITE, SOURCES_CHECKED, SOURCES_PAGE, STAGES,
 } from "./prerender/pages.mjs";
 import { claim, esc, render } from "./prerender/render.mjs";
 
@@ -172,6 +172,7 @@ emit(INDEX_PAGE.slug, render(INDEX_PAGE, `
 <ul>
 <li><a href="/${DOCTOR_PAGE.slug}">When to call a doctor about your baby</a></li>
 <li><a href="/${MILK_PAGE.slug}">How much milk does my baby need?</a></li>
+<li><a href="/${BAG_PAGE.slug}">What to pack when you go out</a></li>
 <li><a href="/${SOURCES_PAGE.slug}">Every source behind these pages</a></li>
 </ul>`, { sources: [], crumb: "Guides", updated: SOURCES_CHECKED }));
 
@@ -195,10 +196,49 @@ writeFileSync(join(dist, "404.html"), render(
 <ul>${STAGES.map((s) => `<li><a href="/${s.slug}">${esc(s.title)}</a></li>`).join("")}
 <li><a href="/${DOCTOR_PAGE.slug}">When to call a doctor about your baby</a></li>
 <li><a href="/${MILK_PAGE.slug}">How much milk does my baby need?</a></li>
+<li><a href="/${BAG_PAGE.slug}">What to pack when you go out</a></li>
 <li><a href="/${SOURCES_PAGE.slug}">Every source behind these pages</a></li>
 </ul>`,
   { sources: [], crumb: "Not found", updated: SOURCES_CHECKED, noindex: true },
 ));
+
+// --- the bag checklist ---------------------------------------------------
+// Practical packing advice, not medical claims, so no citations are required
+// or pretended. Asked for, verbatim, by a mother of two under the post that
+// brought most of this app's families in: "sana meron din checklist for
+// travel or outside gala … para din sa dads pag lumabas wala malilimutan."
+emit(BAG_PAGE.slug, render(BAG_PAGE, `
+<h2>The core, every time</h2>
+<ul>
+<li><strong>Nappies</strong> — one per hour out, plus one. The spare is for the one that fails.</li>
+<li><strong>Wipes and nappy bags</strong> — more wipes than seems reasonable.</li>
+<li><strong>Portable changing mat</strong> — a folded muslin works; the floor of a public toilet does not.</li>
+<li><strong>Full change of clothes</strong> — vest AND outfit. Blowouts do not respect layers. From experience: pack two vests.</li>
+<li><strong>A muslin or burp cloth</strong> — shoulder cover, sun shade, emergency bib, all one square of cloth.</li>
+</ul>
+<h2>Feeding</h2>
+<ul>
+<li><strong>Bottle-fed</strong> — one made-up feed more than the outing needs, or water plus formula powder in a dispenser. A cool bag in summer.</li>
+<li><strong>Breastfed</strong> — a cover if you want one, and a snack and water for the person doing the feeding, who always forgets themselves.</li>
+<li><strong>Started solids?</strong> — a pouch or small tub, one spoon, and a bib that wipes clean.</li>
+</ul>
+<h2>Weather and comfort</h2>
+<ul>
+<li><strong>Hat</strong> — sun hat or warm hat; a baby's head is a lot of their surface area.</li>
+<li><strong>Blanket or extra layer</strong> — rooms are colder than streets, and the reverse.</li>
+<li><strong>The pacifier, if used</strong> — and its clip, or budget for losing it.</li>
+<li><strong>One small familiar toy</strong> — for the queue you did not plan for.</li>
+</ul>
+<h2>For whoever carries the bag</h2>
+<ul>
+<li><strong>Hand sanitiser</strong> — for changes away from a sink.</li>
+<li><strong>Phone, keys, cards</strong> — in the bag's outside pocket, because your hands are full now.</li>
+<li><strong>A spare top for you</strong> — for longer trips. The blowout does not always stay on the baby.</li>
+</ul>
+<p class="note">Restock the bag when you get home, not when you leave — leaving is the moment you
+have a baby on one arm. A packed bag by the door is the whole trick.</p>
+<p>Stage by stage care guidance is on <a href="/${INDEX_PAGE.slug}">the guides page</a>.</p>`,
+  { crumb: "Baby bag checklist" }));
 
 // --- sitemap, robots, llms ----------------------------------------------
 const urls = ["", ...pages];

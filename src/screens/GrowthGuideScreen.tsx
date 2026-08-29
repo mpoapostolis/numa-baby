@@ -6,6 +6,7 @@ import { ActivityGlyph } from "../components/ActivityGlyph";
 import { SproutChart } from "../components/illustrations";
 import { track } from "../domain/analytics";
 import { gramsToLb, useUnits } from "../domain/units";
+import { OutingChecklist } from "../components/OutingChecklist";
 import { CareCard, WATCH_FOR, careForAge } from "../domain/careGuidance";
 import { ageInDays } from "../domain/time";
 import {
@@ -214,6 +215,8 @@ export default function GrowthGuideScreen({
           ))}
         </ul>
       </section>
+
+      <OutingChecklist />
 
       <div className="surface-card guide-disclaimer">
         <ShieldCheck size={20} />

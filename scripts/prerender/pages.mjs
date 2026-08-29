@@ -122,6 +122,16 @@ export const MILK_PAGE = {
     "A formula-fed baby needs roughly 165 ml per kg of body weight per day, up to about 960 ml. Why the number is a guide, not a target, and why it does not apply to breastfeeding.",
 };
 
+export const BAG_PAGE = {
+  slug: "baby-bag-checklist",
+  title: "Baby Bag Checklist: What to Pack When You Go Out",
+  h1: "What to pack when you go out with a baby",
+  lead:
+    "The working rule for a short outing: one nappy per hour you plan to be out plus one spare, a full change of clothes, and one more feed than you think you need. Everything else on this list exists because a parent somewhere got caught without it.",
+  description:
+    "A practical baby bag checklist for outings with a newborn or infant — nappies, feeding, clothes and the things everyone forgets, with the reasoning for each.",
+};
+
 export const SOURCES_PAGE = {
   slug: "sources",
   title: "Sources",

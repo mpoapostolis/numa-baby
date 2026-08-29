@@ -447,3 +447,60 @@
 .watch-list .fact-source {
   justify-self: start;
 }
+
+/* The going-out checklist. Targets are full-row and 44px — packed one-handed,
+   like everything else here. */
+.outing-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.outing-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--glyph-burp) var(--glyph-wash), var(--card));
+  color: var(--glyph-burp);
+}
+
+.outing-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.outing-reset {
+  margin-left: auto;
+}
+
+.outing-list {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+}
+
+.outing-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 4px 4px;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.outing-item input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--signal);
+}
+
+.outing-item.is-done span {
+  color: var(--ink-3);
+  text-decoration: line-through;
+}
