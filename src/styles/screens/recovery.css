@@ -19,6 +19,15 @@
   max-width: 100%;
   overflow: hidden;
   border-radius: 6px;
+  /* Google's iframe leaks a sliver of its own body around the drawn button.
+     Matching the host to the button's ground makes the leak invisible:
+     white behind the daylight outline theme, GSI's #131314 behind
+     filled_black at night (see mountGoogleButton). */
+  background: #fff;
+}
+
+.dark .google-host {
+  background: #131314;
 }
 
 .google-protected {
@@ -175,6 +184,27 @@
 .news-list {
   display: grid;
   gap: 20px;
+}
+
+/* The pinned thank-you above the releases — a letter, not a list item. */
+.news-note {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--glyph-diaper) 8%, var(--card));
+}
+
+.news-note h3 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.news-note p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+  line-height: 1.5;
 }
 
 .news-release h3 {

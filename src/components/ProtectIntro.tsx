@@ -75,7 +75,10 @@ export function ProtectIntro({
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) { track("protect_intro_dismissed"); close(); } }}>
-      <DialogContent className="protect-intro">
+      {/* No autofocus: Radix would land focus in the email field, which pops
+          the keyboard over the modal and paints a focus ring that reads as an
+          error before anyone has typed a thing. */}
+      <DialogContent className="protect-intro" onOpenAutoFocus={(event) => event.preventDefault()}>
         <span className="protect-intro-icon" aria-hidden="true"><CloudUpload /></span>
         <DialogTitle>Your log can live in the cloud now</DialogTitle>
         <DialogDescription>
@@ -85,7 +88,7 @@ export function ProtectIntro({
           any future phone can get everything back. Optional, free, removable —
           and nothing from your log is ever shared with anyone.
         </DialogDescription>
-        <ProtectWithGoogle familySync={familySync} immediate />
+        <ProtectWithGoogle familySync={familySync} immediate explainer={false} />
         <Button variant="ghost" onClick={() => { track("protect_intro_later"); close(); }}>
           Maybe later — it lives in Settings
         </Button>

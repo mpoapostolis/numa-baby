@@ -17,6 +17,23 @@ export function NewsDialog({ open, onOpenChange }: { open: boolean; onOpenChange
           Built by one dad, evenings, between feeds — here is everything that
           has changed and why.
         </DialogDescription>
+        {/* The pinned note — the reason half these releases exist. */}
+        <section className="news-note">
+          <h3>A thank-you, before the list</h3>
+          <p>
+            I made this app for my own daughter. I never expected that something
+            I built for us would end up in so many families&rsquo; hands — and I
+            want to thank every one of you who wrote to me. I read everything
+            you send. Your messages are literally the list below: almost every
+            fix and feature started as someone&rsquo;s feedback.
+          </p>
+          <p>
+            I work on Numalog alone, mostly while the baby sleeps, so some
+            things take an evening or two — but nothing you report is ignored.
+            If something is broken, missing, or just annoying, tap the little
+            message bubble and tell me. It comes straight to me. — Apostolis
+          </p>
+        </section>
         <div className="news-list">
           {RELEASES.map((release) => (
             <section key={release.id} className="news-release">

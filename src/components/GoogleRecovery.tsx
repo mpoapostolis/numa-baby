@@ -127,7 +127,17 @@ function EmailRow({
  * The one-tap promise: with no pairing yet, the tap creates the family
  * first — cloud copy and guard in a single gesture.
  */
-export function ProtectWithGoogle({ familySync, immediate = false }: { familySync: FamilySync; immediate?: boolean }) {
+export function ProtectWithGoogle({
+  familySync,
+  immediate = false,
+  explainer = true,
+}: {
+  familySync: FamilySync;
+  immediate?: boolean;
+  /** The intro modal already says all of this above the buttons — saying it
+      twice in one small dialog read as clutter, because it was. */
+  explainer?: boolean;
+}) {
   const [email, setEmail] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // Google's script loads only after this tap — opening Settings costs
@@ -274,11 +284,13 @@ export function ProtectWithGoogle({ familySync, immediate = false }: { familySyn
           <ShieldCheck /> Protect my log
         </Button>
       )}
-      <p className="t-meta">
-        One tap guards your whole log: a lost or wiped phone can get everything
-        back. Works with Google or any email address — and nothing from your log
-        is ever shared with anyone. The guard is optional and removable.
-      </p>
+      {explainer && (
+        <p className="t-meta">
+          One tap guards your whole log: a lost or wiped phone can get everything
+          back. Works with Google or any email address — and nothing from your log
+          is ever shared with anyone. The guard is optional and removable.
+        </p>
+      )}
 
       <Dialog open={mergeChoice !== null} onOpenChange={(next) => { if (!next) { setMergeChoice(null); setBusy(false); } }}>
         <DialogContent className="merge-choice">

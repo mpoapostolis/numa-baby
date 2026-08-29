@@ -822,19 +822,10 @@ export default function HomePage() {
         </nav>
 
         {/* Hidden while the consent banner owns the same corner, and while a
-            log sheet is open — nothing competes with the 3am flow. */}
-        {/* Not on Today, not on Settings.
-            It is a fixed 48px circle above the nav on the right, so it sits on
-            top of whatever scrolls under it — on Settings it was covering the
-            word "on" in the middle of a sentence about reminders, which is
-            exactly the kind of thing that makes a whole app look broken in a
-            screenshot. Today is worse: that patch of glass is the one a
-            one-handed thumb reaches without re-gripping, and it is needed for
-            logging. Both screens already have a way in — Settings carries the
-            feedback form in full — so nothing is lost but the ambush. */}
-        <FeedbackBubble
-          hidden={consent === null || sheet !== null || activeTab === "today" || activeTab === "more"}
-        />
+            log sheet is open — nothing competes with the 3am flow. On every
+            tab otherwise, by the owner's explicit call: with this many real
+            families writing in, being reachable beats the corner it costs. */}
+        <FeedbackBubble hidden={consent === null || sheet !== null} />
 
         {/* The protect announcement: once, only to a settled family (real
             entries, consent question answered, no sheet open), never during
