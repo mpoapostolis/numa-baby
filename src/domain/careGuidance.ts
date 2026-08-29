@@ -30,6 +30,23 @@ export type CareBracket = {
   cards: CareCard[];
 };
 
+// Fetched and read 29 Aug 2026: "your baby should feed at least 8 to 12 times,
+// or more, every 24 hours during the first few weeks" — verbatim. The page the
+// card cited before is about knowing a baby is getting enough, and never
+// carried this figure.
+const NHS_FIRST_DAYS: FactSource = {
+  name: "NHS · Breastfeeding: the first few days",
+  url: "https://www.nhs.uk/baby/breastfeeding-and-bottle-feeding/breastfeeding/the-first-few-days/",
+};
+// "have yellow-green or green vomit (children)" and "vomit blood or have vomit
+// that looks like ground coffee" — verbatim, 29 Aug 2026. The urgent-help page
+// says neither; it covers "difficult to wake" and "floppy", which is why that
+// half of the warning stays there.
+const NHS_VOMITING: FactSource = {
+  name: "NHS · Diarrhoea and vomiting",
+  url: "https://www.nhs.uk/symptoms/diarrhoea-and-vomiting/",
+};
+
 const AAP_HOW_OFTEN: FactSource = {
   name: "AAP · How Often and How Much Should Your Baby Eat?",
   url: "https://www.healthychildren.org/English/ages-stages/baby/feeding-nutrition/Pages/How-Often-and-How-Much-Should-Your-Baby-Eat.aspx",
@@ -41,10 +58,6 @@ const AAP_FORMULA_AMOUNT: FactSource = {
 const AAP_BURPING: FactSource = {
   name: "AAP · Baby Burping, Hiccups & Spit-Up",
   url: "https://www.healthychildren.org/English/ages-stages/baby/feeding-nutrition/Pages/baby-burping-hiccups-and-spit-up.aspx",
-};
-const AAP_SPIT_UP: FactSource = {
-  name: "AAP · Why Babies Spit Up",
-  url: "https://www.healthychildren.org/English/ages-stages/baby/feeding-nutrition/Pages/Why-Babies-Spit-Up.aspx",
 };
 const AAP_FIRST_DAYS: FactSource = {
   name: "AAP · Baby's First Days: Bowel Movements & Urination",
@@ -82,6 +95,9 @@ const NHS_BOTTLE: FactSource = {
   name: "NHS · Bottle feeding advice",
   url: "https://www.nhs.uk/baby/breastfeeding-and-bottle-feeding/bottle-feeding/advice/",
 };
+// "Reflux usually starts before a baby is 8 weeks old and gets better by the
+// time they're 1" — verbatim, 29 Aug 2026. The AAP spit-up page carries the
+// reassurance but no timeline, which is why the timeline is cited here.
 const NHS_REFLUX: FactSource = {
   name: "NHS · Reflux in babies",
   url: "https://www.nhs.uk/conditions/reflux-in-babies/",
@@ -119,7 +135,7 @@ export const CARE_BRACKETS: CareBracket[] = [
         title: "Feed often — at least 8 to 12 times in 24 hours",
         body: "In the first days it can be as often as every hour. That is the milk supply being built, not a problem.",
         action: "Offer the breast or bottle whenever the cues appear, day and night.",
-        source: NHS_ENOUGH_MILK,
+        source: NHS_FIRST_DAYS,
       },
       {
         kind: "nappies",
@@ -170,16 +186,16 @@ export const CARE_BRACKETS: CareBracket[] = [
       {
         kind: "feeding",
         title: "Cluster feeding is normal, and it is not a supply problem",
-        body: "Feeds bunched close together — often in the evening — are common in the first months and often come with a growth spurt.",
+        body: "Feeds bunched close together are common in the first three to four months, and often come with a growth spurt.",
         action: "Ride it out and keep offering. It passes.",
         source: NHS_CLUSTER,
       },
       {
         kind: "comfort",
         title: "Spit-up is not a problem to fix",
-        body: "About half of babies spit up, usually with no crying or discomfort. Reflux settles on its own, usually by the first birthday.",
+        body: "All babies spit up, and it usually comes with no crying or discomfort. It settles on its own as the muscles mature — generally by their first birthday.",
         action: "If it is frequent, smaller and more frequent feeds help more than bigger, spaced-out ones — and hold upright for about 20 minutes after.",
-        source: AAP_SPIT_UP,
+        source: NHS_REFLUX,
       },
       CUES,
     ],
@@ -346,11 +362,15 @@ export const WATCH_FOR: WatchItem[] = [
     source: AAP_DEHYDRATION,
   },
   {
-    sign: "Yellowing of the skin or eyes that appears in the first 24 hours, deepens, or is still there after two weeks.",
+    sign: "Yellowing of the skin or eyes that appears in the first 24 hours, is getting worse rather than better, or is still there after two weeks.",
     source: NHS_JAUNDICE,
   },
   {
-    sign: "Green or bloody vomit, forceful projectile vomiting, or a baby who is hard to wake or unusually floppy.",
+    sign: "Yellow-green or green vomit, or vomit with blood in it or that looks like ground coffee.",
+    source: NHS_VOMITING,
+  },
+  {
+    sign: "A baby who is difficult to wake, will not wake up, or has gone floppy.",
     source: NHS_URGENT_HELP,
   },
   {

@@ -100,12 +100,16 @@ behaves rather than on its own.</p>
 
 // --- how much milk ------------------------------------------------------
 const perKg = Math.round(data.ML_PER_KG_PER_DAY);
-const feedingCards = data.CARE_BRACKETS.flatMap((b) => b.cards).filter((c) => c.kind === "feeding");
+const allCards = data.CARE_BRACKETS.flatMap((b) => b.cards);
 /** Pick a named source out of the app's own data rather than retyping a URL
-    here — a second copy is a second thing to go stale. */
+    here — a second copy is a second thing to go stale. Searched across every
+    card rather than the feeding ones: "is my baby getting enough milk" is a
+    feeding question the app happens to file under nappies, because nappies are
+    how it is answered. Throwing rather than returning undefined is deliberate —
+    a page that shipped with a missing citation would look fine. */
 const namedSource = (fragment) => {
-  const found = feedingCards.find((c) => c.source.name.includes(fragment));
-  if (!found) throw new Error(`No feeding source matching "${fragment}"`);
+  const found = allCards.find((c) => c.source.name.toLowerCase().includes(fragment.toLowerCase()));
+  if (!found) throw new Error(`No care source matching "${fragment}" — did a citation change?`);
   return found.source;
 };
 const FORMULA_AMOUNT = namedSource("Amount and Schedule");

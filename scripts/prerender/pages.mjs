@@ -145,7 +145,7 @@ export const INDEX_PAGE = {
 /** The day every cited page was last fetched and read. A hand-maintained
     constant on purpose: `new Date()` here would have every build claim the
     sources were checked today, which would be a lie told automatically. */
-export const SOURCES_CHECKED = "2026-08-22";
+export const SOURCES_CHECKED = "2026-08-29";
 
 /** Shown on every page, close to the content rather than buried in a footer. */
 export const DISCLAIMER =
