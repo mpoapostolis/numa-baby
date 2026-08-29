@@ -300,7 +300,7 @@ test("sharePartner shares the full list, tombstones included, and toasts", async
   expect(payload.activities.map((entry) => entry.id).sort()).toEqual(["gone", "live"]);
   expect(payload.activities.find((entry) => entry.id === "gone")?.deleted).toBe(true);
   expect(payload.profile.name).toBe("Mia");
-  expect(toasts.at(-1)?.message).toBe("Shared — have your partner open it in their Baby Tracker");
+  expect(toasts.at(-1)?.message).toBe("Shared — have your partner open it in their Numalog");
 });
 
 test("a cancelled share stays silent", async () => {

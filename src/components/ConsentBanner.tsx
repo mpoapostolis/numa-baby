@@ -22,7 +22,7 @@ export function ConsentBanner({ onChoose }: ConsentBannerProps) {
   return (
     <div className="consent-banner" role="dialog" aria-live="polite" aria-label="Cookie choice">
       <p className="consent-copy">
-        Baby Tracker would like to count anonymous page views to see which parts get used.
+        Numalog would like to count anonymous page views to see which parts get used.
         Nothing about your baby is ever sent — those entries stay on this device unless you
         turn on Family Sync.
       </p>

@@ -131,10 +131,10 @@ export function parseStoredData(value: string): StoredData {
   // Only a wrong SHAPE is unrecoverable. A single corrupt row is filtered out and
   // reported — it must never cost a parent their entire history.
   if (!isRecord(parsed) || !isValidProfile(parsed.profile) || !Array.isArray(parsed.activities)) {
-    throw new Error("Invalid Baby Tracker backup");
+    throw new Error("Invalid Numalog backup");
   }
   if (parsed.activities.length > 25_000) {
-    throw new Error("Invalid Baby Tracker activities");
+    throw new Error("Invalid Numalog activities");
   }
   const activities = parsed.activities.filter(isValidActivity);
   const storedProfile = parsed.profile;

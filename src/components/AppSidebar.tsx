@@ -48,14 +48,14 @@ export function AppSidebar({
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
-              tooltip="Baby Tracker"
-              aria-label="Baby Tracker"
+              tooltip="Numalog"
+              aria-label="Numalog"
               className="app-sidebar-brand"
               onClick={() => navigate("today")}
             >
               <span className="wordmark-mark"><BabyFace /></span>
               <span className="app-sidebar-brand-copy">
-                <strong>Baby Tracker</strong>
+                <strong>Numalog</strong>
                 <small>Private family log</small>
               </span>
             </SidebarMenuButton>

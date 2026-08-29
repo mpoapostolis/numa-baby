@@ -1,3 +1,5 @@
+// Ships with this chunk, not the app shell — same budget rule as handoff.css.
+import "../styles/screens/growth-guide.css";
 import { ArrowLeft, ExternalLink, PhoneCall, ShieldCheck } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { ActivityGlyph } from "../components/ActivityGlyph";

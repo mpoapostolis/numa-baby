@@ -4,8 +4,7 @@
 // stranger's server is the allowlist.
 
 import { describe, expect, it } from "vitest";
-import {
-  DEVELOPMENT_ORIGINS,
+import {  DEVELOPMENT_ORIGINS,
   MAX_PAYLOAD_CHARS,
   PRODUCTION_ORIGINS,
   handoffPeers,
@@ -16,6 +15,7 @@ import {
   readHandoffPayload,
   readHandoffTarget,
   unpackHandoff,
+  moveTarget,
 } from "@/domain/handoff";
 
 const PROD = PRODUCTION_ORIGINS[0];
@@ -184,5 +184,14 @@ describe("handoffReturnUrl", () => {
     expect(url.origin).toBe(GOOD);
     expect(url.search).toBe("");
     expect(readHandoffPayload(url.hash)).toBe("PAYLOAD");
+  });
+});
+
+describe("moveTarget", () => {
+  it("points the old production address home, and nowhere else", () => {
+    expect(moveTarget("https://numa-baby.mpoapostolis.workers.dev")).toBe("https://numalog.app");
+    expect(moveTarget("https://numalog.app")).toBeNull();
+    expect(moveTarget("http://localhost:3000")).toBeNull();
+    expect(moveTarget("https://someones-fork.example")).toBeNull();
   });
 });

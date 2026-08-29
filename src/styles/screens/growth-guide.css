@@ -226,31 +226,7 @@
    negative margins folding the extra height back into the card rhythm; it
    borrows the shared press recipe (values match components.css, stilled by
    the reduced-motion block in base.css). */
-.guide-entry {
-  justify-self: start;
-  align-self: start;
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  margin: -12px 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--signal);
-  font-size: 0.8125rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
-}
 
-.guide-entry:hover {
-  text-decoration: underline;
-}
-
-.guide-entry:active {
-  transition-duration: 90ms;
-  transform: scale(0.985);
-}
 
 @media (min-width: 768px) {
   .growth-guide-screen {

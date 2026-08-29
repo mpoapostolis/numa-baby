@@ -33,6 +33,7 @@ import { parseStoredData } from "./domain/validate";
 import {
   HANDOFF_PATH,
   handoffReturnUrl,
+  moveTarget,
   readHandoffPayload,
   readHandoffTarget,
 } from "./domain/handoff";
@@ -67,6 +68,8 @@ const HandoffScreen = lazy(() => import("./screens/HandoffScreen").then((m) => (
 // pure function and stays here; the card itself has no business in the bundle
 // a parent downloads at 3am.
 const BackupNudgeCard = lazy(() => import("./components/BackupNudge").then((m) => ({ default: m.BackupNudgeCard })));
+// Only the OLD address ever shows this; the new one must not pay for it.
+const MoveBanner = lazy(() => import("./components/MoveBanner").then((m) => ({ default: m.MoveBanner })));
 
 // A future-dated feed from a restored backup must never arm a timer that wraps
 // the 32-bit setTimeout ceiling and fires instantly.
@@ -419,9 +422,9 @@ export default function HomePage() {
 
   if (bootState === "loading") {
     return (
-      <main className="loading-screen" aria-label="Loading Baby Tracker">
+      <main className="loading-screen" aria-label="Loading Numalog">
         <SleepingBaby size={64} aria-hidden="true" />
-        <span>Baby Tracker</span>
+        <span>Numalog</span>
       </main>
     );
   }
@@ -549,6 +552,12 @@ export default function HomePage() {
               </div>
             </div>
           </div>
+        )}
+
+        {moveTarget(window.location.origin) !== null && (
+          <Suspense fallback={null}>
+            <MoveBanner />
+          </Suspense>
         )}
 
         {recoveredNotice && (

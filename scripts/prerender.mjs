@@ -188,7 +188,7 @@ writeFileSync(join(dist, "404.html"), render(
     slug: "404",
     title: "Page not found",
     h1: "That page is not here",
-    description: "The page you were looking for does not exist on Baby Tracker.",
+    description: "The page you were looking for does not exist on Numalog.",
     lead: "The address may have changed, or the link may have been mistyped. Everything this site holds is listed below.",
   },
   `<h2>What is here</h2>

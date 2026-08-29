@@ -136,6 +136,17 @@ function readFragment(hash: string, key: string): string | null {
   return value && value.length ? value : null;
 }
 
+/**
+ * The origin this app should live at, when the current one is not it.
+ * Only a recognised production origin gets an answer: a fork or a preview
+ * deployment is nobody's moving candidate.
+ */
+export function moveTarget(origin: string): string | null {
+  const home = PRODUCTION_ORIGINS[0];
+  if (origin === home) return null;
+  return PRODUCTION_ORIGINS.includes(origin) ? home : null;
+}
+
 export function handoffSendUrl(oldOrigin: string, newOrigin: string): string {
   return `${oldOrigin}${HANDOFF_PATH}#${TARGET_KEY}=${encodeURIComponent(newOrigin)}`;
 }

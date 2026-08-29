@@ -152,7 +152,7 @@ export function VisitSummarySheet({ open, onOpenChange, summary, profile, ageMon
 
           <p className="visit-footer">
             Recorded at home by a parent, not a clinical measurement. WHO Child Growth Standards;
-            typical weekly gain per AAP. Baby Tracker.
+            typical weekly gain per AAP. Numalog.
           </p>
         </div>
 

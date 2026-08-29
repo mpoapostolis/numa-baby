@@ -24,8 +24,8 @@ export default defineConfig({
       injectRegister: null,
       includeAssets: ["favicon.svg", "icon-192.png", "icon-512.png"],
       manifest: {
-        name: "Baby Tracker — Calm, private baby logging",
-        short_name: "Baby Tracker",
+        name: "Numalog — Calm, private baby tracker",
+        short_name: "Numalog",
         description: "Private, one-handed tracking for feeds, diapers, burping and growth.",
         id: "/",
         start_url: "/",

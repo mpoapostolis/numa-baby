@@ -12,7 +12,7 @@
 
 export const SITE = {
   origin: "https://numalog.app",
-  name: "Baby Tracker",
+  name: "Numalog",
   tagline: "Calm, private baby logging",
 };
 
@@ -129,7 +129,7 @@ export const SOURCES_PAGE = {
   lead:
     "Every fact in this app and on these pages points at one named page from the American Academy of Pediatrics, the World Health Organization or the NHS. Nothing is published without a source behind it, and each was fetched and read rather than assumed.",
   description:
-    "Every source behind the facts and guidance in Baby Tracker — AAP, WHO and NHS pages, listed and linked.",
+    "Every source behind the facts and guidance in Numalog — AAP, WHO and NHS pages, listed and linked.",
 };
 
 export const INDEX_PAGE = {

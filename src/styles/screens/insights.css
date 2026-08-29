@@ -787,3 +787,33 @@
   font-size: 0.8125rem;
   line-height: 1.5;
 }
+
+/* The "What’s typical at this age?" button under the growth chart. It
+   lives here, not in growth-guide.css, because that stylesheet ships with
+   the Guide screen’s lazy chunk — and this button renders on Insights,
+   before the Guide has ever been opened. */
+.guide-entry {
+  justify-self: start;
+  align-self: start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin: -12px 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--signal);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.guide-entry:hover {
+  text-decoration: underline;
+}
+
+.guide-entry:active {
+  transition-duration: 90ms;
+  transform: scale(0.985);
+}

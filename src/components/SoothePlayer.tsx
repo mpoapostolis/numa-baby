@@ -68,9 +68,18 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
     // No crossOrigin: the source is a blob this app generated, so there is no
     // origin to negotiate, and asking for a CORS handshake on a blob: URL is a
     // way to make media fail for no benefit.
+    //
+    // And it lives in the document, invisibly. A detached Audio() works on
+    // desktop, but standalone-mode WebKit has a history of refusing play() on
+    // elements that are not in the tree — one more way the same tap can work
+    // on the Mac it was written on and do nothing on the phone it was written
+    // for.
+    audio.style.display = "none";
+    document.body.appendChild(audio);
     audioRef.current = audio;
     return () => {
       audio.pause();
+      audio.remove();
       audioRef.current = null;
     };
   }, []);
@@ -95,8 +104,16 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
     let cancelled = false;
     const id = window.setTimeout(() => {
       if (cancelled) return;
-      audio.src = mode === "noise" ? noiseUrl(kind) : lullabyUrl(tune);
-      audio.load();
+      // A synthesis that throws must not strand the button at "Preparing the
+      // sound…" forever — that is indistinguishable from a dead app.
+      try {
+        audio.src = mode === "noise" ? noiseUrl(kind) : lullabyUrl(tune);
+        audio.load();
+      } catch (error) {
+        track("soothe_failed", { stage: "synth", name: error instanceof Error ? error.name : "unknown" });
+        if (!cancelled) setFailed(true);
+        return;
+      }
       if (!cancelled) setReady(true);
     }, 0);
     return () => {
@@ -143,12 +160,17 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
     // the right sound and the gesture is spent on play() alone.
     audio.volume = volume;
 
+    audio.muted = false;
     // play() is called synchronously inside the gesture, never after an await.
-    audio.play().catch(() => {
+    audio.play().catch((error: unknown) => {
       setPlaying(false);
       setEndsAt(null);
       // Silence with no explanation is the worst outcome: the parent taps a
-      // button and decides the app is broken.
+      // button and decides the app is broken. The error name says which of
+      // two very different things went wrong — a policy refusal or a source
+      // problem — and it is the only diagnostic a phone in someone's kitchen
+      // will ever send back.
+      track("soothe_failed", { stage: "play", name: error instanceof Error ? error.name : "unknown" });
       setFailed(true);
     });
     setPlaying(true);
@@ -161,7 +183,7 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
     if ("mediaSession" in navigator) {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: mode === "noise" ? "White noise" : "Lullaby",
-        artist: "Baby Tracker",
+        artist: "Numalog",
       });
       navigator.mediaSession.setActionHandler("pause", () => stop());
       navigator.mediaSession.setActionHandler("play", () => start());

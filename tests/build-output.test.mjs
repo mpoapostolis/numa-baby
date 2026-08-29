@@ -12,7 +12,7 @@ test("builds a complete installable application shell", async () => {
   ]);
   const manifest = JSON.parse(manifestText);
 
-  assert.match(html, /<title>Baby Tracker — Calm, private baby logging<\/title>/i);
+  assert.match(html, /<title>Numalog — Calm, private baby tracker<\/title>/i);
   assert.match(html, /manifest\.webmanifest/i);
   assert.match(html, /og-baby-tracker\.png/i);
   assert.match(html, /assets\/index-[^"']+\.js/i);

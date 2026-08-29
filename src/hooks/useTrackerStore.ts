@@ -609,7 +609,7 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
       await navigator.share({ files: [file] });
       showToast(debugMode
         ? "Debug file shared — this is not your real log"
-        : "Shared — have your partner open it in their Baby Tracker");
+        : "Shared — have your partner open it in their Numalog");
     } catch (error) {
       // Closing the share sheet is a decision, not a failure — stay silent.
       if (error instanceof DOMException && error.name === "AbortError") return;

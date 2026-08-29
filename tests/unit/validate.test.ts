@@ -84,10 +84,10 @@ describe("parseStoredData", () => {
   });
 
   it("throws only when the blob shape itself is wrong", () => {
-    expect(() => parseStoredData(storedBlob({ profile: undefined }))).toThrow("Invalid Baby Tracker backup");
-    expect(() => parseStoredData(storedBlob({ activities: "nope" }))).toThrow("Invalid Baby Tracker backup");
-    expect(() => parseStoredData(JSON.stringify([]))).toThrow("Invalid Baby Tracker backup");
-    expect(() => parseStoredData(JSON.stringify(null))).toThrow("Invalid Baby Tracker backup");
+    expect(() => parseStoredData(storedBlob({ profile: undefined }))).toThrow("Invalid Numalog backup");
+    expect(() => parseStoredData(storedBlob({ activities: "nope" }))).toThrow("Invalid Numalog backup");
+    expect(() => parseStoredData(JSON.stringify([]))).toThrow("Invalid Numalog backup");
+    expect(() => parseStoredData(JSON.stringify(null))).toThrow("Invalid Numalog backup");
   });
 
   it("rejects an activities array above the 25,000 cap", () => {
@@ -95,7 +95,7 @@ describe("parseStoredData", () => {
       ...baseActivity,
       id: `a-${index}`,
     }));
-    expect(() => parseStoredData(storedBlob({ activities }))).toThrow("Invalid Baby Tracker activities");
+    expect(() => parseStoredData(storedBlob({ activities }))).toThrow("Invalid Numalog activities");
   });
 
   it("detects legacy demo blobs and derives onboarding from isDemo", () => {

@@ -11,6 +11,13 @@ import {
   Upload,
 } from "lucide-react";
 import { ChangeEvent, useId, useRef, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogTitle,
+} from "../components/ui/dialog";
 import { BabyFace, NurseryScene, TinyStars } from "../components/illustrations";
 import { Button } from "../components/ui/button";
 import {
@@ -34,6 +41,8 @@ import { ToggleGroup, ToggleGroupItem } from "../components/ui/toggle-group";
 import { localDateInput } from "../domain/time";
 import { handoffPeers, handoffSendUrl, originLabel } from "../domain/handoff";
 import { FeedingMode, Profile } from "../domain/types";
+
+const HANDOFF_OFFER_SEEN = "numalog-handoff-offer-v1";
 
 export default function OnboardingScreen({
   mode,
@@ -67,13 +76,35 @@ export default function OnboardingScreen({
   // so a log kept at the old address is invisible to this page until someone
   // walks it across.
   const [handoffFrom] = useState(() => handoffPeers(window.location.origin)[0] ?? null);
+  // The offer opens itself once. Anyone arriving at the new address from the
+  // old one has months of entries a scroll away and no reason to know that
+  // web storage is chained to the address it was written under — a quiet
+  // button at the bottom of a form is not enough warning that "start
+  // tracking" here means starting from zero. Declining is remembered, so it
+  // never nags someone who really is new.
+  const [handoffOffer, setHandoffOffer] = useState(() => {
+    if (!handoffPeers(window.location.origin).length) return false;
+    try {
+      return window.localStorage.getItem(HANDOFF_OFFER_SEEN) === null;
+    } catch {
+      return true;
+    }
+  });
+  function declineHandoffOffer() {
+    setHandoffOffer(false);
+    try {
+      window.localStorage.setItem(HANDOFF_OFFER_SEEN, "1");
+    } catch {
+      // Remembering is a courtesy; the session state above still closes it.
+    }
+  }
 
   return (
     <main className="onboarding-shell">
       <header className="onboarding-header">
         <div className="onboarding-brand">
           <span className="wordmark-mark"><BabyFace /></span>
-          <span><strong>Baby Tracker</strong><small>Private family log</small></span>
+          <span><strong>Numalog</strong><small>Private family log</small></span>
         </div>
         <label className="onboarding-theme" htmlFor={nightModeId}>
           {nightMode ? <Moon size={17} /> : <Sun size={17} />}
@@ -89,7 +120,7 @@ export default function OnboardingScreen({
               <span className="onboarding-card-icon"><ShieldCheck /></span>
               <CardTitle asChild><h1>Your local log needs attention</h1></CardTitle>
               <CardDescription>
-                The saved copy could not be read, so Baby Tracker left it untouched. Download it before starting over, or restore a valid backup.
+                The saved copy could not be read, so Numalog left it untouched. Download it before starting over, or restore a valid backup.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -230,6 +261,28 @@ export default function OnboardingScreen({
         </div>
       )}
 
+      {mode === "onboarding" && handoffFrom && (
+        <Dialog open={handoffOffer} onOpenChange={(open) => { if (!open) declineHandoffOffer(); }}>
+          <DialogContent className="handoff-offer">
+            <DialogTitle>Already using {originLabel(handoffFrom)}?</DialogTitle>
+            <DialogDescription>
+              Numalog moved here. Your entries are still safe at the old address — one tap
+              brings your whole log over. Nothing is deleted from the old one.
+            </DialogDescription>
+            <DialogFooter>
+              <Button
+                size="lg"
+                onClick={() => { window.location.href = handoffSendUrl(handoffFrom, window.location.origin); }}
+              >
+                <ArrowLeftRight /> Bring my log over
+              </Button>
+              <Button variant="ghost" onClick={declineHandoffOffer}>
+                I’m new here — start fresh
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
       <Input ref={restoreRef} className="hidden-input" type="file" accept="application/json" onChange={onRestore} />
       <Toaster theme={nightMode ? "dark" : "light"} position="bottom-center" closeButton />
     </main>

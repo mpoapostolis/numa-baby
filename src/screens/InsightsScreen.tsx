@@ -430,7 +430,7 @@ export default function InsightsScreen({
 
       <div className="gentle-note">
         <ShieldCheck size={20} />
-        <p><strong>Useful, not judgmental.</strong> Baby Tracker summarizes what you logged. It never scores your parenting or replaces medical advice.</p>
+        <p><strong>Useful, not judgmental.</strong> Numalog summarizes what you logged. It never scores your parenting or replaces medical advice.</p>
       </div>
     </section>
   );

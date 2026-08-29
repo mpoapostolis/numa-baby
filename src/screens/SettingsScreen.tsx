@@ -128,7 +128,7 @@ export default function SettingsScreen({
       <Card className="settings-group reminder-settings">
         <CardHeader>
           <CardTitle asChild><h2>Care reminders</h2></CardTitle>
-          <CardDescription>Reminders only work while Baby Tracker is open on this device. Don’t rely on them as an alarm.</CardDescription>
+          <CardDescription>Reminders only work while Numalog is open on this device. Don’t rely on them as an alarm.</CardDescription>
         </CardHeader>
         <CardContent>
           <ItemGroup role="group" aria-label="Care reminder settings">
@@ -313,7 +313,7 @@ export default function SettingsScreen({
         )}
       </Card>
 
-      <p className="version-note">Baby Tracker · build {__APP_VERSION__}</p>
+      <p className="version-note">Numalog · build {__APP_VERSION__}</p>
     </section>
   );
 }
