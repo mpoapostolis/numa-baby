@@ -9,6 +9,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Numalog" />
+    <meta property="og:site_name" content="Numalog" />
     <meta property="og:title" content="Numalog — Calm, private baby tracker" />
     <meta property="og:description" content="Private by design. Made for one tired hand." />
     <meta property="og:type" content="website" />
@@ -20,11 +21,22 @@
     <meta name="twitter:title" content="Numalog — Calm, private baby tracker" />
     <meta name="twitter:description" content="Private by design. Made for one tired hand." />
     <meta name="twitter:image" content="/og-baby-tracker.png" />
-    <link rel="icon" href="/icon-192.png" />
+    <!-- The .ico first and at 48px: exactly what Google's result-page
+         favicon pipeline wants; the 192px PNG serves everything newer. -->
+    <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
+    <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="canonical" href="https://numalog.app/" />
     <title>Numalog — Calm, private baby tracker</title>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Numalog",
+        "url": "https://numalog.app/"
+      }
+    </script>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",

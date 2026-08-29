@@ -65,6 +65,7 @@ const BackupNudgeCard = lazy(() => import("./components/BackupNudge").then((m) =
 // The one-time cloud-protection announcement for families that predate it.
 const ProtectIntro = lazy(() => import("./components/ProtectIntro").then((m) => ({ default: m.ProtectIntro })));
 const NewsDialog = lazy(() => import("./components/NewsDialog").then((m) => ({ default: m.NewsDialog })));
+const RecoverLinkDialog = lazy(() => import("./components/RecoverLinkDialog"));
 
 // A future-dated feed from a restored backup must never arm a timer that wraps
 // the 32-bit setTimeout ceiling and fires instantly.
@@ -148,6 +149,9 @@ export default function HomePage() {
   // The on-this-phone-only pill summons the protect dialog directly —
   // incremented per tap so a re-tap remounts a fresh one.
   const [protectAsk, setProtectAsk] = useState(0);
+  // A recovery link tapped on a phone that already holds a log — the token
+  // waits here while the person decides in a real dialog.
+  const [recoverAsk, setRecoverAsk] = useState<string | null>(null);
   const [newsOpen, setNewsOpen] = useState(false);
   // Read once per visit: the intro marks itself seen on any dismissal.
   const [protectIntroDone] = useState(() => {
@@ -261,7 +265,17 @@ export default function HomePage() {
     if (!tapped || bootState === "loading") return;
     magicTokenRef.current = null;
     if (tapped.purpose === "recover" && bootState !== "onboarding") {
-      showToast("This phone already has a log — recovery links are for a fresh phone.");
+      if (bootState === "ready") {
+        // A phone WITH a log tapped a recovery link: that is the standard
+        // merge-or-adopt decision, and it gets the standard real dialog —
+        // not a four-second toast that spends the link's one moment on a
+        // dead end. Cancel leaves the token unspent and this phone whole.
+        setRecoverAsk(tapped.token);
+      } else {
+        // recovery boot: the local copy is unreadable and downloading it
+        // comes first — the restore doors are on the screen already.
+        showToast("Save this phone's copy first — then use the restore options right here.");
+      }
       return;
     }
     void familySync.emailRedeem(tapped.token, "This phone").then((outcome) => {
@@ -839,6 +853,15 @@ export default function HomePage() {
         {protectAsk > 0 && (
           <Suspense fallback={null}>
             <ProtectIntro key={protectAsk} familySync={familySync} forced onClosed={() => setProtectAsk(0)} />
+          </Suspense>
+        )}
+        {recoverAsk && (
+          <Suspense fallback={null}>
+            <RecoverLinkDialog
+              token={recoverAsk}
+              familySync={familySync}
+              onClosed={() => setRecoverAsk(null)}
+            />
           </Suspense>
         )}
         {protectMoment && protectAsk === 0 && (

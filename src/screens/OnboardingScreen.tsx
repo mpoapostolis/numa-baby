@@ -139,6 +139,17 @@ export default function OnboardingScreen({
                 <Button variant="outline" onClick={() => restoreRef.current?.click()}><Upload /> Restore a backup</Button>
                 <Button variant="ghost" onClick={onResetRecovery}>Reset and start clean</Button>
               </div>
+              {/* The cloud way home — for the family whose only good copy
+                  lives behind their guard. Below the download on purpose:
+                  restoring overwrites the unreadable local copy, so saving
+                  it first stays the headline advice. */}
+              <p className="t-meta">
+                Protected your log with Google or email? After downloading the
+                saved copy, you can bring everything back from the cloud:
+              </p>
+              <Suspense fallback={null}>
+                <RestoreWithGoogle familySync={familySync} onRestored={onGoogleRestored} />
+              </Suspense>
             </CardContent>
           </Card>
         </div>

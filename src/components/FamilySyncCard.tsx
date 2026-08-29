@@ -143,6 +143,16 @@ export function FamilySyncCard({
         </CardDescription>
       </CardHeader>
       <CardContent className="family-card-content">
+        {/* A scanned invite landing on a phone that is already in a family
+            used to vanish without a word — the person had just been handed a
+            code and the app pretended nothing happened. */}
+        {paired && incomingCode && (
+          <p className="join-error" role="alert">
+            This phone is already in a family, so the scanned code was not
+            used. To join the other family instead, leave this one below
+            first, then scan the code again.
+          </p>
+        )}
         {!paired && view !== "join" && (
           <div className="family-actions">
             <Button variant="outline" className="log-quiet" disabled={busy} onClick={() => void handleCreate()}>

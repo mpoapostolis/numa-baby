@@ -320,7 +320,14 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     const p = live.current.pairing;
     if (p) {
       const rewound = rewoundPushCursor(p.lastPushedAt, backfillOldestAt);
-      if (rewound !== null) adoptPairing({ ...p, lastPushedAt: rewound });
+      // The pull cursor resets alongside the push rewind: an imported backup
+      // can resurrect an entry whose deletion this device swept long ago
+      // (tombstones are pruned locally after 90 days), and only a FULL pull
+      // brings the family's tombstone back down to re-bury it. Re-pulling
+      // the whole log is idempotent and a family's log is small — the cost
+      // is a few reads, the alternative is a ghost entry nobody can kill.
+      adoptPairing({ ...p, lastPushedAt: rewound ?? p.lastPushedAt, lastSyncAt: "" });
+      if (bootState === "ready") window.setTimeout(() => void runPull(true), 0);
     }
     // No schedulePush here: the same merge persists, so persistVersion bumps
     // alongside this and the effect below already queues the push.
@@ -512,13 +519,24 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     }
   }
 
-  async function emailRedeem(token: string, label: string): Promise<"confirmed" | "recovered" | null> {
+  async function emailRedeem(
+    token: string,
+    label: string,
+    options: { discardLocal?: boolean } = {},
+  ): Promise<"confirmed" | "recovered" | null> {
     if (debugMode) return null;
     try {
+      // Proof before mutation, same vow as googleContinue: the token must
+      // redeem before anything local is dropped or demoted.
       const outcome = await transport.emailRedeem(token, label);
-      saveAuthHint({ method: "email", email: outcome.email });
+      // The hint is saved only when this device JOINS. A confirm tap can
+      // land on any device where the inbox happens to be open — a bystander
+      // phone must not inherit a "welcome back" identity from it. The phone
+      // that asked for the link saved its own hint when it sent it.
       if ("confirmed" in outcome) return "confirmed";
-      demoteProfileForJoin();
+      saveAuthHint({ method: "email", email: outcome.email });
+      if (options.discardLocal) dropLocalForAdoption();
+      else demoteProfileForJoin();
       beginPairing(outcome, label);
       showToast("Welcome back — your log is on its way.");
       return "recovered";

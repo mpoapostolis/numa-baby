@@ -128,7 +128,8 @@ ${opts.noindex ? '<meta name="robots" content="noindex, follow" />' : ""}
 <meta property="og:url" content="${esc(url)}" />
 <meta property="og:image" content="${SITE.origin}/og-baby-tracker.png" />
 <meta name="twitter:card" content="summary_large_image" />
-<link rel="icon" href="/icon-192.png" />
+<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
+<link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
 <style>${STYLE}</style>
 <script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
 <script type="application/ld+json">${JSON.stringify(crumbs)}</script>

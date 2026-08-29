@@ -64,7 +64,7 @@ export function FeedbackForm({ onSent }: { onSent?: () => void } = {}) {
               onChange={(event) => setMessage(event.target.value)}
             />
             <label className="t-label" htmlFor="feedback-contact">
-              Email or handle <span className="feedback-optional">optional — leave empty and I still read it</span>
+              Email <span className="feedback-optional">only if you want a reply</span>
             </label>
             <input
               id="feedback-contact"
@@ -72,7 +72,7 @@ export function FeedbackForm({ onSent }: { onSent?: () => void } = {}) {
               type="text"
               maxLength={200}
               autoComplete="email"
-              placeholder="only if you want a reply"
+              placeholder="optional"
               value={contact}
               onChange={(event) => setContact(event.target.value)}
             />
