@@ -16,7 +16,7 @@
 // Pure: no React, no clock of its own — `now` is always passed in.
 
 import { DaySummary } from "./daySummary";
-import { median } from "./time";
+import { humanDuration, median } from "./time";
 import { typicalWeeklyGain } from "./growthReference";
 import {
   AAP_DEHYDRATION,
@@ -119,6 +119,49 @@ type Rule = {
   sources: FactSource[];
   evaluate: (input: InsightInput) => { title: string; body: string; advice: string } | null;
 };
+
+// ——— reading change ————————————————————————————————————————————————
+//
+// Every rule above this line fires on an absolute threshold: a temperature, a
+// nappy count, a weight. Thresholds catch the dangerous, and they are blind to
+// the thing a parent actually notices first — that something is different from
+// how it was. A baby feeding nine times a day when she fed fourteen last week
+// has crossed no line at all.
+//
+// These read two windows and compare them. The guards matter more than the
+// arithmetic: a day nobody logged is not a day with no feeds, and a change
+// measured against two days of data is a coincidence with a percentage sign.
+
+/** Complete days that actually carry a log. An untracked day says nothing. */
+function daysWithAnything(days: DaySummary[]): DaySummary[] {
+  return days.filter((day) => !day.isEmpty);
+}
+
+/** Mean of a metric across days, or null when there are too few to mean it. */
+function meanOver(days: DaySummary[], pick: (day: DaySummary) => number, least: number): number | null {
+  if (days.length < least) return null;
+  return days.reduce((sum, day) => sum + pick(day), 0) / days.length;
+}
+
+/**
+ * Compare the most recent stretch with the one before it.
+ *
+ * Returns null unless BOTH windows carry enough logged days to be worth
+ * comparing — the alternative is telling a parent their baby has changed when
+ * what changed is how much they wrote down.
+ */
+function shift(
+  days: DaySummary[],
+  pick: (day: DaySummary) => number,
+  window = 3,
+): { recent: number; earlier: number; ratio: number } | null {
+  const logged = daysWithAnything(days);
+  if (logged.length < window * 2) return null;
+  const recent = meanOver(logged.slice(-window), pick, window);
+  const earlier = meanOver(logged.slice(-window * 2, -window), pick, window);
+  if (recent === null || earlier === null || earlier <= 0) return null;
+  return { recent, earlier, ratio: recent / earlier };
+}
 
 const RULES: Rule[] = [
   // ——— seek care ————————————————————————————————————————————————
@@ -435,6 +478,67 @@ const RULES: Rule[] = [
         body: `Your median is ${typical} feeds a day. AAP: breastfed newborns usually nurse about every 2 hours, so 10 to 12 in 24 hours is the norm and 8 is the minimum.`,
         advice:
           "Nothing to change. Keep following the early cues — rooting, hands to the mouth, lip smacking. Crying is the late one.",
+      };
+    },
+  },
+
+  // ——— change, not thresholds ————————————————————————————————————————
+  {
+    id: "feeds-fewer-than-they-were",
+    tone: "suggest",
+    priority: 120,
+    sources: [AAP_HOW_OFTEN],
+    evaluate: ({ days }) => {
+      const moved = shift(days, (day) => day.feeds);
+      // A fifth fewer is noise; a third fewer is a pattern. The floor stops
+      // this firing on a baby who feeds four times a day and once fed six.
+      if (!moved || moved.ratio > 0.7 || moved.earlier < 5) return null;
+      return {
+        title: "Feeds have eased off this week",
+        body: `About ${moved.recent.toFixed(1)} a day recently, against ${moved.earlier.toFixed(1)} before. Appetite moves around, and a settled week can look like this.`,
+        advice:
+          "Worth watching alongside nappies and weight rather than on its own. If wet nappies drop too, or your baby seems harder to rouse for a feed, ring your health visitor.",
+      };
+    },
+  },
+  {
+    id: "wet-nappies-fewer-than-they-were",
+    tone: "suggest",
+    priority: 130,
+    sources: [AAP_ENOUGH_MILK],
+    evaluate: ({ days }) => {
+      const moved = shift(days, (day) => day.wet);
+      // Six or more is the number that matters in absolute terms and there is
+      // already a rule for falling below it. This one is for the slide toward
+      // it, while the count is still fine.
+      if (!moved || moved.ratio > 0.7 || moved.recent < 6) return null;
+      return {
+        title: "Fewer wet nappies than last week",
+        body: `About ${moved.recent.toFixed(1)} a day, from ${moved.earlier.toFixed(1)}. Still inside the usual range, so this is a note rather than a worry.`,
+        advice:
+          "Keep offering feeds on cue. If it keeps falling and lands below six heavy wet nappies a day, that is the point to call.",
+      };
+    },
+  },
+  {
+    id: "longest-sleep-growing",
+    tone: "reassure",
+    priority: 40,
+    // Deliberately uncited. This card makes no claim about babies in general —
+    // only about what this parent's own log says — and hanging an authority's
+    // name on "your nights are getting longer" would borrow weight it does not
+    // need and cannot support.
+    sources: [],
+    evaluate: ({ days }) => {
+      const moved = shift(days, (day) => day.longestSleepMinutes);
+      // Twenty per cent longer, and at least half an hour of real gain — a
+      // ten-minute improvement is a rounding error, not a milestone.
+      if (!moved || moved.ratio < 1.2 || moved.recent - moved.earlier < 30) return null;
+      return {
+        title: "The longest stretch is getting longer",
+        body: `Best stretch is averaging ${humanDuration(Math.round(moved.recent))}, up from ${humanDuration(Math.round(moved.earlier))} the week before.`,
+        advice:
+          "Nothing to do. Nights move backwards as often as forwards at this age, so this is worth noticing rather than counting on.",
       };
     },
   },

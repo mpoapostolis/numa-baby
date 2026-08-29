@@ -228,3 +228,82 @@ describe("buildInsightInput", () => {
     expect(built.weights.map((w) => w.weightGrams)).toEqual([3400, 3900]);
   });
 });
+
+describe("rules that read change rather than thresholds", () => {
+  // A week where nothing crosses a clinical line, but something has clearly
+  // moved. Absolute rules are blind to all of this by design.
+  const week = (feeds: number, wet: number, longest: number) => ({
+    feeds,
+    bottles: feeds,
+    diapers: wet,
+    wet,
+    longestSleepMinutes: longest,
+    naps: 1,
+  });
+
+  /** Oldest first, one per complete day, all of them carrying a log. */
+  function daysFrom(specs: Array<ReturnType<typeof week>>) {
+    return specs.map((spec, index) => day(specs.length - index, spec));
+  }
+
+  it("notices feeds easing off without calling it an emergency", () => {
+    const insights = insightsFor(
+      input({
+        days: daysFrom([
+          week(14, 8, 120), week(14, 8, 120), week(13, 8, 120),
+          week(9, 8, 120), week(9, 8, 120), week(8, 8, 120),
+        ]),
+      }),
+    );
+    const found = insights.find((i) => i.id === "feeds-fewer-than-they-were");
+    expect(found).toBeDefined();
+    expect(found?.tone).toBe("suggest");
+    expect(found?.body).toContain("8.7");
+  });
+
+  it("stays quiet when the drop is small", () => {
+    const insights = insightsFor(
+      input({
+        days: daysFrom([
+          week(12, 8, 120), week(12, 8, 120), week(12, 8, 120),
+          week(11, 8, 120), week(11, 8, 120), week(11, 8, 120),
+        ]),
+      }),
+    );
+    expect(insights.find((i) => i.id === "feeds-fewer-than-they-were")).toBeUndefined();
+  });
+
+  it("stays quiet when there are not two comparable windows", () => {
+    const insights = insightsFor(
+      input({ days: daysFrom([week(14, 8, 120), week(6, 8, 120)]) }),
+    );
+    expect(insights.find((i) => i.id === "feeds-fewer-than-they-were")).toBeUndefined();
+  });
+
+  it("says something good when the nights are lengthening", () => {
+    const insights = insightsFor(
+      input({
+        days: daysFrom([
+          week(10, 8, 90), week(10, 8, 90), week(10, 8, 96),
+          week(10, 8, 180), week(10, 8, 186), week(10, 8, 192),
+        ]),
+      }),
+    );
+    const found = insights.find((i) => i.id === "longest-sleep-growing");
+    expect(found?.tone).toBe("reassure");
+    // A claim about this log only, so nothing is cited at it.
+    expect(found?.sources).toEqual([]);
+  });
+
+  it("does not celebrate ten more minutes", () => {
+    const insights = insightsFor(
+      input({
+        days: daysFrom([
+          week(10, 8, 100), week(10, 8, 100), week(10, 8, 100),
+          week(10, 8, 112), week(10, 8, 112), week(10, 8, 112),
+        ]),
+      }),
+    );
+    expect(insights.find((i) => i.id === "longest-sleep-growing")).toBeUndefined();
+  });
+});
