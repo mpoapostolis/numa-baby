@@ -168,7 +168,20 @@ export function summarizeDay(activities: Activity[], day: Date, now: number): Da
         if (startedToday) summary.naps += 1;
         if (!isStale) {
           summary.sleepMinutes += sleepMinutesHere;
-          summary.longestSleepMinutes = Math.max(summary.longestSleepMinutes, sleepMinutesHere);
+          // The longest STRETCH, not the longest piece of one. Minutes are
+          // split across the midnight a sleep crosses — correctly, because
+          // "how much sleep happened on Tuesday" is a question about Tuesday —
+          // but "she did six hours" is not. A 22:00–04:00 night was six hours
+          // to the parent who lived it, and it belongs to the evening it
+          // began; splitting it into a two and a four reports a night nobody
+          // had. So this one figure is measured end to end and attributed to
+          // the day the stretch STARTED.
+          if (startedToday) {
+            summary.longestSleepMinutes = Math.max(
+              summary.longestSleepMinutes,
+              minutesBetween(activity.startedAt, activity.endedAt ?? nowIso),
+            );
+          }
         }
         break;
       }

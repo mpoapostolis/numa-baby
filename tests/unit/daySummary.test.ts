@@ -100,12 +100,17 @@ describe("summarizeDay", () => {
     const today = summarizeDay([nap, overnight], day, now);
     // 150 minutes of nap plus the six hours of the overnight that fall today.
     expect(today.sleepMinutes).toBe(150 + 360);
-    expect(today.longestSleepMinutes).toBe(360);
-    // Only the nap STARTED today; the overnight is yesterday's stretch.
+    // Only the nap STARTED today, so today's longest stretch is the nap. The
+    // overnight was the 11th's night and is reported there, whole — this
+    // assertion used to read 360, which was the app quietly cutting an
+    // eight-hour night into the six hours that happened to land after
+    // midnight.
+    expect(today.longestSleepMinutes).toBe(150);
     expect(today.naps).toBe(1);
 
     const yesterday = summarizeDay([overnight], new Date(2026, 7, 11), now);
     expect(yesterday.sleepMinutes).toBe(120);
+    expect(yesterday.longestSleepMinutes).toBe(480);
     expect(yesterday.naps).toBe(1);
   });
 
@@ -318,5 +323,53 @@ describe("summarizeDays", () => {
     ];
     const [viaRange] = summarizeDays(acts, day, 1, now);
     expect(viaRange).toEqual(summarizeDay(acts, day, now));
+  });
+});
+
+describe("the longest stretch, which is the number parents actually quote", () => {
+  const day = new Date("2026-08-20T12:00:00");
+  const now = Date.parse("2026-08-21T12:00:00");
+
+  it("measures a night end to end rather than up to midnight", () => {
+    // 22:00 to 04:00. Two hours fall on the 20th and four on the 21st, so a
+    // per-day maximum would report the longest stretch as four hours — a night
+    // nobody had.
+    const overnight: Activity[] = [
+      {
+        id: "night",
+        type: "sleep",
+        startedAt: "2026-08-20T22:00:00",
+        endedAt: "2026-08-21T04:00:00",
+      },
+    ];
+    const evening = summarizeDay(overnight, day, now);
+    expect(evening.longestSleepMinutes).toBe(6 * 60);
+    // The MINUTES still split, because "how much sleep happened on the 20th"
+    // is a different question and two hours is its right answer.
+    expect(evening.sleepMinutes).toBe(2 * 60);
+  });
+
+  it("credits the stretch to the evening it began, not the morning it ended", () => {
+    const overnight: Activity[] = [
+      {
+        id: "night",
+        type: "sleep",
+        startedAt: "2026-08-20T22:00:00",
+        endedAt: "2026-08-21T04:00:00",
+      },
+    ];
+    const morningAfter = summarizeDay(overnight, new Date("2026-08-21T12:00:00"), now);
+    expect(morningAfter.sleepMinutes).toBe(4 * 60);
+    expect(morningAfter.longestSleepMinutes).toBe(0);
+    expect(morningAfter.naps).toBe(0);
+  });
+
+  it("still ignores a timer nobody stopped", () => {
+    const forgotten: Activity[] = [
+      { id: "left-on", type: "sleep", startedAt: "2026-08-20T09:00:00" },
+    ];
+    const summary = summarizeDay(forgotten, day, now);
+    expect(summary.longestSleepMinutes).toBe(0);
+    expect(summary.hasStaleTimer).toBe(true);
   });
 });

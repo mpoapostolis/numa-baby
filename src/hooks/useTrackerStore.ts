@@ -2,6 +2,8 @@ import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { mergeActivities, mergeStored, summarizeMerge } from "../domain/merge";
 import { activityUpdatedAt, liveActivities, parseStoredData } from "../domain/validate";
 import { Activity, BootState, Profile, ReminderSettings } from "../domain/types";
+import { STALE_OPEN_SPAN_MINUTES } from "../domain/daySummary";
+import { humanDuration } from "../domain/time";
 
 // The entire persistence core in one hook: the five persisted state slices,
 // the persist-first write path (nothing reaches React state unless the write
@@ -314,11 +316,54 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     return true;
   }
 
+// What a running timer is called, so stopping a burp no longer reports a
+// nursing session. Three timers exist; the fallbacks cover a fourth arriving
+// without this file being updated.
+const TIMER_LABEL: Partial<Record<Activity["type"], string>> = {
+  nursing: "Nursing session",
+  sleep: "Sleep",
+  burp: "Burping",
+};
+const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
+  nursing: "nursing timer",
+  sleep: "sleep timer",
+  burp: "burping timer",
+};
+
   function stopTimer(id: string) {
+
     const current = persistedStateRef.current.activities;
     const target = current.find((activity) => activity.id === id);
     if (!target || target.deleted || target.endedAt) return;
     const stampedAt = new Date().toISOString();
+    const ranForMinutes = Math.round(
+      (Date.parse(stampedAt) - Date.parse(target.startedAt)) / 60_000,
+    );
+
+    // A timer left running overnight is not a forty-hour feed, and the summaries
+    // already refuse to count one (STALE_OPEN_SPAN_MINUTES in daySummary.ts).
+    // Until now the ENTRY was still written at its full length, so the log and
+    // the recap disagreed and only the recap was right. Neither guessing is
+    // safe here — a genuine long sleep and a forgotten stopwatch look identical
+    // from the outside — so this is the one moment worth asking about.
+    if (ranForMinutes > STALE_OPEN_SPAN_MINUTES) {
+      const kept = window.confirm(
+        `This ${TIMER_NOUN[target.type] ?? "timer"} has been running for ${humanDuration(ranForMinutes)}. ` +
+          `That is usually a timer left on by mistake.\n\nOK discards it. Cancel saves it as a ${humanDuration(ranForMinutes)} session.`,
+      );
+      if (kept) {
+        // Discarded, not deleted-and-forgotten: it becomes a tombstone like any
+        // other removal, so the other phone drops it too.
+        const withoutIt = current.map((activity) =>
+          activity.id === id ? { ...activity, deleted: true as const, updatedAt: stampedAt } : activity,
+        );
+        if (!persistSnapshot(withoutIt)) return;
+        syncActivitiesFromRef();
+        showToast("Timer discarded — nothing was added to the log");
+        return;
+      }
+    }
+
     const nextActivities = current.map((activity) =>
         activity.id === id
           ? { ...activity, endedAt: stampedAt, updatedAt: stampedAt }
@@ -326,7 +371,7 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     );
     if (!persistSnapshot(nextActivities)) return;
     syncActivitiesFromRef();
-    showToast(target.type === "sleep" ? "Sleep session saved" : "Nursing session saved");
+    showToast(`${TIMER_LABEL[target.type] ?? "Session"} saved — ${humanDuration(ranForMinutes)}`);
   }
 
   function changeNightMode(enabled: boolean) {
