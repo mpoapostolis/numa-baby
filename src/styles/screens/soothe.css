@@ -92,6 +92,9 @@
 }
 
 .soothe-action {
+  /* The button primitive ships a fixed height: min-height can raise this box
+     but never let it GROW, so wrapped content spills out of it. */
+  height: auto;
   min-height: 56px;
   width: 100%;
 }

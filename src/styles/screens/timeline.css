@@ -31,6 +31,9 @@
 }
 
 .filter-row [data-slot="toggle-group-item"] {
+  /* The button primitive ships a fixed height: min-height can raise this box
+     but never let it GROW, so wrapped content spills out of it. */
+  height: auto;
   min-width: auto;
   min-height: 44px;
   padding: 0 16px;

@@ -406,6 +406,9 @@
 }
 
 .join-action {
+  /* The button primitive ships a fixed height: min-height can raise this box
+     but never let it GROW, so wrapped content spills out of it. */
+  height: auto;
   min-height: 56px;
   min-width: 220px;
   margin-top: 8px;

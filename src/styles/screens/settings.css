@@ -28,6 +28,9 @@
 }
 
 .appearance-options [data-slot="toggle-group-item"] {
+  /* The button primitive ships a fixed height: min-height can raise this box
+     but never let it GROW, so wrapped content spills out of it. */
+  height: auto;
   min-width: 0;
   min-height: 64px;
   display: grid;
@@ -85,6 +88,9 @@
 }
 
 .reminder-row {
+  /* The button primitive ships a fixed height: min-height can raise this box
+     but never let it GROW, so wrapped content spills out of it. */
+  height: auto;
   width: 100%;
   min-height: 56px;
   padding: 8px 12px;
