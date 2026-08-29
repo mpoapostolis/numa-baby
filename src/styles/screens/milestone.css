@@ -1,0 +1,69 @@
+/* Month-birthday confetti. Fixed, inert, gone in four seconds — and gone
+   entirely for anyone who asked their phone for less motion. */
+.confetti {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.confetti span {
+  position: absolute;
+  top: -12px;
+  border-radius: 2px;
+  animation: confetti-fall linear forwards;
+}
+
+@keyframes confetti-fall {
+  to {
+    transform: translateY(105vh) rotate(540deg);
+    opacity: 0.7;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confetti {
+    display: none;
+  }
+}
+
+.milestone-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid color-mix(in oklab, var(--glyph-nursing) 35%, var(--border));
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklab, var(--glyph-nursing) 10%, var(--card));
+}
+
+.milestone-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--glyph-nursing) var(--glyph-wash), var(--card));
+  color: var(--glyph-nursing);
+}
+
+.milestone-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.milestone-copy {
+  display: grid;
+  min-width: 0;
+}
+
+.milestone-copy strong {
+  font-size: 0.9375rem;
+}
+
+.milestone-copy small {
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+}

@@ -144,7 +144,12 @@ describe("formatBabyAge", () => {
     ["almost two weeks at 13 days", "2026-07-14T10:00:00", "almost 2 weeks"],
     ["exactly two weeks", "2026-07-15T10:00:00", "2 weeks"],
     ["mid-week stays on completed weeks", "2026-07-18T10:00:00", "2 weeks"],
-    ["weeks past 8 while calendar months < 2", "2026-08-27T10:00:00", "8 weeks"],
+    // The owner's rule, arrived at the hard way: the milestone card said
+    // "1 month old today" while this line still said "4 weeks old" on the
+    // same screen. Months win from the first completed calendar month.
+    ["still weeks just before the first month completes", "2026-07-31T10:00:00", "4 weeks"],
+    ["one month from the first calendar month", "2026-08-01T10:00:00", "1 month"],
+    ["months once past the first calendar month", "2026-08-27T10:00:00", "1 month"],
     ["calendar months from two on", "2026-10-15T10:00:00", "3 months"],
   ])("%s", (_label, nowIso, expected) => {
     expect(formatBabyAge(birth, at(nowIso))).toBe(expected);

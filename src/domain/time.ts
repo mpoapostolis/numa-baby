@@ -123,16 +123,27 @@ export function formatBabyAge(birthDate: string | undefined, now: number): strin
   if (days === 0) return "born today";
   if (weeks < 1) return days === 1 ? "1 day" : `${days} days`;
   if (weeks < 8) {
-    if (days % 7 >= 5) return `almost ${weeks + 1} weeks`;
-    return weeks === 1 ? "1 week" : `${weeks} weeks`;
+    const at8 = new Date(now);
+    const monthsSoFar =
+      (at8.getFullYear() - birth.getFullYear()) * 12 +
+      (at8.getMonth() - birth.getMonth()) -
+      (at8.getDate() < birth.getDate() ? 1 : 0);
+    if (monthsSoFar < 1) {
+      if (days % 7 >= 5) return `almost ${weeks + 1} weeks`;
+      return weeks === 1 ? "1 week" : `${weeks} weeks`;
+    }
   }
   const at = new Date(now);
   const months =
     (at.getFullYear() - birth.getFullYear()) * 12 +
     (at.getMonth() - birth.getMonth()) -
     (at.getDate() < birth.getDate() ? 1 : 0);
-  if (months < 2) return `${weeks} weeks`;
-  return `${months} months`;
+  // Months from the FIRST completed calendar month. The screen that proved
+  // the old rule wrong showed "1 month old today" (the milestone card) above
+  // "4 weeks old" (this line) — the same baby, the same morning. Weeks stay
+  // for the newborn window where every jab and every midwife speaks weeks.
+  if (months < 1) return `${weeks} weeks`;
+  return months === 1 ? "1 month" : `${months} months`;
 }
 
 // Whole days since birth for the day counter and the fact engine. Null on

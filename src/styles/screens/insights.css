@@ -93,12 +93,7 @@
   flex: 0 0 auto;
 }
 
-.figure-source {
-  margin: auto 0 0;
-  color: var(--ink-3);
-  font-size: 0.8125rem;
-  line-height: 1.45;
-}
+
 
 /* Bottle volume bars — --signal marks today, the dashed line is the median. */
 .bar-chart {

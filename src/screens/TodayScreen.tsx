@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Suspense, lazy, useState } from "react";
 import { ChevronRight, ExternalLink, Milk, Pill, ShieldCheck, Square, Thermometer, Utensils, Weight } from "lucide-react";
 
 import { Button } from "../components/ui/button";
@@ -32,6 +32,12 @@ import {
 } from "../domain/time";
 import { Activity, DiaperKind, Profile, Sheet } from "../domain/types";
 import { UnitSystem, formatVolume, useUnits } from "../domain/units";
+import { milestoneFor, milestoneSeen } from "../domain/milestones";
+
+// A party is downloaded only on a day there is one.
+const MilestoneParty = lazy(() =>
+  import("../components/MilestoneParty").then((m) => ({ default: m.MilestoneParty })),
+);
 import { ActivityStats } from "../hooks/useActivityStats";
 import { useSecondClock } from "../hooks/useMinuteClock";
 
@@ -220,6 +226,10 @@ export default function TodayScreen({
   onSeeTimeline,
 }: TodayScreenProps) {
   const units = useUnits();
+  // Computed per render against the minute clock, so a party that starts at
+  // midnight appears without a reload; the seen-flag keeps it to one showing.
+  const milestone = milestoneFor(profile.birthDate, profile.name, minuteClock);
+  const celebration = milestone && !milestoneSeen(milestone.id) ? milestone : null;
   const {
     sortedActivities,
     today,
@@ -475,6 +485,12 @@ export default function TodayScreen({
       className={`screen today-screen${sortedActivities.length ? "" : " is-empty"}`}
       aria-labelledby="today-heading"
     >
+      {celebration && (
+        <Suspense fallback={null}>
+          <MilestoneParty milestone={celebration} />
+        </Suspense>
+      )}
+
       {/* Welcome hero: the companion's face greets first, the age counter
           does the maths ("Mia is 2 weeks old · day 15"), and one verified,
           age-matched fact sits underneath with its source in plain sight. */}

@@ -1,3 +1,5 @@
+// Ships with this lazy chunk, not the app shell — the budget rule.
+import "../styles/screens/insights.css";
 import { useMemo, useState } from "react";
 import { ExternalLink, PhoneCall, ShieldCheck, Sparkles, Stethoscope } from "lucide-react";
 import { EmptyState } from "../components/EmptyState";

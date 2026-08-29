@@ -1488,3 +1488,12 @@ body:has(.feedback-bubble) .content {
     color: var(--foreground);
   }
 }
+
+/* Small print under charts. Shared by the growth chart (Insights) and the
+   WHO guide, which live in different lazy chunks. */
+.figure-source {
+  margin: auto 0 0;
+  color: var(--ink-3);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
