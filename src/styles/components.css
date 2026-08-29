@@ -1106,20 +1106,31 @@
    feed can still do exactly that with this on screen. It floats above the
    bottom navigation, and both answers carry the same weight — a "reject"
    that is harder to find than "accept" is not consent. */
+/* Docked, not floating.
+   At bottom:96px with a 12px inset this was a card hovering in the middle of
+   whatever screen you happened to be on — over the feature list on the landing
+   page, over the Care reminders card in Settings — and a panel that covers
+   content it does not belong to reads as a bug, whatever it says. It sits flush
+   above the navigation now, edge to edge, and the page is padded so nothing is
+   underneath it. */
 .consent-banner {
   position: fixed;
   z-index: 60;
-  left: 12px;
-  right: 12px;
-  bottom: calc(96px + env(safe-area-inset-bottom));
+  left: 0;
+  right: 0;
+  bottom: calc(72px + env(safe-area-inset-bottom));
   display: grid;
   gap: 12px;
   padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
+  border-top: 1px solid var(--border);
   background: var(--card);
-  box-shadow: 0 8px 28px oklch(0 0 0 / 0.14);
+  box-shadow: 0 -8px 28px oklch(0 0 0 / 0.12);
   animation: consent-rise 260ms ease-out;
+}
+
+/* Room for it, so the last card on any screen stays reachable while it is up. */
+body:has(.consent-banner) .content {
+  padding-bottom: 180px;
 }
 
 @media (width >= 720px) {
@@ -1128,6 +1139,13 @@
     right: 24px;
     bottom: 24px;
     max-width: 380px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 8px 28px oklch(0 0 0 / 0.14);
+  }
+
+  body:has(.consent-banner) .content {
+    padding-bottom: 0;
   }
 }
 

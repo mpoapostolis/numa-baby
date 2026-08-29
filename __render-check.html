@@ -1,0 +1,86 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+:root{--background:oklch(0.976 0.01 45);--foreground:oklch(0.275 0.022 20);
+--signal:oklch(0.505 0.125 356);--glyph-bottle:oklch(0.5 0.09 240);
+--glyph-nursing:oklch(0.53 0.105 5);--glyph-sleep:oklch(0.51 0.09 295);}
+body{background:var(--background);color:var(--foreground);font:14px system-ui;margin:0;padding:20px}
+.row{display:flex;gap:24px;align-items:flex-end;flex-wrap:wrap;margin-bottom:28px}
+figure{margin:0;text-align:center}
+figcaption{font-size:11px;color:#666;margin-top:4px;max-width:200px}
+svg.c{color:color-mix(in oklab, var(--glyph-nursing) 45%, var(--foreground))}
+svg.i{color:color-mix(in oklch, var(--glyph-nursing) 45%, var(--foreground))}
+</style></head><body>
+
+<h3>Companion "feeding" — at real size 84 and blown up to 240</h3>
+<div class="row">
+<figure><svg class="c" width="84" height="84" viewBox="0 0 112 112" id="f1"></svg><figcaption>current @84 (ship size)</figcaption></figure>
+<figure><svg class="c" width="240" height="240" viewBox="0 0 112 112" id="f2"></svg><figcaption>CURRENT — no mouth, head stroke through bottle</figcaption></figure>
+<figure><svg class="c" width="240" height="240" viewBox="0 0 112 112" id="f3"></svg><figcaption>+ SmileSmall only</figcaption></figure>
+<figure><svg class="c" width="240" height="240" viewBox="0 0 112 112" id="f4"></svg><figcaption>+ smile + rotated/moved bottle (proposal)</figcaption></figure>
+</div>
+
+<h3>Sleeping mouth: dash vs arc</h3>
+<div class="row">
+<figure><svg class="c" width="200" height="200" viewBox="0 0 112 112" id="s1"></svg><figcaption>current M53 77h10</figcaption></figure>
+<figure><svg class="c" width="200" height="200" viewBox="0 0 112 112" id="s2"></svg><figcaption>arc M53 77q5 3.5 10 0</figcaption></figure>
+<figure><svg class="c" width="84" height="84" viewBox="0 0 112 112" id="s3"></svg><figcaption>current @84</figcaption></figure>
+<figure><svg class="c" width="84" height="84" viewBox="0 0 112 112" id="s4"></svg><figcaption>arc @84</figcaption></figure>
+</div>
+
+<h3>NurseryScene (onboarding hero) — mouth dash vs arc, at ship size 180 and 2x</h3>
+<div class="row">
+<figure><svg class="i" width="180" height="126" viewBox="0 0 200 140" id="n1"></svg><figcaption>current dash @180</figcaption></figure>
+<figure><svg class="i" width="180" height="126" viewBox="0 0 200 140" id="n2"></svg><figcaption>arc @180</figcaption></figure>
+</div>
+<div class="row">
+<figure><svg class="i" width="400" height="280" viewBox="0 0 200 140" id="n3"></svg><figcaption>current dash 2x</figcaption></figure>
+<figure><svg class="i" width="400" height="280" viewBox="0 0 200 140" id="n4"></svg><figcaption>arc 2x</figcaption></figure>
+</div>
+
+<script>
+const HEAD = `
+<circle cx="58" cy="66" r="30" fill="none" stroke="currentColor" stroke-width="2"/>
+<path d="M58 36c0-6 4-9 9-8-4 2-5 5-4 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+<circle cx="28.5" cy="66" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/>
+<circle cx="44" cy="74" r="3" fill="var(--glyph-nursing)" opacity="0.55" stroke="none"/>
+<circle cx="72" cy="74" r="3" fill="var(--glyph-nursing)" opacity="0.55" stroke="none"/>`;
+const EYESCLOSED = `<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+<path d="M43 63q4 4 8 0"/><path d="M65 63q4 4 8 0"/></g>`;
+const EYESASLEEP = `<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+<path d="M43 64q4 3 8 0"/><path d="M65 64q4 3 8 0"/></g>`;
+const SMILE = `<path d="M52 76q6 5 12 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`;
+const bottle = (x,y,s=1)=>`<g transform="translate(${x} ${y}) scale(${s})" fill="none" stroke="var(--glyph-bottle)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M-1 0h8v-3a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v3" transform="rotate(90 4 0)"/>
+<rect x="-2" y="2" width="12" height="16" rx="4"/><path d="M1 7h6M1 11h6"/></g>`;
+const ZZZ = `<g fill="none" stroke="var(--glyph-sleep)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M86 44h7l-7 8h7"/><path d="M97 28h5l-5 6h5"/></g>`;
+
+const feedCur = HEAD+EYESCLOSED+bottle(84,62);
+const feedSmile = HEAD+EYESCLOSED+SMILE+bottle(84,62);
+const feedProp = HEAD+EYESCLOSED+SMILE+`<g transform="rotate(-18 92 66)">`+bottle(90,58)+`</g>`;
+f1.innerHTML=feedCur; f2.innerHTML=feedCur; f3.innerHTML=feedSmile; f4.innerHTML=feedProp;
+
+const sleepBase = m => HEAD+EYESASLEEP+`<path d="${m}" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>`+ZZZ;
+s1.innerHTML=sleepBase("M53 77h10"); s2.innerHTML=sleepBase("M53 77q5 3.5 10 0");
+s3.innerHTML=sleepBase("M53 77h10"); s4.innerHTML=sleepBase("M53 77q5 3.5 10 0");
+
+const nursery = m => `
+<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M10 118Q100 106 190 118"/>
+<circle cx="62" cy="89" r="24"/>
+<path d="M62 65c0-5 3-7.5 7-6.5-3 1.5-4 4-3 6.5"/>
+<circle cx="38.5" cy="89" r="2.8"/>
+<path d="M50 87.5q3.5 2.5 7 0"/><path d="M67 87.5q3.5 2.5 7 0"/>
+<path d="${m}"/>
+<circle cx="50.5" cy="95.5" r="2.4" fill="var(--glyph-nursing)" opacity="0.55" stroke="none"/>
+<circle cx="73.5" cy="95.5" r="2.4" fill="var(--glyph-nursing)" opacity="0.55" stroke="none"/>
+<g stroke="var(--glyph-sleep)"><path d="M84 52h7l-7 8h7"/><path d="M96 38h5l-5 6h5"/></g>
+<g transform="translate(132 9) scale(0.5)" stroke-width="4"><path d="M56 22A30 30 0 1 0 56 74A28 28 0 0 1 56 22Z"/></g>
+<path d="M126 12l2.2 5.8 5.8 2.2-5.8 2.2-2.2 5.8-2.2-5.8-5.8-2.2 5.8-2.2z" fill="var(--signal)" stroke="none"/>
+<path d="M184 50l1.6 4.2 4.2 1.6-4.2 1.6-1.6 4.2-1.6-4.2-4.2-1.6 4.2-1.6z" fill="var(--glyph-sleep)" stroke="none"/>
+<g transform="translate(102 71) scale(0.55)" stroke-width="3.6" opacity="0.4">
+<path d="M34 22c0-6 4-10 8-10s8 4 8 10"/><rect x="30" y="22" width="24" height="8" rx="3"/>
+<rect x="27" y="30" width="30" height="46" rx="9"/><path d="M33 44h8M33 54h8M33 64h8" stroke="var(--signal)"/></g>
+</g>`;
+n1.innerHTML=nursery("M58 98h8"); n2.innerHTML=nursery("M58 98q4 3 8 0");
+n3.innerHTML=nursery("M58 98h8"); n4.innerHTML=nursery("M58 98q4 3 8 0");
+</script></body></html>

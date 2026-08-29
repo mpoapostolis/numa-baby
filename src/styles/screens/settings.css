@@ -126,6 +126,12 @@
 
 .settings-action {
   width: 100%;
+  /* The button primitive ships a fixed height. min-height could raise the box
+     but never let it GROW, so a description that wrapped to two lines spilled
+     out of the row and the separator below drew straight through the second
+     line — "keep it in a synced folder to be safe" cut in half on a real
+     phone. The row sizes to its content now. */
+  height: auto;
   min-height: 56px;
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr) 20px;
