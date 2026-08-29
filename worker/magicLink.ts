@@ -256,7 +256,21 @@ export async function handleEmailRedeem(
   if (!familyId) return json({ error: "That link is not valid." }, 400);
 
   // Either purpose confirms the binding — a recover tap proves the inbox
-  // just as well as a confirm tap does.
+  // just as well as a confirm tap does. But a CONFIRM tap must never MOVE
+  // a guard: if this address already protects a different family, refusing
+  // is the only safe answer — the same 409 rule the Google door enforces.
+  if (String(row.purpose) === "link") {
+    const existing = await client.execute({
+      sql: "SELECT family_id FROM recovery_emails WHERE email = ?",
+      args: [email],
+    });
+    if (existing.rows.length && String(existing.rows[0].family_id) !== familyId) {
+      return json({
+        error:
+          "This address already protects another log. To bring that log onto a phone, use Restore — or remove its protection from the other device first.",
+      }, 409);
+    }
+  }
   await client.execute({
     sql: `INSERT INTO recovery_emails (email, family_id, created_at) VALUES (?, ?, ?)
           ON CONFLICT(email) DO UPDATE SET family_id = excluded.family_id, created_at = excluded.created_at`,
