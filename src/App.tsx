@@ -36,13 +36,15 @@ import {
   readHandoffPayload,
   readHandoffTarget,
 } from "./domain/handoff";
+import { backupNudge } from "./domain/backupNudge";
+import { BackupNudgeCard } from "./components/BackupNudge";
 import { readConsent } from "./domain/consent";
 import { ageInDays } from "./domain/time";
 import { useActivityStats } from "./hooks/useActivityStats";
 import { useFamilySync } from "./hooks/useFamilySync";
 import { useMinuteClock } from "./hooks/useMinuteClock";
 import { useCloseOnBack } from "./hooks/useCloseOnBack";
-import { useTrackerStore } from "./hooks/useTrackerStore";
+import { LAST_BACKUP_KEY, useTrackerStore } from "./hooks/useTrackerStore";
 
 // The chart-heavy screens load on first visit; Today never pays for them.
 // Settings rides along: nobody opens it at 3am, so it stays off the
@@ -96,6 +98,15 @@ function NavTrigger() {
 }
 
 const SEEN_RELEASE_KEY = "numa-baby-seen-release-v1";
+const BACKUP_DISMISSED_KEY = "numa-baby-backup-nudge-v1";
+
+function readStamp(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
 
 // A scanned invite arrives as "/#join=123456". Read once at boot and strip it
 // from the URL, so a refresh (or a shared screenshot of the address bar) never
@@ -141,6 +152,8 @@ export default function HomePage() {
   const sheetTriggerRef = useRef<HTMLElement | null>(null);
   const minuteClock = useMinuteClock();
 
+  const [backupDismissedAt, setBackupDismissedAt] = useState(() => readStamp(BACKUP_DISMISSED_KEY));
+
   const closeSheet = useCallback(() => setSheet(null), []);
   // On Android, back is how you leave a screen — and a sheet is a screen.
   // Without this it pops the app's own (empty) history and closes everything.
@@ -160,6 +173,7 @@ export default function HomePage() {
     nightMode,
     reminders,
     storageWarning,
+    storagePersisted,
     recoveredNotice,
     addActivity,
     updateActivity,
@@ -197,6 +211,20 @@ export default function HomePage() {
     mergeRemote,
     showToast,
   });
+
+  // Asked once there is something worth losing, and not before — the rules
+  // live in domain/backupNudge.ts. Recomputed on the minute clock so a
+  // fortnight-old dismissal expires without needing a reload.
+  const pendingBackupNudge = backupNudge(
+    {
+      entries: activities.length,
+      lastBackupAt: readStamp(LAST_BACKUP_KEY),
+      synced: Boolean(familySync.pairing),
+      storagePersisted,
+      dismissedAt: backupDismissedAt,
+    },
+    minuteClock,
+  );
 
   useEffect(() => {
     // Theme changes swap every surface color at once — transitions would
@@ -528,6 +556,22 @@ export default function HomePage() {
               <Button variant="outline" size="sm" onClick={dismissRecoveredNotice}>OK</Button>
             </div>
           </div>
+        )}
+
+        {/* Asked once there is something worth losing, and not before. The
+            rules live in domain/backupNudge.ts so they can be tested rather
+            than argued about. */}
+        {pendingBackupNudge && (
+          <BackupNudgeCard
+            nudge={pendingBackupNudge}
+            onBackup={() => { track("backup_nudge_accepted"); exportData(); }}
+            onDismiss={() => {
+              track("backup_nudge_dismissed");
+              const at = new Date().toISOString();
+              try { window.localStorage.setItem(BACKUP_DISMISSED_KEY, at); } catch { /* storage blocked */ }
+              setBackupDismissedAt(at);
+            }}
+          />
         )}
 
         <main className="content">

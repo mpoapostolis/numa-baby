@@ -12,6 +12,10 @@ import { humanDuration } from "../domain/time";
 
 export const STORAGE_KEY = "numa-baby-v1";
 export const RECOVERY_KEY = "numa-baby-v1-recovery";
+/** When a backup file was last written. Its own key, not part of the blob:
+    a backup is a fact about this device, and restoring an old blob must not
+    resurrect an old answer to "have you backed up lately". */
+export const LAST_BACKUP_KEY = "numa-baby-last-backup-v1";
 const EMPTY_PROFILE: Profile = { name: "", birthDate: "", feedingMode: "mixed" };
 const DEFAULT_REMINDERS: ReminderSettings = {
   feedEnabled: false,
@@ -50,6 +54,11 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
   const [nightMode, setNightMode] = useState(() => document.documentElement.classList.contains("dark"));
   const [reminders, setReminders] = useState<ReminderSettings>(DEFAULT_REMINDERS);
   const [storageWarning, setStorageWarning] = useState<string | null>(null);
+  // What the browser answered when asked to keep this data. FALSE is the
+  // interesting one: it is the browser saying out loud that it may reclaim a
+  // year of a baby's life to free up space. Discarding that answer, as this
+  // did, meant eviction looked exactly like a bug.
+  const [storagePersisted, setStoragePersisted] = useState<boolean | null>(null);
   const [recoveredNotice, setRecoveredNotice] = useState<string | null>(null);
   // Bumped on every successful persist. The sync engine watches it to know
   // "something was written locally" without reaching into this hook's internals.
@@ -167,7 +176,10 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
         setStorageWarning("This browser is blocking local storage. New entries may not persist.");
         applyLoadedState({ activities: [], profile: EMPTY_PROFILE, bootState: "onboarding" });
       }
-      navigator.storage?.persist?.().catch(() => undefined);
+      navigator.storage
+        ?.persist?.()
+        .then((granted) => setStoragePersisted(granted))
+        .catch(() => undefined);
     };
     const frame = window.requestAnimationFrame(boot);
     const fallback = window.setTimeout(boot, 120);
@@ -564,6 +576,12 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
   function exportData() {
     const { payload, name } = buildExportFile();
     downloadExportFile(payload, name);
+    try {
+      window.localStorage.setItem(LAST_BACKUP_KEY, new Date().toISOString());
+    } catch {
+      // Storage blocked. The file was still written, which is the part that
+      // matters; the nudge will simply ask again.
+    }
   }
 
   /** The backup file's contents, without writing a file — what the handoff
@@ -796,6 +814,7 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     nightMode,
     reminders,
     storageWarning,
+    storagePersisted,
     recoveredNotice,
     persistVersion,
     mergeRemote,

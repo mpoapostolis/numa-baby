@@ -1317,3 +1317,69 @@
   font-size: 0.8125rem;
   line-height: 1.5;
 }
+
+/* The backup nudge. Calm by default; the warn tone is for when the browser has
+   actually said it may evict the data, which is no longer a precaution. */
+.backup-nudge {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+}
+
+.backup-nudge.tone-warn {
+  border-color: color-mix(in oklab, var(--alert) 34%, var(--border));
+  background: var(--danger-soft);
+}
+
+.backup-nudge-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--signal) 10%, var(--card));
+  color: var(--signal);
+}
+
+.backup-nudge.tone-warn .backup-nudge-icon {
+  background: color-mix(in oklab, var(--alert) 14%, var(--card));
+  color: var(--alert);
+}
+
+.backup-nudge-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.backup-nudge-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.backup-nudge-copy strong {
+  font-size: 0.9375rem;
+  font-weight: 550;
+}
+
+.backup-nudge-copy small {
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.backup-nudge-actions {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.backup-nudge-actions [data-slot="button"] {
+  min-height: 44px;
+}
