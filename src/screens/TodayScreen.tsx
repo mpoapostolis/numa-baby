@@ -1,5 +1,5 @@
 import { Suspense, lazy, useState } from "react";
-import { ChevronRight, ExternalLink, ShieldCheck, Square, Thermometer, Waves, Weight } from "lucide-react";
+import { ChevronRight, ExternalLink, Milk, ShieldCheck, Square, Thermometer, Waves, Weight } from "lucide-react";
 
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -813,6 +813,25 @@ export default function TodayScreen({
             </span>
             <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
           </Button>
+          {/* Breast-only families lose the Bottle tile, which is right — it is
+              not their daily tap. But expressed milk goes into a bottle, and a
+              bottle at a grandparent's house is an ordinary evening, and until
+              now neither could be logged from this screen at all. The tile
+              stays hidden; the route back exists. */}
+          {profile.feedingMode === "breast" && (
+            <Button
+              variant="ghost"
+              className="log-row log-row-secondary action-feed"
+              onClick={() => onOpenSheet("bottle")}
+            >
+              <span className="action-icon" aria-hidden="true"><Milk /></span>
+              <span className="log-copy">
+                <strong>Bottle</strong>
+                <small>Expressed milk or formula</small>
+              </span>
+              <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             className="log-row log-row-secondary action-soothe"
