@@ -114,6 +114,11 @@ function LiveClock({ startedAt }: { startedAt: string }) {
   return <span className="timer-clock t-numeral">{liveDuration(startedAt, now)}</span>;
 }
 
+/** "Both" is a real answer for a nursing session, not a missing one. */
+function sideLabel(side: Activity["side"]) {
+  return side === "both" ? "Both" : side === "left" ? "Left" : "Right";
+}
+
 // A running timer stays in the tile that started it.
 //
 // It used to vanish from the grid and reappear as a row somewhere else, which
@@ -127,7 +132,7 @@ function TimerTile({ activity, onStop }: { activity: Activity; onStop: () => voi
     ? "Sleeping"
     : isBurp
       ? "Burping"
-      : `Nursing · ${activity.side === "left" ? "Left" : "Right"}`;
+      : `Nursing · ${sideLabel(activity.side)}`;
   const stopLabel = isSleep ? "Wake up" : isBurp ? "Done" : "Stop";
   return (
     <div className={`quick-tile tile-${activity.type} is-running`}>
@@ -166,7 +171,7 @@ function TimerRow({
     ? "Sleeping now"
     : isBurp
       ? "Burping"
-      : `Nursing · ${activity.side === "left" ? "Left" : "Right"}`;
+      : `Nursing · ${sideLabel(activity.side)}`;
   const stopLabel = isSleep ? "Wake up" : isBurp ? "Done" : "Stop";
   return (
     <div className="log-row timer-row">

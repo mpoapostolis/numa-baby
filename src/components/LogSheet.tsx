@@ -58,7 +58,7 @@ type SheetDraft = {
   temperatureC: string;
   logTime: string;
   endTime: string;
-  nursingSide: "left" | "right";
+  nursingSide: "left" | "right" | "both";
   nursingEntryMode: "timer" | "manual";
   diaperKind: DiaperKind;
 };
@@ -193,6 +193,9 @@ export function LogSheet({
     setDraft((current) => ({
       ...current,
       nursingEntryMode: mode,
+      // "Both" only exists for a finished session; switching back to a live
+      // timer must not leave a side selected that the timer cannot start on.
+      nursingSide: mode === "timer" && current.nursingSide === "both" ? "left" : current.nursingSide,
       endTime: mode === "manual" ? localDateInput(ended) : "",
       logTime: localDateInput(mode === "manual" ? new Date(ended.getTime() - 15 * 60_000) : ended),
     }));
@@ -244,7 +247,8 @@ export function LogSheet({
       side: draft.nursingSide,
       note: outcome.value.note,
     };
-    const sideLabel = draft.nursingSide === "left" ? "Left" : "Right";
+    const sideLabel =
+      draft.nursingSide === "both" ? "Both sides" : draft.nursingSide === "left" ? "Left" : "Right";
     const message = draft.nursingEntryMode === "manual" ? `${sideLabel} nursing saved` : `${sideLabel} timer started`;
     if (onAdd(entry, message)) onClose();
   }
@@ -436,9 +440,15 @@ export function LogSheet({
           </Field>
           <Field className="nursing-side-field">
             <FieldLabel>Side</FieldLabel>
-            <ToggleGroup type="single" value={draft.nursingSide} className="side-grid" aria-label="Nursing side" onValueChange={(value) => value && patch({ nursingSide: value as "left" | "right" })}>
+            <ToggleGroup type="single" value={draft.nursingSide} className="side-grid" aria-label="Nursing side" onValueChange={(value) => value && patch({ nursingSide: value as "left" | "right" | "both" })}>
               <ToggleGroupItem value="left"><span className="side-letter">L</span><span className="choice-copy"><strong>Left</strong></span><Check className="choice-check" /></ToggleGroupItem>
               <ToggleGroupItem value="right"><span className="side-letter">R</span><span className="choice-copy"><strong>Right</strong></span><Check className="choice-check" /></ToggleGroupItem>
+              {/* Only for a session that has already finished. A live timer
+                  starts on one side by definition; a feed that used both is
+                  something you know afterwards, and it is one feed, not two. */}
+              {draft.nursingEntryMode === "manual" && (
+                <ToggleGroupItem value="both"><span className="side-letter">LR</span><span className="choice-copy"><strong>Both</strong></span><Check className="choice-check" /></ToggleGroupItem>
+              )}
             </ToggleGroup>
           </Field>
           {draft.nursingEntryMode === "timer" ? (
@@ -454,7 +464,11 @@ export function LogSheet({
           <DialogFooter>
             <p className="sheet-footer-note">{draft.nursingEntryMode === "timer" ? "The timer stays active if you close the app." : "This session saves straight to your timeline."}</p>
             <Button type="submit" className="primary-button sheet-primary">
-              {draft.nursingEntryMode === "timer" ? `Start ${draft.nursingSide} timer` : `Save ${draft.nursingSide} session`}
+              {draft.nursingEntryMode === "timer"
+                ? `Start ${draft.nursingSide} timer`
+                : draft.nursingSide === "both"
+                  ? "Save session"
+                  : `Save ${draft.nursingSide} session`}
             </Button>
           </DialogFooter>
         </SheetForm>
@@ -571,7 +585,7 @@ export function LogSheet({
           {editing.type === "nursing" && (
             <Field className="nursing-side-field">
               <FieldLabel>Side</FieldLabel>
-              <ToggleGroup type="single" value={draft.nursingSide} className="side-grid" aria-label="Nursing side" onValueChange={(value) => value && patch({ nursingSide: value as "left" | "right" })}>
+              <ToggleGroup type="single" value={draft.nursingSide} className="side-grid" aria-label="Nursing side" onValueChange={(value) => value && patch({ nursingSide: value as "left" | "right" | "both" })}>
                 <ToggleGroupItem autoFocus data-initial-focus value="left"><span className="side-letter">L</span><span className="choice-copy"><strong>Left</strong></span><Check className="choice-check" /></ToggleGroupItem>
                 <ToggleGroupItem value="right"><span className="side-letter">R</span><span className="choice-copy"><strong>Right</strong></span><Check className="choice-check" /></ToggleGroupItem>
               </ToggleGroup>

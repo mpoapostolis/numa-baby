@@ -13,7 +13,9 @@ export type Activity = {
   startedAt: string;
   endedAt?: string;
   amount?: number;
-  side?: "left" | "right";
+  /** "both" is one session that used both sides, which is how most feeds
+      actually go — it is not two sessions and should not be logged as two. */
+  side?: "left" | "right" | "both";
   diaperKind?: DiaperKind;
   milkType?: "formula" | "expressed";
   weightGrams?: number;

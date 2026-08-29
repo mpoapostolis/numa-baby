@@ -46,7 +46,7 @@ export function isValidActivity(value: unknown): value is Activity {
   if (invalidStoredNumber("lengthCm", value.lengthCm)) return false;
   if (invalidStoredNumber("headCm", value.headCm)) return false;
   if (invalidStoredNumber("temperatureC", value.temperatureC)) return false;
-  if (value.side !== undefined && value.side !== "left" && value.side !== "right") return false;
+  if (value.side !== undefined && value.side !== "left" && value.side !== "right" && value.side !== "both") return false;
   if (value.diaperKind !== undefined && !["wet", "dirty", "both"].includes(String(value.diaperKind))) return false;
   if (value.milkType !== undefined && value.milkType !== "formula" && value.milkType !== "expressed") return false;
   if (value.updatedAt !== undefined && !isValidDate(value.updatedAt)) return false;

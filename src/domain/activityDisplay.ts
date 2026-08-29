@@ -24,7 +24,7 @@ export function activityDetail(activity: Activity) {
     );
   }
   if (activity.type === "nursing") {
-    const side = activity.side === "left" ? "Left side" : "Right side";
+    const side = activity.side === "both" ? "Both sides" : activity.side === "left" ? "Left side" : "Right side";
     const detail = activity.endedAt
       ? `${side} · ${formatTime(activity.startedAt)}–${formatTime(activity.endedAt)} · ${humanDuration(minutesBetween(activity.startedAt, activity.endedAt))}`
       : `${side} · started ${formatTime(activity.startedAt)}`;

@@ -214,3 +214,26 @@ describe("validateDraft", () => {
     expect(result.ok && result.value.headCm).toBe(35);
   });
 });
+
+describe("a nursing session that used both sides", () => {
+  it("is one entry, not two", () => {
+    // The common case: start on the left, switch, stop. Logging that as two
+    // sessions doubles the feed count and halves both durations.
+    expect(isValidActivity({
+      id: "n1",
+      type: "nursing",
+      startedAt: "2026-08-29T02:00:00.000Z",
+      endedAt: "2026-08-29T02:24:00.000Z",
+      side: "both",
+    })).toBe(true);
+  });
+
+  it("still refuses a side that means nothing", () => {
+    expect(isValidActivity({
+      id: "n2",
+      type: "nursing",
+      startedAt: "2026-08-29T02:00:00.000Z",
+      side: "middle",
+    })).toBe(false);
+  });
+});
