@@ -67,6 +67,11 @@ export default defineConfig({
           /^\/1-year/,
           /^\/when-to-call-a-doctor/,
           /^\/how-much-milk/,
+          /^\/baby-bag-checklist/,
+          // Any file with an extension (sitemap.xml, robots.txt, llms.txt…):
+          // navigating to a FILE must show the file, not the app wearing
+          // its URL.
+          /\.[a-z0-9]+$/i,
         ],
         globPatterns: ["**/*.{html,js,css,png,svg,webmanifest}"],
         globIgnores: ["**/og-baby-tracker.png"],
