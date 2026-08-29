@@ -365,7 +365,9 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
   // Google recovery: the same three verbs the invite path has, plus the
   // disaster door. All of them ride the existing pairing machinery — a
   // recovered device IS a joined device.
-  async function googleProtect(credential: string): Promise<string | null> {
+  /** "elsewhere" = the account already guards a DIFFERENT family; the UI
+      offers to switch this device to it rather than parroting a 409. */
+  async function googleProtect(credential: string): Promise<string | "elsewhere" | null> {
     const p = live.current.pairing;
     if (!p || debugMode) return null;
     try {
@@ -373,6 +375,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
       saveAuthHint({ method: "google", email });
       return email;
     } catch (error) {
+      if (error instanceof transport.ApiError && error.status === 409) return "elsewhere";
       markFailed(error);
       showToast(error instanceof transport.ApiError ? error.message : OFFLINE_MESSAGE);
       return null;

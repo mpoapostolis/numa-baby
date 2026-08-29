@@ -765,7 +765,22 @@ export default function HomePage() {
                 onShare={() => void sharePartner()}
                 onImport={importData}
                 onOpenProfile={() => openSheet("profile")}
-                onEraseAll={eraseAllData}
+                onEraseAll={() => {
+                  // Erase means a CLEAN start. The pairing lives under its
+                  // own key and used to survive the wipe — so "start over"
+                  // quietly rejoined the old family and pulled everything
+                  // back down, which reads as an erase that didn't take.
+                  // Leave first (hands the key back), then wipe, then drop
+                  // the device-local hints that belong to the previous life.
+                  familySync.leaveFamily();
+                  try {
+                    window.localStorage.removeItem("numalog-auth-hint-v1");
+                    window.localStorage.removeItem("numalog-protect-intro-v1");
+                  } catch {
+                    // Cosmetic cleanups only.
+                  }
+                  eraseAllData();
+                }}
                 familySync={familySync}
                 incomingJoinCode={incomingJoinCode}
                 onIncomingCodeUsed={() => setIncomingJoinCode(null)}

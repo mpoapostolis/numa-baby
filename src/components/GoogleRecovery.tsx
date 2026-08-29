@@ -170,7 +170,28 @@ export function ProtectWithGoogle({ familySync, immediate = false }: { familySyn
       }
     }
     const linked = await familySync.googleProtect(credential);
-    track("google_protect", { ok: Boolean(linked) });
+    track("google_protect", { ok: Boolean(linked && linked !== "elsewhere"), elsewhere: linked === "elsewhere" });
+    if (linked === "elsewhere") {
+      // The owner's rule, verbatim: Continue with Google must land every
+      // device on whatever the cloud holds for that account. This device is
+      // in a different family — ask once, then switch: leave, rejoin as the
+      // account's family, merge this phone's entries up, pull the latest.
+      const move = window.confirm(
+        "This Google account's log lives in another family. Switch this phone to it? " +
+        "Entries on this phone will merge into that log — nothing is deleted.",
+      );
+      if (move) {
+        familySync.leaveFamily();
+        const outcome = await familySync.googleContinue(credential, "This phone");
+        track("google_protect_switch", { outcome });
+        if (outcome === "joined") {
+          const guard = await familySync.recoveryEmail();
+          if (guard) setEmail(guard);
+        }
+      }
+      setBusy(false);
+      return;
+    }
     if (linked) setEmail(linked);
     setBusy(false);
   }
