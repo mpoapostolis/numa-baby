@@ -28,6 +28,11 @@ import { Button } from "./components/ui/button";
 /** A phone on a home screen may never be opened cold. Ask anyway. */
 const UPDATE_CHECK_MS = 60 * 60 * 1000;
 
+/** How long after opening the app a found update still counts as "they are
+    still opening it", and can be applied on the spot. Long enough for the
+    round trip to the server, short enough that nobody has started logging. */
+const JUST_OPENED_MS = 12_000;
+
 export function PwaStatus() {
   const [offlineReady, setOfflineReady] = useState(false);
   const [needsRefresh, setNeedsRefresh] = useState(false);
@@ -35,12 +40,27 @@ export function PwaStatus() {
   // Read by the visibility handler, which must not be re-bound on every render.
   const waiting = useRef(false);
   const registration = useRef<ServiceWorkerRegistration | null>(null);
+  // When the app last came to the front. A check started then is allowed to
+  // finish and apply itself, because the parent is still watching it open.
+  // Stamped in the effect, not at render: a clock read during render is
+  // impure, and this one only needs to be right from the moment the service
+  // worker is registered anyway.
+  const openedAt = useRef(0);
 
   useEffect(() => {
+    openedAt.current = Date.now();
     const updateSW = registerSW({
       immediate: true,
       onOfflineReady: () => setOfflineReady(true),
       onNeedRefresh: () => {
+        // Found while they are still opening the app: take it now. The reload
+        // lands inside the launch they are already waiting through, so it
+        // costs nothing and they are current from the first tap rather than
+        // from the next visit.
+        if (Date.now() - openedAt.current < JUST_OPENED_MS) {
+          void updateApp.current();
+          return;
+        }
         waiting.current = true;
         setNeedsRefresh(true);
       },
@@ -74,7 +94,10 @@ export function PwaStatus() {
         return;
       }
       // Nothing waiting: ask. This is the check that was previously only
-      // happening on a cold start, which an installed app rarely gets.
+      // happening on a cold start, which an installed app rarely gets. If the
+      // answer comes back "yes" in the next few seconds, onNeedRefresh applies
+      // it immediately rather than saving it for later.
+      openedAt.current = Date.now();
       void registration.current?.update();
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
