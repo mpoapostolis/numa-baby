@@ -9,6 +9,14 @@
 // levels from infant sleep machines as a concern. And it never runs for ever
 // by accident: a timer is offered up front, because "I'll turn it off in a
 // minute" at 3am means it plays until morning.
+//
+// The silent switch is why this looked broken. On an iPhone, an <audio>
+// element defaults to the "ambient" session, which the physical mute switch
+// silences — and play() still RESOLVES, so the app believed it was playing,
+// showed a countdown, and made no sound. Nothing failed, so nothing could be
+// reported. Declaring the session as playback is what puts it on the media
+// channel, where the mute switch does not reach; where that API does not
+// exist, the hint below is the honest fallback.
 
 import { useEffect, useRef, useState } from "react";
 import "../styles/screens/soothe.css";
@@ -57,7 +65,9 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
     // iOS refuses to play media that could be fullscreen video unless this is
     // set, even for audio-only sources.
     audio.setAttribute("playsinline", "");
-    audio.crossOrigin = "anonymous";
+    // No crossOrigin: the source is a blob this app generated, so there is no
+    // origin to negotiate, and asking for a CORS handshake on a blob: URL is a
+    // way to make media fail for no benefit.
     audioRef.current = audio;
     return () => {
       audio.pause();
@@ -104,6 +114,17 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
     const audio = audioRef.current;
     if (!audio) return;
     setFailed(false);
+
+    // Claim the media channel BEFORE play(), inside the gesture. Without this
+    // an iPhone plays white noise into a channel its mute switch silences —
+    // successfully, and inaudibly.
+    try {
+      const session = (navigator as Navigator & { audioSession?: { type: string } }).audioSession;
+      if (session) session.type = "playback";
+    } catch {
+      // Older WebKit, or a browser that has the property but refuses the value.
+      // The hint under the controls covers it.
+    }
     // The source is normally already attached by the effect above; this only
     // does work on the very first tap, before that effect has run.
     const wanted = sourceUrl();
@@ -243,6 +264,17 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
             Your phone would not start the sound. Turn the silent switch off, check the
             volume, and try once more — some browsers also block audio until you have
             interacted with the page.
+          </p>
+        )}
+
+        {/* Shown while it believes it is playing, because that is exactly when
+            a silenced phone is indistinguishable from a broken app. There is no
+            way to ask the phone whether its mute switch is on, so the only
+            honest thing is to say so. */}
+        {playing && !failed && (
+          <p className="soothe-hint">
+            No sound? Turn up the volume, and on an iPhone check the switch on the side —
+            it silences apps even when they are playing.
           </p>
         )}
 

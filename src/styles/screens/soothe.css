@@ -10,6 +10,15 @@
 .soothe-dialog {
   display: grid;
   gap: 16px;
+  /* Two noise kinds, three lullabies, a volume slider, four timer choices and
+     a source note add up to more than a phone is tall — measured at 832px on
+     an 812px screen. Centred and unscrollable, that put the top of the sheet
+     ABOVE the top of the window: the title and the first sound were simply
+     off-screen with no way to reach them, which is the "I cannot see it" this
+     fixes. It scrolls now, like every other sheet in the app. */
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .soothe-kinds {
@@ -131,5 +140,13 @@
   background: color-mix(in oklab, var(--glyph-health) 10%, var(--card));
   color: var(--foreground);
   font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+/* The quiet line that turns "this app is broken" into "the switch is on". */
+.soothe-hint {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 0.75rem;
   line-height: 1.5;
 }
