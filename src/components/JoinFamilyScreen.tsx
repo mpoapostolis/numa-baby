@@ -7,6 +7,8 @@
 // in hand, one tap joins, and the profile and the whole history arrive over
 // the sync a moment later.
 
+// Ships with this lazy chunk, not the app shell — the budget rule.
+import "../styles/screens/settings.css";
 import { useState } from "react";
 import { Users } from "lucide-react";
 import { Button } from "./ui/button";

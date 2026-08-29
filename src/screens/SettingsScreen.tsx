@@ -1,3 +1,5 @@
+// Ships with this lazy chunk, not the app shell — the budget rule.
+import "../styles/screens/settings.css";
 import { ArrowLeftRight, Baby, Bell, Download, Moon, Share2, ShieldCheck, Sun, Trash2, Upload } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
 import {

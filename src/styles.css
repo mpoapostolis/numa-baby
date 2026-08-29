@@ -9,7 +9,6 @@
 @import "./styles/screens/today.css";
 @import "./styles/screens/timeline.css";
 @import "./styles/screens/insights.css";
-@import "./styles/screens/settings.css";
 @import "./styles/screens/onboarding.css";
 
 @custom-variant dark (&:is(.dark *));

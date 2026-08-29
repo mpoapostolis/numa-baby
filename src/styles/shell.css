@@ -593,22 +593,3 @@
   white-space: normal;
   text-overflow: clip;
 }
-
-/* The move banner wraps its copy (same rule as the recovered notice: a
-   sentence explaining where a family's data lives must never be ellipsised)
-   and stacks its two buttons. */
-.move-banner {
-  flex-wrap: wrap;
-}
-
-.move-banner small {
-  overflow: visible;
-  white-space: normal;
-  text-overflow: clip;
-}
-
-.move-banner-actions {
-  display: flex;
-  gap: 8px;
-  margin-left: auto;
-}

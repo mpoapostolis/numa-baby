@@ -1382,3 +1382,55 @@ body:has(.feedback-bubble) .content {
   display: flex;
   gap: 8px;
 }
+
+/* The feedback form. Lives here, not in settings.css: the bubble's dialog
+   opens it from the main shell, before Settings has ever been visited. */
+/* The feedback form. One box, one optional line: someone typing here is
+   usually annoyed, often tired and frequently one-handed, and every extra
+   field is a reason to give up instead. */
+.feedback-form {
+  display: grid;
+  gap: 8px;
+}
+
+.feedback-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.9375rem;
+  resize: vertical;
+}
+
+.feedback-input:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 1px;
+}
+
+.feedback-optional {
+  margin-left: 6px;
+  color: var(--ink-3);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.feedback-form button[type="submit"] {
+  justify-self: start;
+  min-height: 44px;
+}
+
+.feedback-thanks {
+  margin: 0;
+  color: var(--signal);
+  font-weight: 500;
+}
+
+.feedback-error {
+  margin: 0;
+  color: var(--glyph-health);
+  font-size: 0.8125rem;
+}

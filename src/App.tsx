@@ -34,7 +34,6 @@ import { parseStoredData } from "./domain/validate";
 import {
   HANDOFF_PATH,
   handoffReturnUrl,
-  moveTarget,
   readHandoffPayload,
   readHandoffTarget,
 } from "./domain/handoff";
@@ -69,8 +68,6 @@ const HandoffScreen = lazy(() => import("./screens/HandoffScreen").then((m) => (
 // pure function and stays here; the card itself has no business in the bundle
 // a parent downloads at 3am.
 const BackupNudgeCard = lazy(() => import("./components/BackupNudge").then((m) => ({ default: m.BackupNudgeCard })));
-// Only the OLD address ever shows this; the new one must not pay for it.
-const MoveBanner = lazy(() => import("./components/MoveBanner").then((m) => ({ default: m.MoveBanner })));
 
 // A future-dated feed from a restored backup must never arm a timer that wraps
 // the 32-bit setTimeout ceiling and fires instantly.
@@ -448,11 +445,6 @@ export default function HomePage() {
           onSend={async () => {
             track("handoff_sent");
             try {
-              window.localStorage.setItem("numalog-moved-v1", "1");
-            } catch {
-              // The banner falls back to its 14-day dismissal.
-            }
-            try {
               const { packHandoff } = await import("./domain/handoff");
               const packed = await packHandoff(exportPayload());
               if (!packed) return "too-large" as const;
@@ -561,12 +553,6 @@ export default function HomePage() {
         )}
 
         <InAppEscape />
-
-        {moveTarget(window.location.origin) !== null && (
-          <Suspense fallback={null}>
-            <MoveBanner />
-          </Suspense>
-        )}
 
         {recoveredNotice && (
           <div className="banner-stack">
