@@ -47,15 +47,25 @@ export async function handleLeave(
   familyId: string,
   tokenHash: string,
 ): Promise<Response> {
+  // Read the device_id BEFORE deleting the token row that carries it —
+  // deleting first left the subquery empty and the devices row immortal,
+  // so every leave inflated the family's device count forever.
+  const mine = await client.execute({
+    sql: "select device_id from device_tokens where token_hash = ? and family_id = ?",
+    args: [tokenHash, familyId],
+  }).catch(() => ({ rows: [] as Array<{ device_id: unknown }> }));
+  const deviceId = mine.rows.length && mine.rows[0].device_id ? String(mine.rows[0].device_id) : null;
   await client.execute({
     sql: "delete from device_tokens where token_hash = ? and family_id = ?",
     args: [tokenHash, familyId],
   });
   // The device row goes too, so the family's device count tells the truth.
-  await client.execute({
-    sql: "delete from devices where family_id = ? and id = (select device_id from device_tokens where token_hash = ?)",
-    args: [familyId, tokenHash],
-  }).catch(() => undefined);
+  if (deviceId) {
+    await client.execute({
+      sql: "delete from devices where family_id = ? and id = ?",
+      args: [familyId, deviceId],
+    }).catch(() => undefined);
+  }
   return json({ ok: true });
 }
 

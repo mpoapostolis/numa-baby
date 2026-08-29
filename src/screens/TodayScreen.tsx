@@ -212,7 +212,7 @@ type TodayScreenProps = {
   onEdit: (activity: Activity) => void;
   onSeeTimeline: () => void;
   /** Where the log lives right now, in one word. */
-  cloudState: "none" | "synced" | "syncing" | "offline";
+  cloudState: "none" | "synced" | "syncing" | "offline" | "revoked";
   /** Tap on the note — the doors when unprotected, the details when synced. */
   onOpenProtection: () => void;
 };
@@ -510,11 +510,12 @@ export default function TodayScreen({
           {/* The quiet truth about where the data lives — all four of them.
               A state, not a nudge: small, constant, honest. Unprotected taps
               open the doors; a synced one opens the details. */}
-          <button type="button" className={cloudState === "none" ? "cloud-note" : "cloud-note is-good"} onClick={onOpenProtection}>
+          <button type="button" className={cloudState === "none" || cloudState === "revoked" ? "cloud-note" : "cloud-note is-good"} onClick={onOpenProtection}>
             {cloudState === "none" && <><CloudOff size={12} aria-hidden="true" /> On this phone only</>}
             {cloudState === "synced" && <><Cloud size={12} aria-hidden="true" /> Synced to the cloud</>}
             {cloudState === "syncing" && <><Cloud size={12} aria-hidden="true" /> Syncing…</>}
             {cloudState === "offline" && <><CloudOff size={12} aria-hidden="true" /> Offline — will catch up</>}
+            {cloudState === "revoked" && <><CloudOff size={12} aria-hidden="true" /> Sync disconnected — tap to fix</>}
           </button>
           <p className="welcome-date">
             {statusDateFormat.format(new Date(minuteClock))}

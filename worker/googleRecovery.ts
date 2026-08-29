@@ -61,29 +61,50 @@ export async function handleGoogleLink(
   const identity = await identityFrom(body, clientId, json);
   if (identity instanceof Response) return identity;
   await ensureTable(client);
-  // The guard never moves silently. Re-linking on the SAME family refreshes
-  // the row; pointing at a DIFFERENT family is refused with the truth —
-  // otherwise a second phone tapping "Protect" would quietly strip recovery
-  // from a log that may have no other protection left.
+  // The guard never moves silently — and the two registries are ONE lock:
+  // an address that guards a family through the magic-link door must refuse
+  // here exactly as a sub that guards one through this door. Otherwise a
+  // second phone tapping "Protect" would quietly strip recovery from a log
+  // that may have no other protection left.
+  await client
+    .execute(
+      "CREATE TABLE IF NOT EXISTS recovery_emails (email TEXT PRIMARY KEY, family_id TEXT NOT NULL REFERENCES families(id), created_at TEXT NOT NULL)",
+    )
+    .catch(() => undefined);
   const existing = await client.execute({
-    sql: "SELECT family_id FROM recovery_identities WHERE google_sub = ?",
-    args: [identity.sub],
+    sql: `SELECT family_id FROM recovery_identities WHERE google_sub = ?
+          UNION ALL
+          SELECT family_id FROM recovery_emails WHERE email = ?`,
+    args: [identity.sub, identity.email],
   });
-  if (existing.rows.length && String(existing.rows[0].family_id) !== familyId) {
+  if (existing.rows.some((row) => String(row.family_id) !== familyId)) {
     return json({
       error:
         "This Google account already protects another log. To bring that log onto this phone, use Restore on a fresh phone or Join with a code — or remove its protection from the other device first.",
     }, 409);
   }
+  // The upsert only lands when the binding stays on the SAME family, and the
+  // read-back arbitrates: two concurrent links can both pass the check above,
+  // but only one binding survives, and the loser hears the same 409.
   await client.execute({
     sql: `INSERT INTO recovery_identities (google_sub, family_id, email, created_at)
           VALUES (?, ?, ?, ?)
           ON CONFLICT(google_sub) DO UPDATE SET
-            family_id = excluded.family_id,
             email = excluded.email,
-            created_at = excluded.created_at`,
+            created_at = excluded.created_at
+          WHERE recovery_identities.family_id = excluded.family_id`,
     args: [identity.sub, familyId, identity.email, new Date().toISOString()],
   });
+  const settled = await client.execute({
+    sql: "SELECT family_id FROM recovery_identities WHERE google_sub = ?",
+    args: [identity.sub],
+  });
+  if (!settled.rows.length || String(settled.rows[0].family_id) !== familyId) {
+    return json({
+      error:
+        "This Google account already protects another log. To bring that log onto this phone, use Restore on a fresh phone or Join with a code — or remove its protection from the other device first.",
+    }, 409);
+  }
   return json({ email: identity.email });
 }
 
@@ -137,7 +158,14 @@ export async function handleGoogleRecover(
   json: JsonResponder,
   mintDevice: (familyId: string, deviceLabel: string) => Promise<{ familyId: string; token: string; deviceId: string }>,
 ): Promise<Response> {
-  const body = (await request.json().catch(() => ({}))) as { credential?: unknown; deviceLabel?: unknown };
+  const body = (await request.json().catch(() => ({}))) as {
+    credential?: unknown;
+    deviceLabel?: unknown;
+    /** true = answer "does this account guard anything?" without minting —
+        the UI asks BEFORE showing the merge-or-adopt dialog, so nobody is
+        made to choose over a log that doesn't exist. */
+    probe?: unknown;
+  };
   const identity = await identityFrom(body, clientId, json);
   if (identity instanceof Response) return identity;
   await ensureTable(client);
@@ -155,6 +183,7 @@ export async function handleGoogleRecover(
           ORDER BY created_at DESC LIMIT 1`,
     args: [identity.sub, identity.email],
   });
+  if (body.probe === true) return json({ guarded: rows.rows.length > 0 });
   if (!rows.rows.length) {
     return json({ error: "No log is protected by this Google account. If you used a different address, sign in with that one." }, 404);
   }

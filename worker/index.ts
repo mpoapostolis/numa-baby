@@ -56,6 +56,36 @@ type Env = {
 const INVITE_TTL_MS = 15 * 60 * 1000;
 const MAX_PUSH_BATCH = 500;
 const MAX_PAYLOAD_BYTES = 8_192;
+// Generous on purpose: whole carriers share one IP behind mobile NAT, and a
+// real family must never be locked out by a stranger's typos — while thirty
+// tries against a million codes stays a lottery ticket.
+const JOIN_TRIES_PER_HOUR = 30;
+
+// activities predates received_at. Rows carry two clocks on purpose:
+// updated_at is the CLIENT's stamp and decides LWW conflicts; received_at is
+// the SERVER's stamp and decides what a pull has already seen. Filtering
+// pulls by the client stamp was the second half of the lost-restore bug: a
+// merged backup pushes rows whose updated_at sits months in the past, so
+// every partner's cursor had already sailed past them — pushed, stored, and
+// never delivered. SQLite has no ADD COLUMN IF NOT EXISTS; the duplicate is
+// caught and treated as success. Old rows backfill to NOW, not to their
+// client stamp: every device re-pulls its family's log exactly once (the
+// merge is idempotent, so this costs a few reads and loses nothing), which
+// closes any hole a pre-migration restore had already punched.
+let receivedAtReady = false;
+async function ensureReceivedAt(client: ReturnType<typeof createClient>) {
+  if (receivedAtReady) return;
+  try {
+    await client.execute("ALTER TABLE activities ADD COLUMN received_at TEXT");
+  } catch (error) {
+    if (!String(error).toLowerCase().includes("duplicate column")) throw error;
+  }
+  await client.execute({
+    sql: "UPDATE activities SET received_at = ? WHERE received_at IS NULL",
+    args: [new Date().toISOString()],
+  });
+  receivedAtReady = true;
+}
 
 function db(env: Env) {
   return createClient({ url: env.TURSO_DATABASE_URL, authToken: env.TURSO_AUTH_TOKEN });
@@ -191,12 +221,37 @@ async function handleInvite(env: Env, familyId: string): Promise<Response> {
   return json({ code, expiresAt });
 }
 
+// Six digits is a million codes and a 15-minute window — safe against a
+// human, farmable by a loop. The hourly budget is a family mistyping freely
+// and a brute force getting nowhere.
+async function reserveJoinTry(client: ReturnType<typeof db>, ip: string): Promise<boolean> {
+  await client
+    .execute(
+      "CREATE TABLE IF NOT EXISTS join_budget (ip TEXT PRIMARY KEY, window_start TEXT NOT NULL, tries INTEGER NOT NULL)",
+    )
+    .catch(() => undefined);
+  const windowStart = new Date(Date.now() - 3600_000).toISOString();
+  const result = await client.execute({
+    sql: `INSERT INTO join_budget (ip, window_start, tries) VALUES (?, ?, 1)
+          ON CONFLICT(ip) DO UPDATE SET
+            tries = CASE WHEN join_budget.window_start < ? THEN 1 ELSE join_budget.tries + 1 END,
+            window_start = CASE WHEN join_budget.window_start < ? THEN excluded.window_start ELSE join_budget.window_start END
+          RETURNING tries`,
+    args: [ip, new Date().toISOString(), windowStart, windowStart],
+  });
+  return Number(result.rows[0]?.tries ?? JOIN_TRIES_PER_HOUR + 1) <= JOIN_TRIES_PER_HOUR;
+}
+
 async function handleJoin(env: Env, request: Request): Promise<Response> {
   await ensureDeviceLink(db(env));
   const body = (await request.json().catch(() => ({}))) as { code?: string; deviceLabel?: string };
   const code = String(body.code ?? "").trim();
   if (!/^\d{6}$/.test(code)) return bad("Enter the 6-digit code from the other phone.");
   const client = db(env);
+  const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
+  if (!(await reserveJoinTry(client, ip))) {
+    return bad("Too many attempts from this connection — wait a while and try again.", 429);
+  }
   const found = await client.execute({
     sql: "SELECT family_id, expires_at, used_at FROM invites WHERE code = ?",
     args: [code],
@@ -232,11 +287,15 @@ async function handlePull(env: Env, request: Request, familyId: string): Promise
   const since = url.searchParams.get("since") ?? "";
   const deviceId = url.searchParams.get("device") ?? undefined;
   const client = db(env);
+  await ensureReceivedAt(client);
+  // Filter and order by the SERVER clock: "give me what arrived after my
+  // cursor" is the only question a pull can ask that a backfilled restore
+  // (old client stamps, fresh arrival) still answers correctly.
   const [rows, meta, devices] = await Promise.all([
     client.execute({
       sql: since
-        ? "SELECT id, payload, updated_at, deleted FROM activities WHERE family_id = ? AND updated_at > ? ORDER BY updated_at LIMIT 2000"
-        : "SELECT id, payload, updated_at, deleted FROM activities WHERE family_id = ? ORDER BY updated_at LIMIT 2000",
+        ? "SELECT id, payload, updated_at, deleted, COALESCE(received_at, updated_at) AS received_at FROM activities WHERE family_id = ? AND COALESCE(received_at, updated_at) > ? ORDER BY COALESCE(received_at, updated_at) LIMIT 2000"
+        : "SELECT id, payload, updated_at, deleted, COALESCE(received_at, updated_at) AS received_at FROM activities WHERE family_id = ? ORDER BY COALESCE(received_at, updated_at) LIMIT 2000",
       args: since ? [familyId, since] : [familyId],
     }),
     client.execute({ sql: "SELECT profile, updated_at FROM family_meta WHERE family_id = ?", args: [familyId] }),
@@ -249,6 +308,7 @@ async function handlePull(env: Env, request: Request, familyId: string): Promise
       payload: JSON.parse(String(r.payload)),
       updatedAt: String(r.updated_at),
       deleted: Number(r.deleted) === 1,
+      receivedAt: String(r.received_at),
     })),
     profile: meta.rows.length && meta.rows[0].profile ? JSON.parse(String(meta.rows[0].profile)) : null,
     profileUpdatedAt: meta.rows.length ? meta.rows[0].updated_at : null,
@@ -266,7 +326,9 @@ async function handlePush(env: Env, request: Request, familyId: string): Promise
   } | null;
   if (!body || !Array.isArray(body.activities)) return bad("Malformed sync payload.");
   if (body.activities.length > MAX_PUSH_BATCH) return bad("Batch too large.", 413);
+  await ensureReceivedAt(db(env));
 
+  const receivedAt = new Date().toISOString();
   const statements = [];
   for (const activity of body.activities) {
     if (typeof activity.id !== "string" || typeof activity.updatedAt !== "string") continue;
@@ -275,16 +337,19 @@ async function handlePush(env: Env, request: Request, familyId: string): Promise
     // Server-side LWW guard: an older write can never clobber a newer row.
     // On an EXACT timestamp tie the tombstone wins — mirrors the client
     // merge, so server and phones always converge to the same answer.
+    // received_at is stamped with the server's own clock either way, so
+    // partners' pulls see the arrival even when updated_at is months old.
     statements.push({
-      sql: `INSERT INTO activities (family_id, id, payload, updated_at, deleted)
-            VALUES (?, ?, ?, ?, ?)
+      sql: `INSERT INTO activities (family_id, id, payload, updated_at, deleted, received_at)
+            VALUES (?, ?, ?, ?, ?, ?)
             ON CONFLICT(family_id, id) DO UPDATE SET
               payload = excluded.payload,
               updated_at = excluded.updated_at,
-              deleted = excluded.deleted
+              deleted = excluded.deleted,
+              received_at = excluded.received_at
             WHERE excluded.updated_at > activities.updated_at
                OR (excluded.updated_at = activities.updated_at AND excluded.deleted > activities.deleted)`,
-      args: [familyId, activity.id, payload, activity.updatedAt, activity.deleted ? 1 : 0],
+      args: [familyId, activity.id, payload, activity.updatedAt, activity.deleted ? 1 : 0, receivedAt],
     });
   }
   if (body.profile && typeof body.profileUpdatedAt === "string") {

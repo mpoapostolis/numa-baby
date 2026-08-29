@@ -54,7 +54,7 @@ type FamilySyncOptions = {
   readPersisted: () => { activities: Activity[]; profile: Profile; profileUpdatedAt?: string };
   /** Makes an unstamped legacy profile syncable. Only ever called on create. */
   stampProfileForSync: () => void;
-  mergeRemote: (remote: Activity[], profile?: Profile, profileUpdatedAt?: string) => { added: number; updated: number };
+  mergeRemote: (remote: Activity[], profile?: Profile, profileUpdatedAt?: string) => { added: number; updated: number; persisted: boolean };
   showToast: (message: string) => void;
 };
 
@@ -145,6 +145,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     setStatus((s) => (s.phase === "syncing" ? s : { ...s, phase: "syncing" }));
     try {
       let added = 0;
+      let allPersisted = true;
       let since = sinceParam(before.lastSyncAt, open ? OPEN_OVERLAP_MS : POLL_OVERLAP_MS);
       let page: transport.PullResult;
       let guard = 0;
@@ -159,22 +160,31 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
         }
         const profile = sanitizeProfile(page.profile) ?? undefined;
         const stamp = typeof page.profileUpdatedAt === "string" ? page.profileUpdatedAt : undefined;
-        added += mergeRemote(rows, profile, stamp).added;
+        const merged = mergeRemote(rows, profile, stamp);
+        added += merged.added;
+        // A merge that could not persist (storage blocked) must not let the
+        // cursor advance past rows this device never actually kept.
+        if (rows.length && merged.persisted === false) allPersisted = false;
         // Keyset pagination for oversized backlogs (the first pull after a
-        // join): pages are capped at 2000 rows, updatedAt ascending. Step the
-        // cursor 1ms behind the last row so boundary ties re-fetch instead of
-        // skip; the idempotent merge makes the repeats free, and the guard
-        // bounds the pathological all-one-stamp page.
+        // join): pages are capped at 2000 rows, receivedAt ascending — the
+        // server's arrival clock, so a restored backup's months-old entries
+        // still page through. Step the cursor 1ms behind the last row so
+        // boundary ties re-fetch instead of skip; the idempotent merge makes
+        // the repeats free, and the guard bounds the pathological page.
         const last = Array.isArray(page.activities) ? page.activities[page.activities.length - 1] : undefined;
-        const lastMs = last ? new Date(last.updatedAt).getTime() : NaN;
+        const lastMs = last ? new Date(last.receivedAt ?? last.updatedAt).getTime() : NaN;
         if (Number.isFinite(lastMs)) since = new Date(lastMs - 1).toISOString();
         guard += 1;
       } while (Array.isArray(page.activities) && page.activities.length >= PAGE && guard < 20);
       const cur = live.current.pairing;
       // Left (or re-paired) while the pull was in flight — drop the result.
       if (!cur || cur.token !== before.token) return;
-      adoptPairing({ ...cur, lastSyncAt: page.serverTime });
-      setStatus({ phase: "idle", lastSyncAt: page.serverTime, deviceCount: page.deviceCount });
+      if (allPersisted) adoptPairing({ ...cur, lastSyncAt: page.serverTime });
+      setStatus({
+        phase: "idle",
+        lastSyncAt: allPersisted ? page.serverTime : cur.lastSyncAt || null,
+        deviceCount: page.deviceCount,
+      });
       // Remote arrivals surface exactly once per pull, and only real ones.
       if (added > 0) showToast(`Synced — ${added} new from your partner`);
       // We're clearly online: flush anything the partner is still missing.
@@ -237,13 +247,21 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
       if (maxStamp > now) maxStamp = now;
       const cur = live.current.pairing;
       if (!cur || cur.token !== before.token) return;
-      // The whole log is across; the cursor can be trusted again.
-      if (backfilled) live.current.backfilled = false;
-      adoptPairing({
-        ...cur,
-        lastPushedAt: maxStamp,
-        lastPushedProfileAt: sendProfile && profileUpdatedAt ? profileUpdatedAt : cur.lastPushedProfileAt,
-      });
+      if (cur.lastPushedAt !== before.lastPushedAt) {
+        // A backup merged in MID-FLIGHT and rewound the cursor underneath
+        // this push. Advancing to maxStamp now would bury the rewind and
+        // strand the merged entries below the cursor again — keep the
+        // rewound value and run once more from there instead.
+        l.pushAgain = true;
+      } else {
+        // The whole log is across; the cursor can be trusted again.
+        if (backfilled) live.current.backfilled = false;
+        adoptPairing({
+          ...cur,
+          lastPushedAt: maxStamp,
+          lastPushedProfileAt: sendProfile && profileUpdatedAt ? profileUpdatedAt : cur.lastPushedProfileAt,
+        });
+      }
       setStatus((s) => (s.phase === "syncing" ? { ...s, phase: "idle" } : s));
     } catch (error) {
       markFailed(error);
@@ -336,7 +354,11 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     });
     setStatus({ phase: "idle", lastSyncAt: null, deviceCount: null });
     // The effects above notice `paired` flip true and take it from here:
-    // a full first pull, then the entire local backlog pushes up.
+    // a full first pull, then the entire local backlog pushes up. But a
+    // SWITCH (paired -> paired, new family) never flips that flag — pull
+    // right away, or "your log is on its way" would mean "in a minute".
+    // pullBusy dedupes the double-fire when the effect runs too.
+    if (bootState === "ready") window.setTimeout(() => void runPull(true), 0);
   }
 
   async function createFamily(label: string): Promise<boolean> {
@@ -356,8 +378,11 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
   async function joinFamily(code: string, label: string): Promise<boolean> {
     if (debugMode) return false;
     try {
+      // Proof before mutation: the profile claim is only demoted once the
+      // join actually succeeded — a bad code must change nothing local.
+      const minted = await transport.joinFamily(code, label);
       demoteProfileForJoin();
-      beginPairing(await transport.joinFamily(code, label), label);
+      beginPairing(minted, label);
       return true;
     } catch (error) {
       markFailed(error);
@@ -410,35 +435,38 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     }
   }
 
-  async function googleRecover(credential: string, label: string): Promise<boolean> {
-    if (debugMode) return false;
-    try {
-      demoteProfileForJoin();
-      beginPairing(await transport.googleRecover(credential, label), label);
-      saveAuthHint({ method: "google" });
-      // The parent must SEE the rescue working, not deduce it from entries
-      // trickling in. The pull that follows fills the screen underneath.
-      showToast("Welcome back — your log is on its way.");
-      return true;
-    } catch (error) {
-      markFailed(error);
-      showToast(error instanceof transport.ApiError ? error.message : OFFLINE_MESSAGE);
-      return false;
-    }
-  }
-
-  /**
-   * The continue-with-Google front door for the PROTECT surface. If this
-   * account already guards a family, the right move is to JOIN it — that is
-   * what "continue" means — and the latest data follows. Only when no guard
-   * exists anywhere does protecting mean creating something new. The 404 is
-   * an answer here, never an error to toast.
-   */
   /** How many live entries this device holds — the UI asks before a join. */
   function localEntryCount(): number {
     return readPersisted().activities.filter((a) => !a.deleted).length;
   }
 
+  /** "Does this account guard a log?" — no side effects, for gating the
+      merge-or-adopt dialog. Null means the question itself failed (offline,
+      Google hiccup) and the failure was already toasted. */
+  async function googleProbe(credential: string): Promise<boolean | null> {
+    if (debugMode) return null;
+    try {
+      return (await transport.googleProbe(credential)).guarded;
+    } catch (error) {
+      markFailed(error);
+      showToast(error instanceof transport.ApiError ? error.message : OFFLINE_MESSAGE);
+      return null;
+    }
+  }
+
+  /**
+   * The continue-with-Google front door — for the protect surface, the
+   * restore surface, and the switch-families dialog alike. If this account
+   * guards a family, "continue" means JOIN IT and let the latest data
+   * follow; the 404 is an answer here ("none"), never an error to toast.
+   *
+   * Proof strictly before mutation: NOTHING local changes until the server
+   * has minted the new key. Only then does the old pairing (if any) get
+   * left, the local entries get dropped (when adoption was chosen in a real
+   * dialog) or the profile claim demoted (so the family's identity wins),
+   * and the new pairing begin. A failure anywhere leaves the device exactly
+   * as it was — same family, same entries, same profile.
+   */
   async function googleContinue(
     credential: string,
     label: string,
@@ -446,13 +474,20 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
   ): Promise<"joined" | "none" | "failed"> {
     if (debugMode) return "failed";
     try {
-      // The merge-or-adopt decision was made in a real dialog upstream —
-      // this hook only executes it. Discard drops entries AND the profile
-      // claim; merge keeps entries and drops only the claim.
+      const minted = await transport.googleRecover(credential, label);
+      const old = live.current.pairing;
+      if (old) {
+        // Switching families: hand the old key back, fire-and-forget — the
+        // new pairing must not be blocked by the old server row.
+        void transport.leaveFamily(old.token).catch(() => undefined);
+        window.clearTimeout(live.current.pushTimer);
+      }
       if (options.discardLocal) dropLocalForAdoption();
       else demoteProfileForJoin();
-      beginPairing(await transport.googleRecover(credential, label), label);
+      beginPairing(minted, label);
       saveAuthHint({ method: "google" });
+      // The parent must SEE the rescue working, not deduce it from entries
+      // trickling in. The pull that follows fills the screen underneath.
       showToast("Welcome back — your log is on its way.");
       return "joined";
     } catch (error) {
@@ -511,7 +546,9 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     // purpose: if the network is down, the local goodbye must still happen —
     // a parent tapping "leave" should never be blocked by connectivity. The
     // stale token is then cleared by the other phone's "sign out all".
-    const current = pairing;
+    // Read the LIVE pairing, not the render snapshot: a rollback right after
+    // createFamily happens inside one tick, before any re-render.
+    const current = live.current.pairing;
     if (current) void transport.leaveFamily(current.token).catch(() => undefined);
 
     const l = live.current;
@@ -551,7 +588,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     joinFamily,
     googleProtect,
     googleUnprotect,
-    googleRecover,
+    googleProbe,
     googleContinue,
     localEntryCount,
     emailProtect,

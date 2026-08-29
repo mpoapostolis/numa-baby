@@ -84,6 +84,24 @@ function normalise(raw: unknown): string | null {
   return email;
 }
 
+/** The one lock both doors share: which family does this address guard right
+    now, through EITHER registry? Null when it guards nothing. */
+async function guardedFamily(client: Client, email: string): Promise<string | null> {
+  await client
+    .execute(
+      "CREATE TABLE IF NOT EXISTS recovery_identities (google_sub TEXT PRIMARY KEY, family_id TEXT NOT NULL REFERENCES families(id), email TEXT NOT NULL, created_at TEXT NOT NULL)",
+    )
+    .catch(() => undefined);
+  const rows = await client.execute({
+    sql: `SELECT family_id, created_at FROM recovery_emails WHERE email = ?
+          UNION ALL
+          SELECT family_id, created_at FROM recovery_identities WHERE email = ?
+          ORDER BY created_at DESC LIMIT 1`,
+    args: [email, email],
+  });
+  return rows.rows.length ? String(rows.rows[0].family_id) : null;
+}
+
 /** Spend one send from the address's hourly budget; false means exhausted. */
 async function reserveSend(client: Client, email: string, now: number): Promise<boolean> {
   const windowStart = new Date(now - 3600_000).toISOString();
@@ -142,6 +160,16 @@ export async function handleEmailLink(
   const email = normalise(body.email);
   if (!email) return json({ error: "That doesn't look like an email address." }, 400);
   await ensureTables(client);
+  // Refuse at SEND time, not at tap time: learning "this address is taken"
+  // fifteen minutes later, from inside an inbox, is the confusing version of
+  // the same refusal. The caller is authenticated, so this leaks nothing.
+  const guards = await guardedFamily(client, email);
+  if (guards && guards !== familyId) {
+    return json({
+      error:
+        "This address already protects another log. To bring that log onto a phone, use Restore — or remove its protection from the other device first.",
+    }, 409);
+  }
   const now = Date.now();
   if (!(await reserveSend(client, email, now))) {
     return json({ error: "Too many emails to that address just now — try again in an hour." }, 429);
@@ -255,28 +283,45 @@ export async function handleEmailRedeem(
   const familyId = row.family_id === null ? null : String(row.family_id);
   if (!familyId) return json({ error: "That link is not valid." }, 400);
 
-  // Either purpose confirms the binding — a recover tap proves the inbox
-  // just as well as a confirm tap does. But a CONFIRM tap must never MOVE
-  // a guard: if this address already protects a different family, refusing
-  // is the only safe answer — the same 409 rule the Google door enforces.
   if (String(row.purpose) === "link") {
-    const existing = await client.execute({
-      sql: "SELECT family_id FROM recovery_emails WHERE email = ?",
-      args: [email],
-    });
-    if (existing.rows.length && String(existing.rows[0].family_id) !== familyId) {
+    // A confirm tap completes the binding — but must never MOVE a guard: if
+    // this address already protects a different family through EITHER
+    // registry, refusing is the only safe answer, same as the Google door.
+    const guards = await guardedFamily(client, email);
+    if (guards && guards !== familyId) {
       return json({
         error:
           "This address already protects another log. To bring that log onto a phone, use Restore — or remove its protection from the other device first.",
       }, 409);
     }
+    // Conditional upsert plus read-back: two racing confirms both pass the
+    // check above, but only one binding survives; the loser hears the 409.
+    await client.execute({
+      sql: `INSERT INTO recovery_emails (email, family_id, created_at) VALUES (?, ?, ?)
+            ON CONFLICT(email) DO UPDATE SET created_at = excluded.created_at
+            WHERE recovery_emails.family_id = excluded.family_id`,
+      args: [email, familyId, now],
+    });
+    const settled = await client.execute({
+      sql: "SELECT family_id FROM recovery_emails WHERE email = ?",
+      args: [email],
+    });
+    if (!settled.rows.length || String(settled.rows[0].family_id) !== familyId) {
+      return json({
+        error:
+          "This address already protects another log. To bring that log onto a phone, use Restore — or remove its protection from the other device first.",
+      }, 409);
+    }
+    return json({ confirmed: true, email });
   }
-  await client.execute({
-    sql: `INSERT INTO recovery_emails (email, family_id, created_at) VALUES (?, ?, ?)
-          ON CONFLICT(email) DO UPDATE SET family_id = excluded.family_id, created_at = excluded.created_at`,
-    args: [email, familyId, now],
-  });
-  if (String(row.purpose) === "link") return json({ confirmed: true, email });
+  // A recover tap never writes any binding — the guard already exists; the
+  // token was minted FROM it. Re-resolve it instead: a link that outlived a
+  // guard move (removed, re-bound elsewhere) must refuse, not resurrect the
+  // old binding or mint keys into a family the address no longer guards.
+  const guards = await guardedFamily(client, email);
+  if (guards !== familyId) {
+    return json({ error: "That link is stale — the protection changed since it was sent. Ask for a fresh one." }, 410);
+  }
   const minted = await mintDevice(familyId, typeof body.deviceLabel === "string" ? body.deviceLabel : "");
   return json({ ...minted, email });
 }

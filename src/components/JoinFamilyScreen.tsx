@@ -28,6 +28,9 @@ type JoinFamilyScreenProps = {
 export default function JoinFamilyScreen({ code, familySync, onJoined, onSkip }: JoinFamilyScreenProps) {
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  // Almost always zero (a fresh phone is the whole point) — but a phone that
+  // HAS been logging deserves to know a join merges, before the tap.
+  const [localCount] = useState(() => familySync.localEntryCount());
 
   async function handleJoin() {
     setBusy(true);
@@ -50,10 +53,18 @@ export default function JoinFamilyScreen({ code, familySync, onJoined, onSkip }:
       </p>
       <p className="join-code figure">{code}</p>
 
+      {localCount > 0 && (
+        <p className="t-meta">
+          The {localCount} {localCount === 1 ? "entry" : "entries"} already on this phone will be
+          merged into the family log — nothing is deleted.
+        </p>
+      )}
+
       {failed && (
         <p className="join-error" role="alert">
-          That code did not work. Codes last 15 minutes and can only be used once — ask the
-          other phone for a fresh one.
+          The join did not go through — the code may have expired (codes from a partner&rsquo;s
+          phone last 15 minutes and work once), or this phone may be offline. Nothing changed;
+          try again or ask for a fresh code.
         </p>
       )}
 

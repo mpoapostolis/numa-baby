@@ -61,10 +61,13 @@ function GoogleButtonHost({ onCredential }: { onCredential: (credential: string)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   if (blocked) {
+    // No "Settings →" directions here: this host renders on onboarding too,
+    // where no Settings exists yet.
     return (
       <p className="google-blocked" role="alert">
         Google’s sign-in could not load — an ad blocker or offline moment,
-        probably. Your backup file works regardless: Settings → Download backup.
+        probably. The email link below works regardless, and so does a backup
+        file.
       </p>
     );
   }
@@ -76,18 +79,22 @@ function EmailRow({
   label,
   onSend,
   defaultEmail = "",
+  sentNote,
 }: {
   label: string;
   onSend: (email: string) => Promise<boolean>;
   defaultEmail?: string;
+  /** The restore surface can never promise a link exists (the reply is
+      identical either way, by design) — its note says "if". */
+  sentNote?: string;
 }) {
   const [email, setEmail] = useState(defaultEmail);
   const [state, setState] = useState<"idle" | "busy" | "sent">("idle");
   if (state === "sent") {
     return (
       <p className="google-sent" role="status">
-        <Mail aria-hidden="true" /> Check your inbox — the link works once and
-        expires in 15 minutes.
+        <Mail aria-hidden="true" /> {sentNote ??
+          "Check your inbox — the link works once and expires in 15 minutes."}
       </p>
     );
   }
@@ -170,15 +177,27 @@ export function ProtectWithGoogle({ familySync, immediate = false }: { familySyn
     if (!familySync.pairing) {
       const count = familySync.localEntryCount();
       if (count > 0) {
-        // Entries at stake: the decision gets a real dialog. The credential
-        // waits in state; nothing happens until a button is chosen.
-        setMergeChoice({ credential, count });
-        return;
+        // Entries at stake — but the merge-or-adopt question is only real
+        // if the account actually guards a log. Ask the server first, so
+        // nobody chooses between this phone and a cloud that isn't there.
+        const guarded = await familySync.googleProbe(credential);
+        if (guarded === null) {
+          setBusy(false);
+          return;
+        }
+        if (guarded) {
+          // The credential waits in state; nothing happens until a button
+          // is chosen, and Cancel leaves everything exactly as it was.
+          setMergeChoice({ credential, count });
+          return;
+        }
+        // Guards nothing: fall through to create-and-bind — no dialog.
+      } else {
+        const outcome = await joinGuardedFamily(credential, false);
+        if (outcome !== "none") return;
+        setBusy(true);
       }
-      const outcome = await joinGuardedFamily(credential, false);
-      if (outcome !== "none") return;
-      setBusy(true);
-      // "none": genuinely the first device — create, then bind below.
+      // Genuinely the first device — create, then bind below.
       if (!(await familySync.createFamily("This phone"))) {
         setBusy(false);
         return;
@@ -187,9 +206,10 @@ export function ProtectWithGoogle({ familySync, immediate = false }: { familySyn
     const linked = await familySync.googleProtect(credential);
     track("google_protect", { ok: Boolean(linked && linked !== "elsewhere"), elsewhere: linked === "elsewhere" });
     if (linked === "elsewhere") {
-      // The account's log lives in another family: same real dialog, with
-      // leaving the current family folded into whichever choice is made.
-      familySync.leaveFamily();
+      // The account's log lives in another family: same real dialog. The
+      // CURRENT family is left only inside a chosen switch (googleContinue
+      // hands the old key back after the new one is minted) — Cancel, an
+      // offline moment, anything else leaves this device exactly as it is.
       setMergeChoice({ credential, count: familySync.localEntryCount() });
       return;
     }
@@ -236,9 +256,15 @@ export function ProtectWithGoogle({ familySync, immediate = false }: { familySyn
             defaultEmail={hint?.method === "email" ? hint.email ?? "" : ""}
             onSend={async (address) => {
               // The one-tap promise holds here too: no pairing -> create it.
-              if (!familySync.pairing && !(await familySync.createFamily("This phone"))) return false;
+              // But a create whose link then FAILS (address guards another
+              // log, offline, server error) is rolled back on the spot —
+              // otherwise the device is left green-pilled on an unguarded
+              // orphan family it never chose.
+              const hadPairing = Boolean(familySync.pairing);
+              if (!hadPairing && !(await familySync.createFamily("This phone"))) return false;
               const ok = await familySync.emailProtect(address);
               track("email_protect_requested", { ok });
+              if (!ok && !hadPairing) familySync.leaveFamily();
               return ok;
             }}
           />
@@ -307,10 +333,18 @@ export function RestoreWithGoogle({
   const online = useOnline();
 
   async function handleCredential(credential: string) {
-    const ok = await familySync.googleRecover(credential, "This phone");
-    track("google_recover_attempted", { ok });
-    if (ok) onRestored();
-    else setFailed("No log is protected by that Google account — check which address you used, or restore a backup file instead.");
+    const outcome = await familySync.googleContinue(credential, "This phone");
+    track("google_recover_attempted", { outcome });
+    if (outcome === "joined") onRestored();
+    // "none" is the only case where THIS message is true. A network or
+    // server failure already toasted its own honest explanation — claiming
+    // "no log is protected" over a Wi-Fi blip sent people doubting the
+    // guard they had set up.
+    else if (outcome === "none") {
+      setFailed("No log is protected by that Google account — check which address you used, or restore a backup file instead.");
+    } else {
+      setFailed(null);
+    }
   }
 
   if (!revealed) {
@@ -332,6 +366,7 @@ export function RestoreWithGoogle({
       <EmailRow
         label="Email me a link"
         defaultEmail={hint?.method === "email" ? hint.email ?? "" : ""}
+        sentNote="If this address protects a log, the link is on its way — check your inbox. It works once and expires in 15 minutes."
         onSend={async (address) => {
           track("email_recover_requested");
           try {

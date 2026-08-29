@@ -25,7 +25,10 @@ export class ApiError extends Error {
 
 export type PairResult = { familyId: string; token: string; deviceId: string };
 export type InviteResult = { code: string; expiresAt: string };
-export type PulledRow = { id: string; payload: unknown; updatedAt: string; deleted: boolean };
+// receivedAt is the SERVER's arrival stamp — the pull cursor's clock. It is
+// optional only because a not-yet-redeployed worker omits it; the client
+// falls back to updatedAt, which was the old (backfill-blind) behaviour.
+export type PulledRow = { id: string; payload: unknown; updatedAt: string; deleted: boolean; receivedAt?: string };
 export type PullResult = {
   activities: PulledRow[];
   profile: unknown;
@@ -83,6 +86,12 @@ export function recoveryStatus(token: string): Promise<{ email: string | null }>
 
 export function googleRecover(credential: string, deviceLabel: string): Promise<PairResult> {
   return request("/api/family/google-recover", { method: "POST", body: JSON.stringify({ credential, deviceLabel }) });
+}
+
+/** "Does this account guard anything?" — no minting, no side effects. The UI
+    asks BEFORE putting a merge-or-adopt question to a person. */
+export function googleProbe(credential: string): Promise<{ guarded: boolean }> {
+  return request("/api/family/google-recover", { method: "POST", body: JSON.stringify({ credential, probe: true }) });
 }
 
 export function emailLink(token: string, email: string): Promise<{ sent: true }> {

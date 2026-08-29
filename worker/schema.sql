@@ -52,12 +52,18 @@ CREATE TABLE IF NOT EXISTS invites (
 -- The synced entries. The primary key is (family_id, id) so the same activity
 -- id can exist in two families without collision, and `deleted` carries
 -- tombstones so a deletion travels between phones like any other change.
+-- Two clocks on purpose: updated_at is the CLIENT's stamp and decides LWW
+-- conflicts; received_at is the SERVER's arrival stamp and decides what a
+-- pull has already seen — a restored backup pushes rows stamped months ago,
+-- and only the arrival clock lets partners still receive them. (Live tables
+-- gained received_at via a lazy ALTER in worker/index.ts.)
 CREATE TABLE IF NOT EXISTS activities (
   family_id TEXT NOT NULL REFERENCES families(id),
   id TEXT NOT NULL,
   payload TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   deleted INTEGER NOT NULL DEFAULT 0,
+  received_at TEXT,
   PRIMARY KEY (family_id, id)
 );
 
@@ -65,6 +71,14 @@ CREATE TABLE IF NOT EXISTS activities (
 -- query degrades to a full scan as families accumulate.
 CREATE INDEX IF NOT EXISTS idx_activities_family_updated
   ON activities(family_id, updated_at);
+
+-- The 6-digit invite space is a million codes in a 15-minute window — fine
+-- against fingers, farmable by a loop. Twenty tries an hour per address.
+CREATE TABLE IF NOT EXISTS join_budget (
+  ip TEXT PRIMARY KEY,
+  window_start TEXT NOT NULL,
+  tries INTEGER NOT NULL
+);
 
 -- The family's shared baby profile, with the stamp that decides whose copy is
 -- fresher when two phones disagree.

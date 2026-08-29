@@ -542,7 +542,10 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
   // and report what changed from this device's point of view. Persist-first
   // like every write path — and only when something actually changed, so the
   // 60-second poll never rewrites an identical blob.
-  function mergeRemote(remote: Activity[], remoteProfile?: Profile, remoteProfileUpdatedAt?: string): { added: number; updated: number } {
+  // `persisted: false` is the one outcome the sync cursor must respect: the
+  // merge computed fine but the write to storage failed, so advancing past
+  // these rows would skip them forever.
+  function mergeRemote(remote: Activity[], remoteProfile?: Profile, remoteProfileUpdatedAt?: string): { added: number; updated: number; persisted: boolean } {
     const current = persistedStateRef.current;
     const merged = remote.length ? mergeActivities(current.activities, remote) : current.activities;
     const summary = remote.length ? summarizeMerge(current.activities, merged) : { added: 0, updated: 0 };
@@ -556,15 +559,15 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     const remoteMs = remoteProfileUpdatedAt ? new Date(remoteProfileUpdatedAt).getTime() : -1;
     const emptyDefault = current.profile.name === "" && current.profile.birthDate === "";
     const adoptProfile = remoteProfile !== undefined && (emptyDefault || remoteMs > localMs);
-    if (summary.added === 0 && summary.updated === 0 && !adoptProfile) return { added: 0, updated: 0 };
+    if (summary.added === 0 && summary.updated === 0 && !adoptProfile) return { added: 0, updated: 0, persisted: true };
     const nextProfile = adoptProfile && remoteProfile ? remoteProfile : current.profile;
     const nextStamp = adoptProfile && remoteProfileUpdatedAt ? remoteProfileUpdatedAt : current.profileUpdatedAt;
     if (!persistSnapshot(merged, nextProfile, undefined, undefined, undefined, nextStamp)) {
-      return { added: 0, updated: 0 };
+      return { added: 0, updated: 0, persisted: false };
     }
     syncActivitiesFromRef();
     if (adoptProfile) setProfile(nextProfile);
-    return { added: summary.added, updated: summary.updated };
+    return { added: summary.added, updated: summary.updated, persisted: true };
   }
 
   // Sync egress. A function rather than a value so the debounced push reads

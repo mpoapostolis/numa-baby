@@ -699,9 +699,11 @@ export default function HomePage() {
               onSeeTimeline={() => navigateTo("timeline")}
               cloudState={!familySync.pairing
                 ? "none"
-                : familySync.status.phase === "offline"
-                  ? "offline"
-                  : familySync.status.phase === "syncing" ? "syncing" : "synced"}
+                : familySync.status.phase === "revoked"
+                  ? "revoked"
+                  : familySync.status.phase === "offline"
+                    ? "offline"
+                    : familySync.status.phase === "syncing" ? "syncing" : "synced"}
               onOpenProtection={() => {
                 track("cloud_note_tapped", { synced: Boolean(familySync.pairing) });
                 // Unprotected -> the doors, right here. Synced -> the details.

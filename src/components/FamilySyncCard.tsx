@@ -35,9 +35,12 @@ function statusLine(phase: string, lastSyncAt: string | null, entryCount: number
   if (phase === "offline") return "Offline — will catch up on its own when you're back";
   if (phase === "revoked") return "Reconnect needed — ask the other phone for a fresh code";
   // The sentence a parent actually needs. Not sync jargon — the promise,
-  // with the number that makes it concrete.
+  // with the number that makes it concrete. "Backing up" rather than "all
+  // safe": the count is this phone's, and its newest minutes may still be
+  // riding the next push — a promise the next sync makes true is honest,
+  // a completed one it hasn't made yet is not.
   if (lastSyncAt) {
-    return `All ${entryCount} ${entryCount === 1 ? "entry" : "entries"} safe in the cloud · synced ${formatTime(lastSyncAt)}`;
+    return `Backing up ${entryCount} ${entryCount === 1 ? "entry" : "entries"} to the cloud · synced ${formatTime(lastSyncAt)}`;
   }
   return "Waiting for the first sync";
 }
