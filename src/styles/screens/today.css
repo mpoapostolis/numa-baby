@@ -1362,3 +1362,9 @@
   color: var(--ink-2);
   border-color: var(--border-strong);
 }
+
+/* The good states wear the calm green of the diaper glyph — quietly. */
+.cloud-note.is-good {
+  color: color-mix(in oklab, var(--glyph-diaper) 70%, var(--ink-2));
+  border-color: color-mix(in oklab, var(--glyph-diaper) 30%, var(--border));
+}

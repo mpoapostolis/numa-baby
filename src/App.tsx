@@ -151,6 +151,9 @@ export default function HomePage() {
   // the moment the parent has just invested in the setup — not after five
   // entries like families that predate the feature.
   const [justOnboarded, setJustOnboarded] = useState(false);
+  // The on-this-phone-only pill summons the protect dialog directly —
+  // incremented per tap so a re-tap remounts a fresh one.
+  const [protectAsk, setProtectAsk] = useState(0);
   // Read once per visit: the intro marks itself seen on any dismissal.
   const [protectIntroDone] = useState(() => {
     try {
@@ -684,8 +687,17 @@ export default function HomePage() {
               onManualNursing={() => openSheet("nursing", "manual")}
               onEdit={openEdit}
               onSeeTimeline={() => navigateTo("timeline")}
-              cloudSynced={Boolean(familySync.pairing)}
-              onOpenProtection={() => navigateTo("more")}
+              cloudState={!familySync.pairing
+                ? "none"
+                : familySync.status.phase === "offline"
+                  ? "offline"
+                  : familySync.status.phase === "syncing" ? "syncing" : "synced"}
+              onOpenProtection={() => {
+                track("cloud_note_tapped", { synced: Boolean(familySync.pairing) });
+                // Unprotected -> the doors, right here. Synced -> the details.
+                if (familySync.pairing) navigateTo("more");
+                else setProtectAsk((n) => n + 1);
+              }}
             />
           )}
 
@@ -794,7 +806,12 @@ export default function HomePage() {
             entries, consent question answered, no sheet open), never during
             its own first minutes. The component retires itself for families
             already guarded. */}
-        {protectMoment && (
+        {protectAsk > 0 && (
+          <Suspense fallback={null}>
+            <ProtectIntro key={protectAsk} familySync={familySync} forced onClosed={() => setProtectAsk(0)} />
+          </Suspense>
+        )}
+        {protectMoment && protectAsk === 0 && (
           <Suspense fallback={null}>
             <ProtectIntro familySync={familySync} />
           </Suspense>

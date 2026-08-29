@@ -27,14 +27,25 @@ function markSeen() {
   }
 }
 
-export function ProtectIntro({ familySync }: { familySync: FamilySync }) {
+export function ProtectIntro({
+  familySync,
+  forced = false,
+  onClosed,
+}: {
+  familySync: FamilySync;
+  /** Summoned by a tap (the on-this-phone-only pill) rather than the
+      once-per-life announcement — opens unconditionally. */
+  forced?: boolean;
+  onClosed?: () => void;
+}) {
   const paired = Boolean(familySync.pairing);
   // An unpaired family cannot already be guarded: open on arrival. A paired
   // one might be — stay closed until the status comes back.
-  const [open, setOpen] = useState(!paired);
+  const [open, setOpen] = useState(forced || !paired);
 
   // Families already guarded never see this — it retires silently.
   useEffect(() => {
+    if (forced) return;
     if (!paired) {
       track("protect_intro_shown", { paired: false });
       return;
@@ -59,6 +70,7 @@ export function ProtectIntro({ familySync }: { familySync: FamilySync }) {
   function close() {
     markSeen();
     setOpen(false);
+    onClosed?.();
   }
 
   return (

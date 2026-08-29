@@ -1,5 +1,5 @@
 import { Suspense, lazy, useState } from "react";
-import { ChevronRight, CloudOff, ExternalLink, Milk, Pill, ShieldCheck, Square, Thermometer, Utensils, Weight } from "lucide-react";
+import { ChevronRight, Cloud, CloudOff, ExternalLink, Milk, Pill, ShieldCheck, Square, Thermometer, Utensils, Weight } from "lucide-react";
 
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -211,9 +211,9 @@ type TodayScreenProps = {
   onManualNursing: () => void;
   onEdit: (activity: Activity) => void;
   onSeeTimeline: () => void;
-  /** Whether this device's log also lives in the cloud (paired/protected). */
-  cloudSynced: boolean;
-  /** Tap on the on-this-phone-only note — lands where protection lives. */
+  /** Where the log lives right now, in one word. */
+  cloudState: "none" | "synced" | "syncing" | "offline";
+  /** Tap on the note — the doors when unprotected, the details when synced. */
   onOpenProtection: () => void;
 };
 
@@ -228,7 +228,7 @@ export default function TodayScreen({
   onManualNursing,
   onEdit,
   onSeeTimeline,
-  cloudSynced,
+  cloudState,
   onOpenProtection,
 }: TodayScreenProps) {
   const units = useUnits();
@@ -507,15 +507,15 @@ export default function TodayScreen({
         <div className="welcome-copy">
           <span className="welcome-greeting t-label">{greeting()}</span>
           <h1 id="today-heading" className="t-title-1 welcome-headline">{headline}</h1>
-          {/* The quiet truth about where the data lives. A state, not a
-              nudge: it is small, it is always there while it is true, and it
-              disappears the moment the cloud holds a copy. One tap lands on
-              the fix. */}
-          {!cloudSynced && (
-            <button type="button" className="cloud-note" onClick={onOpenProtection}>
-              <CloudOff size={12} aria-hidden="true" /> On this phone only
-            </button>
-          )}
+          {/* The quiet truth about where the data lives — all four of them.
+              A state, not a nudge: small, constant, honest. Unprotected taps
+              open the doors; a synced one opens the details. */}
+          <button type="button" className={cloudState === "none" ? "cloud-note" : "cloud-note is-good"} onClick={onOpenProtection}>
+            {cloudState === "none" && <><CloudOff size={12} aria-hidden="true" /> On this phone only</>}
+            {cloudState === "synced" && <><Cloud size={12} aria-hidden="true" /> Synced to the cloud</>}
+            {cloudState === "syncing" && <><Cloud size={12} aria-hidden="true" /> Syncing…</>}
+            {cloudState === "offline" && <><CloudOff size={12} aria-hidden="true" /> Offline — will catch up</>}
+          </button>
           <p className="welcome-date">
             {statusDateFormat.format(new Date(minuteClock))}
             {babyDays !== null && <span className="welcome-day-count">Day {babyDays + 1}</span>}
