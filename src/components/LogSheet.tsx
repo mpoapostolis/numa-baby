@@ -687,7 +687,19 @@ export function LogSheet({
           {editing.type === "bottle" && (
             <>
               <Field className="amount-field">
-                <UnitField {...numericFieldProps("amount")} value={draft.bottleAmount} inputRef={amountRef} autoFocus invalid={formError?.field === "amount"} onChange={(value) => { patch({ bottleAmount: value }); setFormError(null); }} className="measurement-primary" />
+                <UnitField
+                  label="Amount"
+                  unit={stepper.unit}
+                  min={stepper.min}
+                  max={stepper.max}
+                  step={stepper.step}
+                  value={draft.bottleAmount}
+                  inputRef={amountRef}
+                  autoFocus
+                  invalid={formError?.field === "amount"}
+                  onChange={(value) => { patch({ bottleAmount: value }); setFormError(null); }}
+                  className="measurement-primary"
+                />
                 <ToggleGroup type="single" value={draft.bottleAmount} className="preset-row" aria-label="Preset amounts" onValueChange={(value) => { if (value) patch({ bottleAmount: value }); setFormError(null); }}>
                   {presets.map((amount) => <ToggleGroupItem value={String(amount)} aria-label={`${amount} ${stepper.unit}`} key={amount}>{amount}</ToggleGroupItem>)}
                 </ToggleGroup>
@@ -725,10 +737,10 @@ export function LogSheet({
 
           {editing.type === "growth" && (
             <FieldGroup className="measurement-fields">
-              <UnitField {...numericFieldProps("weightGrams")} value={draft.weightGrams} inputRef={weightRef} autoFocus invalid={formError?.field === "weightGrams"} onChange={(value) => { patch({ weightGrams: value }); setFormError(null); }} className="measurement-primary" />
+              <UnitField {...measureProps("weightGrams")} value={draft.weightGrams} inputRef={weightRef} autoFocus invalid={formError?.field === "weightGrams"} onChange={(value) => { patch({ weightGrams: value }); setFormError(null); }} className="measurement-primary" />
               <div className="measurement-row">
-                <UnitField {...numericFieldProps("lengthCm")} optional value={draft.lengthCm} inputRef={lengthRef} invalid={formError?.field === "lengthCm"} onChange={(value) => { patch({ lengthCm: value }); setFormError(null); }} />
-                <UnitField {...numericFieldProps("headCm")} optional value={draft.headCm} inputRef={headRef} invalid={formError?.field === "headCm"} onChange={(value) => { patch({ headCm: value }); setFormError(null); }} />
+                <UnitField {...measureProps("lengthCm")} optional value={draft.lengthCm} inputRef={lengthRef} invalid={formError?.field === "lengthCm"} onChange={(value) => { patch({ lengthCm: value }); setFormError(null); }} />
+                <UnitField {...measureProps("headCm")} optional value={draft.headCm} inputRef={headRef} invalid={formError?.field === "headCm"} onChange={(value) => { patch({ headCm: value }); setFormError(null); }} />
               </div>
             </FieldGroup>
           )}
