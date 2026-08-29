@@ -224,6 +224,12 @@ export default function TodayScreen({
   // arrows never step into blank prehistory — or into tomorrow.
   const [dayOffset, setDayOffset] = useState(0);
   const [sootheOpen, setSootheOpen] = useState(false);
+  // White noise has to survive its own sheet being closed. Rendering the
+  // player only while the sheet is open unmounted the <audio> element the
+  // moment a parent tapped away — so the one thing they opened it for stopped,
+  // in the dark, with a baby half asleep. Once opened it stays mounted for the
+  // rest of the visit and the sheet is only its face.
+  const [sootheMounted, setSootheMounted] = useState(false);
 
   const forecastFeedSheet: "bottle" | "nursing" = profile.feedingMode === "breast"
     ? "nursing"
@@ -758,7 +764,7 @@ export default function TodayScreen({
           <Button
             variant="ghost"
             className="log-row log-row-secondary action-soothe"
-            onClick={() => { track("soothe_opened"); setSootheOpen(true); }}
+            onClick={() => { track("soothe_opened"); setSootheMounted(true); setSootheOpen(true); }}
           >
             <span className="action-icon" aria-hidden="true"><Waves /></span>
             <span className="log-copy">
@@ -781,7 +787,7 @@ export default function TodayScreen({
           </Button>
         </section>
       </div>
-      {sootheOpen && (
+      {sootheMounted && (
         <Suspense fallback={null}>
           <SoothePlayer open={sootheOpen} onOpenChange={setSootheOpen} />
         </Suspense>

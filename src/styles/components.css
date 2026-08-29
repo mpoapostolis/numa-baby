@@ -791,13 +791,45 @@
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   }
 
+  /* The grab pill is a button now, so it needs a target a thumb can find. The
+     drawn pill stays 36x4; the thing you can hit is the whole 40px strip
+     across the top of the sheet — which is the closest exit to where a
+     one-handed thumb already is, the X being in the far top corner. */
   .sheet-handle {
+    position: relative;
+    width: 100%;
+    height: 40px;
+    display: block;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .sheet-handle::before {
+    content: "";
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    translate: -50% 0;
     width: 36px;
     height: 4px;
-    display: block;
-    margin: 8px auto 0;
     border-radius: 999px;
     background: var(--border);
+    transition: background-color 120ms ease, width 120ms ease;
+  }
+
+  .sheet-handle:active::before {
+    width: 48px;
+    background: var(--ink-3);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sheet-handle::before {
+      transition: none;
+    }
   }
 
   .log-dialog-header {

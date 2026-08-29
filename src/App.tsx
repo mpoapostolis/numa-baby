@@ -41,6 +41,7 @@ import { ageInDays } from "./domain/time";
 import { useActivityStats } from "./hooks/useActivityStats";
 import { useFamilySync } from "./hooks/useFamilySync";
 import { useMinuteClock } from "./hooks/useMinuteClock";
+import { useCloseOnBack } from "./hooks/useCloseOnBack";
 import { useTrackerStore } from "./hooks/useTrackerStore";
 
 // The chart-heavy screens load on first visit; Today never pays for them.
@@ -139,6 +140,11 @@ export default function HomePage() {
   const [sidebarDefaultOpen] = useState(() => !document.cookie.split("; ").includes("sidebar_state=false"));
   const sheetTriggerRef = useRef<HTMLElement | null>(null);
   const minuteClock = useMinuteClock();
+
+  const closeSheet = useCallback(() => setSheet(null), []);
+  // On Android, back is how you leave a screen — and a sheet is a screen.
+  // Without this it pops the app's own (empty) history and closes everything.
+  useCloseOnBack(Boolean(sheet), closeSheet);
 
   function showToast(message: string, undo?: () => void) {
     toast(message, {
@@ -673,7 +679,16 @@ export default function HomePage() {
                 sheetTriggerRef.current?.focus();
               }}
             >
-              <div className="sheet-handle" />
+              {/* The grab pill is the universal "pull me down" affordance, and
+                  it did nothing at all. Now it closes — so there is an exit at
+                  the BOTTOM of the sheet, where the thumb already is, instead
+                  of only the X in the far top corner. */}
+              <button
+                type="button"
+                className="sheet-handle"
+                aria-label="Close"
+                onClick={() => setSheet(null)}
+              />
               <Suspense fallback={null}>
               <LogSheet
                 key={sheet === "edit" ? editingActivity?.id : sheet}

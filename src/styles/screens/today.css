@@ -1240,3 +1240,37 @@
   background: color-mix(in oklab, var(--glyph-sleep) var(--glyph-wash), var(--card));
   color: var(--glyph-sleep);
 }
+
+/* Three segments inside half a narrow phone is 43px each — under the minimum
+   for a thumb, and that thumb belongs to someone holding a baby with the other
+   arm. Below 380px the nappy tile takes the full row instead, which turns each
+   segment into ~105px on the same single line. Nappies are the most-tapped
+   thing after feeding; they can have the width. */
+@container (width < 380px) {
+  .quick-grid > .tile-diaper {
+    grid-column: 1 / -1;
+  }
+
+  /* Full width, but still a tile: the head keeps the glyph and the title
+     together on the left instead of letting a 1fr column push the words to the
+     far edge, and the row parity rule below is switched off — with the nappy
+     tile spanning both columns it would otherwise stretch Burp across a row of
+     its own and leave Sleep sitting alone. */
+  .quick-grid > .tile-diaper .tile-head,
+  .quick-grid > .tile-diaper .tile-main {
+    grid-template-columns: auto minmax(0, 1fr);
+    justify-items: start;
+  }
+
+  /* The parity rule above stretches the last tile when the count is odd. With
+     the nappy tile spanning both columns the count it is counting is no longer
+     the count you can see, so it would strand Sleep beside a full-width Burp.
+     Off, here only. */
+  .quick-grid > .quick-tile:last-child:nth-child(odd) {
+    grid-column: auto;
+  }
+
+  .tile-split [data-slot="button"] {
+    padding: 0 8px;
+  }
+}
