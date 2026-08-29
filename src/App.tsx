@@ -773,13 +773,23 @@ export default function HomePage() {
                   // Leave first (hands the key back), then wipe, then drop
                   // the device-local hints that belong to the previous life.
                   familySync.leaveFamily();
-                  try {
-                    window.localStorage.removeItem("numalog-auth-hint-v1");
-                    window.localStorage.removeItem("numalog-protect-intro-v1");
-                  } catch {
-                    // Cosmetic cleanups only.
-                  }
                   eraseAllData();
+                  // The owner's rule, in capitals at the time: erasing
+                  // everything erases EVERYTHING from this device. Every key
+                  // this app ever wrote goes — consent, hints, seen-flags,
+                  // units, milestones, all of it. The cloud copy (if any)
+                  // belongs to the family's OTHER devices and is not ours to
+                  // take from here; this device simply forgets it existed.
+                  try {
+                    const doomed: string[] = [];
+                    for (let i = 0; i < window.localStorage.length; i += 1) {
+                      const key = window.localStorage.key(i);
+                      if (key && (key.startsWith("numa-") || key.startsWith("numalog-"))) doomed.push(key);
+                    }
+                    doomed.forEach((key) => window.localStorage.removeItem(key));
+                  } catch {
+                    // The blob and pairing are already gone; the rest is best-effort.
+                  }
                 }}
                 familySync={familySync}
                 incomingJoinCode={incomingJoinCode}

@@ -190,3 +190,20 @@
   color: var(--ink-2);
   font-size: 0.8125rem;
 }
+
+/* The welcome-back card body: the doors, then the quiet start-fresh out. */
+.welcome-back-body {
+  display: grid;
+  gap: 12px;
+  justify-items: stretch;
+}
+
+.welcome-back-body .google-protect {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.welcome-back-body .google-host {
+  margin-inline: auto;
+}

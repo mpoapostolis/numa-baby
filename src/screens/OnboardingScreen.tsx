@@ -39,6 +39,7 @@ import { Toaster } from "../components/ui/sonner";
 import { Switch } from "../components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "../components/ui/toggle-group";
 import { localDateInput } from "../domain/time";
+import { loadAuthHint } from "../domain/authHint";
 import { handoffPeers, handoffSendUrl, moveTarget, originLabel } from "../domain/handoff";
 import { inAppBrowser } from "../domain/install";
 import { FeedingMode, Profile } from "../domain/types";
@@ -95,6 +96,11 @@ export default function OnboardingScreen({
   // "already using the old address?" popup that greeted every stranger from
   // the Facebook post with a question about an address they had never seen.)
   const [restoreOpen, setRestoreOpen] = useState(false);
+  // A device that has signed in before does NOT get greeted like a
+  // stranger: the way back comes first, the blank form second.
+  const [returningHint] = useState(loadAuthHint);
+  const [freshSetup, setFreshSetup] = useState(false);
+  const welcomeBack = mode === "onboarding" && returningHint !== null && !freshSetup;
   const showHandoffDoor =
     handoffFrom !== null && moveTarget(window.location.origin) === null && !inAppBrowser();
 
@@ -148,6 +154,26 @@ export default function OnboardingScreen({
             </div>
           </section>
 
+          {welcomeBack ? (
+            <Card className="onboarding-card">
+              <CardHeader>
+                <span className="onboarding-card-icon onboarding-baby-icon"><BabyFace /><TinyStars /></span>
+                <CardTitle asChild><h2>Welcome back</h2></CardTitle>
+                <CardDescription>
+                  This device has used Numalog before — continue, and your log
+                  comes straight down from the cloud.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="welcome-back-body">
+                <Suspense fallback={null}>
+                  <RestoreWithGoogle familySync={familySync} onRestored={onGoogleRestored} />
+                </Suspense>
+                <Button type="button" variant="ghost" onClick={() => setFreshSetup(true)}>
+                  Set up a new baby instead
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
           <Card className="onboarding-card">
             <CardHeader>
               <span className="onboarding-card-icon onboarding-baby-icon"><BabyFace /><TinyStars /></span>
@@ -253,6 +279,7 @@ export default function OnboardingScreen({
               </form>
             </CardContent>
           </Card>
+          )}
         </div>
       )}
 

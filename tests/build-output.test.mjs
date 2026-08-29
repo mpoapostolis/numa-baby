@@ -64,5 +64,11 @@ test("keeps the initial production UI bundle lightweight", async () => {
   // any shaving here — but they share classes with eager components
   // (insights.css with TodayScreen, timeline.css with ActivityRow), so it is a
   // real refactor and not a line move. Do that before granting more headroom.
-  assert.ok(totalGzip < 172_500, `Initial JS + CSS is ${totalGzip} gzip bytes`);
+  // Raised to 173k after the cloud pill, the welcome-back onboarding and the
+  // total-erase sweep. The split rule has been honored since the last raise:
+  // settings.css, insights.css, growth-guide.css and the shared recovery.css
+  // all ship with their lazy chunks now. Next candidate before another
+  // raise: timeline.css (ActivityRow and DayRecap borrow two classes that
+  // would need rehoming first).
+  assert.ok(totalGzip < 173_000, `Initial JS + CSS is ${totalGzip} gzip bytes`);
 });
