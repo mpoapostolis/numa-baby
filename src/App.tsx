@@ -447,6 +447,11 @@ export default function HomePage() {
           onSend={async () => {
             track("handoff_sent");
             try {
+              window.localStorage.setItem("numalog-moved-v1", "1");
+            } catch {
+              // The banner falls back to its 14-day dismissal.
+            }
+            try {
               const { packHandoff } = await import("./domain/handoff");
               const packed = await packHandoff(exportPayload());
               if (!packed) return "too-large" as const;
@@ -556,7 +561,7 @@ export default function HomePage() {
 
         {moveTarget(window.location.origin) !== null && (
           <Suspense fallback={null}>
-            <MoveBanner />
+            <MoveBanner paired={Boolean(familySync.pairing)} onDownloadBackup={exportData} />
           </Suspense>
         )}
 

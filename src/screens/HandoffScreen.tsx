@@ -44,6 +44,20 @@ export function HandoffScreen({
           app at its other address.
         </p>
 
+        {/* The empty-browser trap. A parent who always used the installed
+            app arrives here through Safari, where this origin's copy has
+            nothing in it — their real log is inside the installed app's own
+            storage partition. Sending 0 entries "successfully" would read as
+            the app losing everything, so the empty case explains instead. */}
+        {entryCount === 0 && (
+          <p className="handoff-problem" role="alert">
+            This browser’s copy is empty. If you have been using the installed
+            app from your home screen, your log lives inside it — open the
+            installed app, tap “Move my log” there, and it will hand you a
+            backup file that carries everything.
+          </p>
+        )}
+
         <ul className="handoff-facts">
           <li>Nothing is uploaded. The entries travel inside the link, which no browser sends to a server.</li>
           <li>This copy stays here too. Nothing is deleted from this address.</li>

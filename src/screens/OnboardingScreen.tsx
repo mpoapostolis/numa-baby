@@ -267,7 +267,9 @@ export default function OnboardingScreen({
             <DialogTitle>Already using {originLabel(handoffFrom)}?</DialogTitle>
             <DialogDescription>
               Numalog moved here. Your entries are still safe at the old address — one tap
-              brings your whole log over. Nothing is deleted from the old one.
+              brings your whole log over, and nothing is deleted from the old one. If you
+              used the installed app from your home screen, move with a backup file
+              instead: its entries can’t travel by link.
             </DialogDescription>
             <DialogFooter>
               <Button
