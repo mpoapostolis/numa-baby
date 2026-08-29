@@ -12,10 +12,11 @@
 //    outcome is known (three sends per address per hour, atomically), so
 //    neither the inbox nor the table can be farmed;
 //  - the reply to "send me a link" is the same whether the address guards a
-//    family or not — an enumeration attempt learns nothing. The email
-//    itself tells the truth instead: a guarded address gets the link, an
-//    unknown one gets "no log is protected by this address", which is
-//    useful to the real owner and invisible to the attacker.
+//    family or not — an enumeration attempt learns nothing. A guarded
+//    address gets the link; an unknown one gets NO email at all — a
+//    stranger whose address was typed into the form must never hear from
+//    an app they have never used. The app's own copy carries the
+//    uncertainty ("if this address protects a log…").
 
 import { Client } from "@libsql/client";
 
@@ -116,17 +117,52 @@ async function reserveSend(client: Client, email: string, now: number): Promise<
   return Number(result.rows[0]?.sends ?? SENDS_PER_HOUR + 1) <= SENDS_PER_HOUR;
 }
 
-function linkEmail(origin: string, token: string, guarded: boolean): { subject: string; text: string; html: string } {
-  if (!guarded) {
-    return {
-      subject: "Numalog — no log is protected by this address",
-      text:
-        "Someone (probably you) asked to recover a Numalog baby log with this email address, " +
-        "but no log is protected by it. If you set up protection with a different address, try that one. " +
-        "If this wasn't you, you can ignore this email — nothing happened.",
-      html: "",
-    };
-  }
+/** The one sender for everything Numalog mails. no-reply on purpose: these
+    are one-time links, and a reply would land nowhere useful. */
+export const MAIL_FROM = { email: "no-reply@numalog.app", name: "Numalog" };
+
+/**
+ * The branded shell every Numalog email wears: logo, one heading, one
+ * message, at most one button. Table layout and inline styles because email
+ * clients still live in 2003; the plain-text part remains the real fallback.
+ * Nothing user-supplied is interpolated here — headings, bodies and URLs are
+ * all our own strings.
+ */
+function brandedHtml(options: {
+  heading: string;
+  body: string;
+  cta?: { label: string; url: string };
+  footnote: string;
+}): string {
+  const button = options.cta
+    ? `<tr><td align="center" style="padding-bottom:22px;">
+         <a href="${options.cta.url}" style="display:inline-block;background:#e8a2b3;color:#231a1e;text-decoration:none;font-weight:600;font-size:15px;padding:13px 30px;border-radius:999px;">${options.cta.label}</a>
+       </td></tr>`
+    : "";
+  return `<!doctype html><html><body style="margin:0;padding:0;background:#faf7f5;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#faf7f5;padding:28px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:440px;background:#ffffff;border-radius:18px;padding:32px 28px;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+        <tr><td align="center" style="padding-bottom:14px;">
+          <img src="https://numalog.app/icon-192.png" width="56" height="56" alt="Numalog" style="border-radius:14px;display:block;">
+        </td></tr>
+        <tr><td align="center" style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#a08c92;padding-bottom:8px;">Numalog</td></tr>
+        <tr><td align="center" style="font-size:20px;font-weight:600;color:#2b2426;padding-bottom:12px;">${options.heading}</td></tr>
+        <tr><td align="center" style="font-size:14px;line-height:1.6;color:#5c5254;padding-bottom:22px;">${options.body}</td></tr>
+        ${button}
+        <tr><td align="center" style="font-size:12px;line-height:1.6;color:#a08c92;border-top:1px solid #f0e8ea;padding-top:16px;">${options.footnote}</td></tr>
+      </table>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:440px;">
+        <tr><td align="center" style="font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:11px;color:#b5a4aa;padding-top:14px;">
+          Numalog — a calm, private baby tracker · <a href="https://numalog.app" style="color:#b5a4aa;">numalog.app</a>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+}
+
+function linkEmail(origin: string, token: string): { subject: string; text: string; html: string } {
   const url = `${origin}/#recover=${token}`;
   const text =
     "Tap this link on the phone that should hold your baby's log:\n\n" +
@@ -135,10 +171,13 @@ function linkEmail(origin: string, token: string, guarded: boolean): { subject: 
   return {
     subject: "Your Numalog recovery link",
     text,
-    html:
-      `<p>Tap this link on the phone that should hold your baby’s log:</p>` +
-      `<p><a href="${url}"><strong>Restore my Numalog</strong></a></p>` +
-      `<p>It works once and expires in 15 minutes. If you didn’t ask for it, ignore this email — nothing happens without the link.</p>`,
+    html: brandedHtml({
+      heading: "Welcome back",
+      body: "Tap the button on the phone that should hold your baby’s log — everything comes home from there.",
+      cta: { label: "Restore my Numalog", url },
+      footnote:
+        "The link works once and expires in 15 minutes. If you didn’t ask for it, ignore this email — nothing happens without the link.",
+    }),
   };
 }
 
@@ -182,12 +221,19 @@ export async function handleEmailLink(
   const url = `${origin}/#confirm-email=${token}`;
   await email_service.send({
     to: email,
-    from: { email: "hello@numalog.app", name: "Numalog" },
+    from: MAIL_FROM,
     subject: "Confirm your Numalog recovery email",
     text:
       "Tap to confirm this address can recover your baby's log:\n\n" +
       `${url}\n\n` +
       "It works once and expires in 15 minutes. If you didn't ask for this, ignore it — nothing happens without the link.",
+    html: brandedHtml({
+      heading: "One tap to protect your log",
+      body: "Confirm that this address can recover your baby’s log, and a lost or wiped phone can always get everything back.",
+      cta: { label: "Confirm my email", url },
+      footnote:
+        "The link works once and expires in 15 minutes. If you didn’t ask for this, ignore it — nothing happens without the link.",
+    }),
   });
   return json({ sent: true });
 }
@@ -224,22 +270,25 @@ export async function handleEmailRecoverRequest(
           ORDER BY created_at DESC LIMIT 1`,
     args: [email, email],
   });
-  const guarded = guard.rows.length > 0;
-  let token = "";
-  if (guarded) {
-    token = newToken();
-    await client.execute({
-      sql: `INSERT INTO magic_tokens (token_hash, email, family_id, purpose, expires_at) VALUES (?, ?, ?, 'recover', ?)`,
-      args: [await sha256(token), email, String(guard.rows[0].family_id), new Date(now + TOKEN_TTL_MS).toISOString()],
-    });
-  }
-  const message = linkEmail(origin, token, guarded);
+  // An address that guards nothing gets NOTHING — not even a "nothing here"
+  // notice. Anyone can type a stranger's address into the Restore form, and
+  // mailing that stranger would make this app a way to poke inboxes it has
+  // no business in. The HTTP reply is identical either way, so an
+  // enumeration attempt still learns nothing; the honest "if this address
+  // protects a log…" copy in the app carries the uncertainty instead.
+  if (!guard.rows.length) return json({ sent: true });
+  const token = newToken();
+  await client.execute({
+    sql: `INSERT INTO magic_tokens (token_hash, email, family_id, purpose, expires_at) VALUES (?, ?, ?, 'recover', ?)`,
+    args: [await sha256(token), email, String(guard.rows[0].family_id), new Date(now + TOKEN_TTL_MS).toISOString()],
+  });
+  const message = linkEmail(origin, token);
   await email_service.send({
     to: email,
-    from: { email: "hello@numalog.app", name: "Numalog" },
+    from: MAIL_FROM,
     subject: message.subject,
     text: message.text,
-    ...(message.html ? { html: message.html } : {}),
+    html: message.html,
   });
   return json({ sent: true });
 }
