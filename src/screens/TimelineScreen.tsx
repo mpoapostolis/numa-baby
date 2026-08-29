@@ -78,13 +78,13 @@ export default function TimelineScreen({
             onFilterChange(value as "all" | ActivityType);
           }}
         >
-          {(["all", "bottle", "nursing", "diaper", "burp", "sleep", "medicine", "growth", "health"] as const).map((option) => (
+          {(["all", "bottle", "nursing", "diaper", "burp", "sleep", "solid", "medicine", "growth", "health"] as const).map((option) => (
             <ToggleGroupItem
               key={option}
               value={option}
               aria-label={`Show ${option} logs`}
             >
-              {option === "all" ? "All" : option[0].toUpperCase() + option.slice(1)}
+              {option === "all" ? "All" : option === "solid" ? "Solids" : option[0].toUpperCase() + option.slice(1)}
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
