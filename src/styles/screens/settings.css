@@ -27,6 +27,12 @@
   padding: 0 16px 16px;
 }
 
+/* The units toggle is its own setting, not two more theme chips — give it
+   air so the two groups stop reading as one grid. */
+.units-options {
+  margin-top: 16px;
+}
+
 .appearance-options [data-slot="toggle-group-item"] {
   /* The button primitive ships a fixed height: min-height can raise this box
      but never let it GROW, so wrapped content spills out of it. */

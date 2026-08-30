@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { ChevronRight, Cloud, CloudOff, ExternalLink, Milk, Pill, ShieldCheck, Square, Thermometer, Utensils, Weight } from "lucide-react";
 
 import { Button } from "../components/ui/button";
@@ -151,7 +151,9 @@ function TimerTile({ activity, onStop }: { activity: Activity; onStop: () => voi
           stopped — and looking stopped is how a parent taps it twice. */}
       <p className="tile-elapsed"><LiveClock startedAt={activity.startedAt} /></p>
       <p className="tile-started">Started {formatTime(activity.startedAt)}</p>
-      <Button className="tile-stop" onClick={onStop} aria-label={`Stop ${activity.type} timer`}>
+      {/* The accessible name starts with the visible label, so "tap Wake up"
+          works for voice control (WCAG label-in-name). */}
+      <Button className="tile-stop" onClick={onStop} aria-label={`${stopLabel} — stop ${activity.type} timer`}>
         <Square size={14} fill="currentColor" aria-hidden="true" /> {stopLabel}
       </Button>
     </div>
@@ -192,7 +194,7 @@ function TimerRow({
       </div>
       {isBurp && <LiveClock startedAt={activity.startedAt} />}
       <div className="log-actions">
-        <Button onClick={onStop} aria-label={`Stop ${activity.type} timer`}>
+        <Button onClick={onStop} aria-label={`${stopLabel} — stop ${activity.type} timer`}>
           <Square size={14} fill="currentColor" aria-hidden="true" /> {stopLabel}
         </Button>
       </div>
@@ -233,9 +235,19 @@ export default function TodayScreen({
 }: TodayScreenProps) {
   const units = useUnits();
   // Computed per render against the minute clock, so a party that starts at
-  // midnight appears without a reload; the seen-flag keeps it to one showing.
+  // midnight appears without a reload — but FROZEN in state the moment it
+  // qualifies: MilestoneParty marks its id seen on mount, so re-checking
+  // storage every render made the card vanish on the next minute tick or
+  // first tap. It stays for the visit; its own 🎉 button dismisses it.
   const milestone = milestoneFor(profile.birthDate, profile.name, minuteClock);
-  const celebration = milestone && !milestoneSeen(milestone.id) ? milestone : null;
+  const [celebration, setCelebration] = useState(() =>
+    milestone && !milestoneSeen(milestone.id) ? milestone : null,
+  );
+  useEffect(() => {
+    if (milestone && !celebration && !milestoneSeen(milestone.id)) setCelebration(milestone);
+    // The id is the identity; the object is rebuilt every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [milestone?.id]);
   const {
     sortedActivities,
     today,
@@ -336,7 +348,7 @@ export default function TodayScreen({
       // disagrees with itself. It never promises the pattern will arrive.
       waiting: {
         headline: "No steady pattern",
-        hint: "Nappies come when they come — check whenever something seems off.",
+        hint: "Diapers come when they come — check whenever something seems off.",
       },
       gone: {
         headline: "Past the usual window",

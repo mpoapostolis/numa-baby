@@ -594,8 +594,10 @@
   text-overflow: clip;
 }
 
-/* The newspaper in the topbar — quiet until tapped. */
+/* The newspaper in the topbar — quiet until tapped, but never a sub-44px
+   target: the trigger beside it is 44x44 and thumbs deserve parity. */
 .topbar-news {
+  min-width: 44px;
   color: var(--ink-3);
 }
 

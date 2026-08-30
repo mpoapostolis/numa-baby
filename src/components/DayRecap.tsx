@@ -12,6 +12,7 @@ import { track } from "../domain/analytics";
 import { Button } from "./ui/button";
 import { DaySummary } from "../domain/daySummary";
 import { formatTime, humanDuration } from "../domain/time";
+import { formatVolume, useUnits, volumeParts } from "../domain/units";
 
 // Unit demotion, the house rule: digits speak, units recede.
 function Duration({ minutes }: { minutes: number }) {
@@ -103,6 +104,8 @@ type DayRecapProps = {
 };
 
 export function DayRecap({ summary, title, stepper }: DayRecapProps) {
+  const units = useUnits();
+  const milk = volumeParts(summary.ml, units);
   const bracket =
     summary.firstFeedAt && summary.lastFeedAt && summary.firstFeedAt !== summary.lastFeedAt
       ? `${formatTime(summary.firstFeedAt)} → ${formatTime(summary.lastFeedAt)}`
@@ -161,7 +164,7 @@ export function DayRecap({ summary, title, stepper }: DayRecapProps) {
         ) : (
           <Stat glyph="bottle" label="Milk" sub={milkSub(summary)}>
             {summary.ml > 0
-              ? <>{summary.ml}<span className="unit">ml</span></>
+              ? <>{milk.value}<span className="unit">{milk.unit}</span></>
               : <span className="is-zero">—</span>}
           </Stat>
         )}
@@ -185,9 +188,10 @@ export function DayRecap({ summary, title, stepper }: DayRecapProps) {
  * happened appear — an empty day renders nothing at all.
  */
 export function DayRecapLine({ summary }: { summary: DaySummary }) {
+  const units = useUnits();
   const parts: string[] = [];
   if (summary.feeds > 0) parts.push(`${summary.feeds} ${summary.feeds === 1 ? "feed" : "feeds"}`);
-  if (summary.ml > 0) parts.push(`${summary.ml} ml`);
+  if (summary.ml > 0) parts.push(formatVolume(summary.ml, units));
   if (summary.wet > 0) parts.push(`${summary.wet} wet`);
   if (summary.dirty > 0) parts.push(`${summary.dirty} dirty`);
   if (summary.sleepMinutes > 0) parts.push(`${humanDuration(summary.sleepMinutes)} sleep`);

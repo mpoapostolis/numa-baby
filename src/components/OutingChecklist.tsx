@@ -14,8 +14,8 @@ import { track } from "../domain/analytics";
 const KEY = "numalog-outing-v1";
 
 const ITEMS = [
-  { id: "nappies", label: "Nappies — one per hour out, plus one" },
-  { id: "wipes", label: "Wipes and nappy bags" },
+  { id: "nappies", label: "Diapers — one per hour out, plus one" },
+  { id: "wipes", label: "Wipes and diaper bags" },
   { id: "mat", label: "Changing mat (a muslin works)" },
   { id: "clothes", label: "Full change of clothes — vest AND outfit" },
   { id: "muslin", label: "A muslin or burp cloth" },

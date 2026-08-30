@@ -1,7 +1,7 @@
 // Ships with this lazy chunk, not the app shell — the budget rule.
 import "../styles/screens/settings.css";
 import { ArrowLeftRight, Baby, Bell, Download, Moon, Ruler, Share2, ShieldCheck, Sun, Trash2, Upload } from "lucide-react";
-import { ChangeEvent, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import {
   Card,
   CardContent,
@@ -28,7 +28,7 @@ import { AppNews } from "../components/AppNews";
 import { InstallGuide } from "../components/InstallGuide";
 import { SettingsAction } from "../components/SettingsAction";
 import { track } from "../domain/analytics";
-import { ConsentChoice, readConsent, saveConsent } from "../domain/consent";
+import { ConsentChoice, onConsentChange, readConsent, saveConsent } from "../domain/consent";
 import { UnitSystem, setUnits, useUnits } from "../domain/units";
 import { formatTime } from "../domain/time";
 import { FamilySync } from "../hooks/useFamilySync";
@@ -87,6 +87,8 @@ export default function SettingsScreen({
   const units = useUnits();
   const [handoffFrom] = useState(() => handoffPeers(window.location.origin)[0] ?? null);
   const [consent, setConsent] = useState<ConsentChoice | null>(readConsent);
+  // The floating banner answers the same question — mirror it here live.
+  useEffect(() => onConsentChange(setConsent), []);
   const feedingModeLabel = {
     breast: "Breastfeeding",
     bottle: "Bottle feeding",
@@ -206,13 +208,16 @@ export default function SettingsScreen({
 
             <ItemSeparator />
             {/* Asked for by a user: "put a reminder to change diaper". Counts
-                from the last change, not from a feed. */}
-            <Item>
+                from the last change, not from a feed. Dressed exactly like
+                its feed sibling — same row class, same icon treatment, same
+                copy for the same states. */}
+            <Item size="sm" className="reminder-row">
+              <ItemMedia variant="icon" className="glyph-diaper"><Bell /></ItemMedia>
               <ItemContent>
                 <ItemTitle>Diaper reminder</ItemTitle>
                 <ItemDescription id="diaper-reminder-status">
                   {notificationPermission === "unsupported"
-                    ? "Not supported in this browser"
+                    ? "This browser can’t show notifications"
                     : notificationPermission === "denied"
                       ? "Blocked in browser settings"
                       : reminders.diaperEnabled && diaperReminderTargetAt && diaperReminderTargetAt > minuteClock
@@ -271,7 +276,7 @@ export default function SettingsScreen({
           <ItemGroup className="settings-action-list" role="group" aria-label="Backup actions">
             <AppNews />
             <ItemSeparator />
-            <SettingsAction title="Share with partner" description="Send today's log — their app merges it, nothing gets replaced" icon={<Share2 />} onClick={() => { track("data_shared"); onShare(); }} />
+            <SettingsAction title="Share with partner" description="Sends your whole log as a file — their app merges it, nothing gets replaced" icon={<Share2 />} onClick={() => { track("data_shared"); onShare(); }} />
             <ItemSeparator />
             <SettingsAction title="Download backup" description="Saves a file with all your entries — keep it in a synced folder to be safe" icon={<Download />} onClick={() => { track("backup_downloaded"); onExport(); }} />
             <ItemSeparator />

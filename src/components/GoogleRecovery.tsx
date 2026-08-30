@@ -113,6 +113,7 @@ function EmailRow({
           type="email"
           value={email}
           placeholder="your@email.com"
+          aria-label="Email address"
           autoComplete="email"
           onChange={(event) => setEmail(event.target.value)}
         />
@@ -131,12 +132,15 @@ export function ProtectWithGoogle({
   familySync,
   immediate = false,
   explainer = true,
+  onProtected,
 }: {
   familySync: FamilySync;
   immediate?: boolean;
   /** The intro modal already says all of this above the buttons — saying it
       twice in one small dialog read as clutter, because it was. */
   explainer?: boolean;
+  /** Fired when the guard lands — the intro swaps "Maybe later" for "Done". */
+  onProtected?: () => void;
 }) {
   const [email, setEmail] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -172,7 +176,10 @@ export function ProtectWithGoogle({
     track("google_protect_probe", { outcome, discardLocal });
     if (outcome === "joined") {
       const guard = await familySync.recoveryEmail();
-      if (guard) setEmail(guard);
+      if (guard) {
+        setEmail(guard);
+        onProtected?.();
+      }
     }
     setBusy(false);
     return outcome;
@@ -223,7 +230,10 @@ export function ProtectWithGoogle({
       setMergeChoice({ credential, count: familySync.localEntryCount() });
       return;
     }
-    if (linked) setEmail(linked);
+    if (linked) {
+      setEmail(linked);
+      onProtected?.();
+    }
     setBusy(false);
   }
 

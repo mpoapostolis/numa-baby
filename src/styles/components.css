@@ -1183,7 +1183,14 @@ body:has(.feedback-bubble) .content {
   body:has(.consent-banner) .content {
     padding-bottom: 0;
   }
+
+  /* Same reset for the update toast: on desktop it is a small corner card,
+     and the mobile clearance left 264px of blank under every screen. */
+  body:has(.pwa-toast) .content {
+    padding-bottom: 0;
+  }
 }
+
 
 .consent-copy {
   margin: 0;

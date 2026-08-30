@@ -139,7 +139,21 @@ function trimmed(value: number): string {
 // person typed is what the field shows — and they cross to metric exactly
 // once, on save, before validateDraft ever sees them. Storage stays metric.
 
-export type MeasurementName = "weightGrams" | "lengthCm" | "headCm";
+export type MeasurementName = "weightGrams" | "lengthCm" | "headCm" | "temperatureC";
+
+export function cToF(c: number): number {
+  return c * 9 / 5 + 32;
+}
+
+export function fToC(f: number): number {
+  return (f - 32) * 5 / 9;
+}
+
+/** A stored °C temperature, in the system's own degrees. */
+export function formatTemperature(c: number, units: UnitSystem): string {
+  if (units === "metric") return `${c.toFixed(1)} °C`;
+  return `${cToF(c).toFixed(1)} °F`;
+}
 
 /** The bottle stepper's geometry per system: ±10 ml, or the half-ounce. */
 export function bottleStepper(units: UnitSystem) {
@@ -173,6 +187,10 @@ const US_MEASUREMENT = {
   weightGrams: { label: "Weight", unit: "lb", min: 1.11, max: 66.1, step: 0.01, noun: "a weight", errorUnit: "lb" },
   lengthCm: { label: "Length", unit: "in", min: 7.9, max: 51.2, step: 0.1, noun: "a length", errorUnit: "inches" },
   headCm: { label: "Head", unit: "in", min: 7.9, max: 31.5, step: 0.1, noun: "a head measurement", errorUnit: "inches" },
+  // 30–45 °C through the same conversion the value takes. A parent with a
+  // Fahrenheit thermometer typing 98.6 at 3am must not be told to enter
+  // "between 30 and 45".
+  temperatureC: { label: "Temperature", unit: "°F", min: 86, max: 113, step: 0.1, noun: "a temperature", errorUnit: "°F" },
 } as const;
 
 export function usMeasurementProps(name: MeasurementName) {
@@ -186,8 +204,8 @@ export function usMeasurementError(name: MeasurementName): string {
 }
 
 export function measurementPlaceholder(name: MeasurementName, units: UnitSystem): string {
-  if (units === "metric") return { weightGrams: "3500", lengthCm: "51.5", headCm: "35.1" }[name];
-  return { weightGrams: "7.7", lengthCm: "20.3", headCm: "13.8" }[name];
+  if (units === "metric") return { weightGrams: "3500", lengthCm: "51.5", headCm: "35.1", temperatureC: "36.7" }[name];
+  return { weightGrams: "7.7", lengthCm: "20.3", headCm: "13.8", temperatureC: "98.1" }[name];
 }
 
 /** A display-units draft string, converted to the metric string validate expects. */
@@ -196,6 +214,7 @@ export function measurementToMetric(name: MeasurementName, value: string, units:
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return value;
   if (name === "weightGrams") return String(lbToGrams(parsed));
+  if (name === "temperatureC") return String(fToC(parsed));
   return String(inToCm(parsed));
 }
 
@@ -203,5 +222,6 @@ export function measurementToMetric(name: MeasurementName, value: string, units:
 export function metricToMeasurementDraft(name: MeasurementName, value: number, units: UnitSystem): string {
   if (units === "metric") return String(value);
   if (name === "weightGrams") return gramsToLb(value).toFixed(2);
+  if (name === "temperatureC") return cToF(value).toFixed(1);
   return cmToIn(value).toFixed(1);
 }

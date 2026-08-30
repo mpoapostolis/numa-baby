@@ -42,6 +42,9 @@ export function ProtectIntro({
   // An unpaired family cannot already be guarded: open on arrival. A paired
   // one might be — stay closed until the status comes back.
   const [open, setOpen] = useState(forced || !paired);
+  // Flips once the guard lands, so the exit button stops offering "later"
+  // for a thing that already happened.
+  const [protectedNow, setProtectedNow] = useState(false);
 
   // Families already guarded never see this — it retires silently.
   useEffect(() => {
@@ -88,9 +91,9 @@ export function ProtectIntro({
           any future phone can get everything back. Optional, free, removable —
           and nothing from your log is ever shared with anyone.
         </DialogDescription>
-        <ProtectWithGoogle familySync={familySync} immediate explainer={false} />
-        <Button variant="ghost" onClick={() => { track("protect_intro_later"); close(); }}>
-          Maybe later — it lives in Settings
+        <ProtectWithGoogle familySync={familySync} immediate explainer={false} onProtected={() => setProtectedNow(true)} />
+        <Button variant="ghost" onClick={() => { if (!protectedNow) track("protect_intro_later"); close(); }}>
+          {protectedNow ? "Done" : "Maybe later — it lives in Settings"}
         </Button>
       </DialogContent>
     </Dialog>

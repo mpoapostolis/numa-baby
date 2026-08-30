@@ -30,6 +30,20 @@ export function readConsent(): ConsentChoice | null {
   }
 }
 
+const CONSENT_EVENT = "numalog:consent";
+
+/** Two surfaces ask the same question (the floating banner and the Settings
+    toggle) and each kept its own copy of the answer — answering one left the
+    other stale. Whoever saves, broadcasts; whoever renders, listens. */
+export function onConsentChange(listener: (choice: ConsentChoice) => void): () => void {
+  const handler = (event: Event) => {
+    const detail = (event as CustomEvent).detail;
+    if (detail === "granted" || detail === "denied") listener(detail);
+  };
+  window.addEventListener(CONSENT_EVENT, handler);
+  return () => window.removeEventListener(CONSENT_EVENT, handler);
+}
+
 export function saveConsent(choice: ConsentChoice) {
   setTrackingEnabled(choice === "granted");
   try {
@@ -37,6 +51,7 @@ export function saveConsent(choice: ConsentChoice) {
   } catch {
     // The banner still applies the choice for this session.
   }
+  window.dispatchEvent(new CustomEvent(CONSENT_EVENT, { detail: choice }));
   // Advertising signals are never granted — this app has no ads.
   gtag()?.("consent", "update", {
     analytics_storage: choice === "granted" ? "granted" : "denied",

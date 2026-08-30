@@ -220,7 +220,7 @@ export default function OnboardingScreen({
                       />
                     </InputGroup>
                     <FieldDescription>
-                      Does the day count, and matches the guidance to this exact week. You can skip it.
+                      Powers the day counter and matches the guidance to this exact week. You can skip it.
                     </FieldDescription>
                   </Field>
                   <Field>

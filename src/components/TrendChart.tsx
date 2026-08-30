@@ -7,13 +7,14 @@
 
 import { useState } from "react";
 import { track } from "../domain/analytics";
+import { humanDuration } from "../domain/time";
 import { mlToOz, useUnits } from "../domain/units";
 import { DaySummary } from "../domain/daySummary";
 
 type Series = {
   key: string;
   label: string;
-  glyph: "bottle" | "nursing" | "diaper";
+  glyph: "bottle" | "nursing" | "diaper" | "sleep";
   hue: string;
   unit?: string;
   value: (day: DaySummary) => number;
@@ -23,8 +24,10 @@ const SERIES: Series[] = [
   { key: "ml", label: "Milk", glyph: "bottle", hue: "var(--glyph-bottle)", unit: "ml", value: (d) => d.ml },
   { key: "feeds", label: "Feeds", glyph: "nursing", hue: "var(--glyph-nursing)", value: (d) => d.feeds },
   { key: "wet", label: "Wet", glyph: "diaper", hue: "var(--glyph-diaper)", value: (d) => d.wet },
-  { key: "dirty", label: "Dirty", glyph: "diaper", hue: "var(--glyph-growth)", value: (d) => d.dirty },
-  { key: "sleep", label: "Sleep", glyph: "diaper", hue: "var(--glyph-sleep)", unit: "m", value: (d) => d.sleepMinutes },
+  // Every series wears its own activity pigment — the six hues are a
+  // contract (tokens.css), and Dirty borrowing growth's honey broke it.
+  { key: "dirty", label: "Dirty", glyph: "diaper", hue: "var(--glyph-diaper)", value: (d) => d.dirty },
+  { key: "sleep", label: "Sleep", glyph: "sleep", hue: "var(--glyph-sleep)", unit: "m", value: (d) => d.sleepMinutes },
 ];
 
 const dayFormat = new Intl.DateTimeFormat("en", { weekday: "short" });
@@ -43,9 +46,14 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
   // Bars are proportions, so only the WORDS convert: the millilitre series
   // reads in ounces when the phone does, and every number goes through fmt.
   const isVolume = series.key === "ml";
-  const unitLabel = isVolume && units === "us" ? "oz" : series.unit;
+  // Sleep speaks in hours-and-minutes like everywhere else in the app —
+  // "612m a day" is exactly the arithmetic this app promises to spare.
+  const isSleep = series.key === "sleep";
+  const unitLabel = isSleep ? undefined : isVolume && units === "us" ? "oz" : series.unit;
   const fmt = (value: number) =>
-    isVolume && units === "us" ? String(Math.round(mlToOz(value) * 10) / 10) : String(value);
+    isSleep
+      ? humanDuration(Math.round(value))
+      : isVolume && units === "us" ? String(Math.round(mlToOz(value) * 10) / 10) : String(value);
 
   // Days before anything was ever logged are not zero-milk days — they are
   // days this app was not being used. Plotting them as zero would draw a
@@ -97,13 +105,14 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
         )}
       </header>
 
-      <div className="trend-tabs" role="tablist" aria-label="Choose what to chart">
+      {/* Plain toggle buttons, not the ARIA tabs pattern: tabs promise
+          arrow-key navigation and panels this chart does not have. */}
+      <div className="trend-tabs" role="group" aria-label="Choose what to chart">
         {SERIES.map((option) => (
           <button
             key={option.key}
             type="button"
-            role="tab"
-            aria-selected={option.key === activeKey}
+            aria-pressed={option.key === activeKey}
             className={option.key === activeKey ? "trend-tab is-active" : "trend-tab"}
             style={{ "--trend-hue": option.hue } as React.CSSProperties}
             onClick={() => { track("trend_series_changed", { series: option.key }); setActiveKey(option.key); }}

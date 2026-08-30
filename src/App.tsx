@@ -32,7 +32,7 @@ import {
   readHandoffTarget,
 } from "./domain/handoff";
 import { backupNudge } from "./domain/backupNudge";
-import { readConsent } from "./domain/consent";
+import { onConsentChange, readConsent } from "./domain/consent";
 import { ageInDays } from "./domain/time";
 import { useActivityStats } from "./hooks/useActivityStats";
 import { useFamilySync } from "./hooks/useFamilySync";
@@ -153,8 +153,10 @@ export default function HomePage() {
   // waits here while the person decides in a real dialog.
   const [recoverAsk, setRecoverAsk] = useState<string | null>(null);
   const [newsOpen, setNewsOpen] = useState(false);
-  // Read once per visit: the intro marks itself seen on any dismissal.
-  const [protectIntroDone] = useState(() => {
+  // Stateful, not read-once: the intro unmounts whenever a sheet opens, and
+  // a boot-time snapshot meant every sheet close REMOUNTED it, open again,
+  // for anyone who had said "maybe later" this visit.
+  const [protectIntroDone, setProtectIntroDone] = useState(() => {
     try {
       return window.localStorage.getItem("numalog-protect-intro-v1") !== null;
     } catch {
@@ -168,6 +170,9 @@ export default function HomePage() {
   // null = never asked. The banner shows only then, so a parent is asked once
   // rather than on every one of the six visits they make in a night.
   const [consent, setConsent] = useState(readConsent);
+  // The Settings toggle answers the same question — when it does, the
+  // floating banner must fold up too, not linger asking what was answered.
+  useEffect(() => onConsentChange(setConsent), []);
   const [seenRelease, setSeenRelease] = useState(() => {
     try {
       return window.localStorage.getItem(SEEN_RELEASE_KEY);
@@ -456,7 +461,7 @@ export default function HomePage() {
     if (delay <= 0 || delay > MAX_REMINDER_DELAY_MS) return;
     const timer = window.setTimeout(() => {
       void navigator.serviceWorker.ready
-        .then((registration) => registration.showNotification("Nappy check", {
+        .then((registration) => registration.showNotification("Diaper check", {
           // No name on a lock screen — this may show in a shared room.
           body: "It has been a while since the last change.",
           icon: "/icon-192.png",
@@ -671,7 +676,10 @@ export default function HomePage() {
         {/* Asked once there is something worth losing, and not before. The
             rules live in domain/backupNudge.ts so they can be tested rather
             than argued about. */}
-        {pendingBackupNudge && !milestoneToday && !protectMoment && !showWhatsNew && !familySync.pairing && (
+        {/* Gated on releases EXISTING, not on the tab-dependent showWhatsNew
+            flag — otherwise the nudge shows on Timeline and vanishes the
+            moment the person returns to Today, which reads as a glitch. */}
+        {pendingBackupNudge && !milestoneToday && !protectMoment && releasesToShow.length === 0 && !familySync.pairing && (
           <Suspense fallback={null}>
           <BackupNudgeCard
             nudge={pendingBackupNudge}
@@ -866,7 +874,7 @@ export default function HomePage() {
         )}
         {protectMoment && protectAsk === 0 && (
           <Suspense fallback={null}>
-            <ProtectIntro familySync={familySync} />
+            <ProtectIntro familySync={familySync} onClosed={() => setProtectIntroDone(true)} />
           </Suspense>
         )}
 
@@ -883,7 +891,13 @@ export default function HomePage() {
           theme={nightMode ? "dark" : "light"}
           position="bottom-center"
           closeButton
-          mobileOffset={{ bottom: "calc(96px + env(safe-area-inset-bottom))", left: "12px", right: "12px" }}
+          mobileOffset={{
+            // The consent banner owns the bottom band until answered —
+            // toasts lift above it rather than landing on its Allow button.
+            bottom: consent === null ? "calc(248px + env(safe-area-inset-bottom))" : "calc(96px + env(safe-area-inset-bottom))",
+            left: "12px",
+            right: "12px",
+          }}
           offset={{ bottom: "24px" }}
         />
 

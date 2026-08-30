@@ -18,7 +18,7 @@ import { VisitSummary } from "../domain/visitSummary";
 import { expectedWeightRange, typicalWeeklyGain } from "../domain/growthReference";
 import { formatBabyAge } from "../domain/time";
 import { Profile } from "../domain/types";
-import { formatKg, formatVolume, useUnits, weightParts } from "../domain/units";
+import { formatKg, formatVolume, useUnits, volumeParts, weightParts } from "../domain/units";
 
 const dateFormat = new Intl.DateTimeFormat("en", { day: "numeric", month: "short" });
 const longDate = new Intl.DateTimeFormat("en", { day: "numeric", month: "long", year: "numeric" });
@@ -85,7 +85,11 @@ export function VisitSummarySheet({ open, onOpenChange, summary, profile, ageMon
             <h3>Feeding</h3>
             <div className="visit-figures">
               <Figure value={show(summary.feedsPerDay)} label="feeds a day" />
-              <Figure value={show(summary.mlPerDay)} unit="ml" label="milk a day" />
+              <Figure
+                value={summary.mlPerDay === null ? show(summary.mlPerDay) : volumeParts(summary.mlPerDay, units).value}
+                unit={volumeParts(summary.mlPerDay ?? 0, units).unit}
+                label="milk a day"
+              />
               <Figure value={show(summary.nursingMinutesPerDay)} unit="m" label="nursing a day" />
             </div>
             <p className="visit-note">
@@ -95,7 +99,7 @@ export function VisitSummarySheet({ open, onOpenChange, summary, profile, ageMon
           </section>
 
           <section className="visit-block">
-            <h3>Nappies</h3>
+            <h3>Diapers</h3>
             <div className="visit-figures">
               <Figure value={show(summary.wetPerDay)} label="wet a day" />
               <Figure value={show(summary.dirtyPerDay)} label="dirty a day" />
@@ -131,7 +135,7 @@ export function VisitSummarySheet({ open, onOpenChange, summary, profile, ageMon
             <h3>Day by day</h3>
             <table className="visit-table">
               <thead>
-                <tr><th>Day</th><th>Feeds</th><th>ml</th><th>Wet</th><th>Dirty</th></tr>
+                <tr><th>Day</th><th>Feeds</th><th>{volumeParts(0, units).unit}</th><th>Wet</th><th>Dirty</th></tr>
               </thead>
               <tbody>
                 {summary.days.map((day) => (
@@ -142,7 +146,7 @@ export function VisitSummarySheet({ open, onOpenChange, summary, profile, ageMon
                     ) : (
                       <>
                         <td>{day.feeds}</td>
-                        <td>{day.ml || "—"}</td>
+                        <td>{day.ml ? volumeParts(day.ml, units).value : "—"}</td>
                         <td>{day.wet}</td>
                         <td>{day.dirty}</td>
                       </>

@@ -33,6 +33,9 @@
   align-items: center;
   gap: 12px;
   padding: 14px;
+  /* Matches the hero's own bottom margin — on the one morning a month this
+     appears, it must not sit flush against the illustration below. */
+  margin-bottom: 16px;
   border: 1px solid color-mix(in oklab, var(--glyph-nursing) 35%, var(--border));
   border-radius: var(--radius-lg);
   background: color-mix(in oklab, var(--glyph-nursing) 10%, var(--card));

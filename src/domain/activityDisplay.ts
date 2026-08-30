@@ -1,6 +1,6 @@
 import { formatTime, humanDuration, minutesBetween, timeAgo } from "./time";
 import { Activity } from "./types";
-import { UnitSystem, formatLength, formatVolume, formatWeight } from "./units";
+import { UnitSystem, formatLength, formatTemperature, formatVolume, formatWeight } from "./units";
 
 export function activityTitle(activity: Activity) {
   if (activity.type === "bottle") return "Bottle";
@@ -68,7 +68,7 @@ export function activityDetail(activity: Activity, units: UnitSystem = "metric")
     return includeNote(values.join(" · "), activity.note);
   }
   if (activity.type === "health") {
-    const detail = activity.temperatureC ? `${activity.temperatureC.toFixed(1)} °C` : "Note";
+    const detail = activity.temperatureC ? formatTemperature(activity.temperatureC, units) : "Note";
     return includeNote(detail, activity.note);
   }
   return activity.note?.trim() ?? "";

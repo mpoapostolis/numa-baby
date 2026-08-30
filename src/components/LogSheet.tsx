@@ -122,7 +122,7 @@ function initialSheetDraft(
       weightGrams: editing.weightGrams ? metricToMeasurementDraft("weightGrams", editing.weightGrams, units) : "",
       lengthCm: editing.lengthCm ? metricToMeasurementDraft("lengthCm", editing.lengthCm, units) : "",
       headCm: editing.headCm ? metricToMeasurementDraft("headCm", editing.headCm, units) : "",
-      temperatureC: editing.temperatureC ? String(editing.temperatureC) : "",
+      temperatureC: editing.temperatureC ? metricToMeasurementDraft("temperatureC", editing.temperatureC, units) : "",
       logTime: localDateInput(new Date(editing.startedAt)),
       endTime: editing.endedAt ? localDateInput(new Date(editing.endedAt)) : "",
       nursingSide: editing.side ?? "left",
@@ -441,7 +441,7 @@ export function LogSheet({
 
   function saveHealthNote() {
     const outcome = validateDraft(
-      { type: "health", start: draft.logTime, temperatureC: draft.temperatureC, note: draft.note },
+      { type: "health", start: draft.logTime, temperatureC: metricMeasurement("temperatureC"), note: draft.note },
       { clampTime: true },
     );
     if (!outcome.ok) {
@@ -470,7 +470,7 @@ export function LogSheet({
         end: timed ? draft.endTime : undefined,
         amount: draft.bottleAmount.trim() === "" ? undefined : draftAmountMl(),
         ...metricGrowthDraft(),
-        temperatureC: draft.temperatureC,
+        temperatureC: metricMeasurement("temperatureC"),
         note: draft.note,
       },
       { allowEqualEnd: true },
@@ -757,8 +757,8 @@ export function LogSheet({
       {sheet === "health" && (
         <SheetForm onSubmit={saveHealthNote}>
           <LogDialogHeader icon={<Thermometer />} eyebrow="Health log" title="Temperature or note" description="Keep a time-stamped note you can refer back to." />
-          <UnitField {...numericFieldProps("temperatureC")} optional value={draft.temperatureC} inputRef={temperatureRef} autoFocus invalid={formError?.field === "temperatureC"} onChange={(value) => { patch({ temperatureC: value }); setFormError(null); }} placeholder="36.7" />
-          <TemperatureAdvice value={draft.temperatureC} ageMonths={babyAgeMonths} />
+          <UnitField {...measureProps("temperatureC")} optional value={draft.temperatureC} inputRef={temperatureRef} autoFocus invalid={formError?.field === "temperatureC"} onChange={(value) => { patch({ temperatureC: value }); setFormError(null); }} placeholder={measurementPlaceholder("temperatureC", units)} />
+          <TemperatureAdvice value={metricMeasurement("temperatureC")} ageMonths={babyAgeMonths} />
           <TimeField value={draft.logTime} onChange={(value) => patch({ logTime: value })} />
           <NoteField value={draft.note} onChange={(value) => { patch({ note: value }); setFormError(null); }} placeholder="Medicine, spit-up, rash, question for the doctor…" />
           <FormError message={formError?.message ?? null} />
@@ -812,6 +812,10 @@ export function LogSheet({
               <ToggleGroup type="single" value={draft.nursingSide} className="side-grid" aria-label="Nursing side" onValueChange={(value) => value && patch({ nursingSide: value as "left" | "right" | "both" })}>
                 <ToggleGroupItem autoFocus data-initial-focus value="left"><span className="side-letter">L</span><span className="choice-copy"><strong>Left</strong></span><Check className="choice-check" /></ToggleGroupItem>
                 <ToggleGroupItem value="right"><span className="side-letter">R</span><span className="choice-copy"><strong>Right</strong></span><Check className="choice-check" /></ToggleGroupItem>
+                {/* Sessions saved as Both exist (the manual sheet offers it);
+                    without this item, editing one showed no side selected and
+                    Both could never be kept or restored. */}
+                <ToggleGroupItem value="both"><span className="side-letter">LR</span><span className="choice-copy"><strong>Both</strong></span><Check className="choice-check" /></ToggleGroupItem>
               </ToggleGroup>
             </Field>
           )}
@@ -853,8 +857,8 @@ export function LogSheet({
 
           {editing.type === "health" && (
             <>
-              <UnitField {...numericFieldProps("temperatureC")} optional value={draft.temperatureC} inputRef={temperatureRef} autoFocus invalid={formError?.field === "temperatureC"} onChange={(value) => { patch({ temperatureC: value }); setFormError(null); }} placeholder="36.7" />
-              <TemperatureAdvice value={draft.temperatureC} ageMonths={babyAgeMonths} />
+              <UnitField {...measureProps("temperatureC")} optional value={draft.temperatureC} inputRef={temperatureRef} autoFocus invalid={formError?.field === "temperatureC"} onChange={(value) => { patch({ temperatureC: value }); setFormError(null); }} placeholder={measurementPlaceholder("temperatureC", units)} />
+              <TemperatureAdvice value={metricMeasurement("temperatureC")} ageMonths={babyAgeMonths} />
             </>
           )}
 
@@ -868,7 +872,7 @@ export function LogSheet({
           <AlertDialog>
             <div className="edit-danger">
               <AlertDialogTrigger asChild>
-                <Button type="button" variant="ghost"><Trash2 size={17} /> Delete this log</Button>
+                <Button type="button" variant="ghost"><Trash2 size={17} /> Delete this entry</Button>
               </AlertDialogTrigger>
             </div>
             <AlertDialogContent className="delete-dialog">
@@ -910,7 +914,7 @@ function ProfileForm({ profile, onChange, onDone }: { profile: Profile; onChange
     <SheetForm onSubmit={() => {
       if (onChange({ ...draft, name: draft.name.trim() || "Baby" })) onDone();
     }}>
-      <LogDialogHeader icon={<Baby />} eyebrow="Keep it personal" title="Baby profile" description="Used only in this browser to personalise your tracker." />
+      <LogDialogHeader icon={<Baby />} eyebrow="Keep it personal" title="Baby profile" description="Personalises your tracker — shared only with the phones in your Family Sync." />
       <FieldGroup>
         <Field>
           <FieldLabel htmlFor={nameId}>Name</FieldLabel>

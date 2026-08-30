@@ -65,7 +65,7 @@ export default function TimelineScreen({
           <p className="eyebrow">The full picture</p>
           <h1 id="timeline-heading">Timeline</h1>
         </div>
-        <Badge variant="outline" className="count-badge"><span aria-live="polite">{filteredTimeline.length} logs</span></Badge>
+        <Badge variant="outline" className="count-badge"><span aria-live="polite">{filteredTimeline.length} {filteredTimeline.length === 1 ? "entry" : "entries"}</span></Badge>
       </div>
       <div className="timeline-controls">
         <ToggleGroup
@@ -97,7 +97,7 @@ export default function TimelineScreen({
           <section className="timeline-day" key={new Date(group[0].startedAt).toDateString()}>
             <div className="timeline-day-heading">
               <h2>{formatTimelineDay(group[0].startedAt)}</h2>
-              <span>{group.length} {group.length === 1 ? "log" : "logs"}</span>
+              <span>{group.length} {group.length === 1 ? "entry" : "entries"}</span>
             </div>
             {/* The day's totals sit below the sticky heading, not inside it —
                 a two-line sticky bar clips under the app header. */}
@@ -123,9 +123,9 @@ export default function TimelineScreen({
                 <EmptyState text="Nothing logged yet — your day builds here from the Today screen." />
               ) : (
                 <>
-                  <EmptyState text={`No ${filter} logs yet.`} />
+                  <EmptyState text={`No ${filter} entries yet.`} />
                   <Button variant="outline" className="timeline-clear-filter" onClick={() => onFilterChange("all")}>
-                    Show all logs
+                    Show all entries
                   </Button>
                 </>
               )}
@@ -135,7 +135,7 @@ export default function TimelineScreen({
       </div>
       {filteredTimeline.length > limit && (
         <Button variant="outline" className="load-more" onClick={onShowMore}>
-          Show more logs
+          Show more entries
         </Button>
       )}
     </section>

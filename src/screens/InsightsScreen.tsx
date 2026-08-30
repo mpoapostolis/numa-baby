@@ -6,7 +6,7 @@ import { EmptyState } from "../components/EmptyState";
 import { GrowthChart } from "../components/GrowthChart";
 import { LittleBottle } from "../components/illustrations";
 import { activityTitle } from "../domain/activityDisplay";
-import { formatVolume, formatWeight, useUnits, volumeParts } from "../domain/units";
+import { formatVolume, formatWeight, useUnits, volumeParts, weightParts } from "../domain/units";
 import { formatShortDay, formatTime, humanDuration, median } from "../domain/time";
 import { track } from "../domain/analytics";
 import { Insight, buildInsightInput, insightsFor } from "../domain/insightRules";
@@ -148,7 +148,9 @@ export default function InsightsScreen({
   const waitingFor = [
     typicalGap ? null : "a few more feeds",
     averageFeeds ? null : "a day or two",
-    bottleMlToday > 0 ? null : "a bottle today",
+    // A breastfeeding-only family will rightly never log a bottle — promising
+    // that dash "fills in on its own" would be a promise broken daily.
+    bottleMlToday > 0 || feedingMode === "breast" ? null : "a bottle today",
     latestGrowth?.weightGrams ? null : "a weight",
   ].filter(Boolean) as string[];
 
@@ -300,7 +302,8 @@ export default function InsightsScreen({
           <div>
             {latestGrowth?.weightGrams ? (
               <strong className="t-numeral figure">
-                {(latestGrowth.weightGrams / 1_000).toFixed(2)} <span className="unit">kg</span>
+                {weightParts(latestGrowth.weightGrams, units).value}{" "}
+                <span className="unit">{weightParts(latestGrowth.weightGrams, units).unit}</span>
               </strong>
             ) : (
               emptyTile
@@ -327,8 +330,8 @@ export default function InsightsScreen({
           <div
             className="bar-chart"
             role="img"
-            aria-label={`Bottle volume for the last seven days. Most bottle days total about ${medianMl} millilitres. ${weekly
-              .map((day) => `${formatShortDay(day.date)}: ${day.ml} millilitres`)
+            aria-label={`Bottle volume for the last seven days. Most bottle days total about ${formatVolume(medianMl, units)}. ${weekly
+              .map((day) => `${formatShortDay(day.date)}: ${formatVolume(day.ml, units)}`)
               .join(", ")}.`}
           >
             <div className="bar-plot" aria-hidden="true">
@@ -340,7 +343,7 @@ export default function InsightsScreen({
                       className="bar-value"
                       style={{ bottom: `calc(${(day.ml / maxMl) * 100}% + 4px)` }}
                     >
-                      {day.ml}
+                      {volumeParts(day.ml, units).value}
                     </span>
                   )}
                   <div

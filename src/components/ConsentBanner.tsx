@@ -19,8 +19,10 @@ export function ConsentBanner({ onChoose }: ConsentBannerProps) {
     onChoose(choice);
   }
 
+  // role=region, not dialog: this is deliberately non-modal, never takes
+  // focus, and a screen reader hearing "dialog" expects both.
   return (
-    <div className="consent-banner" role="dialog" aria-live="polite" aria-label="Cookie choice">
+    <div className="consent-banner" role="region" aria-live="polite" aria-label="Cookie choice">
       <p className="consent-copy">
         Numalog would like to count anonymous page views to see which parts get used.
         Nothing about your baby is ever sent — those entries stay on this device unless you

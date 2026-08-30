@@ -62,7 +62,7 @@ export function MilestoneParty({ milestone }: { milestone: Milestone }) {
           <strong>{milestone.title}</strong>
           <small>{milestone.sub}</small>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => setDismissed(true)}>🎉</Button>
+        <Button variant="ghost" size="sm" aria-label="Dismiss the celebration" onClick={() => setDismissed(true)}>🎉</Button>
       </div>
     </>
   );

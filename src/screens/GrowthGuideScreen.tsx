@@ -322,7 +322,7 @@ export default function GrowthGuideScreen({
             <span className="guide-authority">NHS · NICE</span>
           </li>
           <li>
-            <p>After the first week, fewer than six wet nappies a day, or urine that is dark or has reddish-orange marks in it.</p>
+            <p>After the first week, fewer than six wet diapers a day, or urine that is dark or has reddish-orange marks in it.</p>
             <span className="guide-authority">AAP</span>
           </li>
           <li>
@@ -330,7 +330,7 @@ export default function GrowthGuideScreen({
             <span className="guide-authority">NHS</span>
           </li>
           <li>
-            <p>Noticeably fewer wet nappies alongside irritability, unusual sleepiness or reduced feeding — seek care the same day.</p>
+            <p>Noticeably fewer wet diapers alongside irritability, unusual sleepiness or reduced feeding — seek care the same day.</p>
             <span className="guide-authority">NHS</span>
           </li>
         </ul>

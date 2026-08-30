@@ -368,11 +368,14 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     // safe here — a genuine long sleep and a forgotten stopwatch look identical
     // from the outside — so this is the one moment worth asking about.
     if (ranForMinutes > STALE_OPEN_SPAN_MINUTES) {
-      const kept = window.confirm(
+      // OK is the reflex tap, so OK must be the SAFE answer: it saves. Only
+      // an explicit Cancel discards — the previous mapping put a genuine
+      // overnight sleep one habitual OK away from a tombstone.
+      const savedIt = window.confirm(
         `This ${TIMER_NOUN[target.type] ?? "timer"} has been running for ${humanDuration(ranForMinutes)}. ` +
-          `That is usually a timer left on by mistake.\n\nOK discards it. Cancel saves it as a ${humanDuration(ranForMinutes)} session.`,
+          `That is usually a timer left on by mistake.\n\nOK saves it as a ${humanDuration(ranForMinutes)} session. Cancel discards it.`,
       );
-      if (kept) {
+      if (!savedIt) {
         // Discarded, not deleted-and-forgotten: it becomes a tombstone like any
         // other removal, so the other phone drops it too.
         const withoutIt = current.map((activity) =>

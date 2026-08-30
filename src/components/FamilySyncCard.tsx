@@ -30,6 +30,20 @@ type FamilySyncCardProps = {
 
 type View = "closed" | "code" | "join";
 
+const deviceDayFormat = new Intl.DateTimeFormat("en", { month: "short", day: "numeric" });
+
+/** The worker clips ISO stamps to "2026-08-30T11:42" (UTC) for last-seen and
+    a bare date for joined. Re-inflate them and speak LOCAL time — a raw UTC
+    string with a literal T is machine text, not a sentence. Unparseable
+    values fall back to the raw string. */
+function humanStamp(raw: string): string {
+  const iso = raw.length === 16 ? `${raw}:00Z` : raw.length === 10 ? `${raw}T12:00:00Z` : raw;
+  const ms = Date.parse(iso);
+  if (!Number.isFinite(ms)) return raw;
+  const day = deviceDayFormat.format(new Date(ms));
+  return raw.length === 10 ? day : `${day}, ${formatTime(new Date(ms).toISOString())}`;
+}
+
 function statusLine(phase: string, lastSyncAt: string | null, entryCount: number): string {
   if (phase === "syncing") return "Syncing…";
   if (phase === "offline") return "Offline — will catch up on its own when you're back";
@@ -226,7 +240,10 @@ export function FamilySyncCard({
             <span className="family-status-icon"><Users size={18} /></span>
             <div className="family-status-copy">
               <strong>
-                Family Sync on{status.deviceCount ? ` · ${status.deviceCount} devices` : ""}
+                Family Sync on
+                {status.deviceCount
+                  ? ` · ${status.deviceCount === 1 ? "just this phone" : `${status.deviceCount} phones`}`
+                  : ""}
               </strong>
               <small>{statusLine(status.phase, status.lastSyncAt, entryCount)}</small>
             </div>
@@ -251,7 +268,9 @@ export function FamilySyncCard({
                     {device.isThisDevice && <span className="family-device-you"> · this one</span>}
                   </span>
                   <span className="family-device-meta">
-                    {device.last_seen ? `last synced ${device.last_seen}` : `joined ${device.joined}`}
+                    {device.last_seen
+                      ? `last synced ${humanStamp(device.last_seen)}`
+                      : `joined ${humanStamp(device.joined)}`}
                   </span>
                   {!device.isThisDevice && device.revocable > 0 && (
                     <Button
