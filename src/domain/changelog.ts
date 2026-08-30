@@ -17,6 +17,14 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-09-03",
+    title: "A dot when there is news",
+    items: [
+      "The little newspaper up top now shows a dot when something new has landed since your last look. Open it and the dot goes out — no nagging, no unread counters, just one quiet dot.",
+      "Sending feedback now tells you where the answer will appear: right here, in the news. Most messages arrive without a reply address, so the update IS the reply — like this one.",
+    ],
+  },
+  {
     id: "2026-09-02",
     title: "The sounds are back — and this time they play",
     items: [
