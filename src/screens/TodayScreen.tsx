@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from "react";
-import { ChevronRight, Cloud, CloudOff, ExternalLink, Milk, Pill, ShieldCheck, Square, Thermometer, Utensils, Waves, Weight } from "lucide-react";
+import { ChevronRight, Cloud, CloudOff, ExternalLink, Gift, Milk, Pill, ShieldCheck, Square, Thermometer, Utensils, Waves, Weight } from "lucide-react";
 
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -16,6 +16,7 @@ import { EmptyState } from "../components/EmptyState";
 import { LittleBottle, TinyStars } from "../components/illustrations";
 import { BabyCompanion, CompanionMood } from "../components/BabyCompanion";
 import { mlBucket, track } from "../domain/analytics";
+import { shareAppNatively } from "../domain/shareApp";
 import { bracketOfAge, factOfTheDay } from "../domain/babyFacts";
 import { summarizeDay } from "../domain/daySummary";
 import { makeId } from "../domain/id";
@@ -40,6 +41,9 @@ import { milestoneFor, milestoneSeen } from "../domain/milestones";
 const SoothePlayer = lazy(() =>
   import("../components/SoothePlayer").then((m) => ({ default: m.SoothePlayer })),
 );
+// Same rule for the share fallback dialog — phones use the native sheet and
+// never load this chunk at all.
+const ShareNumalogDialog = lazy(() => import("../components/ShareNumalog"));
 const MilestoneParty = lazy(() =>
   import("../components/MilestoneParty").then((m) => ({ default: m.MilestoneParty })),
 );
@@ -277,6 +281,7 @@ export default function TodayScreen({
   // arrows never step into blank prehistory — or into tomorrow.
   const [dayOffset, setDayOffset] = useState(0);
   const [sootheOpen, setSootheOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   // The noise must survive its own sheet being closed. Rendering the player
   // only while the sheet is open unmounted the <audio> the moment a parent
   // tapped away — so the one thing they opened it for stopped, in the dark,
@@ -959,8 +964,32 @@ export default function TodayScreen({
             </span>
             <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
           </Button>
+          {/* Asked for by a Greek dev on Reddit: he wanted to hand the app
+              to his brother with a newborn, instantly, and found no way to.
+              Native sheet on phones; a small dialog everywhere else. */}
+          <Button
+            variant="ghost"
+            className="log-row log-row-secondary action-share"
+            onClick={() => {
+              track("app_share_opened", { from: "today" });
+              if (!shareAppNatively()) setShareOpen(true);
+            }}
+          >
+            <span className="action-icon" aria-hidden="true"><Gift /></span>
+            <span className="log-copy">
+              <strong>Tell another parent</strong>
+              <small>Numalog is free — pass it on</small>
+            </span>
+            <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
+          </Button>
         </section>
       </div>
+
+      {shareOpen && (
+        <Suspense fallback={null}>
+          <ShareNumalogDialog open={shareOpen} onOpenChange={setShareOpen} />
+        </Suspense>
+      )}
 
       {sootheMounted && (
         <Suspense fallback={null}>

@@ -314,6 +314,35 @@
   line-height: 1.45;
 }
 
+/* The tell-another-parent fallback dialog: a handful of places parents
+   actually paste links, each one just an <a>. */
+.share-app-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.share-app-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--ink-1);
+  font-size: 0.875rem;
+  font-weight: 550;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.share-app-link svg {
+  color: var(--ink-3);
+}
+
 /* The medicines-given-before chips: name up top, last dose beneath, so the
    3am tap re-selects both without typing either. */
 .medicine-presets {

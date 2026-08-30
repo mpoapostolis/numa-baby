@@ -1,8 +1,11 @@
 // Ships with this lazy chunk, not the app shell — the budget rule.
 import "../styles/screens/settings.css";
 import { ArrowLeftRight, Baby, Bell, Download, Gift, Moon, Ruler, Share2, ShieldCheck, Sun, Trash2, Upload } from "lucide-react";
-import { toast } from "sonner";
-import { ChangeEvent, useEffect, useRef, useState } from "react";
+import { shareAppNatively } from "../domain/shareApp";
+import { ChangeEvent, Suspense, lazy, useEffect, useRef, useState } from "react";
+
+// Loads only on browsers without a native share sheet.
+const ShareNumalogDialog = lazy(() => import("../components/ShareNumalog"));
 import {
   Card,
   CardContent,
@@ -90,6 +93,7 @@ export default function SettingsScreen({
   const [consent, setConsent] = useState<ConsentChoice | null>(readConsent);
   // The floating banner answers the same question — mirror it here live.
   useEffect(() => onConsentChange(setConsent), []);
+  const [shareOpen, setShareOpen] = useState(false);
   const feedingModeLabel = {
     breast: "Breastfeeding",
     bottle: "Bottle feeding",
@@ -285,26 +289,14 @@ export default function SettingsScreen({
             <ItemSeparator />
             {/* Asked for by a Greek dev on Reddit who wanted to hand it to
                 his brother with a newborn and found no way to. The share
-                sheet where it exists; the clipboard everywhere else. */}
+                sheet where it exists; a small dialog everywhere else. */}
             <SettingsAction
               title="Tell another parent"
               description="Share Numalog — free, no sign-up, works on any phone"
               icon={<Gift />}
               onClick={() => {
-                track("app_shared");
-                const share = {
-                  title: "Numalog",
-                  text: "A calm, free baby tracker — no account, no ads, works offline.",
-                  url: "https://numalog.app",
-                };
-                if (navigator.share) {
-                  void navigator.share(share).catch(() => undefined);
-                } else {
-                  void navigator.clipboard?.writeText(share.url).then(
-                    () => toast("Link copied — send it to them however you like."),
-                    () => toast("numalog.app — that's the whole link."),
-                  );
-                }
+                track("app_share_opened", { from: "settings" });
+                if (!shareAppNatively()) setShareOpen(true);
               }}
             />
             {/* Storage belongs to a web address. A log kept at the app's other
@@ -375,6 +367,12 @@ export default function SettingsScreen({
       </Card>
 
       <p className="version-note">Numalog · build {__APP_VERSION__}</p>
+
+      {shareOpen && (
+        <Suspense fallback={null}>
+          <ShareNumalogDialog open={shareOpen} onOpenChange={setShareOpen} />
+        </Suspense>
+      )}
     </section>
   );
 }
