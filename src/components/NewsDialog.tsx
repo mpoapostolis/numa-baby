@@ -35,10 +35,13 @@ export function NewsDialog({ open, onOpenChange }: { open: boolean; onOpenChange
           </p>
         </section>
         <div className="news-list">
-          {RELEASES.map((release) => (
+          {RELEASES.map((release, index) => (
             <section key={release.id} className="news-release">
+              <p className="news-date">
+                {newsDateFormat.format(new Date(`${release.id}T12:00:00`))}
+                {index === 0 && <span className="news-latest">Latest</span>}
+              </p>
               <h3>{release.title}</h3>
-              <p className="t-meta">{newsDateFormat.format(new Date(`${release.id}T12:00:00`))}</p>
               <ul>
                 {release.items.map((item) => <li key={item}>{item}</li>)}
               </ul>

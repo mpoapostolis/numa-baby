@@ -207,18 +207,72 @@
   line-height: 1.5;
 }
 
-.news-release h3 {
-  font-size: 0.9375rem;
+/* Each release reads as a dated section: eyebrow date, title, then items
+   with a hand-set marker — never the browser's default bullet soup. A rule
+   above every entry but the first keeps the archive scannable. */
+.news-release {
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.news-list > .news-release:first-of-type {
+  padding-top: 0;
+  border-top: none;
+}
+
+.news-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 3px;
+  font-size: 0.6875rem;
   font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.news-latest {
+  padding: 1px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--ink-1);
+  background: color-mix(in oklab, var(--glyph-nursing) 22%, var(--card));
+}
+
+.news-release h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
 }
 
 .news-release ul {
-  margin: 8px 0 0;
-  padding-left: 18px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
   display: grid;
-  gap: 6px;
+  gap: 9px;
+}
+
+.news-release li {
+  position: relative;
+  padding-left: 16px;
   color: var(--ink-2);
   font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+.news-release li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.52em;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--glyph-nursing) 55%, var(--border));
 }
 
 /* The welcome-back card body: the doors, then the quiet start-fresh out. */
