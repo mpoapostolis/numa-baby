@@ -171,6 +171,16 @@ export default function OnboardingScreen({
               <div><span className="glyph-burp"><Clock /></span><p><strong>Live timers and patterns</strong><small>See what happened and what may be next.</small></p></div>
               <div><span className="onboarding-private-icon"><ShieldCheck /></span><p><strong>Yours by default</strong><small>Entries stay on this device. Family Sync is opt-in.</small></p></div>
             </div>
+            {/* The human line, quietly, where a stranger decides whether to
+                trust this thing with their baby's nights: who builds it,
+                why, and that feedback is how it grows. A note, never a
+                popup — the first open stays sacred. */}
+            <p className="onboarding-note">
+              Built by one dad, for his own daughter — I use it every night
+              myself. It grows from what parents ask for: if anything is
+              broken, missing or annoying, tap the message bubble inside and
+              tell me. I read everything.
+            </p>
             {/* The person most likely to pass it on is the one who just
                 arrived from a friend's link — meet them where they are. */}
             <Button

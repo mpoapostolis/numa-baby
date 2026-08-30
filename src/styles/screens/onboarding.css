@@ -150,6 +150,19 @@
   line-height: 1.5;
 }
 
+/* The one human line on the front door — a note in the margin, not a pitch. */
+.onboarding-note {
+  margin-top: 18px;
+  padding: 10px 14px;
+  max-width: 42ch;
+  border-left: 2px solid color-mix(in oklab, var(--glyph-nursing) 40%, var(--border));
+  border-radius: 0 10px 10px 0;
+  background: color-mix(in oklab, var(--glyph-nursing) 6%, var(--card));
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
 /* The pass-it-on button under the intro points: quiet, left with the text. */
 .onboarding-share {
   margin-top: 14px;
