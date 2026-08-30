@@ -14,7 +14,6 @@ import {
   Upload,
 } from "lucide-react";
 import { track } from "../domain/analytics";
-import { shareAppNatively } from "../domain/shareApp";
 
 // Loads only on browsers without a native share sheet.
 const ShareNumalogDialog = lazy(() => import("../components/ShareNumalog"));
@@ -180,7 +179,7 @@ export default function OnboardingScreen({
               className="onboarding-share"
               onClick={() => {
                 track("app_share_opened", { from: "onboarding" });
-                if (!shareAppNatively()) setShareOpen(true);
+                setShareOpen(true);
               }}
             >
               <Gift size={16} aria-hidden="true" /> Know another tired parent? Share Numalog

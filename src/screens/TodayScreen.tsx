@@ -16,7 +16,6 @@ import { EmptyState } from "../components/EmptyState";
 import { LittleBottle, TinyStars } from "../components/illustrations";
 import { BabyCompanion, CompanionMood } from "../components/BabyCompanion";
 import { mlBucket, track } from "../domain/analytics";
-import { shareAppNatively } from "../domain/shareApp";
 import { bracketOfAge, factOfTheDay } from "../domain/babyFacts";
 import { summarizeDay } from "../domain/daySummary";
 import { makeId } from "../domain/id";
@@ -972,7 +971,7 @@ export default function TodayScreen({
             className="log-row log-row-secondary action-share"
             onClick={() => {
               track("app_share_opened", { from: "today" });
-              if (!shareAppNatively()) setShareOpen(true);
+              setShareOpen(true);
             }}
           >
             <span className="action-icon" aria-hidden="true"><Gift /></span>

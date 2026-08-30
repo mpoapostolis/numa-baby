@@ -1,7 +1,6 @@
 // Ships with this lazy chunk, not the app shell — the budget rule.
 import "../styles/screens/settings.css";
 import { ArrowLeftRight, Baby, Bell, Download, Gift, Moon, Ruler, Share2, ShieldCheck, Sun, Trash2, Upload } from "lucide-react";
-import { shareAppNatively } from "../domain/shareApp";
 import { ChangeEvent, Suspense, lazy, useEffect, useRef, useState } from "react";
 
 // Loads only on browsers without a native share sheet.
@@ -296,7 +295,7 @@ export default function SettingsScreen({
               icon={<Gift />}
               onClick={() => {
                 track("app_share_opened", { from: "settings" });
-                if (!shareAppNatively()) setShareOpen(true);
+                setShareOpen(true);
               }}
             />
             {/* Storage belongs to a web address. A log kept at the app's other

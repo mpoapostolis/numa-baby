@@ -1,11 +1,10 @@
 // "Tell another parent" — the app handing itself onward.
 //
-// On phones this is the native share sheet, which is strictly better than
-// anything a web page can draw. The dialog below exists for the browsers
-// that have no share sheet (desktop, mostly): the handful of places parents
-// actually paste links, plus copy. No library — every one of these buttons
-// is a URL, and a share widget dependency would cost more bytes than this
-// whole file.
+// The owner's call: the branded dialog opens EVERYWHERE (a share row that
+// looks the same on every device), with the phone's native sheet one tap
+// away inside it for Messenger, Viber, SMS and whatever else lives on that
+// phone. No library — every button here is a URL, and a share widget
+// dependency would cost more bytes than this whole file.
 
 import { Copy, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
@@ -64,6 +63,20 @@ export default function ShareNumalogDialog({
           >
             Copy link <Copy size={13} aria-hidden="true" />
           </button>
+          {/* The phone's own sheet, for Messenger, Viber, SMS and whatever
+              else lives on this particular phone. */}
+          {"share" in navigator && (
+            <button
+              type="button"
+              className="share-app-link"
+              onClick={() => {
+                track("app_shared", { via: "native" });
+                void navigator.share({ title: APP_SHARE.title, text: APP_TEXT, url: APP_URL }).catch(() => undefined);
+              }}
+            >
+              More apps… <ExternalLink size={13} aria-hidden="true" />
+            </button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
