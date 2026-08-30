@@ -17,6 +17,15 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-09-04",
+    title: "Play ideas for every age",
+    items: [
+      "A parent asked for development activities — they're in now. Open the Guide tab and you'll find Play & development: activities matched to your baby's exact age, from tummy time and watch-and-follow in the first months to crawling games and first books near the birthday.",
+      "Each card tells you why it helps, how to do it in three or four steps, and how long — with a little 2- or 5-minute timer, and a link to the AAP, CDC or NHS page it came from. Nothing here grades your baby.",
+      "The cards change as your baby grows — check back after each monthly birthday for the next set.",
+    ],
+  },
+  {
     id: "2026-09-03",
     title: "A dot when there is news",
     items: [
@@ -33,7 +42,6 @@ export const RELEASES: Release[] = [
       "Log a medicine and it becomes a button — next time you tap the name instead of typing it, and the dose comes pre-filled exactly as you last wrote it. Asked for by a parent, built the same week.",
       "A Sync now button in Family Sync: tap it and the app does a full send-and-receive right away, then tells you it finished.",
       "Temperatures can be typed in °F when your phone is set to US units.",
-      "Play & development, in the Guide: everyday activities matched to your baby's age — tummy time, reaching, peek-a-boo and friends — each with simple steps, a little timer, and a link to the AAP, CDC or NHS page it came from. Suggested by a parent; built the same day.",
       "Tell another parent: a share button on the front page, Today and Settings, because the person most likely to pass this app on is you.",
     ],
   },
