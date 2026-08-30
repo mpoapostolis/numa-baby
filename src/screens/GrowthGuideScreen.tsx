@@ -142,6 +142,16 @@ const GUIDE_SOURCES = [
     url: "https://www.nhs.uk/baby/babys-development/height-weight-and-reviews/baby-height-and-weight/",
     note: "Weighing guidance and when to talk to a professional.",
   },
+  {
+    name: "CDC — Learn the Signs. Act Early.",
+    url: "https://www.cdc.gov/act-early/milestones/index.html",
+    note: "Milestone pages behind several Play & development cards — each card also links its exact page.",
+  },
+  {
+    name: "NHS — Baby play and learning",
+    url: "https://www.nhs.uk/baby/babys-development/play-and-learning/",
+    note: "Play ideas and learning-to-talk guidance behind the early Play & development cards.",
+  },
 ];
 
 export default function GrowthGuideScreen({
@@ -228,8 +238,10 @@ export default function GrowthGuideScreen({
         <div>
           <h2 className="t-title-2">Context, not a diagnosis</h2>
           <p className="t-body">
-            Indicative ranges from the WHO child growth standards. Babies grow in their own
-            rhythm — your paediatrician’s assessment always comes first.
+            Everything in this guide — ranges, care notes and play ideas — is general
+            information from the sources listed below, not medical advice, and this app is
+            not a medical device. Babies grow in their own rhythm; your paediatrician’s
+            assessment always comes first.
           </p>
         </div>
       </div>

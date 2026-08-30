@@ -158,6 +158,9 @@ ${body}
   </div>
   <p>Every claim on this page cites the American Academy of Pediatrics, the World Health
   Organization or the NHS page it came from${updated ? `. Sources last checked ${esc(updated)}` : ""}.</p>
+  <p>Numalog is a tracking tool and general information, not a medical device and not
+  medical advice. Every baby is different — for anything about your own baby, follow
+  your paediatrician, midwife or health visitor.</p>
 </footer>
 </div>
 </body>

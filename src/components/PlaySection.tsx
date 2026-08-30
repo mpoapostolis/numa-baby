@@ -108,6 +108,11 @@ export function PlaySection({ bracket, name }: { bracket: PlayBracket; name: str
         milestones to pass: stop whenever either of you has had enough. Every
         card links to the page it came from.
       </p>
+      <p className="t-meta play-disclaimer">
+        These are general play ideas, not medical or developmental advice —
+        every baby moves at their own pace. For anything about {name}&rsquo;s
+        own development, your paediatrician or health visitor is the answer.
+      </p>
       <ul className="play-list">
         {bracket.ideas.map((idea) => (
           <PlayCard

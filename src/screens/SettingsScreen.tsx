@@ -366,6 +366,12 @@ export default function SettingsScreen({
       </Card>
 
       <p className="version-note">Numalog · build {__APP_VERSION__}</p>
+      {/* The liability line, plainly: this app tracks and informs, full stop. */}
+      <p className="version-note">
+        Numalog is a tracking tool and general information — not a medical
+        device, and nothing in it is medical advice. For anything about your
+        baby, your paediatrician, midwife or health visitor comes first.
+      </p>
 
       {shareOpen && (
         <Suspense fallback={null}>
