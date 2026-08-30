@@ -97,6 +97,9 @@ type LiveSync = {
   // failed push on purpose: a restore that never reached the partner must be
   // retried, not forgotten.
   backfilled: boolean;
+  // Raised by markFailed, read (and cleared) only by syncNow — the one
+  // caller that needs a truthful yes/no rather than a status enum.
+  lastSyncFailed: boolean;
 };
 
 export function useFamilySync({ debugMode, bootState, persistVersion, backfillVersion, backfillOldestAt, readPersisted, stampProfileForSync, demoteProfileForJoin, dropLocalForAdoption, mergeRemote, showToast }: FamilySyncOptions) {
@@ -109,7 +112,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
   // Mutable sync internals, mirroring persistedStateRef's pattern: async code
   // reads pairing and in-flight flags from here, never from a render snapshot.
   // Only read inside effects and callbacks — never during render.
-  const live = useRef<LiveSync>({ pairing, pushTimer: 0, pullBusy: false, pushBusy: false, pushAgain: false, revoked: false, backfilled: false });
+  const live = useRef<LiveSync>({ pairing, pushTimer: 0, pullBusy: false, pushBusy: false, pushAgain: false, revoked: false, backfilled: false, lastSyncFailed: false });
 
   function adoptPairing(next: FamilyPairing | null) {
     live.current.pairing = next;
@@ -119,6 +122,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
   }
 
   function markFailed(error: unknown) {
+    live.current.lastSyncFailed = true;
     if (error instanceof transport.PairingRevokedError) {
       // The server no longer honours this token. Keep the record — the UI
       // shows reconnect guidance; only an explicit leave discards it.
@@ -272,6 +276,18 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
         schedulePush();
       }
     }
+  }
+
+  /** The worried-parent button: force a full pull and push RIGHT NOW and
+      answer honestly whether both landed. "Is it synced?" becomes a tap
+      with a result instead of an anxiety. */
+  async function syncNow(): Promise<boolean> {
+    const l = live.current;
+    if (!l.pairing || debugMode || l.revoked) return false;
+    l.lastSyncFailed = false;
+    await runPull(true);
+    await runPush();
+    return !l.lastSyncFailed && !l.revoked;
   }
 
   const paired = Boolean(pairing);
@@ -604,6 +620,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     createFamily,
     createInvite,
     joinFamily,
+    syncNow,
     googleProtect,
     googleUnprotect,
     googleProbe,

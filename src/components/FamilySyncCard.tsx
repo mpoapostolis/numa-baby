@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Copy, Users } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
@@ -248,6 +249,25 @@ export function FamilySyncCard({
               <small>{statusLine(status.phase, status.lastSyncAt, entryCount)}</small>
             </div>
             <div className="family-actions">
+              {/* The worried-parent button: forces a full pull and push NOW
+                  and answers with a result — "is it synced?" should be a
+                  tap, not a feeling. */}
+              <Button
+                variant="outline"
+                disabled={busy}
+                onClick={() => {
+                  setBusy(true);
+                  track("sync_now_tapped");
+                  void familySync.syncNow().then((ok) => {
+                    setBusy(false);
+                    toast(ok
+                      ? "In step with the cloud — everything sent and received."
+                      : "Could not finish a full sync — check the connection and try again.");
+                  });
+                }}
+              >
+                Sync now
+              </Button>
               <Button variant="outline" disabled={busy} onClick={() => void handleNewCode()}>Show invite code</Button>
               <Button variant="ghost" className="family-leave" onClick={handleLeave}>Leave family</Button>
             </div>

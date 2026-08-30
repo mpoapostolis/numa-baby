@@ -75,6 +75,19 @@ export default defineConfig({
         ],
         globPatterns: ["**/*.{html,js,css,png,svg,webmanifest}"],
         globIgnores: ["**/og-baby-tracker.png"],
+        // The soothing sounds are ~1.5MB of media nobody should pay for at
+        // install time — cached on first play instead, then they work
+        // offline like everything else.
+        runtimeCaching: [
+          {
+            urlPattern: /\/sounds\/.*\.(wav|m4a)$/,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "numalog-sounds",
+              expiration: { maxEntries: 12 },
+            },
+          },
+        ],
         sourcemap: false,
       },
     }),

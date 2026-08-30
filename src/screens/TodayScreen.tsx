@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from "react";
-import { ChevronRight, Cloud, CloudOff, ExternalLink, Milk, Pill, ShieldCheck, Square, Thermometer, Utensils, Weight } from "lucide-react";
+import { ChevronRight, Cloud, CloudOff, ExternalLink, Milk, Pill, ShieldCheck, Square, Thermometer, Utensils, Waves, Weight } from "lucide-react";
 
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -35,6 +35,11 @@ import { UnitSystem, formatVolume, useUnits } from "../domain/units";
 import { milestoneFor, milestoneSeen } from "../domain/milestones";
 
 // A party is downloaded only on a day there is one.
+// The sound player is only needed once someone asks for it — it stays out
+// of the bundle every parent downloads.
+const SoothePlayer = lazy(() =>
+  import("../components/SoothePlayer").then((m) => ({ default: m.SoothePlayer })),
+);
 const MilestoneParty = lazy(() =>
   import("../components/MilestoneParty").then((m) => ({ default: m.MilestoneParty })),
 );
@@ -271,6 +276,13 @@ export default function TodayScreen({
   // today, 1 is yesterday. Bounded by the first thing ever logged so the
   // arrows never step into blank prehistory — or into tomorrow.
   const [dayOffset, setDayOffset] = useState(0);
+  const [sootheOpen, setSootheOpen] = useState(false);
+  // The noise must survive its own sheet being closed. Rendering the player
+  // only while the sheet is open unmounted the <audio> the moment a parent
+  // tapped away — so the one thing they opened it for stopped, in the dark,
+  // with a baby half asleep. Once opened it stays mounted for the visit and
+  // the sheet is only its face.
+  const [sootheMounted, setSootheMounted] = useState(false);
   const forecastFeedSheet: "bottle" | "nursing" = profile.feedingMode === "breast"
     ? "nursing"
     : profile.feedingMode === "bottle"
@@ -899,6 +911,23 @@ export default function TodayScreen({
               </Button>
             );
           })()}
+          {/* Take two of the sounds — real files this time, see
+              domain/soothe.ts. Once opened, the player stays mounted for the
+              rest of the visit: unmounting it with its sheet was how the
+              noise stopped the moment a parent tapped away, in the dark,
+              with a baby half asleep. */}
+          <Button
+            variant="ghost"
+            className="log-row log-row-secondary action-soothe"
+            onClick={() => { track("soothe_opened"); setSootheMounted(true); setSootheOpen(true); }}
+          >
+            <span className="action-icon" aria-hidden="true"><Waves /></span>
+            <span className="log-copy">
+              <strong>Sounds</strong>
+              <small>White noise and lullabies — back, and working</small>
+            </span>
+            <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
+          </Button>
           {/* The whole point is the timestamp. "Has she already had it, and did
               you give it or did I" is the question two exhausted people in one
               house get wrong, and it is the one mistake here that matters. */}
@@ -932,6 +961,12 @@ export default function TodayScreen({
           </Button>
         </section>
       </div>
+
+      {sootheMounted && (
+        <Suspense fallback={null}>
+          <SoothePlayer open={sootheOpen} onOpenChange={setSootheOpen} />
+        </Suspense>
+      )}
     </section>
   );
 }

@@ -17,6 +17,17 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-09-02",
+    title: "The sounds are back — and this time they play",
+    items: [
+      "White noise and lullabies returned to the Today screen. Someone wrote in missing them, so they were rebuilt properly: real audio files instead of on-the-fly synthesis, which is why they now start reliably and keep playing with the screen off.",
+      "Lock-screen controls, so you can stop the sound without lighting up a dark room.",
+      "Log a medicine and it becomes a button — next time you tap the name instead of typing it, and the dose comes pre-filled exactly as you last wrote it. Asked for by a parent, built the same week.",
+      "A Sync now button in Family Sync: tap it and the app does a full send-and-receive right away, then tells you it finished.",
+      "Temperatures can be typed in °F when your phone is set to US units.",
+    ],
+  },
+  {
     id: "2026-09-01",
     title: "Twenty pairs of eyes went over this app",
     items: [
