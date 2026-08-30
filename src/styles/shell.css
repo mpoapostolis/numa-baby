@@ -597,8 +597,22 @@
 /* The newspaper in the topbar — quiet until tapped, but never a sub-44px
    target: the trigger beside it is 44x44 and thumbs deserve parity. */
 .topbar-news {
+  position: relative;
   min-width: 44px;
   color: var(--ink-3);
+}
+
+/* Unread news: one small dot, gone the moment the archive opens (or the
+   what's-new card has said its piece). */
+.news-badge {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--glyph-nursing);
+  border: 2px solid var(--background);
 }
 
 .topbar-news:hover,

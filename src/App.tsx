@@ -153,6 +153,11 @@ export default function HomePage() {
   // waits here while the person decides in a real dialog.
   const [recoverAsk, setRecoverAsk] = useState<string | null>(null);
   const [newsOpen, setNewsOpen] = useState(false);
+  // The topbar badge's own "read" flag for THIS visit. The what's-new card
+  // deliberately writes only storage when it marks itself seen (so it can
+  // stay on screen), which would leave the badge lit all visit — this flag
+  // is how both the card showing and the dialog opening turn it off now.
+  const [newsSeen, setNewsSeen] = useState(false);
   // Stateful, not read-once: the intro unmounts whenever a sheet opens, and
   // a boot-time snapshot meant every sheet close REMOUNTED it, open again,
   // for anyone who had said "maybe later" this visit.
@@ -403,6 +408,7 @@ export default function HomePage() {
     // screen for the rest of this visit so it can actually be read.
     if (!showWhatsNew) return;
     const settle = window.setTimeout(() => {
+      setNewsSeen(true);
       try {
         window.localStorage.setItem(SEEN_RELEASE_KEY, LATEST_RELEASE_ID);
       } catch {
@@ -622,10 +628,20 @@ export default function HomePage() {
             variant="ghost"
             size="icon"
             className="topbar-news"
-            aria-label="News and updates"
-            onClick={() => { track("news_opened", { from: "topbar" }); setNewsOpen(true); }}
+            aria-label={releasesToShow.length > 0 && !newsSeen ? "News and updates — something new" : "News and updates"}
+            onClick={() => {
+              track("news_opened", { from: "topbar" });
+              setNewsOpen(true);
+              // Opening the archive IS reading the news: badge off, and the
+              // what's-new card stands down for this release too.
+              setNewsSeen(true);
+              try {
+                window.localStorage.setItem(SEEN_RELEASE_KEY, LATEST_RELEASE_ID);
+              } catch { /* storage blocked — the badge returns next visit */ }
+            }}
           >
             <Newspaper />
+            {releasesToShow.length > 0 && !newsSeen && <span className="news-badge" aria-hidden="true" />}
           </Button>
           <Button variant="ghost" className="baby-identity" aria-label="Baby profile" onClick={() => openSheet("profile")}>
             <span className="baby-avatar"><BabyFace size={22} /></span>
