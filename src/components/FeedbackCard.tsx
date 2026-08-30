@@ -49,7 +49,9 @@ export function FeedbackForm({ onSent }: { onSent?: () => void } = {}) {
     <>
       {state === "sent" ? (
           <p className="feedback-thanks" role="status">
-            Sent — thank you. Genuinely.
+            Sent — thank you. Genuinely. Most messages arrive without a way to
+            reply, so the answer comes as an update: keep an eye on News
+            (the 📰 up top) to see what happened with yours.
           </p>
       ) : (
         <form className="feedback-form" onSubmit={(event) => void submit(event)}>
