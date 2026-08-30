@@ -31,7 +31,9 @@ export function NewsDialog({ open, onOpenChange }: { open: boolean; onOpenChange
             I work on Numalog alone, mostly while the baby sleeps, so some
             things take an evening or two — but nothing you report is ignored.
             If something is broken, missing, or just annoying, tap the little
-            message bubble and tell me. It comes straight to me. — Apostolis
+            message bubble and tell me. It comes straight to me. And one rule
+            above all: an app can help, but your paediatrician always comes
+            first. — Apostolis
           </p>
         </section>
         <div className="news-list">
