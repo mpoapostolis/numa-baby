@@ -176,11 +176,11 @@ export default function OnboardingScreen({
                 why, and that feedback is how it grows. A note, never a
                 popup — the first open stays sacred. */}
             <p className="onboarding-note">
-              Built by one dad, for his own daughter — I use it every day
-              myself. It grows from what parents ask for: if anything is
-              broken, missing or annoying, tap the message bubble inside and
-              tell me. I read everything. And one rule above all: an app can
-              help, but your paediatrician always comes first.
+              Built by two parents, for our own daughter — we use it every
+              day ourselves. It grows from what parents ask for: if anything
+              is broken, missing or annoying, tap the message bubble inside
+              and tell us. We read everything. And one rule above all: an app
+              can help, but your paediatrician always comes first.
             </p>
             {/* The person most likely to pass it on is the one who just
                 arrived from a friend's link — meet them where they are. */}

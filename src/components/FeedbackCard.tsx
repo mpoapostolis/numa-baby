@@ -95,7 +95,7 @@ export function FeedbackForm({ onSent }: { onSent?: () => void } = {}) {
 
 export const FEEDBACK_BLURB =
   "Something broken, missing, or just annoying? It goes straight to the person who built " +
-  "this — one dad, evenings, between feeds.";
+  "this — two tired parents, evenings, between feeds.";
 
 export function FeedbackCard() {
   return (

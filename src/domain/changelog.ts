@@ -17,6 +17,14 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-09-05",
+    title: "Built by two parents — for the record",
+    items: [
+      "This app's story kept saying “one dad”. The truth: the dad writes the code, but the mum does half of every night, half of every log, and all of the toughest QA. Built by two parents — it always was.",
+      "Nothing else changed in this update. Some things matter more than features.",
+    ],
+  },
+  {
     id: "2026-09-04",
     title: "Play ideas for every age",
     items: [

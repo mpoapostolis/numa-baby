@@ -51,7 +51,7 @@ export function ThanksCard() {
         <span className="thanks-heart" aria-hidden="true"><Heart /></span>
         <CardTitle asChild><h2>Thank you for being here</h2></CardTitle>
         <CardDescription>
-          Numalog started as one dad’s app for his own daughter, built in the
+          Numalog started as two parents’ app for their own daughter, built in the
           evenings between feeds. I honestly never expected other families to
           find it — seeing it help with your baby means more than you’d guess.
           If anything is broken, missing, or just annoying, don’t hesitate to

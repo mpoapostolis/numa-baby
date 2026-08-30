@@ -603,7 +603,8 @@
 }
 
 /* Unread news: one small dot, gone the moment the archive opens (or the
-   what's-new card has said its piece). */
+   what's-new card has said its piece). Notification red, the owner's call —
+   a badge that whispers in brand pink is a badge nobody notices. */
 .news-badge {
   position: absolute;
   top: 9px;
@@ -611,7 +612,7 @@
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: var(--glyph-nursing);
+  background: oklch(0.6 0.21 27);
   border: 2px solid var(--background);
 }
 

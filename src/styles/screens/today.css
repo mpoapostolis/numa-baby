@@ -1241,8 +1241,10 @@
   margin-right: 7px;
   padding: 1px 7px;
   border-radius: 99px;
-  background: color-mix(in oklab, var(--signal) 14%, transparent);
-  color: var(--signal);
+  /* Notification red, matching the topbar dot — one color means "unread"
+     everywhere. */
+  background: oklch(0.6 0.21 27);
+  color: #fff;
   font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.02em;

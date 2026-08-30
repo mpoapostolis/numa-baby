@@ -14,8 +14,8 @@ export function NewsDialog({ open, onOpenChange }: { open: boolean; onOpenChange
       <DialogContent className="news-dialog">
         <DialogTitle>News & updates</DialogTitle>
         <DialogDescription>
-          Built by one dad, evenings, between feeds — here is everything that
-          has changed and why.
+          Built by two parents, evenings, between feeds — here is everything
+          that has changed and why.
         </DialogDescription>
         {/* The pinned note — the reason half these releases exist. */}
         <section className="news-note">
@@ -28,12 +28,16 @@ export function NewsDialog({ open, onOpenChange }: { open: boolean; onOpenChange
             fix and feature started as someone&rsquo;s feedback.
           </p>
           <p>
-            I work on Numalog alone, mostly while the baby sleeps, so some
+            I write the code alone, mostly while the baby sleeps, so some
             things take an evening or two — but nothing you report is ignored.
             If something is broken, missing, or just annoying, tap the little
-            message bubble and tell me. It comes straight to me. And one rule
-            above all: an app can help, but your paediatrician always comes
-            first. — Apostolis
+            message bubble and tell me. It comes straight to me.
+          </p>
+          <p>
+            The code may be mine, but nothing else here happens alone — half
+            of every night, and half of our own family&rsquo;s log, is her
+            mum&rsquo;s. And one rule above all: an app can help, but your
+            paediatrician always comes first. — Apostolis
           </p>
         </section>
         <div className="news-list">
