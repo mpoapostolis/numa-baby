@@ -1,6 +1,7 @@
 // Ships with this lazy chunk, not the app shell — the budget rule.
 import "../styles/screens/settings.css";
-import { ArrowLeftRight, Baby, Bell, Download, Moon, Ruler, Share2, ShieldCheck, Sun, Trash2, Upload } from "lucide-react";
+import { ArrowLeftRight, Baby, Bell, Download, Gift, Moon, Ruler, Share2, ShieldCheck, Sun, Trash2, Upload } from "lucide-react";
+import { toast } from "sonner";
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import {
   Card,
@@ -281,6 +282,31 @@ export default function SettingsScreen({
             <SettingsAction title="Download backup" description="Saves a file with all your entries — keep it in a synced folder to be safe" icon={<Download />} onClick={() => { track("backup_downloaded"); onExport(); }} />
             <ItemSeparator />
             <SettingsAction title="Restore a backup" description="Merges a backup file from any device" icon={<Upload />} onClick={() => { track("backup_restore_opened"); importRef.current?.click(); }} />
+            <ItemSeparator />
+            {/* Asked for by a Greek dev on Reddit who wanted to hand it to
+                his brother with a newborn and found no way to. The share
+                sheet where it exists; the clipboard everywhere else. */}
+            <SettingsAction
+              title="Tell another parent"
+              description="Share Numalog — free, no sign-up, works on any phone"
+              icon={<Gift />}
+              onClick={() => {
+                track("app_shared");
+                const share = {
+                  title: "Numalog",
+                  text: "A calm, free baby tracker — no account, no ads, works offline.",
+                  url: "https://numalog.app",
+                };
+                if (navigator.share) {
+                  void navigator.share(share).catch(() => undefined);
+                } else {
+                  void navigator.clipboard?.writeText(share.url).then(
+                    () => toast("Link copied — send it to them however you like."),
+                    () => toast("numalog.app — that's the whole link."),
+                  );
+                }
+              }}
+            />
             {/* Storage belongs to a web address. A log kept at the app's other
                 address is invisible here until someone walks it across. */}
             {handoffFrom && (
