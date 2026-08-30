@@ -314,6 +314,43 @@
   line-height: 1.45;
 }
 
+/* The medicines-given-before chips: name up top, last dose beneath, so the
+   3am tap re-selects both without typing either. */
+.medicine-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.medicine-preset {
+  display: grid;
+  gap: 1px;
+  justify-items: start;
+  min-height: 44px;
+  padding: 7px 13px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--ink-1);
+  text-align: left;
+  cursor: pointer;
+}
+
+.medicine-preset strong {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.medicine-preset small {
+  font-size: 0.75rem;
+  color: var(--ink-3);
+}
+
+.medicine-preset.is-active {
+  border-color: color-mix(in oklab, var(--glyph-medicine-ink, var(--ink-1)) 40%, var(--border));
+  background: color-mix(in oklab, var(--accent, var(--card)) 14%, var(--card));
+}
+
 .sheet-form {
   display: grid;
   gap: 16px;

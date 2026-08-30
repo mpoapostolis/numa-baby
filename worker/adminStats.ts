@@ -1,4 +1,5 @@
 /// <reference types="@cloudflare/workers-types" />
+import { WORKER_BUILD } from "./buildInfo";
 // Everything the database can honestly say about the service.
 //
 // One rule survives the expansion, and it is the important one: this is an
@@ -260,6 +261,7 @@ export async function collectStats(client: Client, now: number) {
     sessions,
     knownBrowsers,
     trendDays: TREND_DAYS,
+    workerBuild: WORKER_BUILD,
     generatedAt: new Date(now).toISOString(),
   };
 }

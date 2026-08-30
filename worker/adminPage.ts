@@ -307,15 +307,27 @@ export function adminPageHtml(nonce: string): string {
       var msgs = "";
       for (var m = 0; m < d.feedback.length; m++) {
         var f = d.feedback[m];
+        // The triage chip the owner asked for: which build the report came
+        // from, and whether that build predates what is live right now —
+        // "is this already fixed?" answered at a glance.
+        var buildBit = '';
+        if (f.app_version) {
+          var stale = d.workerBuild && String(f.app_version) < String(d.workerBuild);
+          buildBit = ' · build ' + esc(f.app_version) +
+            (stale ? ' <span style="color:#c96">· before current deploy</span>'
+                   : ' <span style="color:#7a6">· current</span>');
+        }
         msgs += '<div class="msg"><div class="tiny">' + esc(f.sent) +
           (f.contact ? ' · <b>' + esc(f.contact) + '</b>' : ' · no contact') +
-          (f.app_version ? ' · build ' + esc(f.app_version) : '') + '</div>' +
+          buildBit + '</div>' +
           '<p>' + esc(f.message) + '</p>' +
           '<div><button class="ghost mark" data-id="' + esc(f.id) + '" data-to="' +
           (Number(f.handled) ? 0 : 1) + '">' +
           (Number(f.handled) ? 'Handled ✓ — undo' : 'Mark handled') + '</button></div></div>';
       }
-      parts.push('<div class="card"><h2>Messages · ' + d.feedback.length + '</h2>' + msgs + '</div>');
+      parts.push('<div class="card"><h2>Messages · ' + d.feedback.length + '</h2>' +
+        (d.workerBuild ? '<p class="tiny">Live build: ' + esc(d.workerBuild) + '</p>' : '') +
+        msgs + '</div>');
     }
 
     parts.push('<div class="card"><h2>Recover a family</h2>' +

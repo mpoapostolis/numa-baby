@@ -361,6 +361,26 @@ export function LogSheet({
   // meant to help with. The value is the timestamp — "has she already had it,
   // and did you give it or did I" is the question two exhausted people in one
   // house get wrong.
+  // Distinct medicines from the log, newest first, each carrying its most
+  // recent dose text. Derived, never stored: the list manages itself — give
+  // a medicine once and it is on the list, stop giving it and it ages out
+  // of the top six.
+  const savedMedicines = (() => {
+    if (sheet !== "medicine") return [] as Array<{ name: string; dose?: string }>;
+    const seen = new Map<string, { name: string; dose?: string }>();
+    const doses = [...activities]
+      .filter((a) => a.type === "medicine" && !a.deleted && a.medicine?.trim())
+      .sort((a, b) => (a.startedAt < b.startedAt ? 1 : -1));
+    for (const dose of doses) {
+      const name = dose.medicine?.trim() ?? "";
+      const key = name.toLowerCase();
+      if (!key || seen.has(key)) continue;
+      seen.set(key, { name, dose: dose.dose?.trim() || undefined });
+      if (seen.size >= 6) break;
+    }
+    return [...seen.values()];
+  })();
+
   function saveMedicine() {
     const name = draft.medicineName.trim();
     if (!name) {
@@ -649,8 +669,31 @@ export function LogSheet({
             title="Log a dose"
             description="So the next person knows it has already been given."
           />
+          {/* Asked for from the feedback box, by a parent of a baby with
+              special needs: PICK the medicine, don't retype it — a mistyped
+              name at 3am is how doses get mixed up. The list IS the history:
+              every medicine already logged, newest first, wearing the dose
+              exactly as it was last written. */}
+          {savedMedicines.length > 0 && (
+            <div className="medicine-presets" role="group" aria-label="Medicines given before">
+              {savedMedicines.map((m) => (
+                <button
+                  key={m.name}
+                  type="button"
+                  className={draft.medicineName.trim().toLowerCase() === m.name.toLowerCase() ? "medicine-preset is-active" : "medicine-preset"}
+                  onClick={() => {
+                    patch({ medicineName: m.name, ...(m.dose ? { doseText: m.dose } : {}) });
+                    setFormError(null);
+                  }}
+                >
+                  <strong>{m.name}</strong>
+                  {m.dose && <small>{m.dose}</small>}
+                </button>
+              ))}
+            </div>
+          )}
           <Field className="medicine-field">
-            <FieldLabel htmlFor="medicine-name">What was given</FieldLabel>
+            <FieldLabel htmlFor="medicine-name">{savedMedicines.length > 0 ? "Or type a new one" : "What was given"}</FieldLabel>
             <InputGroup>
               <InputGroupInput
                 id="medicine-name"

@@ -12,7 +12,8 @@
     "test": "npm run build && node --test tests/build-output.test.mjs && vitest run",
     "icons": "node scripts/make-maskable.mjs",
     "lint": "eslint . --max-warnings=0",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.worker.json"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.worker.json",
+    "deploy": "node scripts/stamp-worker.mjs && npm run build && wrangler deploy"
   },
   "dependencies": {
     "@cloudflare/workers-types": "^5.20260808.1",
