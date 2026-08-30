@@ -72,6 +72,11 @@ CREATE TABLE IF NOT EXISTS activities (
 CREATE INDEX IF NOT EXISTS idx_activities_family_updated
   ON activities(family_id, updated_at);
 
+-- Pulls filter on the ARRIVAL clock; this is the index that makes an empty
+-- 60-second poll cost an index probe instead of the family's whole log.
+CREATE INDEX IF NOT EXISTS idx_activities_family_received
+  ON activities(family_id, received_at);
+
 -- The 6-digit invite space is a million codes in a 15-minute window — fine
 -- against fingers, farmable by a loop. Twenty tries an hour per address.
 CREATE TABLE IF NOT EXISTS join_budget (

@@ -84,6 +84,15 @@ async function ensureReceivedAt(client: ReturnType<typeof createClient>) {
     sql: "UPDATE activities SET received_at = ? WHERE received_at IS NULL",
     args: [new Date().toISOString()],
   });
+  // Pulls filter on received_at, and a COALESCE in the WHERE could never use
+  // an index — every 60-second poll was scanning the family's whole log to
+  // answer "nothing new". The backfill above guarantees the column is always
+  // set, so the queries drop the COALESCE and this index makes an empty poll
+  // cost an index probe instead of N row reads. That difference is the
+  // entire Turso read budget at scale.
+  await client
+    .execute("CREATE INDEX IF NOT EXISTS idx_activities_family_received ON activities(family_id, received_at)")
+    .catch(() => undefined);
   receivedAtReady = true;
 }
 
@@ -294,8 +303,8 @@ async function handlePull(env: Env, request: Request, familyId: string): Promise
   const [rows, meta, devices] = await Promise.all([
     client.execute({
       sql: since
-        ? "SELECT id, payload, updated_at, deleted, COALESCE(received_at, updated_at) AS received_at FROM activities WHERE family_id = ? AND COALESCE(received_at, updated_at) > ? ORDER BY COALESCE(received_at, updated_at) LIMIT 2000"
-        : "SELECT id, payload, updated_at, deleted, COALESCE(received_at, updated_at) AS received_at FROM activities WHERE family_id = ? ORDER BY COALESCE(received_at, updated_at) LIMIT 2000",
+        ? "SELECT id, payload, updated_at, deleted, received_at FROM activities WHERE family_id = ? AND received_at > ? ORDER BY received_at LIMIT 2000"
+        : "SELECT id, payload, updated_at, deleted, received_at FROM activities WHERE family_id = ? ORDER BY received_at LIMIT 2000",
       args: since ? [familyId, since] : [familyId],
     }),
     client.execute({ sql: "SELECT profile, updated_at FROM family_meta WHERE family_id = ?", args: [familyId] }),
