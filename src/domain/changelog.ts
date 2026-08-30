@@ -25,6 +25,8 @@ export const RELEASES: Release[] = [
       "Log a medicine and it becomes a button — next time you tap the name instead of typing it, and the dose comes pre-filled exactly as you last wrote it. Asked for by a parent, built the same week.",
       "A Sync now button in Family Sync: tap it and the app does a full send-and-receive right away, then tells you it finished.",
       "Temperatures can be typed in °F when your phone is set to US units.",
+      "Play & development, in the Guide: everyday activities matched to your baby's age — tummy time, reaching, peek-a-boo and friends — each with simple steps, a little timer, and a link to the AAP, CDC or NHS page it came from. Suggested by a parent; built the same day.",
+      "Tell another parent: a share button on the front page, Today and Settings, because the person most likely to pass this app on is you.",
     ],
   },
   {

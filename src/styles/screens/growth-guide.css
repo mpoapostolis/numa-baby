@@ -504,3 +504,105 @@
   color: var(--ink-3);
   text-decoration: line-through;
 }
+
+/* ---- Play & development ---------------------------------------------------
+   Age-matched activity cards with a quiet per-card timer. */
+
+.play-list {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+
+.play-card {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.play-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.play-card-head strong {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.play-area-chip {
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ink-2);
+  background: color-mix(in oklab, var(--glyph-diaper) 14%, var(--card));
+}
+
+.play-area-motor { background: color-mix(in oklab, var(--glyph-growth) 16%, var(--card)); }
+.play-area-vision { background: color-mix(in oklab, var(--glyph-sleep) 16%, var(--card)); }
+.play-area-language { background: color-mix(in oklab, var(--glyph-nursing) 16%, var(--card)); }
+.play-area-social { background: color-mix(in oklab, var(--glyph-bottle) 16%, var(--card)); }
+
+.play-why {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+}
+
+.play-steps {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+}
+
+.play-meta {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--ink-3);
+}
+
+.play-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.play-timer {
+  display: flex;
+  gap: 6px;
+}
+
+.play-timer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: none;
+  color: var(--ink-2);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.play-timer-btn.is-running {
+  border-color: color-mix(in oklab, var(--glyph-nursing) 45%, var(--border));
+  color: var(--ink-1);
+  font-variant-numeric: tabular-nums;
+}

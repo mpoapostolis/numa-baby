@@ -8,6 +8,8 @@ import { track } from "../domain/analytics";
 import { gramsToLb, useUnits } from "../domain/units";
 import { OutingChecklist } from "../components/OutingChecklist";
 import { CareCard, WATCH_FOR, careForAge } from "../domain/careGuidance";
+import { playForAge } from "../domain/playIdeas";
+import { PlaySection } from "../components/PlaySection";
 import { ageInDays } from "../domain/time";
 import {
   MAX_REFERENCE_MONTHS,
@@ -152,6 +154,7 @@ export default function GrowthGuideScreen({
   const name = profile.name.trim() || "Baby";
   const careDays = ageInDays(profile.birthDate, minuteClock);
   const care = careDays === null ? null : careForAge(careDays);
+  const play = careDays === null ? null : playForAge(careDays);
   const exactAge = fractionalAgeMonths(profile.birthDate);
   const age = exactAge === null ? null : Math.min(exactAge, MAX_REFERENCE_MONTHS);
   const range = age === null ? null : expectedWeightRange(age, profile.sex);
@@ -192,6 +195,8 @@ export default function GrowthGuideScreen({
           </ul>
         </section>
       )}
+
+      {play && <PlaySection bracket={play} name={name} />}
 
       <section className="surface-card watch-card" aria-labelledby="watch-heading">
         <div className="watch-head">
