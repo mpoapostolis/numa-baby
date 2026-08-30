@@ -150,6 +150,14 @@
   line-height: 1.5;
 }
 
+/* The pass-it-on button under the intro points: quiet, left with the text. */
+.onboarding-share {
+  margin-top: 14px;
+  justify-content: flex-start;
+  width: fit-content;
+  color: var(--ink-2);
+}
+
 .onboarding-points {
   max-width: 520px;
   display: grid;

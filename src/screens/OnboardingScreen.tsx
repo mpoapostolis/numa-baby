@@ -6,12 +6,18 @@ import {
   ChevronRight,
   Clock,
   Download,
+  Gift,
   Milk,
   Moon,
   ShieldCheck,
   Sun,
   Upload,
 } from "lucide-react";
+import { track } from "../domain/analytics";
+import { shareAppNatively } from "../domain/shareApp";
+
+// Loads only on browsers without a native share sheet.
+const ShareNumalogDialog = lazy(() => import("../components/ShareNumalog"));
 import { ChangeEvent, Suspense, lazy, useId, useRef, useState } from "react";
 import {
   Dialog,
@@ -98,6 +104,7 @@ export default function OnboardingScreen({
   // "already using the old address?" popup that greeted every stranger from
   // the Facebook post with a question about an address they had never seen.)
   const [restoreOpen, setRestoreOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   // A device that has signed in before does NOT get greeted like a
   // stranger: the way back comes first, the blank form second.
   const [returningHint] = useState(loadAuthHint);
@@ -165,6 +172,19 @@ export default function OnboardingScreen({
               <div><span className="glyph-burp"><Clock /></span><p><strong>Live timers and patterns</strong><small>See what happened and what may be next.</small></p></div>
               <div><span className="onboarding-private-icon"><ShieldCheck /></span><p><strong>Yours by default</strong><small>Entries stay on this device. Family Sync is opt-in.</small></p></div>
             </div>
+            {/* The person most likely to pass it on is the one who just
+                arrived from a friend's link — meet them where they are. */}
+            <Button
+              type="button"
+              variant="ghost"
+              className="onboarding-share"
+              onClick={() => {
+                track("app_share_opened", { from: "onboarding" });
+                if (!shareAppNatively()) setShareOpen(true);
+              }}
+            >
+              <Gift size={16} aria-hidden="true" /> Know another tired parent? Share Numalog
+            </Button>
           </section>
 
           {welcomeBack ? (
@@ -337,6 +357,11 @@ export default function OnboardingScreen({
       )}
 
       <Input ref={restoreRef} className="hidden-input" type="file" accept="application/json" onChange={onRestore} />
+      {shareOpen && (
+        <Suspense fallback={null}>
+          <ShareNumalogDialog open={shareOpen} onOpenChange={setShareOpen} />
+        </Suspense>
+      )}
       <Toaster theme={nightMode ? "dark" : "light"} position="bottom-center" closeButton />
     </main>
   );
