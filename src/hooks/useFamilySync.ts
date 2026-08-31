@@ -184,11 +184,12 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
       // Left (or re-paired) while the pull was in flight — drop the result.
       if (!cur || cur.token !== before.token) return;
       if (allPersisted) adoptPairing({ ...cur, lastSyncAt: page.serverTime });
-      setStatus({
+      setStatus((s) => ({
         phase: "idle",
         lastSyncAt: allPersisted ? page.serverTime : cur.lastSyncAt || null,
-        deviceCount: page.deviceCount,
-      });
+        // Polls omit the count to spare a scan; the number already shown stays.
+        deviceCount: page.deviceCount ?? s.deviceCount,
+      }));
       // Remote arrivals surface exactly once per pull, and only real ones.
       if (added > 0) showToast(`Synced — ${added} new from your partner`);
       // We're clearly online: flush anything the partner is still missing.

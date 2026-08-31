@@ -194,3 +194,13 @@ CREATE TABLE IF NOT EXISTS magic_budget (
   window_start TEXT NOT NULL,
   sends INTEGER NOT NULL
 );
+
+-- The admin dashboard's heavy statistics, computed at most once per TTL
+-- window and served from here to every tab and refresh in between. Seven
+-- dashboard loads once cost ~790k row reads in six hours; now they cost one
+-- computation and six cache hits.
+CREATE TABLE IF NOT EXISTS stats_cache (
+  id TEXT PRIMARY KEY,
+  payload TEXT NOT NULL,
+  computed_at TEXT NOT NULL
+);

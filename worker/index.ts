@@ -80,18 +80,19 @@ async function ensureReceivedAt(client: ReturnType<typeof createClient>) {
   } catch (error) {
     if (!String(error).toLowerCase().includes("duplicate column")) throw error;
   }
-  await client.execute({
-    sql: "UPDATE activities SET received_at = ? WHERE received_at IS NULL",
-    args: [new Date().toISOString()],
-  });
-  // Pulls filter on received_at, and a COALESCE in the WHERE could never use
-  // an index — every 60-second poll was scanning the family's whole log to
-  // answer "nothing new". The backfill above guarantees the column is always
-  // set, so the queries drop the COALESCE and this index makes an empty poll
-  // cost an index probe instead of N row reads. That difference is the
-  // entire Turso read budget at scale.
+  // The one-time NULL backfill ran on 30 Aug 2026 and every row written
+  // since is stamped at insert — the UPDATE that used to sit here scanned
+  // the whole table again on EVERY isolate cold start, which on Workers
+  // means constantly. Catalog-only statements below are the cheap kind.
+  //
+  // Pulls filter on received_at; this index makes an empty poll cost an
+  // index probe instead of the family's whole log. The devices index kills
+  // the other per-pull scan (the device-count).
   await client
     .execute("CREATE INDEX IF NOT EXISTS idx_activities_family_received ON activities(family_id, received_at)")
+    .catch(() => undefined);
+  await client
+    .execute("CREATE INDEX IF NOT EXISTS idx_devices_family ON devices(family_id)")
     .catch(() => undefined);
   receivedAtReady = true;
 }
@@ -300,6 +301,10 @@ async function handlePull(env: Env, request: Request, familyId: string): Promise
   // Filter and order by the SERVER clock: "give me what arrived after my
   // cursor" is the only question a pull can ask that a backfilled restore
   // (old client stamps, fresh arrival) still answers correctly.
+  // The device count is decoration for the Settings card, not sync state —
+  // counting it on every 60-second poll was a table scan a minute per phone.
+  // Full pulls (open, join, restore) still carry it; polls omit it and the
+  // client keeps the number it already has.
   const [rows, meta, devices] = await Promise.all([
     client.execute({
       sql: since
@@ -308,7 +313,9 @@ async function handlePull(env: Env, request: Request, familyId: string): Promise
       args: since ? [familyId, since] : [familyId],
     }),
     client.execute({ sql: "SELECT profile, updated_at FROM family_meta WHERE family_id = ?", args: [familyId] }),
-    client.execute({ sql: "SELECT COUNT(*) AS n FROM devices WHERE family_id = ?", args: [familyId] }),
+    since
+      ? Promise.resolve(null)
+      : client.execute({ sql: "SELECT COUNT(*) AS n FROM devices WHERE family_id = ?", args: [familyId] }),
   ]);
   await touchDevice(env, familyId, deviceId);
   return json({
@@ -321,7 +328,7 @@ async function handlePull(env: Env, request: Request, familyId: string): Promise
     })),
     profile: meta.rows.length && meta.rows[0].profile ? JSON.parse(String(meta.rows[0].profile)) : null,
     profileUpdatedAt: meta.rows.length ? meta.rows[0].updated_at : null,
-    deviceCount: Number(devices.rows[0]?.n ?? 0),
+    ...(devices ? { deviceCount: Number(devices.rows[0]?.n ?? 0) } : {}),
     serverTime: new Date().toISOString(),
   });
 }

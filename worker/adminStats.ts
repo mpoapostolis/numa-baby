@@ -37,7 +37,11 @@ async function safe(client: Client, sql: string): Promise<Row[]> {
     .catch(() => []);
 }
 
-export async function collectStats(client: Client, now: number) {
+// The heavy half: a dozen queries that between them scan the activities
+// table many times over. One dashboard load used to cost ~113k row reads —
+// with seven loads in six hours outspending the entire sync fleet. These now
+// run at most once per TTL window; everything else rides the cache.
+async function computeHeavy(client: Client, now: number) {
   const [
     totals,
     activityByDay,
@@ -51,11 +55,6 @@ export async function collectStats(client: Client, now: number) {
     invites,
     hours,
     families,
-    feedback,
-    auditLog,
-    lockouts,
-    sessions,
-    knownBrowsers,
   ] = await Promise.all([
     safe(
       client,
@@ -197,39 +196,6 @@ export async function collectStats(client: Client, now: number) {
        from families f order by f.created_at desc limit 500`,
     ),
 
-    safe(
-      client,
-      `select id, substr(created_at, 1, 16) as sent, message, contact, app_version, handled
-       from feedback order by created_at desc limit 200`,
-    ),
-
-    safe(
-      client,
-      `select substr(at, 1, 19) as at, event, ip, country, asn, user_agent
-       from admin_audit order by id desc limit 60`,
-    ),
-
-    safe(
-      client,
-      `select scope, failures, strikes, substr(window_start, 1, 19) as window_start,
-              substr(locked_until, 1, 19) as locked_until
-       from admin_lockouts where locked_until is not null and locked_until > ${NOW}
-       order by locked_until desc limit 40`,
-    ),
-
-    safe(
-      client,
-      `select substr(created_at, 1, 16) as created, substr(expires_at, 1, 16) as expires,
-              substr(last_seen_at, 1, 16) as last_seen, ip, country, user_agent
-       from admin_sessions where expires_at > ${NOW} order by created_at desc limit 20`,
-    ),
-
-    safe(
-      client,
-      `select substr(created_at, 1, 10) as trusted, substr(last_seen_at, 1, 16) as last_seen,
-              ip, country, user_agent
-       from admin_known where expires_at > ${NOW} order by last_seen_at desc limit 20`,
-    ),
   ]);
 
   // The median is the one figure SQLite will not give cheaply, and it is the
@@ -255,6 +221,81 @@ export async function collectStats(client: Client, now: number) {
     kinds,
     hours,
     families,
+    statsComputedAt: new Date(now).toISOString(),
+  };
+}
+
+const HEAVY_TTL_MS = 15 * 60_000;
+
+export async function collectStats(client: Client, now: number) {
+  await client
+    .execute(
+      "CREATE TABLE IF NOT EXISTS stats_cache (id TEXT PRIMARY KEY, payload TEXT NOT NULL, computed_at TEXT NOT NULL)",
+    )
+    .catch(() => undefined);
+
+  // Serve the heavy half from the cache while it is fresh — however many
+  // tabs, reloads or auto-refreshes ask. A stale or missing cache recomputes
+  // once and pays it forward.
+  let heavy: Awaited<ReturnType<typeof computeHeavy>> | null = null;
+  const cached = await client
+    .execute("SELECT payload, computed_at FROM stats_cache WHERE id = 'heavy'")
+    .catch(() => null);
+  if (cached?.rows.length && now - Date.parse(String(cached.rows[0].computed_at)) < HEAVY_TTL_MS) {
+    try {
+      heavy = JSON.parse(String(cached.rows[0].payload));
+    } catch {
+      // Unreadable cache: recompute below.
+    }
+  }
+  if (!heavy) {
+    heavy = await computeHeavy(client, now);
+    await client
+      .execute({
+        sql: `INSERT INTO stats_cache (id, payload, computed_at) VALUES ('heavy', ?, ?)
+              ON CONFLICT(id) DO UPDATE SET payload = excluded.payload, computed_at = excluded.computed_at`,
+        args: [JSON.stringify(heavy), new Date(now).toISOString()],
+      })
+      .catch(() => undefined);
+  }
+
+  // The live half stays live: messages must be markable and the security
+  // panels must tell the truth of this minute. All of these are small,
+  // indexed reads.
+  const [feedback, auditLog, lockouts, sessions, knownBrowsers] = await Promise.all([
+    safe(
+      client,
+      `select id, substr(created_at, 1, 16) as sent, message, contact, app_version, handled
+       from feedback order by created_at desc limit 200`,
+    ),
+    safe(
+      client,
+      `select substr(at, 1, 19) as at, event, ip, country, asn, user_agent
+       from admin_audit order by id desc limit 60`,
+    ),
+    safe(
+      client,
+      `select scope, failures, strikes, substr(window_start, 1, 19) as window_start,
+              substr(locked_until, 1, 19) as locked_until
+       from admin_lockouts where locked_until is not null and locked_until > ${NOW}
+       order by locked_until desc limit 40`,
+    ),
+    safe(
+      client,
+      `select substr(created_at, 1, 16) as created, substr(expires_at, 1, 16) as expires,
+              substr(last_seen_at, 1, 16) as last_seen, ip, country, user_agent
+       from admin_sessions where expires_at > ${NOW} order by created_at desc limit 20`,
+    ),
+    safe(
+      client,
+      `select substr(created_at, 1, 10) as trusted, substr(last_seen_at, 1, 16) as last_seen,
+              ip, country, user_agent
+       from admin_known where expires_at > ${NOW} order by last_seen_at desc limit 20`,
+    ),
+  ]);
+
+  return {
+    ...heavy,
     feedback,
     auditLog,
     lockouts,

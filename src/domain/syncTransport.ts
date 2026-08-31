@@ -33,7 +33,8 @@ export type PullResult = {
   activities: PulledRow[];
   profile: unknown;
   profileUpdatedAt: string | null;
-  deviceCount: number;
+  /** Carried on full pulls only — polls omit it to spare a per-minute scan. */
+  deviceCount?: number;
   serverTime: string;
 };
 export type PushRow = { id: string; payload: unknown; updatedAt: string; deleted: boolean };
