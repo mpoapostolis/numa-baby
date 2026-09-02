@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { ExternalLink, PhoneCall, Share2, ShieldCheck, Sparkles, Stethoscope } from "lucide-react";
 import { toast } from "../lib/toast";
 import { weekCard } from "../domain/shareCards";
+import { shareLink } from "../domain/shareApp";
 import { renderCard, shareImage } from "../lib/shareCard";
 import { EmptyState } from "../components/EmptyState";
 import { GrowthChart } from "../components/GrowthChart";
@@ -197,7 +198,7 @@ export default function InsightsScreen({
               onClick={() => {
                 track("week_shared");
                 void renderCard(weekCard(profile.name, weekly, units))
-                  .then((blob) => shareImage(blob, "numalog-week.png", `${profile.name.trim() || "Baby"}’s week · numalog.app`))
+                  .then((blob) => shareImage(blob, "numalog-week.png", `${profile.name.trim() || "Baby"}’s week · ${shareLink("week")}`))
                   .then((outcome) => { if (outcome === "saved") toast("Card saved to your device"); })
                   .catch(() => toast("Could not make the card on this phone"));
               }}

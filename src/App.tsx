@@ -1,5 +1,5 @@
 import { BarChart3, ChevronRight, Clock, Home, Newspaper, Ruler, Settings, ShieldCheck, Stethoscope } from "lucide-react";
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { toast } from "./lib/toast";
 import { Button } from "./components/ui/button";
 import { Dialog, DialogContent } from "./components/ui/dialog";
@@ -14,6 +14,7 @@ import { BabyFace, SleepingBaby } from "./components/illustrations";
 import { ConsentBanner } from "./components/ConsentBanner";
 import { InAppEscape } from "./components/InAppEscape";
 import { Milestone, milestoneFor, milestoneSeen } from "./domain/milestones";
+import { lifetimeTotals } from "./domain/shareCards";
 import { useStableCallback } from "./hooks/useStableCallback";
 import { FeedbackBubble } from "./components/FeedbackBubble";
 // Lazy: a returning family boots straight to Today and never downloads the
@@ -171,6 +172,20 @@ function readShortcut(): Exclude<Sheet, null> | null {
 }
 const tappedShortcut = readShortcut();
 
+// Where this visit came from — a milestone card, a week picture, a friend's
+// message — tagged by shareLink() and stripped here, so the analytics can
+// say which picture brings families in and the address stays clean.
+function readArrival(): string | null {
+  const params = new URLSearchParams(window.location.search);
+  const via = params.get("via");
+  if (via === null) return null;
+  params.delete("via");
+  const query = params.toString();
+  window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`);
+  return via.slice(0, 32) || null;
+}
+const arrivedVia = readArrival();
+
 export default function HomePage() {
   const [debugMode] = useState(() => {
     const on = new URLSearchParams(window.location.search).has("debug");
@@ -180,6 +195,7 @@ export default function HomePage() {
   const [incomingJoinCode, setIncomingJoinCode] = useState(readIncomingJoinCode);
   const magicTokenRef = useRef(tappedMagicLink);
   const shortcutRef = useRef(tappedShortcut);
+  const arrivalRef = useRef(arrivedVia);
   // Fresh from onboarding: the protect offer earns its one showing NOW, at
   // the moment the parent has just invested in the setup — not after five
   // entries like families that predate the feature.
@@ -317,6 +333,10 @@ export default function HomePage() {
   // A tapped home-screen shortcut opens its sheet the moment the log is
   // readable. Deferred to a timer so no state changes inside the effect body.
   useEffect(() => {
+    if (bootState === "ready" && arrivalRef.current) {
+      track("arrived_via", { via: arrivalRef.current });
+      arrivalRef.current = null;
+    }
     const wanted = shortcutRef.current;
     if (!wanted || bootState !== "ready") return;
     shortcutRef.current = null;
@@ -427,6 +447,9 @@ export default function HomePage() {
   }
   const celebration = milestoneGate.milestone;
   const milestoneToday = celebration !== null;
+  // The party's picture says what the family has done since day one. Summed
+  // only on a milestone day; every other day this is null and costs nothing.
+  const milestoneTotals = useMemo(() => (celebration ? lifetimeTotals(activities) : null), [celebration, activities]);
   const dismissCelebration = useCallback(() => setMilestoneGate((gate) => ({ ...gate, milestone: null })), []);
   // The first morning. A family's first night is the moment the other parent
   // wakes up not knowing when the last feed was — the one sentence that
@@ -845,6 +868,7 @@ export default function HomePage() {
               minuteClock={minuteClock}
               stats={stats}
               celebration={celebration}
+              milestoneTotals={milestoneTotals}
               onDismissCelebration={dismissCelebration}
               onAdd={onAdd}
               onStopTimer={onStopTimer}

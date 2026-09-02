@@ -20,7 +20,8 @@ export const RELEASES: Release[] = [
     id: "2026-09-06",
     title: "Faster at 3am, and the theme follows your phone",
     items: [
-      "Share a picture: the month-birthday card has a share button, Insights can send the week as one picture, and the paediatrician summary can go out as a picture too — for the family group chat, or ahead to the clinic.",
+      "Share a picture: the month-birthday card has a share button and now says everything since day one — every feed and nappy you logged. Any day's recap can go out as a picture, Insights can send the whole week, and the paediatrician summary can go ahead to the clinic the same way.",
+      "Family Sync: when the other parent is not in the room, send the invite as a link instead of holding up a QR code.",
       "Press and hold the app icon on your home screen for one-tap shortcuts: Nappy, Bottle, Nursing, Sleep.",
       "Appearance has a new choice, Phone: the app turns to night mode when your phone does, and back in the morning. It used to stay on whichever look it was set up in.",
       "Undo is bigger and stays on screen twice as long, and stopping a timer can be undone too — a bounce on Wake up no longer writes a zero-minute sleep.",

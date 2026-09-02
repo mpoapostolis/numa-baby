@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "../lib/toast";
-import { Copy, Users } from "lucide-react";
+import { Copy, Send, Users } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { InputGroup, InputGroupInput } from "./ui/input-group";
@@ -80,7 +80,8 @@ export function FamilySyncCard({
   const [joinValue, setJoinValue] = useState(incomingCode ?? "");
   const [busy, setBusy] = useState(false);
 
-  const deviceLabel = profile.name.trim() ? `${profile.name.trim()}’s tracker` : "This phone";
+  const babyName = profile.name.trim();
+  const deviceLabel = babyName ? `${babyName}’s tracker` : "This phone";
 
   // Fetched once per pairing, and refreshed after a revocation so the list
   // never shows a phone that no longer holds a key. The unpaired case needs
@@ -249,6 +250,28 @@ export function FamilySyncCard({
               {partnerJoined ? "Paired! Both phones are syncing." : "Waiting for the other phone…"}
             </p>
             <div className="family-actions">
+              {/* The other parent is at work, not across the table: the same
+                  invite as a link, through whatever the phone uses to talk
+                  to them. The link lands on the join step with the code in. */}
+              <Button
+                disabled={busy}
+                onClick={() => {
+                  const link = inviteLink(window.location.origin, invite.code);
+                  const text = `Join ${babyName ? `${babyName}’s` : "our baby’s"} log in Numalog — open this on your phone, it works for 15 minutes: ${link}`;
+                  const canShare = typeof navigator.share === "function";
+                  track("invite_link_sent", { via: canShare ? "native" : "copy" });
+                  if (canShare) {
+                    void navigator.share({ title: "Join our baby’s log", text }).catch(() => undefined);
+                  } else {
+                    void navigator.clipboard?.writeText(text).then(
+                      () => toast("Invite copied — send it to the other phone."),
+                      () => toast(`Send the other phone this code: ${invite.code}`),
+                    );
+                  }
+                }}
+              >
+                <Send size={15} /> Send the link
+              </Button>
               <Button variant="outline" disabled={busy} onClick={() => void handleNewCode()}>
                 <Copy size={15} /> New code
               </Button>

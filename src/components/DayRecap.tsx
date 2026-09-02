@@ -6,13 +6,17 @@
 //
 // Every figure comes from summarizeDay, so the two readings can never disagree.
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Share2 } from "lucide-react";
 import { ActivityGlyph } from "./ActivityGlyph";
 import { track } from "../domain/analytics";
 import { Button } from "./ui/button";
 import { DaySummary } from "../domain/daySummary";
+import { dayCard } from "../domain/shareCards";
+import { shareLink } from "../domain/shareApp";
 import { formatTime, humanDuration } from "../domain/time";
 import { formatVolume, useUnits, volumeParts } from "../domain/units";
+import { renderCard, shareImage } from "../lib/shareCard";
+import { toast } from "../lib/toast";
 
 // Unit demotion, the house rule: digits speak, units recede.
 function Duration({ minutes }: { minutes: number }) {
@@ -93,6 +97,8 @@ function nursedSub(summary: DaySummary) {
 type DayRecapProps = {
   summary: DaySummary;
   title: string;
+  /** The baby's name, for the picture this day can become. */
+  name?: string;
   /** Omitted entirely when there is no history to walk; otherwise both arrows
       always render and disable at the ends, so the header never reflows. */
   stepper?: {
@@ -103,8 +109,20 @@ type DayRecapProps = {
   };
 };
 
-export function DayRecap({ summary, title, stepper }: DayRecapProps) {
+export function DayRecap({ summary, title, name = "", stepper }: DayRecapProps) {
   const units = useUnits();
+  // The day as one picture — "how did Tuesday go" for the parent at work
+  // and the grandmother who asks every evening, in any language.
+  // Local date for the file name: toISOString would name a Greek evening's
+  // picture after the day before.
+  const dayKey = `${summary.date.getFullYear()}-${String(summary.date.getMonth() + 1).padStart(2, "0")}-${String(summary.date.getDate()).padStart(2, "0")}`;
+  function share() {
+    track("day_shared", { today: summary.isToday });
+    void renderCard(dayCard(name, summary, units))
+      .then((blob) => shareImage(blob, `numalog-${dayKey}.png`, `${name.trim() || "Baby"} · ${title.toLowerCase()} · ${shareLink("day")}`))
+      .then((outcome) => { if (outcome === "saved") toast("Picture saved to your device"); })
+      .catch(() => toast("Could not make the picture on this phone"));
+  }
   const milk = volumeParts(summary.ml, units);
   const bracket =
     summary.firstFeedAt && summary.lastFeedAt && summary.firstFeedAt !== summary.lastFeedAt
@@ -129,6 +147,16 @@ export function DayRecap({ summary, title, stepper }: DayRecapProps) {
         )}
         <span className="t-label recap-title">{title}</span>
         {bracket && <span className="recap-bracket">{bracket}</span>}
+        {!summary.isEmpty && (
+          <Button
+            variant="ghost"
+            className="recap-step recap-share"
+            onClick={share}
+            aria-label={`Share ${title.toLowerCase()} as a picture`}
+          >
+            <Share2 size={16} aria-hidden="true" />
+          </Button>
+        )}
         {stepper && (
           <Button
             variant="ghost"

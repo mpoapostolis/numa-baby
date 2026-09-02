@@ -10,10 +10,10 @@ import { Copy, ExternalLink } from "lucide-react";
 import { toast } from "../lib/toast";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 import { track } from "../domain/analytics";
-import { APP_SHARE } from "../domain/shareApp";
+import { APP_SHARE, shareLink } from "../domain/shareApp";
 import { useCloseOnBack } from "../hooks/useCloseOnBack";
 
-const APP_URL = APP_SHARE.url;
+const APP_URL = shareLink("tell");
 const APP_TEXT = APP_SHARE.text;
 
 const TARGETS = [

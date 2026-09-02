@@ -740,6 +740,12 @@
   opacity: 0.3;
 }
 
+/* The share icon sits with the arrows, in the accent so it reads as an
+   action rather than a third arrow. */
+.recap-share {
+  color: var(--primary);
+}
+
 /* A past day with nothing logged says so, rather than showing four dashes. */
 .recap-empty {
   margin: 0;

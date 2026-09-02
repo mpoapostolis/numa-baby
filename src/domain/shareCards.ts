@@ -5,7 +5,9 @@
 // them carries the app's name to a family group chat somewhere, which is
 // how a private app with no ads gets found.
 
+import { DaySummary } from "./daySummary";
 import { Milestone } from "./milestones";
+import { formatTime, humanDuration } from "./time";
 import { UnitSystem, formatVolume, weightParts } from "./units";
 import { VisitSummary } from "./visitSummary";
 import { Activity } from "./types";
@@ -17,7 +19,7 @@ export type CardSpec = {
   eyebrow: string;
   headline: string;
   sub?: string;
-  /** Up to four figures, two to a row. */
+  /** Up to six figures, two to a row. */
   stats?: CardStat[];
   /** A quiet line above the footer. */
   footnote?: string;
@@ -40,17 +42,107 @@ function possessive(name: string): string {
   return who.endsWith("s") ? `${who}’` : `${who}’s`;
 }
 
-export function milestoneCard(milestone: Milestone, now: number): CardSpec {
+function hours(minutes: number): string {
+  const whole = Math.round(minutes / 60);
+  return `${whole}h`;
+}
+
+/** A lifetime of milk reads better in litres once it passes ten of them. */
+function bigVolume(ml: number, units: UnitSystem): string {
+  if (units === "metric" && ml >= 10_000) return `${(ml / 1_000).toFixed(1)} L`;
+  return formatVolume(ml, units);
+}
+
+export type LifetimeTotals = { feeds: number; nappies: number; sleepMinutes: number; ml: number };
+
+/**
+ * Everything since day one. Tombstones are skipped; a sleep still running,
+ * or one left open for days, is not counted — a forgotten stopwatch is not
+ * a week of sleep.
+ */
+export function lifetimeTotals(activities: Activity[]): LifetimeTotals {
+  const totals: LifetimeTotals = { feeds: 0, nappies: 0, sleepMinutes: 0, ml: 0 };
+  for (const activity of activities) {
+    if (activity.deleted) continue;
+    switch (activity.type) {
+      case "bottle":
+        totals.feeds += 1;
+        totals.ml += activity.amount ?? 0;
+        break;
+      case "nursing":
+        totals.feeds += 1;
+        break;
+      case "diaper":
+        totals.nappies += 1;
+        break;
+      case "sleep": {
+        if (!activity.endedAt) break;
+        const minutes = (new Date(activity.endedAt).getTime() - new Date(activity.startedAt).getTime()) / 60_000;
+        if (minutes > 0 && minutes <= 24 * 60) totals.sleepMinutes += Math.round(minutes);
+        break;
+      }
+      default:
+        break;
+    }
+  }
+  return totals;
+}
+
+/**
+ * The month-birthday card. With a log behind it, it also says what the
+ * family has done since day one — the "we changed 312 nappies" line that
+ * gets a card forwarded past the grandparents.
+ */
+export function milestoneCard(milestone: Milestone, now: number, totals: LifetimeTotals | null = null, units: UnitSystem = "metric"): CardSpec {
+  const stats: CardStat[] = [];
+  if (totals) {
+    if (totals.feeds > 0) stats.push({ value: String(totals.feeds), label: totals.feeds === 1 ? "feed" : "feeds" });
+    if (totals.nappies > 0) stats.push({ value: String(totals.nappies), label: totals.nappies === 1 ? "nappy" : "nappies" });
+    if (totals.sleepMinutes >= 60) stats.push({ value: hours(totals.sleepMinutes), label: "asleep" });
+    if (totals.ml > 0) stats.push({ value: bigVolume(totals.ml, units), label: "of milk" });
+  }
   return {
     eyebrow: longFormat.format(new Date(now)),
     headline: milestone.title,
     sub: milestone.sub,
+    stats: stats.length ? stats : undefined,
+    footnote: stats.length ? "All of it since day one, logged by hand — usually at 3am." : undefined,
   };
 }
 
-function hours(minutes: number): string {
-  const whole = Math.round(minutes / 60);
-  return `${whole}h`;
+const weekdayFormat = new Intl.DateTimeFormat("en", { weekday: "long" });
+
+/**
+ * One day as a picture — "how did Tuesday go" for the parent who was at
+ * work, or the grandmother who asks every evening.
+ */
+export function dayCard(name: string, summary: DaySummary, units: UnitSystem): CardSpec {
+  const weekday = weekdayFormat.format(summary.date);
+  const stats: CardStat[] = [];
+  if (summary.feeds > 0) stats.push({ value: String(summary.feeds), label: summary.feeds === 1 ? "feed" : "feeds" });
+  if (summary.bottles === 0 && summary.nursingMinutes > 0) {
+    stats.push({ value: humanDuration(summary.nursingMinutes), label: "nursed" });
+  } else if (summary.ml > 0) {
+    stats.push({ value: formatVolume(summary.ml, units), label: "of milk" });
+  }
+  if (summary.diapers > 0) {
+    stats.push({ value: String(summary.wet), label: "wet" });
+    stats.push({ value: String(summary.dirty), label: "dirty" });
+  }
+  if (summary.sleepMinutes > 0) stats.push({ value: humanDuration(summary.sleepMinutes), label: "asleep" });
+  if (summary.naps > 1 && summary.longestSleepMinutes > 0) {
+    stats.push({ value: humanDuration(summary.longestSleepMinutes), label: "longest sleep" });
+  }
+  const bracket =
+    summary.firstFeedAt && summary.lastFeedAt && summary.firstFeedAt !== summary.lastFeedAt
+      ? `Feeds from ${formatTime(summary.firstFeedAt)} to ${formatTime(summary.lastFeedAt)}.`
+      : undefined;
+  return {
+    eyebrow: summary.isToday ? `Today so far · ${longFormat.format(summary.date)}` : longFormat.format(summary.date),
+    headline: `${possessive(name)} ${weekday}`,
+    sub: bracket,
+    stats: stats.slice(0, 6),
+  };
 }
 
 export function weekCard(name: string, weekly: WeekDay[], units: UnitSystem): CardSpec {

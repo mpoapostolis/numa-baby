@@ -10,11 +10,13 @@ import "../styles/screens/milestone.css";
 import { useEffect, useState } from "react";
 import { PartyPopper, Share2 } from "lucide-react";
 import { toast } from "../lib/toast";
-import { milestoneCard } from "../domain/shareCards";
+import { LifetimeTotals, milestoneCard } from "../domain/shareCards";
+import { shareLink } from "../domain/shareApp";
 import { renderCard, shareImage } from "../lib/shareCard";
 import { Button } from "./ui/button";
 import { Milestone, markMilestoneSeen, milestoneSeen } from "../domain/milestones";
 import { track } from "../domain/analytics";
+import { useUnits } from "../domain/units";
 
 const COLORS = ["var(--glyph-bottle)", "var(--glyph-nursing)", "var(--glyph-diaper)", "var(--glyph-sleep)", "var(--glyph-burp)"];
 const PIECES = Array.from({ length: 28 }, (_, i) => ({
@@ -26,7 +28,15 @@ const PIECES = Array.from({ length: 28 }, (_, i) => ({
   size: 6 + ((i * 13) % 3) * 2,
 }));
 
-export function MilestoneParty({ milestone, onDismiss }: { milestone: Milestone; onDismiss?: () => void }) {
+type Props = {
+  milestone: Milestone;
+  /** Everything since day one, so the card can say what the family has done. */
+  totals: LifetimeTotals | null;
+  onDismiss?: () => void;
+};
+
+export function MilestoneParty({ milestone, totals, onDismiss }: Props) {
+  const units = useUnits();
   const [dismissed, setDismissed] = useState(false);
   // Confetti falls once and cleans up after itself; the card stays until read.
   // Once per milestone, not once per mount: Today unmounts on every tab
@@ -45,8 +55,8 @@ export function MilestoneParty({ milestone, onDismiss }: { milestone: Milestone;
   async function share() {
     track("milestone_shared", { id: milestone.id });
     try {
-      const blob = await renderCard(milestoneCard(milestone, Date.now()));
-      const outcome = await shareImage(blob, `numalog-${milestone.id}.png`, `${milestone.title} · numalog.app`);
+      const blob = await renderCard(milestoneCard(milestone, Date.now(), totals, units));
+      const outcome = await shareImage(blob, `numalog-${milestone.id}.png`, `${milestone.title} · ${shareLink("milestone")}`);
       if (outcome === "saved") toast("Card saved to your device");
     } catch {
       toast("Could not make the card on this phone");

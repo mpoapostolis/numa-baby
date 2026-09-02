@@ -32,6 +32,7 @@ import {
 import { Activity, DiaperKind, Profile, Sheet } from "../domain/types";
 import { UnitSystem, formatVolume, useUnits } from "../domain/units";
 import { Milestone } from "../domain/milestones";
+import { LifetimeTotals } from "../domain/shareCards";
 
 // A party is downloaded only on a day there is one.
 // The sound player is only needed once someone asks for it — it stays out
@@ -219,6 +220,8 @@ type TodayScreenProps = {
   stats: ActivityStats;
   /** Today's milestone, decided once per day by App and frozen for the visit. */
   celebration: Milestone | null;
+  /** Since-day-one totals for the party's picture; null on any other day. */
+  milestoneTotals: LifetimeTotals | null;
   /** The party's own 🎉: dismissed for the day, on every return to Today. */
   onDismissCelebration: () => void;
   onAdd: (activity: Activity, message: string) => boolean;
@@ -239,6 +242,7 @@ function TodayScreen({
   minuteClock,
   stats,
   celebration,
+  milestoneTotals,
   onDismissCelebration,
   onAdd,
   onStopTimer,
@@ -505,7 +509,7 @@ function TodayScreen({
     >
       {celebration && (
         <Suspense fallback={null}>
-          <MilestoneParty milestone={celebration} onDismiss={onDismissCelebration} />
+          <MilestoneParty milestone={celebration} totals={milestoneTotals} onDismiss={onDismissCelebration} />
         </Suspense>
       )}
 
@@ -596,6 +600,7 @@ function TodayScreen({
             <DayRecap
               summary={daySummary}
               title={recapTitle}
+              name={profile.name}
               stepper={maxDayOffset > 0 ? {
                 onPrev: () => setDayOffset((value) => Math.min(maxDayOffset, value + 1)),
                 onNext: () => setDayOffset((value) => Math.max(0, value - 1)),
