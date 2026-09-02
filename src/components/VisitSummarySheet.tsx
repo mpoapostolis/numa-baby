@@ -12,6 +12,9 @@
 import { Printer, Share2, X } from "lucide-react";
 import { toast } from "../lib/toast";
 import { visitCard } from "../domain/shareCards";
+import { VISIT_PRINT_CSS, renderVisitHtml, visitDocument } from "../domain/visitDocument";
+import { printDocument } from "../lib/printDocument";
+import { shareLink } from "../domain/shareApp";
 import { renderCard, shareImage } from "../lib/shareCard";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
@@ -167,7 +170,16 @@ export function VisitSummarySheet({ open, onOpenChange, summary, profile, ageMon
         </div>
 
         <div className="visit-actions">
-          <Button onClick={() => { track("visit_summary_printed"); window.print(); }}>
+          {/* Printed as a document of its own (see lib/printDocument): the
+              same figures, laid out like the share card, from the top of
+              the first page. */}
+          <Button
+            onClick={() => {
+              track("visit_summary_printed");
+              const doc = visitDocument(summary, name, age, units, band, gainBand, now);
+              void printDocument(`${name} · summary for the paediatrician`, renderVisitHtml(doc), VISIT_PRINT_CSS);
+            }}
+          >
             <Printer size={16} aria-hidden="true" /> Print or save as PDF
           </Button>
           {/* The same figures as one picture — what actually gets shown
@@ -177,7 +189,7 @@ export function VisitSummarySheet({ open, onOpenChange, summary, profile, ageMon
             onClick={() => {
               track("visit_summary_shared");
               void renderCard(visitCard(summary, name, age, units))
-                .then((blob) => shareImage(blob, "numalog-visit-summary.png", `${name} · summary for the paediatrician · numalog.app`))
+                .then((blob) => shareImage(blob, "numalog-visit-summary.png", `${name} · summary for the paediatrician · ${shareLink("visit")}`))
                 .then((outcome) => { if (outcome === "saved") toast("Picture saved to your device"); })
                 .catch(() => toast("Could not make the picture on this phone"));
             }}

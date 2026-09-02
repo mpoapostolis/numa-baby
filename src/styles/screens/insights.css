@@ -760,41 +760,6 @@
   flex-wrap: wrap;
 }
 
-/* Printing: the sheet becomes the page. Everything else in the app — nav,
-   dialog chrome, the app itself — is not part of a medical handout. */
-@media print {
-  body * { visibility: hidden !important; }
-  .visit-page, .visit-page * { visibility: visible !important; }
-  /* Paper has one theme. With .dark still on <html> at print time, every
-     descendant that speaks in ink tokens would print the NIGHT values —
-     faint gray on white. Re-pin the tokens for the whole page instead of
-     chasing each selector. */
-  :root, .dark {
-    --foreground: #000;
-    --ink-1: #000;
-    --ink-2: #333;
-    --ink-3: #555;
-    --border: #ccc;
-  }
-  .visit-page {
-    position: absolute;
-    inset: 0 auto auto 0;
-    width: 100%;
-    padding: 0;
-    color: #000;
-    background: #fff;
-  }
-  .visit-actions { display: none !important; }
-  .visit-sheet {
-    max-height: none;
-    overflow: visible;
-    box-shadow: none;
-    border: 0;
-  }
-  .visit-coverage { background: #f2f2f2; }
-  .visit-table { page-break-inside: avoid; }
-}
-
 /* Three dashes beside one number reads as a broken screen. One quiet line
    turns it into a young one. */
 .insight-waiting {
