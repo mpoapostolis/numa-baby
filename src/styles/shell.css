@@ -187,9 +187,11 @@
   gap: 16px;
   padding: env(safe-area-inset-top) max(clamp(16px, 4vw, 32px), env(safe-area-inset-right)) 0 max(clamp(16px, 4vw, 32px), env(safe-area-inset-left));
   border-bottom: 1px solid var(--border);
-  background: color-mix(in oklch, var(--card) 92%, transparent);
+  /* Solid, no blur: nothing ever scrolls beneath the topbar (it is a sibling
+     of the scroller, not above it), so the blur produced no visible result
+     and cost a compositing layer plus a GPU pass on every frame. */
+  background: var(--card);
   box-shadow: none;
-  backdrop-filter: blur(16px);
 }
 
 .topbar-start {
@@ -544,8 +546,10 @@
     grid-auto-columns: minmax(0, 1fr);
     padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     border-top: 1px solid var(--border);
-    background: color-mix(in oklch, var(--card) 94%, transparent);
-    backdrop-filter: blur(18px);
+    /* Opaque. At 94% the blur beneath was imperceptible, and a backdrop
+       blur on a fixed bar re-runs a GPU pass on every scroll frame — the
+       classic jank on a mid-range phone at the moment a thumb is aiming. */
+    background: var(--card);
   }
 
   .bottom-nav-item {

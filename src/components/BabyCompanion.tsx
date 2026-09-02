@@ -8,6 +8,8 @@
 // currentColor lines, glyph-hue accents, theme-safe. All motion is slow and
 // small, and the global prefers-reduced-motion block stills every keyframe.
 
+import { useEffect, useRef, useState } from "react";
+
 export type CompanionMood = "awake" | "content" | "sleeping" | "hungry" | "feeding";
 
 type BabyCompanionProps = {
@@ -101,9 +103,22 @@ export function BabyCompanion({
   className = "",
   reactionKey = null,
 }: BabyCompanionProps) {
+  // The loops are paused while the face is scrolled off the screen (see
+  // companion.css): they are style-and-paint work every frame, and a parent
+  // reading the recap two screens down is not looking at them.
+  const face = useRef<SVGSVGElement>(null);
+  const [offscreen, setOffscreen] = useState(false);
+  useEffect(() => {
+    const node = face.current;
+    if (!node || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(([entry]) => setOffscreen(!entry.isIntersecting));
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
   return (
     <svg
-      className={`baby-companion is-${mood} ${className}`.trim()}
+      ref={face}
+      className={`baby-companion is-${mood}${offscreen ? " is-offscreen" : ""} ${className}`.trim()}
       width={size}
       height={size}
       viewBox="0 0 112 112"

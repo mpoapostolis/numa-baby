@@ -173,12 +173,20 @@ async function authFamily(env: Env, request: Request): Promise<Caller | null> {
     : null;
 }
 
+// How stale last_seen_at may be before a request bothers to refresh it. It is
+// only ever read at minute and day granularity (the device list, the
+// dashboard), yet every 60-second poll used to write it unconditionally —
+// a write transaction to the primary per phone per minute, six times the
+// real entry writes of a newborn family.
+const TOUCH_INTERVAL_MS = 10 * 60_000;
+
 async function touchDevice(env: Env, familyId: string, deviceId: string | undefined) {
   if (!deviceId) return;
+  const now = new Date();
   await db(env).execute({
-    sql: "UPDATE devices SET last_seen_at = ? WHERE id = ? AND family_id = ?",
-    args: [new Date().toISOString(), deviceId, familyId],
-  });
+    sql: "UPDATE devices SET last_seen_at = ? WHERE id = ? AND family_id = ? AND (last_seen_at IS NULL OR last_seen_at < ?)",
+    args: [now.toISOString(), deviceId, familyId, new Date(now.getTime() - TOUCH_INTERVAL_MS).toISOString()],
+  }).catch(() => undefined);
 }
 
 async function handleCreateFamily(env: Env, request: Request): Promise<Response> {
@@ -370,7 +378,7 @@ async function handleJoin(env: Env, request: Request): Promise<Response> {
   return json({ familyId, token, deviceId });
 }
 
-async function handlePull(env: Env, request: Request, familyId: string): Promise<Response> {
+async function handlePull(env: Env, request: Request, familyId: string, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
   const since = url.searchParams.get("since") ?? "";
   // The second half of the page cursor: the id of the last row the client
@@ -387,7 +395,11 @@ async function handlePull(env: Env, request: Request, familyId: string): Promise
   // carry it; polls omit it and the client keeps the number it already has.
   const wantCount = !since || url.searchParams.get("count") === "1";
   const client = db(env);
-  await ensureReceivedAt(client);
+  // Off the request path. The self-heal is a no-op on every existing
+  // database (schema.sql is the record), and awaiting it put three sequential
+  // round trips in front of the first pull of every cold isolate — which on
+  // a low-traffic Worker is most of the 3am opens.
+  ctx.waitUntil(ensureReceivedAt(client));
   // Filter and order by the SERVER clock: "give me what arrived after my
   // cursor" is the only question a pull can ask that a backfilled restore
   // (old client stamps, fresh arrival) still answers correctly.
@@ -405,7 +417,8 @@ async function handlePull(env: Env, request: Request, familyId: string): Promise
       ? client.execute({ sql: "SELECT COUNT(*) AS n FROM devices WHERE family_id = ?", args: [familyId] })
       : Promise.resolve(null),
   ]);
-  await touchDevice(env, familyId, deviceId);
+  // After the answer, not before it: the touch is bookkeeping.
+  ctx.waitUntil(touchDevice(env, familyId, deviceId));
   return json({
     activities: rows.rows.map((r) => ({
       id: String(r.id),
@@ -421,7 +434,7 @@ async function handlePull(env: Env, request: Request, familyId: string): Promise
   });
 }
 
-async function handlePush(env: Env, request: Request, familyId: string): Promise<Response> {
+async function handlePush(env: Env, request: Request, familyId: string, ctx: ExecutionContext): Promise<Response> {
   const body = (await request.json().catch(() => null)) as {
     activities?: Array<{ id: string; payload: unknown; updatedAt: string; deleted?: boolean }>;
     profile?: unknown;
@@ -430,7 +443,7 @@ async function handlePush(env: Env, request: Request, familyId: string): Promise
   } | null;
   if (!body || !Array.isArray(body.activities)) return bad("Malformed sync payload.");
   if (body.activities.length > MAX_PUSH_BATCH) return bad("Batch too large.", 413);
-  await ensureReceivedAt(db(env));
+  ctx.waitUntil(ensureReceivedAt(db(env)));
 
   const receivedAt = new Date().toISOString();
   // A write stamp past this is a phone whose clock is wrong, not a newer
@@ -487,12 +500,12 @@ async function handlePush(env: Env, request: Request, familyId: string): Promise
     }
   }
   if (statements.length) await db(env).batch(statements, "write");
-  await touchDevice(env, familyId, body.deviceId);
+  ctx.waitUntil(touchDevice(env, familyId, body.deviceId));
   return json({ accepted: statements.length, serverTime: new Date().toISOString() });
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     // One address in the address bar. www is registered only to catch typing;
@@ -575,10 +588,10 @@ export default {
         return await handleInvite(env, familyId);
       }
       if (url.pathname === "/api/sync/pull" && request.method === "GET") {
-        return await handlePull(env, request, familyId);
+        return await handlePull(env, request, familyId, ctx);
       }
       if (url.pathname === "/api/sync/push" && request.method === "POST") {
-        return await handlePush(env, request, familyId);
+        return await handlePush(env, request, familyId, ctx);
       }
       return bad("Unknown endpoint.", 404);
     } catch (error) {

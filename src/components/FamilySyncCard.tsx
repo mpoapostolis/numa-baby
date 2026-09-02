@@ -45,6 +45,10 @@ function humanStamp(raw: string): string {
   return raw.length === 10 ? day : `${day}, ${formatTime(new Date(ms).toISOString())}`;
 }
 
+function partnerJoinedLive(deviceCount: number | null): boolean {
+  return (deviceCount ?? 0) >= 2;
+}
+
 function statusLine(phase: string, lastSyncAt: string | null, entryCount: number): string {
   if (phase === "syncing") return "Syncing…";
   if (phase === "offline") return "Offline — will catch up on its own when you're back";
@@ -96,6 +100,19 @@ export function FamilySyncCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [familyId]);
 
+  // While the code is on screen this phone is waiting for exactly one thing,
+  // so it asks every fifteen seconds rather than on the ordinary heartbeat
+  // (which is slow for a family of one — see useFamilySync). The pull that
+  // answers carries the device count, which is what flips "Waiting…".
+  const waitingForPartner = view === "code" && !partnerJoinedLive(status.deviceCount);
+  useEffect(() => {
+    if (!waitingForPartner) return;
+    const timer = window.setInterval(() => void familySync.syncNow(), 15_000);
+    return () => window.clearInterval(timer);
+    // syncNow reads the live pairing; its identity is per-render by design.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [waitingForPartner]);
+
   async function removeDevice(target: { deviceId: string } | { all: true }) {
     const confirmed = "all" in target
       ? window.confirm("Sign out every other phone? They will each need a fresh invite code to come back.")
@@ -105,7 +122,7 @@ export function FamilySyncCard({
     if (await revokeDevice(target)) setDevices(await listDevices());
   }
   const paired = Boolean(pairing);
-  const partnerJoined = (status.deviceCount ?? 0) >= 2;
+  const partnerJoined = partnerJoinedLive(status.deviceCount);
 
   async function handleCreate() {
     setBusy(true);

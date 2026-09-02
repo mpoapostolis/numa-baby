@@ -227,12 +227,19 @@ async function computeHeavy(client: Client, now: number) {
 
 const HEAVY_TTL_MS = 15 * 60_000;
 
+// Once per isolate, like every other self-heal: this used to run on every
+// stats call, a write-path round trip per dashboard refresh.
+let cacheTableReady = false;
+
 export async function collectStats(client: Client, now: number) {
-  await client
-    .execute(
-      "CREATE TABLE IF NOT EXISTS stats_cache (id TEXT PRIMARY KEY, payload TEXT NOT NULL, computed_at TEXT NOT NULL)",
-    )
-    .catch(() => undefined);
+  if (!cacheTableReady) {
+    await client
+      .execute(
+        "CREATE TABLE IF NOT EXISTS stats_cache (id TEXT PRIMARY KEY, payload TEXT NOT NULL, computed_at TEXT NOT NULL)",
+      )
+      .catch(() => undefined);
+    cacheTableReady = true;
+  }
 
   // Serve the heavy half from the cache while it is fresh — however many
   // tabs, reloads or auto-refreshes ask. A stale or missing cache recomputes

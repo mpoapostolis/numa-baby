@@ -345,6 +345,13 @@ export default function HomePage() {
     return () => window.clearTimeout(settle);
   }, [nightMode]);
 
+  // The companion's lullaby loops are paused while a sheet covers it (see
+  // companion.css): six infinite SVG animations repaint every frame, and
+  // under an overlay nobody sees them. A class on <html> is what CSS reads.
+  useEffect(() => {
+    document.documentElement.classList.toggle("sheet-open", sheet !== null);
+  }, [sheet]);
+
   function markReleasesSeen() {
     try {
       window.localStorage.setItem(SEEN_RELEASE_KEY, LATEST_RELEASE_ID);

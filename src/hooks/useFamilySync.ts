@@ -23,6 +23,7 @@ import { activityUpdatedAt, clampFutureUpdatedAt, isValidActivity, sanitizeProfi
 // no storage reads, no network, no timers.
 
 const PULL_INTERVAL_MS = 60_000;
+const SOLO_PULL_INTERVAL_MS = 5 * 60_000;
 const PUSH_DEBOUNCE_MS = 2_000;
 // The server filters pulls by ITS OWN arrival clock (received_at) and the
 // cursor is the server's own serverTime, so the only gap an overlap must
@@ -348,9 +349,15 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
   }
 
   const paired = Boolean(pairing);
+  // A family of one phone — sync switched on to keep the log safe in the
+  // cloud, nobody else writing — has nothing to hear from a poll. It still
+  // polls (a partner may join while the app sits open), just five times an
+  // hour instead of sixty; the invite screen runs its own quick check, and
+  // every open, unlock and Sync now pulls at once regardless.
+  const solo = status.deviceCount === 1;
 
   // PULL triggers: becoming paired, boot reaching ready, tab turning visible,
-  // and a 60s heartbeat while visible. One interval, always cleaned up. The
+  // and a heartbeat while visible. One interval, always cleaned up. The
   // opening pull is deferred to a timer so no state ever changes synchronously
   // inside the effect body.
   useEffect(() => {
@@ -358,7 +365,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     const opener = window.setTimeout(() => void runPull(true), 0);
     const interval = window.setInterval(() => {
       if (!document.hidden) void runPull(false);
-    }, PULL_INTERVAL_MS);
+    }, solo ? SOLO_PULL_INTERVAL_MS : PULL_INTERVAL_MS);
     const onVisibility = () => {
       if (!document.hidden) {
         void runPull(true);
@@ -383,7 +390,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     // value through live.current, and re-arming the listeners per render would
     // tear down the heartbeat on every keystroke.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debugMode, paired, bootState]);
+  }, [debugMode, paired, bootState, solo]);
 
   // BACKFILL trigger: a merged backup bumps backfillVersion. The flag is
   // raised here rather than inside the merge because the store cannot reach

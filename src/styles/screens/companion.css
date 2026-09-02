@@ -1,6 +1,16 @@
 /* BabyCompanion — slow, small, lullaby motion. Every keyframe here is stilled
    by the global prefers-reduced-motion block in base.css. */
 
+/* Stilled while it cannot be seen: under an open sheet, or scrolled off the
+   screen. These are six looping animations on SVG nodes, which the browser
+   cannot hand to the compositor — each one is a style recalc and a repaint
+   every frame, for hours, on a phone left face-up on the nightstand. The
+   sheet-open class is set by App; is-offscreen by the companion itself. */
+.sheet-open .baby-companion *,
+.baby-companion.is-offscreen * {
+  animation-play-state: paused;
+}
+
 .baby-companion {
   color: color-mix(in oklab, var(--glyph-nursing) 45%, var(--foreground));
 }
