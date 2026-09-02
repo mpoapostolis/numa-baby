@@ -627,14 +627,6 @@ function TodayScreen({
 
           </div>
 
-          <ComingUp
-            entries={comingUp}
-            now={minuteClock}
-            name={profile.name}
-            record={rhythm.feed}
-            onShareRecord={shareRhythm}
-          />
-
           {/* Shown from the first thing ever logged. A fresh install skips it
               — four em-dashes read as breakage, not calm — but a quiet morning
               keeps the card, or the arrows back to yesterday vanish with it. */}
@@ -863,6 +855,18 @@ function TodayScreen({
               </div>
             )}
           </div>
+
+          {/* What is probably next, and how often the app has been right —
+              directly under the taps it forecasts. It used to sit in the
+              clock column below, which on a phone is a screen and a half
+              past the only line anybody would ever quote about this app. */}
+          <ComingUp
+            entries={comingUp}
+            now={minuteClock}
+            name={profile.name}
+            record={rhythm.feed}
+            onShareRecord={shareRhythm}
+          />
 
           <Button
             variant="ghost"
