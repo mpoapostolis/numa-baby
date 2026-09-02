@@ -833,3 +833,15 @@
   transition-duration: 90ms;
   transform: scale(0.985);
 }
+
+/* The two hand-it-on buttons side by side; each alone on a narrow phone. */
+.insight-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.insight-actions .visit-open {
+  margin-bottom: 0;
+}

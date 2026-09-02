@@ -9,7 +9,10 @@
 // four of the fourteen days were never logged, and a doctor cannot know that
 // unless the sheet says so.
 
-import { Printer, X } from "lucide-react";
+import { Printer, Share2, X } from "lucide-react";
+import { toast } from "../lib/toast";
+import { visitCard } from "../domain/shareCards";
+import { renderCard, shareImage } from "../lib/shareCard";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
 import { track } from "../domain/analytics";
@@ -166,6 +169,20 @@ export function VisitSummarySheet({ open, onOpenChange, summary, profile, ageMon
         <div className="visit-actions">
           <Button onClick={() => { track("visit_summary_printed"); window.print(); }}>
             <Printer size={16} aria-hidden="true" /> Print or save as PDF
+          </Button>
+          {/* The same figures as one picture — what actually gets shown
+              across the desk, or sent ahead to the clinic on WhatsApp. */}
+          <Button
+            variant="outline"
+            onClick={() => {
+              track("visit_summary_shared");
+              void renderCard(visitCard(summary, name, age, units))
+                .then((blob) => shareImage(blob, "numalog-visit-summary.png", `${name} · summary for the paediatrician · numalog.app`))
+                .then((outcome) => { if (outcome === "saved") toast("Picture saved to your device"); })
+                .catch(() => toast("Could not make the picture on this phone"));
+            }}
+          >
+            <Share2 size={16} aria-hidden="true" /> Share as a picture
           </Button>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             <X size={16} aria-hidden="true" /> Close

@@ -8,7 +8,10 @@
 
 import "../styles/screens/milestone.css";
 import { useEffect, useState } from "react";
-import { PartyPopper } from "lucide-react";
+import { PartyPopper, Share2 } from "lucide-react";
+import { toast } from "../lib/toast";
+import { milestoneCard } from "../domain/shareCards";
+import { renderCard, shareImage } from "../lib/shareCard";
 import { Button } from "./ui/button";
 import { Milestone, markMilestoneSeen, milestoneSeen } from "../domain/milestones";
 import { track } from "../domain/analytics";
@@ -36,6 +39,19 @@ export function MilestoneParty({ milestone, onDismiss }: { milestone: Milestone;
     const id = window.setTimeout(() => setRaining(false), 4_000);
     return () => window.clearTimeout(id);
   }, [milestone.id]);
+
+  // The party as a picture, for the family group chat: the one moment a
+  // parent WANTS to send something, and the picture carries the app's name.
+  async function share() {
+    track("milestone_shared", { id: milestone.id });
+    try {
+      const blob = await renderCard(milestoneCard(milestone, Date.now()));
+      const outcome = await shareImage(blob, `numalog-${milestone.id}.png`, `${milestone.title} · numalog.app`);
+      if (outcome === "saved") toast("Card saved to your device");
+    } catch {
+      toast("Could not make the card on this phone");
+    }
+  }
 
   if (dismissed) return null;
 
@@ -65,6 +81,7 @@ export function MilestoneParty({ milestone, onDismiss }: { milestone: Milestone;
           <strong>{milestone.title}</strong>
           <small>{milestone.sub}</small>
         </div>
+        <Button variant="ghost" size="sm" aria-label="Share this milestone as a picture" onClick={() => void share()}><Share2 size={18} aria-hidden="true" /></Button>
         <Button variant="ghost" size="sm" aria-label="Dismiss the celebration" onClick={() => { setDismissed(true); onDismiss?.(); }}>🎉</Button>
       </div>
     </>

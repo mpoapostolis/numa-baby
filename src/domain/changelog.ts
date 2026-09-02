@@ -20,6 +20,8 @@ export const RELEASES: Release[] = [
     id: "2026-09-06",
     title: "Faster at 3am, and the theme follows your phone",
     items: [
+      "Share a picture: the month-birthday card has a share button, Insights can send the week as one picture, and the paediatrician summary can go out as a picture too — for the family group chat, or ahead to the clinic.",
+      "Press and hold the app icon on your home screen for one-tap shortcuts: Nappy, Bottle, Nursing, Sleep.",
       "Appearance has a new choice, Phone: the app turns to night mode when your phone does, and back in the morning. It used to stay on whichever look it was set up in.",
       "Undo is bigger and stays on screen twice as long, and stopping a timer can be undone too — a bounce on Wake up no longer writes a zero-minute sleep.",
       "Your phone’s back gesture now closes the sounds panel, the news and the feedback form, and brings you back to Today from any tab, instead of closing the app.",

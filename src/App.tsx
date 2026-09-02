@@ -39,6 +39,7 @@ import {
 import { backupNudge } from "./domain/backupNudge";
 import { onConsentChange, readConsent } from "./domain/consent";
 import { ageInDays } from "./domain/time";
+import { dayKey } from "./domain/daySummary";
 import { useActivityStats } from "./hooks/useActivityStats";
 import { useFamilySync } from "./hooks/useFamilySync";
 import { useMinuteClock } from "./hooks/useMinuteClock";
@@ -153,6 +154,23 @@ function readMagicToken(): { purpose: "confirm" | "recover"; token: string } | n
 // render can race it.
 const tappedMagicLink = readMagicToken();
 
+// A home-screen shortcut (manifest.shortcuts) arrives as "/?log=diaper":
+// press-and-hold on the icon, one tap, and the sheet is open before the app
+// has finished saying hello. Read once at boot and stripped, so a refresh
+// never re-opens a sheet the parent already closed.
+const SHORTCUT_SHEETS: ReadonlyArray<Exclude<Sheet, null>> = ["bottle", "nursing", "diaper", "sleep"];
+function readShortcut(): Exclude<Sheet, null> | null {
+  const params = new URLSearchParams(window.location.search);
+  const wanted = params.get("log");
+  if (wanted === null) return null;
+  params.delete("log");
+  const query = params.toString();
+  window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`);
+  const found = SHORTCUT_SHEETS.find((sheet) => sheet === wanted);
+  return found ?? null;
+}
+const tappedShortcut = readShortcut();
+
 export default function HomePage() {
   const [debugMode] = useState(() => {
     const on = new URLSearchParams(window.location.search).has("debug");
@@ -161,6 +179,7 @@ export default function HomePage() {
   });
   const [incomingJoinCode, setIncomingJoinCode] = useState(readIncomingJoinCode);
   const magicTokenRef = useRef(tappedMagicLink);
+  const shortcutRef = useRef(tappedShortcut);
   // Fresh from onboarding: the protect offer earns its one showing NOW, at
   // the moment the parent has just invested in the setup — not after five
   // entries like families that predate the feature.
@@ -295,6 +314,17 @@ export default function HomePage() {
     showToast,
   });
 
+  // A tapped home-screen shortcut opens its sheet the moment the log is
+  // readable. Deferred to a timer so no state changes inside the effect body.
+  useEffect(() => {
+    const wanted = shortcutRef.current;
+    if (!wanted || bootState !== "ready") return;
+    shortcutRef.current = null;
+    track("shortcut_opened", { sheet: wanted });
+    const timer = window.setTimeout(() => openSheet(wanted), 0);
+    return () => window.clearTimeout(timer);
+  }, [bootState]);
+
   // A tapped magic link. The confirm kind is safe in any state — it only
   // marks an address as this family's guard. The recover kind REPLACES the
   // pairing, so it only acts on a phone with nothing to lose (onboarding);
@@ -398,9 +428,15 @@ export default function HomePage() {
   const celebration = milestoneGate.milestone;
   const milestoneToday = celebration !== null;
   const dismissCelebration = useCallback(() => setMilestoneGate((gate) => ({ ...gate, milestone: null })), []);
+  // The first morning. A family's first night is the moment the other parent
+  // wakes up not knowing when the last feed was — the one sentence that
+  // explains why a second phone matters — so the offer comes the day after
+  // the first entry, not after five entries.
+  const oldestEntry = sortedActivities[sortedActivities.length - 1];
+  const firstMorning = oldestEntry !== undefined && dayKey(new Date(oldestEntry.startedAt)) !== dayKey(new Date(minuteClock));
   const protectMoment =
     !milestoneToday && consent !== null && sheet === null && !protectIntroDone &&
-    (justOnboarded || activities.filter((activity) => !activity.deleted).length >= 5);
+    (justOnboarded || firstMorning || activities.length >= 5);
   const showWhatsNew =
     activeTab === "today" && releasesToShow.length > 0 && !milestoneToday && !protectMoment;
 
@@ -946,7 +982,7 @@ export default function HomePage() {
         )}
         {protectAsk > 0 && (
           <Suspense fallback={null}>
-            <ProtectIntro key={protectAsk} familySync={familySync} forced onClosed={() => setProtectAsk(0)} />
+            <ProtectIntro key={protectAsk} familySync={familySync} forced onClosed={() => setProtectAsk(0)} onInvitePartner={() => navigateTo("more")} />
           </Suspense>
         )}
         {recoverAsk && (
@@ -960,7 +996,7 @@ export default function HomePage() {
         )}
         {protectMoment && protectAsk === 0 && (
           <Suspense fallback={null}>
-            <ProtectIntro familySync={familySync} onClosed={() => setProtectIntroDone(true)} />
+            <ProtectIntro familySync={familySync} onClosed={() => setProtectIntroDone(true)} onInvitePartner={() => navigateTo("more")} />
           </Suspense>
         )}
 

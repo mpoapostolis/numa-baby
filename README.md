@@ -55,6 +55,63 @@ Set `TURSO_DATABASE_URL` in `wrangler.jsonc` and the token as a secret:
 turso db tokens create <database> | npx wrangler secret put TURSO_AUTH_TOKEN
 ```
 
+## Sharing, shortcuts and the store listing
+
+Three surfaces exist only so a parent can hand the app on: the month-birthday
+card, the "share this week" picture on Insights and the paediatrician summary
+as a picture. All three are drawn by `src/lib/shareCard.ts` from a spec in
+`src/domain/shareCards.ts` and go through the phone's native share sheet
+(a download where there is none). Every card carries `numalog.app`.
+
+The manifest declares four home-screen shortcuts (press-and-hold on the icon:
+Nappy, Bottle, Nursing, Sleep). They open `/?log=<sheet>`, which `App.tsx`
+reads once at boot and strips.
+
+The manifest also declares the screenshots Android's richer install prompt
+and a store listing show. Regenerate them from the built app:
+
+```bash
+npm run build
+npm i -D playwright --no-save && npx playwright install chromium   # once
+node scripts/screenshots.mjs
+```
+
+### Google Play (Trusted Web Activity)
+
+The PWA already satisfies what a TWA needs: `id`, `start_url`, `display:
+standalone`, maskable icons, screenshots, `prefer_related_applications:
+false`. To list it:
+
+1. Go to [pwabuilder.com](https://www.pwabuilder.com), enter `https://numalog.app`,
+   and generate the Android package. Keep the package id it suggests (or
+   pick `app.numalog.twa`) and let it create the signing key — save that
+   key; it is the identity of the listing for ever.
+2. PWABuilder prints the SHA-256 fingerprint of the signing key. Put it in
+   `public/.well-known/assetlinks.json` (the file is what tells Android the
+   site and the app belong to each other; without it the app opens with a
+   browser bar):
+
+   ```json
+   [{
+     "relation": ["delegate_permission/common.handle_all_urls"],
+     "target": {
+       "namespace": "android_app",
+       "package_name": "app.numalog.twa",
+       "sha256_cert_fingerprints": ["AA:BB:…"]
+     }
+   }]
+   ```
+
+   Deploy, and check `https://numalog.app/.well-known/assetlinks.json` serves it.
+3. Upload the `.aab` to Play Console. The listing text, icon and
+   screenshots come from the manifest; the privacy section is the same
+   promise the app makes: no account, nothing leaves the phone unless
+   Family Sync is on.
+
+The web app and the Play app are the same origin, so a family that installs
+from Play and one that installs from the browser see the same log through
+Family Sync; nothing is duplicated.
+
 ## Moving to a new domain
 
 Read this before pointing a new domain at the app.

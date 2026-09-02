@@ -32,12 +32,15 @@ export function ProtectIntro({
   familySync,
   forced = false,
   onClosed,
+  onInvitePartner,
 }: {
   familySync: FamilySync;
   /** Summoned by a tap (the on-this-phone-only pill) rather than the
       once-per-life announcement — opens unconditionally. */
   forced?: boolean;
   onClosed?: () => void;
+  /** "Add the other parent" — the caller takes them to Family Sync. */
+  onInvitePartner?: () => void;
 }) {
   const paired = Boolean(familySync.pairing);
   // An unpaired family cannot already be guarded: open on arrival. A paired
@@ -98,6 +101,21 @@ export function ProtectIntro({
           and nothing from your log is ever shared with anyone.
         </DialogDescription>
         <ProtectWithGoogle familySync={familySync} immediate explainer={false} onProtected={() => setProtectedNow(true)} />
+        {/* The other reason for a second copy, said plainly: the parent who
+            wakes up next does not have to ask when the last feed was. This
+            is the sentence that makes a family want a second phone, and the
+            second phone is how the app travels. */}
+        {onInvitePartner && (
+          <>
+            <p className="protect-intro-partner">
+              Two phones, one log: add the other parent and neither of you has to
+              ask when the last feed was.
+            </p>
+            <Button variant="outline" onClick={() => { track("protect_intro_partner"); close(); onInvitePartner(); }}>
+              Add the other parent’s phone
+            </Button>
+          </>
+        )}
         <Button variant="ghost" onClick={() => { if (!protectedNow) track("protect_intro_later"); close(); }}>
           {protectedNow ? "Done" : "Maybe later — it lives in Settings"}
         </Button>

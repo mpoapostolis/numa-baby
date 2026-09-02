@@ -1,7 +1,10 @@
 // Ships with this lazy chunk, not the app shell — the budget rule.
 import "../styles/screens/insights.css";
 import { useMemo, useState } from "react";
-import { ExternalLink, PhoneCall, ShieldCheck, Sparkles, Stethoscope } from "lucide-react";
+import { ExternalLink, PhoneCall, Share2, ShieldCheck, Sparkles, Stethoscope } from "lucide-react";
+import { toast } from "../lib/toast";
+import { weekCard } from "../domain/shareCards";
+import { renderCard, shareImage } from "../lib/shareCard";
 import { EmptyState } from "../components/EmptyState";
 import { GrowthChart } from "../components/GrowthChart";
 import { LittleBottle } from "../components/illustrations";
@@ -180,10 +183,30 @@ export default function InsightsScreen({
       {/* One page a parent can hand across a desk. Placed first because the
           appointment is the moment all of this stops being a hobby. */}
       {visit.loggedDays > 0 && (
-        <Button variant="outline" className="visit-open" onClick={() => setVisitOpen(true)}>
-          <Stethoscope size={16} aria-hidden="true" />
-          Summary for the paediatrician
-        </Button>
+        <div className="insight-actions">
+          <Button variant="outline" className="visit-open" onClick={() => setVisitOpen(true)}>
+            <Stethoscope size={16} aria-hidden="true" />
+            Summary for the paediatrician
+          </Button>
+          {/* The week as a picture for the grandparents' group chat — the
+              numbers a parent is quietly proud of, with the app's name on it. */}
+          {hasSummaryData && (
+            <Button
+              variant="outline"
+              className="week-share"
+              onClick={() => {
+                track("week_shared");
+                void renderCard(weekCard(profile.name, weekly, units))
+                  .then((blob) => shareImage(blob, "numalog-week.png", `${profile.name.trim() || "Baby"}’s week · numalog.app`))
+                  .then((outcome) => { if (outcome === "saved") toast("Card saved to your device"); })
+                  .catch(() => toast("Could not make the card on this phone"));
+              }}
+            >
+              <Share2 size={16} aria-hidden="true" />
+              Share this week
+            </Button>
+          )}
+        </div>
       )}
 
       <VisitSummarySheet

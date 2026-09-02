@@ -69,6 +69,21 @@ export default defineConfig({
           { src: "/icon-maskable-192.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
           { src: "/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
+        // Press-and-hold on the home-screen icon: the sheet is open before
+        // the app has finished saying hello. App.tsx reads ?log= at boot.
+        shortcuts: [
+          { name: "Nappy change", short_name: "Nappy", url: "/?log=diaper", icons: [{ src: "/icon-192.png", sizes: "192x192", type: "image/png" }] },
+          { name: "Bottle", short_name: "Bottle", url: "/?log=bottle", icons: [{ src: "/icon-192.png", sizes: "192x192", type: "image/png" }] },
+          { name: "Nursing", short_name: "Nursing", url: "/?log=nursing", icons: [{ src: "/icon-192.png", sizes: "192x192", type: "image/png" }] },
+          { name: "Sleep", short_name: "Sleep", url: "/?log=sleep", icons: [{ src: "/icon-192.png", sizes: "192x192", type: "image/png" }] },
+        ],
+        // What the richer install prompt and a store listing (TWA) show.
+        // Captured by scripts/screenshots.mjs from the built app.
+        screenshots: [
+          { src: "/screenshots/today.png", sizes: "780x1688", type: "image/png", form_factor: "narrow", label: "Today: one-tap logging for feeds, nappies, sleep and more" },
+          { src: "/screenshots/insights.png", sizes: "780x1688", type: "image/png", form_factor: "narrow", label: "Insights: the week's rhythm and a summary for the paediatrician" },
+          { src: "/screenshots/timeline.png", sizes: "780x1688", type: "image/png", form_factor: "narrow", label: "Timeline: every entry, day by day" },
+        ],
       },
       workbox: {
         cleanupOutdatedCaches: true,
@@ -105,6 +120,7 @@ export default defineConfig({
         globPatterns: ["**/*.{html,js,css,png,svg,webmanifest,woff2}"],
         globIgnores: [
           "**/og-baby-tracker.png",
+          "**/screenshots/*",
           "**/icon-512.png",
           "**/icon-maskable-512.png",
           "**/geist-cyrillic-*.woff2",
