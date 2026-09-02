@@ -100,36 +100,67 @@ export async function renderCard(spec: CardSpec): Promise<Blob> {
   ctx.fill();
   drawFace(ctx, MARGIN + 78, 210, 72);
 
-  let y = 400;
+  // Measure first, draw second: a card with six tiles needs the text higher
+  // and the tiles shorter, and a card with no tiles reads better with its
+  // words in the middle than as a headline over a blank page.
+  const count = Math.min(spec.stats?.length ?? 0, 6);
+  const compact = count > 4;
+  const headlineSize = compact ? 72 : 84;
+  const headlineLead = compact ? 86 : 98;
+  const subSize = compact ? 36 : 40;
+  const subLead = compact ? 48 : 54;
+  const maxWidth = W - MARGIN * 2;
+
   ctx.textBaseline = "alphabetic";
+  ctx.font = `600 ${headlineSize}px ${FONT}`;
+  const headlineLines = wrap(ctx, spec.headline, maxWidth);
+  ctx.font = `500 ${subSize}px ${FONT}`;
+  const subLines = spec.sub ? wrap(ctx, spec.sub, maxWidth) : [];
+  ctx.font = `500 30px ${FONT}`;
+  const footnoteLines = spec.footnote ? wrap(ctx, spec.footnote, maxWidth) : [];
+
+  const footerTop = H - 132;
+  const footnoteTop = footerTop - 44 - footnoteLines.length * 40;
+  const contentBottom = (footnoteLines.length ? footnoteTop : footerTop) - 48;
+  const blockH = 88 + headlineLines.length * headlineLead + (subLines.length ? 8 + subLines.length * subLead : 0);
+  let y = compact ? 360 : 400;
+  if (count === 0) {
+    // Centre the words between the face and the footer.
+    const faceBottom = 282;
+    y = Math.max(y, Math.round(faceBottom + (contentBottom - faceBottom - blockH) / 2) + 40);
+  }
+
   ctx.fillStyle = ROSE;
   ctx.font = `600 32px ${FONT}`;
   ctx.fillText(spec.eyebrow.toUpperCase(), MARGIN, y);
   y += 88;
 
   ctx.fillStyle = INK;
-  ctx.font = `600 84px ${FONT}`;
-  for (const line of wrap(ctx, spec.headline, W - MARGIN * 2)) {
+  ctx.font = `600 ${headlineSize}px ${FONT}`;
+  for (const line of headlineLines) {
     ctx.fillText(line, MARGIN, y);
-    y += 98;
+    y += headlineLead;
   }
 
-  if (spec.sub) {
+  if (subLines.length) {
     y += 8;
     ctx.fillStyle = INK_2;
-    ctx.font = `500 40px ${FONT}`;
-    for (const line of wrap(ctx, spec.sub, W - MARGIN * 2)) {
+    ctx.font = `500 ${subSize}px ${FONT}`;
+    for (const line of subLines) {
       ctx.fillText(line, MARGIN, y);
-      y += 54;
+      y += subLead;
     }
   }
 
-  if (spec.stats?.length) {
+  if (count > 0) {
     y += 40;
     const gap = 24;
-    const tileW = (W - MARGIN * 2 - gap) / 2;
-    const tileH = 190;
-    spec.stats.slice(0, 6).forEach((stat, index) => {
+    const rows = Math.ceil(count / 2);
+    const tileW = (maxWidth - gap) / 2;
+    // Never taller than the design's 190, never past the footnote.
+    const tileH = Math.max(120, Math.min(190, Math.floor((contentBottom - y - (rows - 1) * gap) / rows)));
+    const scale = tileH / 190;
+    spec.stats!.slice(0, 6).forEach((stat, index) => {
       const x = MARGIN + (index % 2) * (tileW + gap);
       const top = y + Math.floor(index / 2) * (tileH + gap);
       ctx.fillStyle = CARD;
@@ -139,19 +170,19 @@ export async function renderCard(spec: CardSpec): Promise<Blob> {
       ctx.fill();
       ctx.stroke();
       ctx.fillStyle = INK;
-      ctx.font = `600 72px ${FONT}`;
-      ctx.fillText(stat.value, x + 36, top + 100);
+      ctx.font = `600 ${Math.round(72 * scale)}px ${FONT}`;
+      ctx.fillText(stat.value, x + 36, top + Math.round(100 * scale));
       ctx.fillStyle = INK_2;
-      ctx.font = `500 32px ${FONT}`;
-      ctx.fillText(stat.label, x + 36, top + 152);
+      ctx.font = `500 ${Math.round(32 * scale)}px ${FONT}`;
+      ctx.fillText(stat.label, x + 36, top + Math.round(152 * scale));
     });
   }
 
-  if (spec.footnote) {
+  if (footnoteLines.length) {
     ctx.fillStyle = INK_2;
     ctx.font = `500 30px ${FONT}`;
-    let fy = H - 200;
-    for (const line of wrap(ctx, spec.footnote, W - MARGIN * 2)) {
+    let fy = footnoteTop + 30;
+    for (const line of footnoteLines) {
       ctx.fillText(line, MARGIN, fy);
       fy += 40;
     }
