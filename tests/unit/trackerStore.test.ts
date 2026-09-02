@@ -2,7 +2,7 @@
 import { ChangeEvent } from "react";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { RECOVERY_KEY, STORAGE_KEY, useTrackerStore } from "@/hooks/useTrackerStore";
+import { RECOVERY_KEY, STORAGE_KEY, THEME_KEY, useTrackerStore } from "@/hooks/useTrackerStore";
 import { Activity } from "@/domain/types";
 
 // Permanent regression suite for the W1 persistence contract: undo is an
@@ -653,4 +653,66 @@ test("the backup file is compact JSON that the import path accepts at any age", 
   const parsed = JSON.parse(payload) as { activities: Activity[]; profile: { name: string } };
   expect(parsed.activities.map((entry) => entry.id)).toEqual(["one", "two"]);
   expect(parsed.profile.name).toBe("Mia");
+});
+
+test("stopping a timer can be undone: the session reopens with no end time", async () => {
+  const startedAt = new Date(Date.now() - 20 * 60_000).toISOString();
+  window.localStorage.setItem(STORAGE_KEY, makeBlob([makeActivity("nap", { type: "sleep", startedAt, diaperKind: undefined })]));
+  const toasts: Toast[] = [];
+  const { result } = renderStore(toasts);
+  await waitFor(() => expect(result.current.bootState).toBe("ready"));
+
+  act(() => {
+    result.current.stopTimer("nap");
+  });
+  expect(storedActivities().find((entry) => entry.id === "nap")?.endedAt).toBeDefined();
+  const saved = toasts.find((entry) => entry.message.startsWith("Sleep saved"));
+  expect(saved?.undo).toBeDefined();
+
+  act(() => {
+    saved?.undo?.();
+  });
+  const reopened = storedActivities().find((entry) => entry.id === "nap");
+  expect(reopened?.endedAt).toBeUndefined();
+  expect(isRecentIso(reopened?.updatedAt)).toBe(true);
+  expect(toasts.some((entry) => entry.message === "Timer resumed")).toBe(true);
+});
+
+test("the theme choice is its own key, and 'system' is never overwritten by a save", async () => {
+  window.localStorage.setItem(STORAGE_KEY, makeBlob());
+  const toasts: Toast[] = [];
+  const { result } = renderStore(toasts);
+  await waitFor(() => expect(result.current.bootState).toBe("ready"));
+
+  act(() => {
+    result.current.changeTheme("dark");
+  });
+  expect(result.current.themeChoice).toBe("dark");
+  expect(result.current.nightMode).toBe(true);
+  expect(window.localStorage.getItem(THEME_KEY)).toBe("dark");
+
+  act(() => {
+    result.current.changeTheme("system");
+  });
+  expect(result.current.themeChoice).toBe("system");
+  // jsdom has no matchMedia, so "the phone" reads as light here.
+  expect(result.current.nightMode).toBe(false);
+  act(() => {
+    result.current.addActivity(makeActivity("later"), "Saved");
+  });
+  expect(window.localStorage.getItem(THEME_KEY)).toBe("system");
+});
+
+test("a fresh install starts on the system theme; a phone with a log keeps its own", async () => {
+  const toasts: Toast[] = [];
+  const fresh = renderStore(toasts);
+  await waitFor(() => expect(fresh.result.current.bootState).toBe("onboarding"));
+  expect(fresh.result.current.themeChoice).toBe("system");
+  cleanup();
+
+  window.localStorage.clear();
+  window.localStorage.setItem(STORAGE_KEY, makeBlob());
+  const settled = renderStore(toasts);
+  await waitFor(() => expect(settled.result.current.bootState).toBe("ready"));
+  expect(settled.result.current.themeChoice).toBe("light");
 });

@@ -13,8 +13,15 @@ import { useEffect, useRef } from "react";
 // sheet any other way takes that entry back off, so the history never grows a
 // tail of phantom steps to walk through.
 
+// Several surfaces use this at once — the log sheet, the Sounds panel, the
+// feedback form, the news, and "which tab am I on" — and a popstate reaches
+// every listener. Only the surface that pushed LAST may answer a pop, or one
+// back gesture would close the sheet and leave the tab in the same breath.
+const stack: symbol[] = [];
+
 export function useCloseOnBack(open: boolean, onClose: () => void) {
   const pushed = useRef(false);
+  const token = useRef(Symbol("close-on-back"));
   // Held in a ref so the popstate listener is bound once rather than on every
   // render an inline arrow causes. Written in an effect, never during render.
   const close = useRef(onClose);
@@ -25,6 +32,7 @@ export function useCloseOnBack(open: boolean, onClose: () => void) {
   useEffect(() => {
     if (open && !pushed.current) {
       pushed.current = true;
+      stack.push(token.current);
       window.history.pushState({ numaSheet: true }, "");
       return;
     }
@@ -34,14 +42,17 @@ export function useCloseOnBack(open: boolean, onClose: () => void) {
       // The flag is cleared FIRST: history.back() fires popstate, and the
       // handler below must see that this pop was ours and ignore it.
       pushed.current = false;
+      const at = stack.lastIndexOf(token.current);
+      if (at >= 0) stack.splice(at, 1);
       window.history.back();
     }
   }, [open]);
 
   useEffect(() => {
     const onPop = () => {
-      if (!pushed.current) return;
+      if (!pushed.current || stack[stack.length - 1] !== token.current) return;
       pushed.current = false;
+      stack.pop();
       close.current();
     };
     window.addEventListener("popstate", onPop);

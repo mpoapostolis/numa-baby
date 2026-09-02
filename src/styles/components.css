@@ -1599,3 +1599,22 @@ body:has(.feedback-bubble) .content {
     scroll-snap-align: start;
   }
 }
+
+/* The undo toast — the one control a mis-tap depends on. Sonner's own rule
+   makes the action button 24px tall with 12px type, and on a touchscreen the
+   toast's timer never pauses (there is no hover to pause it), so both the
+   button and its window (App.showToast) are sized for a thumb in the dark.
+   The selector out-ranks sonner's [data-sonner-toast][data-styled] rule. */
+[data-sonner-toast].cn-toast[data-styled] [data-button] {
+  min-height: 44px;
+  height: auto;
+  padding: 0 18px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: var(--radius, 12px);
+}
+
+[data-sonner-toast].cn-toast[data-styled] [data-close-button] {
+  width: 32px;
+  height: 32px;
+}

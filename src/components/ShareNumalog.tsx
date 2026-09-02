@@ -11,6 +11,7 @@ import { toast } from "../lib/toast";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 import { track } from "../domain/analytics";
 import { APP_SHARE } from "../domain/shareApp";
+import { useCloseOnBack } from "../hooks/useCloseOnBack";
 
 const APP_URL = APP_SHARE.url;
 const APP_TEXT = APP_SHARE.text;
@@ -29,6 +30,7 @@ export default function ShareNumalogDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  useCloseOnBack(open, () => onOpenChange(false));
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="share-app-dialog">

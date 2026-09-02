@@ -77,7 +77,11 @@
   --accent-foreground: oklch(0.37 0.09 356);
   --destructive: var(--alert);
   --destructive-foreground: oklch(0.985 0.008 40);
-  --input: var(--border-strong);
+  /* Field borders need WCAG 1.4.11's 3:1 against the sheet surface; the
+     decorative --border-strong gives 1.5:1, and in daylight the Started and
+     Ended fields, the note and the medicine box had no visible edge at all.
+     0.66 clears 3:1 on the card (the dark palette has its own, below). */
+  --input: oklch(0.66 0.02 30);
   --ring: var(--signal);
   /* Chart reservation: chart-1/--signal belongs to Mia's own series and the
      "now" mark ONLY. Reference geometry (WHO bands, medians, gridlines)
@@ -131,6 +135,7 @@
   /* Interactive field/toggle borders need WCAG 1.4.11 3:1 on card, popover
      and muted (sheets); 0.52 clears all three. --border stays decorative. */
   --border-strong: oklch(0.52 0.016 345);
+  --input: var(--border-strong);
   --edge-highlight: oklch(1 0 0 / 0.04);
   --muted: oklch(0.228 0.013 345);
   --signal: oklch(0.77 0.1 8);

@@ -5,10 +5,12 @@
 import "../styles/screens/recovery.css";
 import { RELEASES } from "../domain/changelog";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
+import { useCloseOnBack } from "../hooks/useCloseOnBack";
 
 const newsDateFormat = new Intl.DateTimeFormat("en", { dateStyle: "long" });
 
 export function NewsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  useCloseOnBack(open, () => onOpenChange(false));
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="news-dialog">

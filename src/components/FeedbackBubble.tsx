@@ -10,6 +10,7 @@
 // competing with a feedback button.
 
 import { Suspense, lazy, useState } from "react";
+import { useCloseOnBack } from "../hooks/useCloseOnBack";
 import { MessageCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 // The form itself is only needed once someone taps — the bubble is not.
@@ -23,6 +24,7 @@ import { track } from "../domain/analytics";
 
 export function FeedbackBubble({ hidden }: { hidden: boolean }) {
   const [open, setOpen] = useState(false);
+  useCloseOnBack(open, () => setOpen(false));
   if (hidden) return null;
 
   return (

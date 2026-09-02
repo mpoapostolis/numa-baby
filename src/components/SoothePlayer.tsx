@@ -14,6 +14,7 @@
 // where that API does not exist, the hint below is the honest fallback.
 
 import { useEffect, useRef, useState } from "react";
+import { useCloseOnBack } from "../hooks/useCloseOnBack";
 import "../styles/screens/soothe.css";
 import { ExternalLink, Pause, Play, Waves } from "lucide-react";
 import { Button } from "./ui/button";
@@ -41,6 +42,9 @@ function formatLeft(seconds: number) {
 }
 
 export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  // Android back closes the panel, not the app — which took the <audio>
+  // with it, so the white noise stopped with a baby half asleep.
+  useCloseOnBack(open, () => onOpenChange(false));
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [mode, setMode] = useState<"noise" | "lullaby">("noise");
   const [kind, setKind] = useState<NoiseKind>("brown");

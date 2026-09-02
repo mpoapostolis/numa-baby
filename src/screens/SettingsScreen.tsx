@@ -1,6 +1,6 @@
 // Ships with this lazy chunk, not the app shell — the budget rule.
 import "../styles/screens/settings.css";
-import { ArrowLeftRight, Baby, Bell, Download, Gift, Moon, Ruler, Share2, ShieldCheck, Sun, Trash2, Upload } from "lucide-react";
+import { ArrowLeftRight, Baby, Bell, Download, Gift, Moon, Ruler, Share2, ShieldCheck, Sun, SunMoon, Trash2, Upload } from "lucide-react";
 import { ChangeEvent, Suspense, lazy, useEffect, useRef, useState } from "react";
 
 // Loads only on browsers without a native share sheet.
@@ -37,16 +37,17 @@ import { formatTime } from "../domain/time";
 import { FamilySync } from "../hooks/useFamilySync";
 import { handoffPeers, handoffSendUrl, originLabel } from "../domain/handoff";
 import { Profile, ReminderSettings } from "../domain/types";
+import { ThemeChoice } from "../hooks/useTrackerStore";
 
 type SettingsScreenProps = {
   profile: Profile;
-  nightMode: boolean;
+  themeChoice: ThemeChoice;
   reminders: ReminderSettings;
   notificationPermission: NotificationPermission | "unsupported";
   feedReminderTargetAt: number | null;
   diaperReminderTargetAt: number | null;
   minuteClock: number;
-  onNightModeChange: (enabled: boolean) => void;
+  onThemeChange: (choice: ThemeChoice) => void;
   onFeedRemindersChange: (enabled: boolean) => Promise<void>;
   onFeedIntervalChange: (minutes: number) => void;
   onDiaperRemindersChange: (enabled: boolean) => Promise<void>;
@@ -65,13 +66,13 @@ type SettingsScreenProps = {
 
 export default function SettingsScreen({
   profile,
-  nightMode,
+  themeChoice,
   reminders,
   notificationPermission,
   feedReminderTargetAt,
   diaperReminderTargetAt,
   minuteClock,
-  onNightModeChange,
+  onThemeChange,
   onFeedRemindersChange,
   onFeedIntervalChange,
   onDiaperRemindersChange,
@@ -117,11 +118,16 @@ export default function SettingsScreen({
         <CardContent>
           <ToggleGroup
             type="single"
-            value={nightMode ? "dark" : "light"}
+            value={themeChoice}
             className="appearance-options"
             aria-label="Application appearance"
-            onValueChange={(value) => { if (!value) return; track("theme_changed", { theme: value }); onNightModeChange(value === "dark"); }}
+            onValueChange={(value) => {
+              if (value !== "light" && value !== "dark" && value !== "system") return;
+              track("theme_changed", { theme: value });
+              onThemeChange(value);
+            }}
           >
+            <ToggleGroupItem value="system"><SunMoon /><span><strong>Phone</strong><small>Follows your phone</small></span></ToggleGroupItem>
             <ToggleGroupItem value="light"><Sun /><span><strong>Light</strong><small>Bright and clear</small></span></ToggleGroupItem>
             <ToggleGroupItem value="dark"><Moon /><span><strong>Night</strong><small>Warm and dim for 3am</small></span></ToggleGroupItem>
           </ToggleGroup>

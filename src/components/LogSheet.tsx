@@ -676,10 +676,11 @@ export function LogSheet({
               exactly as it was last written. */}
           {savedMedicines.length > 0 && (
             <div className="medicine-presets" role="group" aria-label="Medicines given before">
-              {savedMedicines.map((m) => (
+              {savedMedicines.map((m, index) => (
                 <button
                   key={m.name}
                   type="button"
+                  data-initial-focus={index === 0 ? "" : undefined}
                   className={draft.medicineName.trim().toLowerCase() === m.name.toLowerCase() ? "medicine-preset is-active" : "medicine-preset"}
                   onClick={() => {
                     patch({ medicineName: m.name, ...(m.dose ? { doseText: m.dose } : {}) });
@@ -695,10 +696,15 @@ export function LogSheet({
           <Field className="medicine-field">
             <FieldLabel htmlFor="medicine-name">{savedMedicines.length > 0 ? "Or type a new one" : "What was given"}</FieldLabel>
             <InputGroup>
+              {/* Focus lands on the first preset when there are any — the
+                  text field only when there is nothing to pick. Focusing the
+                  field popped the keyboard over the very list the feature
+                  was built around, at the moment a parent opened the sheet
+                  to tap a name rather than type one. */}
               <InputGroupInput
                 id="medicine-name"
-                autoFocus
-                data-initial-focus
+                autoFocus={savedMedicines.length === 0}
+                data-initial-focus={savedMedicines.length === 0 ? "" : undefined}
                 value={draft.medicineName}
                 maxLength={NOTE_MAX_LENGTH}
                 placeholder="Vitamin D drops, paracetamol…"

@@ -10,6 +10,7 @@
 // Ships with this lazy chunk, not the app shell — the budget rule.
 import "../styles/screens/recovery.css";
 import { useEffect, useState } from "react";
+import { useCloseOnBack } from "../hooks/useCloseOnBack";
 import { CloudUpload } from "lucide-react";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
@@ -69,6 +70,11 @@ export function ProtectIntro({
     // Boot-time decision, once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useCloseOnBack(open, () => {
+    track("protect_intro_dismissed");
+    close();
+  });
 
   function close() {
     markSeen();

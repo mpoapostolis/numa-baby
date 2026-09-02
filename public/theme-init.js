@@ -15,6 +15,10 @@
       apply(theme === "dark");
       return;
     }
+    if (theme === "system") {
+      apply(systemDark);
+      return;
+    }
     const saved = JSON.parse(localStorage.getItem("numa-baby-v1") || "null");
     apply(typeof saved?.nightMode === "boolean" ? saved.nightMode : systemDark);
   } catch {

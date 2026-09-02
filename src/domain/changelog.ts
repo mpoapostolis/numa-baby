@@ -17,6 +17,17 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-09-06",
+    title: "Faster at 3am, and the theme follows your phone",
+    items: [
+      "Appearance has a new choice, Phone: the app turns to night mode when your phone does, and back in the morning. It used to stay on whichever look it was set up in.",
+      "Undo is bigger and stays on screen twice as long, and stopping a timer can be undone too — a bounce on Wake up no longer writes a zero-minute sleep.",
+      "Your phone’s back gesture now closes the sounds panel, the news and the feedback form, and brings you back to Today from any tab, instead of closing the app.",
+      "The app opens with a quarter less to download, the screen no longer redraws itself every minute, and a family sharing one log sends and receives less in the background.",
+      "Backups always open again, however long you have been logging; an undone entry disappears from your partner’s phone too; and a phone with the wrong time can no longer plant an entry nobody can delete.",
+    ],
+  },
+  {
     id: "2026-09-04",
     title: "Play ideas for every age",
     items: [

@@ -223,10 +223,18 @@ export default function HomePage() {
   // On Android, back is how you leave a screen — and a sheet is a screen.
   // Without this it pops the app's own (empty) history and closes everything.
   useCloseOnBack(Boolean(sheet), closeSheet);
+  // And a tab is a screen too: back from Timeline, Insights, the Guide or
+  // Settings returns to Today instead of leaving the installed app.
+  const backToToday = useCallback(() => setActiveTab("today"), []);
+  useCloseOnBack(activeTab !== "today", backToToday);
 
   function showToast(message: string, undo?: () => void) {
     toast(message, {
-      duration: 4_200,
+      // A toast that carries Undo stays twice as long: on a touchscreen the
+      // timer never pauses (nothing hovers), and the mis-tap it exists for —
+      // Wet for Dirty, four pixels apart — is found with the eyes, in the
+      // dark, after the baby has been settled.
+      duration: undo ? 8_000 : 4_200,
       action: undo ? { label: "Undo", onClick: undo } : undefined,
     });
   }
@@ -245,6 +253,8 @@ export default function HomePage() {
     removeActivity,
     stopTimer,
     changeNightMode,
+    themeChoice,
+    changeTheme,
     saveProfile,
     completeOnboarding,
     completeJoin,
@@ -856,12 +866,12 @@ export default function HomePage() {
               <SettingsScreen
                 entryCount={activities.filter((activity) => !activity.deleted).length}
                 profile={profile}
-                nightMode={nightMode}
+                themeChoice={themeChoice}
                 reminders={reminders}
                 notificationPermission={notificationPermission}
                 feedReminderTargetAt={feedReminderTargetAt}
                 minuteClock={minuteClock}
-                onNightModeChange={changeNightMode}
+                onThemeChange={changeTheme}
                 onFeedRemindersChange={changeFeedReminders}
                 onFeedIntervalChange={changeFeedReminderInterval}
                 onDiaperRemindersChange={changeDiaperReminders}

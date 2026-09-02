@@ -21,6 +21,48 @@ export const LAST_BACKUP_KEY = "numa-baby-last-backup-v1";
     the whole log (megabytes, at a year) to read one boolean. Mirrors the
     blob's nightMode; the blob stays the source of truth. */
 export const THEME_KEY = "numa-baby-theme-v1";
+
+/** The theme CHOICE, as distinct from the theme in effect: "system" follows
+    the phone through the night. Every phone used to be pinned to whatever
+    the OS said at the moment of onboarding — a parent who set up at noon got
+    the cream theme at 3am for ever, and the rose nightlight designed for
+    that moment was unreachable unless they found Settings. */
+export type ThemeChoice = "light" | "dark" | "system";
+
+function readThemeChoice(): ThemeChoice | null {
+  try {
+    const stored = window.localStorage.getItem(THEME_KEY);
+    return stored === "light" || stored === "dark" || stored === "system" ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
+function hasStoredLog(): boolean {
+  try {
+    return window.localStorage.getItem(STORAGE_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
+function prefersDark(): boolean {
+  return typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: dark)").matches;
+}
+
+// A tactile tick on a one-tap log. In the dark, holding the baby, the eyes
+// are often not on the phone at the moment of the tap; without it a parent
+// either lights the baby's face to check the toast, or taps again. Android
+// only (iOS ignores vibrate), and off under reduced motion like every other
+// flourish.
+function buzz() {
+  try {
+    if (typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    navigator.vibrate?.(12);
+  } catch {
+    // Never worth an interrupted log.
+  }
+}
 const EMPTY_PROFILE: Profile = { name: "", birthDate: "", feedingMode: "mixed" };
 const DEFAULT_REMINDERS: ReminderSettings = {
   feedEnabled: false,
@@ -98,6 +140,22 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
   // Adopt whatever theme-init.js (a blocking script in <head>) already applied,
   // so the first React render never strips the .dark class and flashes white.
   const [nightMode, setNightMode] = useState(() => document.documentElement.classList.contains("dark"));
+  // A phone that already holds a log keeps the theme it had (light or night,
+  // as the blob says — nobody's screen changes on an update); a fresh install
+  // starts on "system".
+  const [themeChoice, setThemeChoice] = useState<ThemeChoice>(() =>
+    readThemeChoice() ?? (hasStoredLog() ? (document.documentElement.classList.contains("dark") ? "dark" : "light") : "system"),
+  );
+  const themeChoiceRef = useRef(themeChoice);
+  useEffect(() => {
+    themeChoiceRef.current = themeChoice;
+    if (themeChoice !== "system" || typeof window.matchMedia !== "function") return;
+    // Following the phone: the OS switches to dark at sunset, the app with it.
+    const query = window.matchMedia("(prefers-color-scheme: dark)");
+    const follow = () => setNightMode(query.matches);
+    query.addEventListener("change", follow);
+    return () => query.removeEventListener("change", follow);
+  }, [themeChoice]);
   const [reminders, setReminders] = useState<ReminderSettings>(DEFAULT_REMINDERS);
   const [storageWarning, setStorageWarning] = useState<string | null>(null);
   // What the browser answered when asked to keep this data. FALSE is the
@@ -146,7 +204,9 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
       activities: next.activities,
       profile: next.profile,
       profileUpdatedAt: next.profileUpdatedAt,
-      nightMode: next.nightMode ?? persistedStateRef.current.nightMode,
+      // A phone on "system" takes its theme from the OS, never from a blob
+      // written by a phone (or a tab) that may be on the other side of dusk.
+      nightMode: themeChoiceRef.current === "system" ? prefersDark() : (next.nightMode ?? persistedStateRef.current.nightMode),
       reminders: next.reminders ?? persistedStateRef.current.reminders,
       bootState: next.bootState,
     };
@@ -318,7 +378,12 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     }
     persistedStateRef.current = nextPersisted;
     try {
-      window.localStorage.setItem(THEME_KEY, nextNightMode ? "dark" : "light");
+      // A legacy backfill only: from then on the key is written by
+      // changeTheme, and "system" must never be overwritten by the theme
+      // that happens to be in effect.
+      if (window.localStorage.getItem(THEME_KEY) === null) {
+        window.localStorage.setItem(THEME_KEY, nextNightMode ? "dark" : "light");
+      }
     } catch {
       // The blob carries the theme too; theme-init.js falls back to it.
     }
@@ -342,6 +407,7 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     const next = [stamped, ...persistedStateRef.current.activities];
     if (!persistSnapshot(next)) return false;
     syncActivitiesFromRef();
+    buzz();
     showToast(message, () => {
       // Remove exactly this entry — never restore a whole stale array, which
       // would silently delete anything logged after it. And remove it as a
@@ -456,20 +522,50 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     );
     if (!persistSnapshot(nextActivities)) return;
     syncActivitiesFromRef();
-    showToast(`${TIMER_LABEL[target.type] ?? "Session"} saved — ${humanDuration(ranForMinutes)}`);
+    buzz();
+    // Undo reopens the timer. The stop button appears exactly where the start
+    // button was, so a bounce or a double tap ended a sleep at zero minutes
+    // and wrote it to the log — and the way back was a datetime field in the
+    // edit sheet, not a one-handed 3am operation. Now it is the same Undo
+    // every other tap has.
+    showToast(`${TIMER_LABEL[target.type] ?? "Session"} saved — ${humanDuration(ranForMinutes)}`, () => {
+      const reopened = persistedStateRef.current.activities.map((activity) => {
+        if (activity.id !== id) return activity;
+        const running: Activity = { ...activity, updatedAt: new Date().toISOString() };
+        delete running.endedAt;
+        return running;
+      });
+      if (!persistSnapshot(reopened)) return;
+      syncActivitiesFromRef();
+      showToast("Timer resumed");
+    });
   }
 
-  function changeNightMode(enabled: boolean) {
+  function changeTheme(choice: ThemeChoice) {
+    const enabled = choice === "system" ? prefersDark() : choice === "dark";
+    setThemeChoice(choice);
     if (bootState === "recovery") {
-      // Never persist from the recovery screen — it would overwrite the unreadable
-      // original that the recovery card promises to leave untouched.
+      // Never persist from the recovery screen — not even the theme key. The
+      // recovery card promises the unreadable original is left untouched,
+      // and "nothing is written here" is a simpler promise than "nothing
+      // that matters". The choice holds for this session.
       setNightMode(enabled);
       return;
+    }
+    try {
+      window.localStorage.setItem(THEME_KEY, choice);
+    } catch {
+      // Storage blocked: the choice holds for this session.
     }
     // Read activities through the ref: the live state is missing tombstones,
     // and persisting it would silently drop them from storage.
     if (!persistSnapshot(persistedStateRef.current.activities, profile, enabled)) return;
     setNightMode(enabled);
+  }
+
+  /** The onboarding switch: a plain on/off is an explicit light-or-night choice. */
+  function changeNightMode(enabled: boolean) {
+    changeTheme(enabled ? "dark" : "light");
   }
 
   function saveProfile(nextProfile: Profile) {
@@ -945,6 +1041,8 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     removeActivity,
     stopTimer,
     changeNightMode,
+    themeChoice,
+    changeTheme,
     saveProfile,
     completeOnboarding,
     completeJoin,
