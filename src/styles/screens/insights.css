@@ -603,9 +603,10 @@
 }
 
 /* ——— The paediatrician summary ——————————————————————————————————
-   Built to survive three exits: printed on paper, screenshotted on a phone,
-   or read across a desk. One column, no colour that carries meaning alone,
-   and nothing that depends on being scrollable. */
+   Read across a desk, sent as a picture, or printed: the same object in
+   three places, so it is dressed like the share card — the face, the rose
+   eyebrow, tiles for the figures, a quiet table — and nothing on it carries
+   meaning by colour alone. The actions stay pinned under the scroll. */
 .visit-open {
   width: 100%;
   min-height: 48px;
@@ -614,10 +615,13 @@
 .visit-sheet {
   /* This unlayered rule outranks the dialog's own Tailwind max-width utility,
      so the phone inset must live here too — without it the sheet ran
-     edge-to-edge on every phone. */
+     edge-to-edge on every phone. Padding is zero here and lives on the page
+     and the action bar, so the bar can sit flush against the bottom edge. */
   width: min(calc(100vw - 32px), 640px);
   max-width: 640px;
   max-height: 88vh;
+  display: block;
+  padding: 0;
   overflow-y: auto;
 }
 
@@ -629,31 +633,54 @@
 
 .visit-page {
   display: grid;
-  gap: 16px;
+  gap: 18px;
+  padding: 20px 16px 16px;
   color: var(--foreground);
 }
 
 .visit-head {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
+  align-items: flex-start;
+  gap: 14px;
+  /* Room for the dialog's own close button, top right. */
+  padding-right: 44px;
+}
+
+.visit-face {
+  flex: 0 0 auto;
+  width: 52px;
+  height: 52px;
+  color: var(--signal);
+}
+
+.visit-head-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.visit-eyebrow {
+  margin: 0;
+  color: var(--signal);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .visit-title {
   margin: 0;
-  font-size: 1.375rem;
+  font-size: 1.5rem;
   font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
 }
 
-.visit-sub,
-.visit-printed {
+.visit-sub {
   margin: 2px 0 0;
   color: var(--ink-2);
   font-size: 0.8125rem;
+  line-height: 1.4;
 }
 
 /* What the log can and cannot answer, stated before any number — a doctor
@@ -674,31 +701,49 @@
 
 .visit-block h3 {
   margin: 0;
-  font-size: 0.75rem;
-  font-weight: 500;
+  font-size: 0.6875rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.08em;
   color: var(--ink-3);
 }
 
 .visit-figures {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 8px;
+}
+
+/* An odd third tile takes the whole row rather than sitting alone beside a gap. */
+.visit-figures > .visit-figure:nth-child(3):last-child {
+  grid-column: 1 / -1;
 }
 
 .visit-figure {
   display: grid;
-  gap: 1px;
+  gap: 2px;
+  padding: 12px 14px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
 }
 
 .visit-figure .figure {
   font-size: 1.5rem;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.1;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
 }
 
-.visit-figure span:last-child {
+.visit-figure .unit {
+  margin-left: 3px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.visit-figure > span:last-child {
   color: var(--ink-2);
   font-size: 0.75rem;
 }
@@ -718,23 +763,25 @@
 }
 
 .visit-table th {
-  text-align: left;
+  text-align: right;
   padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
   color: var(--ink-3);
-  font-weight: 500;
-  font-size: 0.7rem;
+  font-weight: 600;
+  font-size: 0.6875rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 
 .visit-table td {
-  padding: 5px 6px;
-  border-top: 1px solid var(--border);
+  padding: 6px;
+  text-align: right;
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 55%, transparent);
 }
 
-.visit-table th:not(:first-child),
-.visit-table td:not(:first-child) {
-  text-align: right;
+.visit-table th:first-child,
+.visit-table td:first-child {
+  text-align: left;
 }
 
 /* A day with no entries is shown as a gap, never as a row of zeroes. */
@@ -745,19 +792,43 @@
 }
 
 .visit-footer {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
   margin: 0;
   padding-top: 12px;
   border-top: 1px solid var(--border);
+}
+
+.visit-brand {
+  color: var(--signal);
+  font-weight: 600;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.visit-footer p {
+  margin: 0;
   color: var(--ink-3);
   font-size: 0.75rem;
   line-height: 1.5;
+  text-align: right;
 }
 
+/* Pinned to the bottom of the scrolling sheet. In the first version the
+   buttons sat under fourteen rows of table, and a parent on a phone never
+   saw them. */
 .visit-actions {
+  position: sticky;
+  bottom: 0;
   display: flex;
   gap: 8px;
   justify-content: flex-end;
   flex-wrap: wrap;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
+  background: var(--popover);
 }
 
 /* Three dashes beside one number reads as a broken screen. One quiet line

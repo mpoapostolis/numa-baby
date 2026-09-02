@@ -1,53 +1,77 @@
 // "For the paediatrician" — the whole picture on one page.
 //
-// Designed to survive three exits: printed on paper, screenshotted on a
-// phone, or read off the screen across a desk. That is why it is one column,
-// no scroll-dependent chrome, and no colour that carries meaning on its own.
+// Designed to survive three exits: printed on paper (lib/printDocument),
+// sent as a picture (domain/shareCards) or read off the screen across a
+// desk — this component. All three draw from the same VisitSummary, and the
+// words on this screen and on the printed page come from ONE builder,
+// visitDocument, so they can never disagree.
 //
-// The numbers are reductions of what the family logged. The blank-days line
-// is not decoration: "3 wet a day" means something completely different if
-// four of the fourteen days were never logged, and a doctor cannot know that
-// unless the sheet says so.
+// The blank-days line is not decoration: "3 wet a day" means something
+// completely different if four of the fourteen days were never logged, and
+// a doctor cannot know that unless the sheet says so.
 
-import { Printer, Share2, X } from "lucide-react";
+import { Printer, Share2 } from "lucide-react";
 import { toast } from "../lib/toast";
 import { visitCard } from "../domain/shareCards";
-import { VISIT_PRINT_CSS, renderVisitHtml, visitDocument } from "../domain/visitDocument";
-import { printDocument } from "../lib/printDocument";
 import { shareLink } from "../domain/shareApp";
+import { VISIT_PRINT_CSS, VisitDay, VisitFigure, renderVisitHtml, visitDocument } from "../domain/visitDocument";
+import { printDocument } from "../lib/printDocument";
 import { renderCard, shareImage } from "../lib/shareCard";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
 import { track } from "../domain/analytics";
-import { hasRoutineCare } from "../domain/daySummary";
-import { VisitSummary } from "../domain/visitSummary";
 import { expectedWeightRange, typicalWeeklyGain } from "../domain/growthReference";
 import { formatBabyAge } from "../domain/time";
 import { Profile } from "../domain/types";
-import { formatKg, formatVolume, useUnits, volumeParts, weightParts } from "../domain/units";
+import { useUnits } from "../domain/units";
 
-const dateFormat = new Intl.DateTimeFormat("en", { day: "numeric", month: "short" });
-const longDate = new Intl.DateTimeFormat("en", { day: "numeric", month: "long", year: "numeric" });
+/** The face from the share card, so the sheet reads as the same object. */
+function Face() {
+  return (
+    <svg className="visit-face" viewBox="0 0 100 100" aria-hidden="true">
+      <circle cx="50" cy="52" r="42" fill="var(--card)" stroke="currentColor" strokeWidth="5" />
+      <path d="M50 10c6-8 14-6 16 0" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+      <circle cx="36" cy="46" r="4" fill="currentColor" />
+      <circle cx="64" cy="46" r="4" fill="currentColor" />
+      <path d="M36 62q14 12 28 0" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+    </svg>
+  );
+}
 
-function Figure({ value, unit, label }: { value: string; unit?: string; label: string }) {
+function Tile({ figure }: { figure: VisitFigure }) {
   return (
     <div className="visit-figure">
       <strong className="figure">
-        {value}
-        {unit && <span className="unit">{unit}</span>}
+        {figure.value}
+        {figure.unit && figure.value !== "—" && <span className="unit">{figure.unit}</span>}
       </strong>
-      <span>{label}</span>
+      <span>{figure.label}</span>
     </div>
   );
 }
 
-const show = (value: number | null, digits = 0) =>
-  value === null ? "—" : value.toFixed(digits);
+function Row({ day }: { day: VisitDay }) {
+  return (
+    <tr className={day.blank ? "is-blank" : undefined}>
+      <td>{day.label}</td>
+      {day.blank ? (
+        <td colSpan={4} className="visit-blank">not logged</td>
+      ) : (
+        <>
+          <td>{day.feeds}</td>
+          <td>{day.ml}</td>
+          <td>{day.wet}</td>
+          <td>{day.dirty}</td>
+        </>
+      )}
+    </tr>
+  );
+}
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  summary: VisitSummary;
+  summary: Parameters<typeof visitDocument>[0];
   profile: Profile;
   ageMonths: number | null;
   now: number;
@@ -57,126 +81,62 @@ export function VisitSummarySheet({ open, onOpenChange, summary, profile, ageMon
   const units = useUnits();
   const name = profile.name.trim() || "Baby";
   const age = formatBabyAge(profile.birthDate, now);
-  const first = summary.days[0]?.date;
-  const last = summary.days.at(-1)?.date;
-  const weightKg = summary.latestWeightGrams ? summary.latestWeightGrams / 1_000 : null;
   const band = ageMonths === null ? null : expectedWeightRange(ageMonths, profile.sex);
   const gainBand = ageMonths === null ? null : typicalWeeklyGain(ageMonths);
+  const doc = visitDocument(summary, name, age, units, band, gainBand, now);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="visit-sheet">
         <div className="visit-page">
           <header className="visit-head">
-            <div>
-              <DialogTitle asChild><h2 className="visit-title">{name}</h2></DialogTitle>
-              <p className="visit-sub">
-                {age ? `${age} old · ` : ""}
-                {first && last ? `${dateFormat.format(first)} – ${dateFormat.format(last)}` : ""}
-                {" · "}{summary.days.length} days
-              </p>
+            <Face />
+            <div className="visit-head-copy">
+              <p className="visit-eyebrow">{doc.eyebrow}</p>
+              <DialogTitle asChild><h2 className="visit-title">{doc.title}</h2></DialogTitle>
+              <p className="visit-sub">{doc.sub}</p>
             </div>
-            <p className="visit-printed">Printed {longDate.format(new Date(now))}</p>
           </header>
 
           {/* What the log can and cannot answer, said before any number. */}
-          <p className="visit-coverage">
-            {summary.loggedDays} of {summary.days.length} days have entries
-            {summary.blankDays > 0
-              ? ` · ${summary.blankDays} ${summary.blankDays === 1 ? "day was" : "days were"} not logged, so daily figures are medians over the logged days only`
-              : " · every day logged"}
-          </p>
+          <p className="visit-coverage">{doc.coverage}</p>
 
-          <section className="visit-block">
-            <h3>Feeding</h3>
-            <div className="visit-figures">
-              <Figure value={show(summary.feedsPerDay)} label="feeds a day" />
-              <Figure
-                value={summary.mlPerDay === null ? show(summary.mlPerDay) : volumeParts(summary.mlPerDay, units).value}
-                unit={volumeParts(summary.mlPerDay ?? 0, units).unit}
-                label="milk a day"
-              />
-              <Figure value={show(summary.nursingMinutesPerDay)} unit="m" label="nursing a day" />
-            </div>
-            <p className="visit-note">
-              {summary.totalFeeds} feeds and {formatVolume(summary.totalMl, units)} across the window. Bottle volumes
-              are bottles only.
-            </p>
-          </section>
-
-          <section className="visit-block">
-            <h3>Diapers</h3>
-            <div className="visit-figures">
-              <Figure value={show(summary.wetPerDay)} label="wet a day" />
-              <Figure value={show(summary.dirtyPerDay)} label="dirty a day" />
-            </div>
-            <p className="visit-note">
-              {summary.totalWet} wet and {summary.totalDirty} dirty across the window. A change
-              recorded as both counts in each.
-            </p>
-          </section>
-
-          <section className="visit-block">
-            <h3>Growth</h3>
-            <div className="visit-figures">
-              <Figure value={weightKg === null ? "—" : weightParts(weightKg * 1_000, units).value} unit={weightParts(0, units).unit} label="latest weight" />
-              <Figure
-                value={summary.gramsPerWeek === null ? "—" : String(summary.gramsPerWeek)}
-                unit="g"
-                label="a week"
-              />
-            </div>
-            <p className="visit-note">
-              {band
-                ? `WHO reference at this age: ${formatKg(band.p3, units)}–${formatKg(band.p97, units)} (P3–P97), midpoint ${formatKg(band.p50, units)}.`
-                : "No age on file, so no WHO reference is shown."}
-              {gainBand
-                ? ` Typical gain ${gainBand.minGramsPerWeek}–${gainBand.maxGramsPerWeek} g a week.`
-                : ""}
-            </p>
-          </section>
+          {doc.sections.map((section) => (
+            <section className="visit-block" key={section.heading}>
+              <h3>{section.heading}</h3>
+              <div className="visit-figures">
+                {section.figures.map((figure) => <Tile figure={figure} key={figure.label} />)}
+              </div>
+              <p className="visit-note">{section.note}</p>
+            </section>
+          ))}
 
           {/* Per-day table: the doctor who wants the raw days gets them. */}
           <section className="visit-block">
             <h3>Day by day</h3>
             <table className="visit-table">
               <thead>
-                <tr><th>Day</th><th>Feeds</th><th>{volumeParts(0, units).unit}</th><th>Wet</th><th>Dirty</th></tr>
+                <tr><th>Day</th><th>Feeds</th><th>{doc.volumeUnit}</th><th>Wet</th><th>Dirty</th></tr>
               </thead>
               <tbody>
-                {summary.days.map((day) => (
-                  <tr key={day.date.toISOString()} className={hasRoutineCare(day) ? undefined : "is-blank"}>
-                    <td>{dateFormat.format(day.date)}</td>
-                    {!hasRoutineCare(day) ? (
-                      <td colSpan={4} className="visit-blank">not logged</td>
-                    ) : (
-                      <>
-                        <td>{day.feeds}</td>
-                        <td>{day.ml ? volumeParts(day.ml, units).value : "—"}</td>
-                        <td>{day.wet}</td>
-                        <td>{day.dirty}</td>
-                      </>
-                    )}
-                  </tr>
-                ))}
+                {doc.days.map((day) => <Row day={day} key={day.label} />)}
               </tbody>
             </table>
           </section>
 
-          <p className="visit-footer">
-            Recorded at home by a parent, not a clinical measurement. WHO Child Growth Standards;
-            typical weekly gain per AAP. Numalog.
-          </p>
+          <footer className="visit-footer">
+            <span className="visit-brand">numalog.app</span>
+            <p>{doc.footnote}</p>
+          </footer>
         </div>
 
+        {/* Pinned under the scroll, so Print and Share are never a page away.
+            The dialog's own X closes; a third button here only pushed the
+            two that matter onto a second row on a phone. */}
         <div className="visit-actions">
-          {/* Printed as a document of its own (see lib/printDocument): the
-              same figures, laid out like the share card, from the top of
-              the first page. */}
           <Button
             onClick={() => {
               track("visit_summary_printed");
-              const doc = visitDocument(summary, name, age, units, band, gainBand, now);
               void printDocument(`${name} · summary for the paediatrician`, renderVisitHtml(doc), VISIT_PRINT_CSS);
             }}
           >
@@ -195,9 +155,6 @@ export function VisitSummarySheet({ open, onOpenChange, summary, profile, ageMon
             }}
           >
             <Share2 size={16} aria-hidden="true" /> Share as a picture
-          </Button>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            <X size={16} aria-hidden="true" /> Close
           </Button>
         </div>
       </DialogContent>
