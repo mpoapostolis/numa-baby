@@ -424,7 +424,14 @@ export default function HomePage() {
   const stats = useActivityStats(activities, profile, minuteClock);
   const { sortedActivities, lastFeed, lastBottle, activeNursing, babyAgeMonths } = stats;
 
-  const releasesToShow = seenRelease === null && sortedActivities.length === 0
+  // A fresh install is latched the first time it is seen, not re-tested on
+  // every render: without the latch the parent's very first entry made the
+  // count non-zero and the whole release history arrived as "New".
+  const [freshInstall, setFreshInstall] = useState(false);
+  if (!freshInstall && seenRelease === null && bootState === "ready" && sortedActivities.length === 0) {
+    setFreshInstall(true);
+  }
+  const releasesToShow = seenRelease === null && (freshInstall || sortedActivities.length === 0)
     ? []
     : unseenReleases(seenRelease);
   // ---- The moment chain -------------------------------------------------
@@ -465,15 +472,15 @@ export default function HomePage() {
 
   useEffect(() => {
     // Everything is new to someone who just arrived; greeting them with a
-    // changelog is noise. Record the latest and say nothing.
-    if (seenRelease === null && bootState === "ready" && sortedActivities.length === 0) {
-      try {
-        window.localStorage.setItem(SEEN_RELEASE_KEY, LATEST_RELEASE_ID);
-      } catch {
-        // Nothing to do.
-      }
+    // changelog is noise. Record the latest and say nothing. The latch above
+    // covers this visit even where storage refuses the write.
+    if (!freshInstall) return;
+    try {
+      window.localStorage.setItem(SEEN_RELEASE_KEY, LATEST_RELEASE_ID);
+    } catch {
+      // Nothing to do.
     }
-  }, [seenRelease, bootState, sortedActivities.length]);
+  }, [freshInstall]);
 
   useEffect(() => {
     // A log arriving from the app's other web address. The fragment is cleared
@@ -1006,7 +1013,7 @@ export default function HomePage() {
         )}
         {protectAsk > 0 && (
           <Suspense fallback={null}>
-            <ProtectIntro key={protectAsk} familySync={familySync} forced onClosed={() => setProtectAsk(0)} onInvitePartner={() => navigateTo("more")} />
+            <ProtectIntro key={protectAsk} familySync={familySync} forced fresh={activities.length === 0} onClosed={() => setProtectAsk(0)} onInvitePartner={() => navigateTo("more")} />
           </Suspense>
         )}
         {recoverAsk && (
@@ -1020,7 +1027,7 @@ export default function HomePage() {
         )}
         {protectMoment && protectAsk === 0 && (
           <Suspense fallback={null}>
-            <ProtectIntro familySync={familySync} onClosed={() => setProtectIntroDone(true)} onInvitePartner={() => navigateTo("more")} />
+            <ProtectIntro familySync={familySync} fresh={activities.length === 0} onClosed={() => setProtectIntroDone(true)} onInvitePartner={() => navigateTo("more")} />
           </Suspense>
         )}
 

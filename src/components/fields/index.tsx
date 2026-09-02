@@ -1,10 +1,14 @@
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { Button } from "../ui/button";
 import {
+  DialogClose,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog";
 import { Field, FieldDescription, FieldError, FieldLabel } from "../ui/field";
+import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 import {
   InputGroup,
   InputGroupAddon,
@@ -43,6 +47,14 @@ export function LogDialogHeader({
   );
 }
 
+/** "It happened a bit ago" without opening the OS wheel picker. */
+const QUICK_OFFSETS = [
+  { minutes: 0, label: "Now", spoken: "Now" },
+  { minutes: 15, label: "15m ago", spoken: "15 minutes ago" },
+  { minutes: 30, label: "30m ago", spoken: "30 minutes ago" },
+  { minutes: 60, label: "1h ago", spoken: "1 hour ago" },
+];
+
 export function TimeField({
   value,
   onChange,
@@ -51,6 +63,7 @@ export function TimeField({
   inputRef,
   error = false,
   autoFocus = false,
+  quick = false,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -59,16 +72,60 @@ export function TimeField({
   inputRef?: React.Ref<HTMLInputElement>;
   error?: boolean;
   autoFocus?: boolean;
+  /** Offer the one-tap offsets under the picker. Single-time create sheets
+      only — a paired start/end row has its own meaning of "now". */
+  quick?: boolean;
 }) {
   const id = useId();
+  // Which shortcut is lit. The sheets that offer these open seeded to now,
+  // so "Now" starts lit; dialling an exact time by hand clears it, because
+  // the row then describes nothing. Held as state rather than derived from
+  // the clock: a render that reads the time is not a pure render.
+  const [preset, setPreset] = useState("0");
   return (
     <Field className="time-field" data-invalid={error || undefined}>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <InputGroup>
-        <InputGroupInput id={id} ref={inputRef} autoFocus={autoFocus} data-initial-focus={autoFocus ? "" : undefined} type="datetime-local" value={value} max={localDateInput(new Date())} aria-invalid={error} aria-describedby={error ? "sheet-error" : undefined} onChange={(event) => onChange(event.target.value)} />
+        <InputGroupInput id={id} ref={inputRef} autoFocus={autoFocus} data-initial-focus={autoFocus ? "" : undefined} type="datetime-local" value={value} max={localDateInput(new Date())} aria-invalid={error} aria-describedby={error ? "sheet-error" : undefined} onChange={(event) => { setPreset(""); onChange(event.target.value); }} />
       </InputGroup>
+      {quick && (
+        <ToggleGroup
+          type="single"
+          className="preset-row quick-time"
+          aria-label="How long ago"
+          value={preset}
+          onValueChange={(next) => {
+            if (!next) return;
+            setPreset(next);
+            onChange(localDateInput(new Date(Date.now() - Number(next) * 60_000)));
+          }}
+        >
+          {QUICK_OFFSETS.map((offset) => (
+            <ToggleGroupItem key={offset.minutes} value={String(offset.minutes)} aria-label={offset.spoken}>
+              {offset.label}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+      )}
       {description && <FieldDescription>{description}</FieldDescription>}
     </Field>
+  );
+}
+
+/**
+ * The sticky bottom bar of a log sheet: a way out on the left, Save on the
+ * right. The drawer's other exits — the grab strip and the X — both live in
+ * the top 160px of a screen the sheet fills, which is nowhere near the thumb
+ * of someone holding a baby.
+ */
+export function SheetFooter({ children }: { children: React.ReactNode }) {
+  return (
+    <DialogFooter>
+      <DialogClose asChild>
+        <Button type="button" variant="ghost" className="sheet-cancel">Cancel</Button>
+      </DialogClose>
+      {children}
+    </DialogFooter>
   );
 }
 

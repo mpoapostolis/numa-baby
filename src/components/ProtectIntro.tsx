@@ -31,6 +31,7 @@ function markSeen() {
 export function ProtectIntro({
   familySync,
   forced = false,
+  fresh = false,
   onClosed,
   onInvitePartner,
 }: {
@@ -38,6 +39,10 @@ export function ProtectIntro({
   /** Summoned by a tap (the on-this-phone-only pill) rather than the
       once-per-life announcement — opens unconditionally. */
   forced?: boolean;
+  /** A log with nothing in it yet. The announcement copy below speaks of
+      "until today", which is nonsense to a family that started a minute
+      ago — they get the same offer worded for day one. */
+  fresh?: boolean;
   onClosed?: () => void;
   /** "Add the other parent" — the caller takes them to Family Sync. */
   onInvitePartner?: () => void;
@@ -92,13 +97,24 @@ export function ProtectIntro({
           error before anyone has typed a thing. */}
       <DialogContent className="protect-intro" onOpenAutoFocus={(event) => event.preventDefault()}>
         <span className="protect-intro-icon" aria-hidden="true"><CloudUpload /></span>
-        <DialogTitle>Your log can live in the cloud now</DialogTitle>
+        <DialogTitle>{fresh ? "Keep the log safe from day one" : "Your log can live in the cloud now"}</DialogTitle>
         <DialogDescription>
-          Until today, everything lived only on this phone — a lost or wiped
-          phone meant a lost history. Now, if you want, your log can also be
-          protected in the cloud: sign in once with Google or any email, and
-          any future phone can get everything back. Optional, free, removable —
-          and nothing from your log is ever shared with anyone.
+          {fresh ? (
+            <>
+              Everything you log stays on this phone. If you like, sign in once
+              with Google or any email and a new phone can get it all back —
+              optional, free, removable, and nothing from your log is ever
+              shared with anyone.
+            </>
+          ) : (
+            <>
+              Until today, everything lived only on this phone — a lost or wiped
+              phone meant a lost history. Now, if you want, your log can also be
+              protected in the cloud: sign in once with Google or any email, and
+              any future phone can get everything back. Optional, free, removable —
+              and nothing from your log is ever shared with anyone.
+            </>
+          )}
         </DialogDescription>
         <ProtectWithGoogle familySync={familySync} immediate explainer={false} onProtected={() => setProtectedNow(true)} />
         {/* The other reason for a second copy, said plainly: the parent who

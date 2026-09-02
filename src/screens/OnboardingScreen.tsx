@@ -2,6 +2,7 @@
 import "../styles/screens/onboarding.css";
 import {
   ArrowLeftRight,
+  CalendarDays,
   Check,
   ChevronRight,
   Clock,
@@ -41,7 +42,7 @@ import {
   FieldLabel,
 } from "../components/ui/field";
 import { Input } from "../components/ui/input";
-import { InputGroup, InputGroupInput } from "../components/ui/input-group";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "../components/ui/input-group";
 import { Toaster } from "../components/ui/sonner";
 import { Switch } from "../components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "../components/ui/toggle-group";
@@ -166,35 +167,6 @@ export default function OnboardingScreen({
             <p className="eyebrow">Private by default</p>
             <h1 id="onboarding-title">The whole day,<br />without the mental load.</h1>
             <p>Log feeds, diapers, burping and growth in seconds. No account needed — your entries stay on this device until you choose to share them.</p>
-            <div className="onboarding-points">
-              <div><span className="glyph-bottle"><Milk /></span><p><strong>One-tap logging</strong><small>Details only when you need them.</small></p></div>
-              <div><span className="glyph-burp"><Clock /></span><p><strong>Live timers and patterns</strong><small>See what happened and what may be next.</small></p></div>
-              <div><span className="onboarding-private-icon"><ShieldCheck /></span><p><strong>Yours by default</strong><small>Entries stay on this device. Family Sync is opt-in.</small></p></div>
-            </div>
-            {/* The human line, quietly, where a stranger decides whether to
-                trust this thing with their baby's nights: who builds it,
-                why, and that feedback is how it grows. A note, never a
-                popup — the first open stays sacred. */}
-            <p className="onboarding-note">
-              Built by two parents, for our own daughter — we use it every
-              day ourselves. It grows from what parents ask for: if anything
-              is broken, missing or annoying, tap the message bubble inside
-              and tell us. We read everything. And one rule above all: an app
-              can help, but your paediatrician always comes first.
-            </p>
-            {/* The person most likely to pass it on is the one who just
-                arrived from a friend's link — meet them where they are. */}
-            <Button
-              type="button"
-              variant="ghost"
-              className="onboarding-share"
-              onClick={() => {
-                track("app_share_opened", { from: "onboarding" });
-                setShareOpen(true);
-              }}
-            >
-              <Gift size={16} aria-hidden="true" /> Know another tired parent? Share Numalog
-            </Button>
           </section>
 
           {welcomeBack ? (
@@ -240,7 +212,24 @@ export default function OnboardingScreen({
                       the app looks emptier than it is, for want of one tap. */}
                   <Field>
                     <FieldLabel htmlFor={birthDateId}>Date of birth</FieldLabel>
+                    {/* An empty date input draws nothing at all on iOS — a
+                        blank rounded box under a label, with no hint that it
+                        opens anything. The calendar mark says what it is, and
+                        tapping it opens the picker instead of only focusing. */}
                     <InputGroup>
+                      <InputGroupAddon
+                        onClick={(event) => {
+                          const input = event.currentTarget.parentElement?.querySelector("input");
+                          try {
+                            input?.showPicker?.();
+                          } catch {
+                            // No user activation, or a browser without it.
+                          }
+                          input?.focus();
+                        }}
+                      >
+                        <CalendarDays aria-hidden="true" />
+                      </InputGroupAddon>
                       <InputGroupInput
                         id={birthDateId}
                         type="date"
@@ -323,6 +312,43 @@ export default function OnboardingScreen({
             </CardContent>
           </Card>
           )}
+
+          {/* Who builds this, and the offer to pass it on. Below the form in
+              DOM order, because on a phone the column stacks: a parent who
+              opened the link at 3am must reach "Start tracking" without
+              scrolling past a founders' note and a request to share an app
+              they have not used yet. */}
+          <aside className="onboarding-aside">
+            <div className="onboarding-points">
+              <div><span className="glyph-bottle"><Milk /></span><p><strong>One-tap logging</strong><small>Details only when you need them.</small></p></div>
+              <div><span className="glyph-burp"><Clock /></span><p><strong>Live timers and patterns</strong><small>See what happened and what may be next.</small></p></div>
+              <div><span className="onboarding-private-icon"><ShieldCheck /></span><p><strong>Yours by default</strong><small>Entries stay on this device. Family Sync is opt-in.</small></p></div>
+            </div>
+            {/* The human line, quietly, where a stranger decides whether to
+              trust this thing with their baby's nights: who builds it,
+              why, and that feedback is how it grows. A note, never a
+              popup — the first open stays sacred. */}
+          <p className="onboarding-note">
+            Built by two parents, for our own daughter — we use it every
+            day ourselves. It grows from what parents ask for: if anything
+            is broken, missing or annoying, tap the message bubble inside
+            and tell us. We read everything. And one rule above all: an app
+            can help, but your paediatrician always comes first.
+          </p>
+          {/* The person most likely to pass it on is the one who just
+              arrived from a friend's link — meet them where they are. */}
+          <Button
+            type="button"
+            variant="ghost"
+            className="onboarding-share"
+            onClick={() => {
+              track("app_share_opened", { from: "onboarding" });
+              setShareOpen(true);
+            }}
+          >
+            <Gift size={16} aria-hidden="true" /> Know another tired parent? Share Numalog
+          </Button>
+          </aside>
         </div>
       )}
 

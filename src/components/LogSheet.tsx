@@ -1,19 +1,7 @@
 import { Baby, Check, Droplet, Heart, Milk, Minus, Moon, Pill, Plus, Thermometer, Trash2, Utensils, Weight } from "lucide-react";
 import { useId, useRef, useState } from "react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "./ui/alert-dialog";
 import { Button } from "./ui/button";
 import { ButtonGroup, ButtonGroupText } from "./ui/button-group";
-import { DialogFooter } from "./ui/dialog";
 import {
   Field,
   FieldDescription,
@@ -50,6 +38,7 @@ import {
   FormError,
   LogDialogHeader,
   NoteField,
+  SheetFooter,
   SheetForm,
   TimeField,
   UnitField,
@@ -130,6 +119,17 @@ function initialSheetDraft(
       foodText: editing.food ?? "",
       doseText: editing.dose ?? "",
       diaperKind: editing.diaperKind ?? "wet",
+    };
+  }
+  if (sheet === "sleep") {
+    // "Past" on the Sleep tile is always a stretch that has ALREADY ended —
+    // the baby has just woken. Seed it ending now and starting an hour ago,
+    // so "she slept about an hour" is zero wheels and Save can never fail
+    // on an empty "Woke up".
+    return {
+      ...base,
+      endTime: localDateInput(now),
+      logTime: localDateInput(new Date(now.getTime() - 60 * 60_000)),
     };
   }
   if (sheet === "nursing" && nursingMode === "manual") {
@@ -570,9 +570,9 @@ export function LogSheet({
               <ToggleGroupItem value="expressed">Breast milk<Check className="choice-check" /></ToggleGroupItem>
             </ToggleGroup>
           </Field>
-          <TimeField value={draft.logTime} onChange={(value) => patch({ logTime: value })} />
+          <TimeField quick value={draft.logTime} onChange={(value) => patch({ logTime: value })} />
           <NoteField value={draft.note} onChange={(value) => patch({ note: value })} />
-          <DialogFooter><Button type="submit" className="primary-button sheet-primary">Save {draft.bottleAmount} {stepper.unit}</Button></DialogFooter>
+          <SheetFooter><Button type="submit" className="primary-button sheet-primary">Save {draft.bottleAmount} {stepper.unit}</Button></SheetFooter>
         </SheetForm>
       )}
 
@@ -615,7 +615,7 @@ export function LogSheet({
           )}
           <NoteField value={draft.note} onChange={(value) => patch({ note: value })} />
           <FormError message={formError?.message ?? null} />
-          <DialogFooter>
+          <SheetFooter>
             <p className="sheet-footer-note">{draft.nursingEntryMode === "timer" ? "The timer stays active if you close the app." : "This session saves straight to your timeline."}</p>
             <Button type="submit" className="primary-button sheet-primary">
               {draft.nursingEntryMode === "timer"
@@ -624,7 +624,7 @@ export function LogSheet({
                   ? "Save session"
                   : `Save ${draft.nursingSide} session`}
             </Button>
-          </DialogFooter>
+          </SheetFooter>
         </SheetForm>
       )}
 
@@ -654,10 +654,10 @@ export function LogSheet({
           </div>
           <NoteField value={draft.note} onChange={(value) => patch({ note: value })} />
           <FormError message={formError?.message ?? null} />
-          <DialogFooter>
+          <SheetFooter>
             <p className="sheet-footer-note">A stretch that crosses midnight is counted whole, on the evening it began.</p>
             <Button type="submit" className="primary-button sheet-primary">Save sleep</Button>
-          </DialogFooter>
+          </SheetFooter>
         </SheetForm>
       )}
 
@@ -728,10 +728,10 @@ export function LogSheet({
               the label or your doctor.
             </FieldDescription>
           </Field>
-          <TimeField value={draft.logTime} inputRef={startRef} error={formError?.field === "start"} onChange={(value) => { patch({ logTime: value }); setFormError(null); }} />
+          <TimeField quick value={draft.logTime} inputRef={startRef} error={formError?.field === "start"} onChange={(value) => { patch({ logTime: value }); setFormError(null); }} />
           <NoteField value={draft.note} onChange={(value) => patch({ note: value })} />
           <FormError message={formError?.message ?? null} />
-          <DialogFooter><Button type="submit" className="primary-button sheet-primary">Save dose</Button></DialogFooter>
+          <SheetFooter><Button type="submit" className="primary-button sheet-primary">Save dose</Button></SheetFooter>
         </SheetForm>
       )}
 
@@ -761,10 +761,10 @@ export function LogSheet({
               a rash or vomiting after a new food is worth telling your doctor about.
             </FieldDescription>
           </Field>
-          <TimeField value={draft.logTime} inputRef={startRef} error={formError?.field === "start"} onChange={(value) => { patch({ logTime: value }); setFormError(null); }} />
+          <TimeField quick value={draft.logTime} inputRef={startRef} error={formError?.field === "start"} onChange={(value) => { patch({ logTime: value }); setFormError(null); }} />
           <NoteField value={draft.note} onChange={(value) => patch({ note: value })} placeholder="How it went — loved it, spat it out, small rash…" />
           <FormError message={formError?.message ?? null} />
-          <DialogFooter><Button type="submit" className="primary-button sheet-primary">Save food</Button></DialogFooter>
+          <SheetFooter><Button type="submit" className="primary-button sheet-primary">Save food</Button></SheetFooter>
         </SheetForm>
       )}
 
@@ -779,9 +779,9 @@ export function LogSheet({
               <ToggleGroupItem value="both"><span className="both-icon" aria-hidden="true"><Droplet size={18} />●</span><strong>Both</strong><Check className="choice-check" /></ToggleGroupItem>
             </ToggleGroup>
           </Field>
-          <TimeField value={draft.logTime} onChange={(value) => patch({ logTime: value })} />
+          <TimeField quick value={draft.logTime} onChange={(value) => patch({ logTime: value })} />
           <NoteField value={draft.note} onChange={(value) => patch({ note: value })} />
-          <DialogFooter><Button type="submit" className="primary-button sheet-primary">Save {draft.diaperKind === "both" ? "wet + dirty" : draft.diaperKind} diaper</Button></DialogFooter>
+          <SheetFooter><Button type="submit" className="primary-button sheet-primary">Save {draft.diaperKind === "both" ? "wet + dirty" : draft.diaperKind} diaper</Button></SheetFooter>
         </SheetForm>
       )}
 
@@ -795,11 +795,11 @@ export function LogSheet({
               <UnitField {...measureProps("headCm")} optional value={draft.headCm} inputRef={headRef} invalid={formError?.field === "headCm"} onChange={(value) => { patch({ headCm: value }); setFormError(null); }} placeholder={measurementPlaceholder("headCm", units)} />
             </div>
           </FieldGroup>
-          <TimeField value={draft.logTime} onChange={(value) => patch({ logTime: value })} />
+          <TimeField quick value={draft.logTime} onChange={(value) => patch({ logTime: value })} />
           <NoteField value={draft.note} onChange={(value) => patch({ note: value })} placeholder="Clinic, home scale, or anything useful" />
           <p className="sheet-advice">Measure consistently and use the trend as context for your paediatrician.</p>
           <FormError message={formError?.message ?? null} />
-          <DialogFooter><Button type="submit" className="primary-button sheet-primary">Save growth check</Button></DialogFooter>
+          <SheetFooter><Button type="submit" className="primary-button sheet-primary">Save growth check</Button></SheetFooter>
         </SheetForm>
       )}
 
@@ -811,7 +811,7 @@ export function LogSheet({
           <TimeField value={draft.logTime} onChange={(value) => patch({ logTime: value })} />
           <NoteField value={draft.note} onChange={(value) => { patch({ note: value }); setFormError(null); }} placeholder="Medicine, spit-up, rash, question for the doctor…" />
           <FormError message={formError?.message ?? null} />
-          <DialogFooter><Button type="submit" className="primary-button sheet-primary">Save health log</Button></DialogFooter>
+          <SheetFooter><Button type="submit" className="primary-button sheet-primary">Save health log</Button></SheetFooter>
         </SheetForm>
       )}
 
@@ -918,29 +918,18 @@ export function LogSheet({
           <NoteField value={draft.note} onChange={(value) => { patch({ note: value }); setFormError(null); }} />
           <FormError message={formError?.message ?? null} />
 
-          <AlertDialog>
-            <div className="edit-danger">
-              <AlertDialogTrigger asChild>
-                <Button type="button" variant="ghost"><Trash2 size={17} /> Delete this entry</Button>
-              </AlertDialogTrigger>
-            </div>
-            <AlertDialogContent className="delete-dialog">
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete {activityTitle(editing)}?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {formatTimelineDay(editing.startedAt)} at {formatTime(editing.startedAt)}. You can undo immediately after deletion.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Keep log</AlertDialogCancel>
-                <AlertDialogAction className="confirm-remove" onClick={() => {
-                  if (onRemove(editing)) onClose();
-                }}>Delete</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          {/* One tap. The confirm dialog that used to sit here asked a tired
+              parent to read a centred modal whose own words admitted the
+              protection was redundant — the removal is a tombstone with an
+              eight-second Undo at the bottom of the screen, which is the
+              safety net, and the one a thumb can actually reach. */}
+          <div className="edit-danger">
+            <Button type="button" variant="ghost" onClick={() => { if (onRemove(editing)) onClose(); }}>
+              <Trash2 size={17} /> Delete this entry
+            </Button>
+          </div>
 
-          <DialogFooter><Button type="submit" className="primary-button sheet-primary">Save changes</Button></DialogFooter>
+          <SheetFooter><Button type="submit" className="primary-button sheet-primary">Save changes</Button></SheetFooter>
         </SheetForm>
       )}
 
@@ -990,7 +979,7 @@ function ProfileForm({ profile, onChange, onDone }: { profile: Profile; onChange
           <FieldDescription>This changes which quick actions are shown.</FieldDescription>
         </Field>
       </FieldGroup>
-      <DialogFooter><Button type="submit" className="primary-button sheet-primary">Save profile</Button></DialogFooter>
+      <SheetFooter><Button type="submit" className="primary-button sheet-primary">Save profile</Button></SheetFooter>
     </SheetForm>
   );
 }

@@ -154,6 +154,14 @@
   padding: 0;
 }
 
+/* The separator primitive is width:100%, so an inset margin alone pushed
+   the hairline off the right edge, where the card clipped it. Inset both
+   ends to match the row's own 16px padding. */
+.activity-list [data-slot="item-separator"] {
+  width: auto;
+  margin: 0 16px;
+}
+
 .activity-row,
 .activity-open {
   width: 100%;
@@ -375,9 +383,13 @@
   color: var(--ink-3);
 }
 
+/* The one quiet selected state, same as the toggle groups below — the
+   old recipe leaned on two properties that were never declared, so the
+   border fell back to full-strength ink and the fill was invisible. */
 .medicine-preset.is-active {
-  border-color: color-mix(in oklab, var(--glyph-medicine-ink, var(--ink-1)) 40%, var(--border));
-  background: color-mix(in oklab, var(--accent, var(--card)) 14%, var(--card));
+  border-color: color-mix(in oklab, var(--signal) 40%, var(--border));
+  background: var(--signal-quiet);
+  color: var(--signal);
 }
 
 .sheet-form {
@@ -401,7 +413,9 @@
   bottom: 0;
   z-index: 2;
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  /* Cancel takes only what its word needs; Save keeps the rest. A sheet
+     that fills the screen must have a way out where the thumb already is. */
+  grid-template-columns: auto minmax(0, 1fr);
   justify-content: stretch;
   gap: 8px;
   margin: 4px 0 0;
@@ -438,6 +452,13 @@
   line-height: 1.45;
 }
 
+.sheet-cancel {
+  min-height: 56px;
+  padding: 0 16px;
+  border-radius: var(--radius-lg);
+  color: var(--ink-2);
+}
+
 .sheet-primary {
   width: 100%;
   min-height: 56px;
@@ -453,6 +474,11 @@
   font-size: 0.8125rem;
   line-height: 1.4;
   text-align: center;
+  /* Its own full-width row ABOVE the buttons — the footer is a two-column
+     grid now, and a note left in source order lands between Cancel and
+     Save and pushes Save onto a third row. */
+  order: -1;
+  grid-column: 1 / -1;
 }
 
 .ui-dialog-close {
@@ -558,6 +584,13 @@
 .preset-row {
   gap: 8px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* "Now / 15m ago / 30m ago / 1h ago" under a time picker: a shortcut, not
+   the field itself, so it sits lower than a 56px control. */
+.quick-time [data-slot="toggle-group-item"] {
+  min-height: 44px;
+  font-size: 0.8125rem;
 }
 
 .segmented {
@@ -815,15 +848,6 @@
   justify-content: center;
   gap: 12px;
   padding: 16px 0;
-}
-
-.delete-dialog {
-  width: min(calc(100vw - 32px), 460px);
-}
-
-.confirm-remove {
-  background: var(--alert);
-  color: var(--destructive-foreground);
 }
 
 @media (hover: hover) and (pointer: fine) {

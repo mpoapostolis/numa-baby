@@ -959,10 +959,6 @@
   gap: 0;
 }
 
-.recent-list [data-slot="item-separator"] {
-  margin: 0;
-}
-
 /* Two columns once the container itself can afford them (~720px — with the
    sidebar open a 1024px viewport yields roughly this): hearth + rail, a
    fixed two-cell grid, the divider carried by the rail's own border. */

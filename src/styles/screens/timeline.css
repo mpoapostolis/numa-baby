@@ -96,11 +96,6 @@
   gap: 0;
 }
 
-.timeline-list [data-slot="item-separator"] {
-  margin: 0 16px;
-}
-
-
 
 .load-more {
   width: min(100%, 320px);

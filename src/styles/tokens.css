@@ -60,6 +60,9 @@
   --card-foreground: var(--foreground);
   --popover: oklch(0.993 0.004 55);
   --popover-foreground: var(--foreground);
+  /* The plain ink name six rules already reference; .dark re-declares
+     --foreground, so the alias follows the theme on its own. */
+  --ink-1: var(--foreground);
   --ink-2: oklch(0.455 0.024 18);
   --ink-3: oklch(0.54 0.022 16);
   --border: oklch(0.912 0.014 35);

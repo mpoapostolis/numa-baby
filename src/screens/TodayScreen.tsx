@@ -562,7 +562,16 @@ function TodayScreen({
               <div className="hearth-clock hearth-empty">
                 <LittleBottle className="hearth-illustration" />
                 <p className="t-title-2">Ready when you are</p>
-                <p className="t-meta">Log the first feed when it happens — one tap on Bottle or Nursing.</p>
+                {/* Name the tiles this family actually has: a bottle-only
+                    home has no Nursing tile, and nursing is Left/Right, not
+                    one tap. */}
+                <p className="t-meta">
+                  {profile.feedingMode === "bottle"
+                    ? "Log the first feed when it happens — one tap on Bottle."
+                    : profile.feedingMode === "breast"
+                      ? "Log the first feed when it happens — tap Left or Right under Nursing."
+                      : "Log the first feed when it happens — one tap on Bottle or Nursing."}
+                </p>
               </div>
             ) : (
               // The companion now greets from the hero above — the idle

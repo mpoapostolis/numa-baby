@@ -77,11 +77,25 @@
   grid-template-columns: minmax(0, 1fr) minmax(380px, 440px);
   align-items: center;
   gap: clamp(48px, 6vw, 64px);
+  /* The aside below sits under the intro in the same column; the card spans
+     both rows, so no vertical hole opens between them on a wide screen. */
+  row-gap: 0;
   padding: 48px max(clamp(16px, 4vw, 32px), env(safe-area-inset-right)) 64px max(clamp(16px, 4vw, 32px), env(safe-area-inset-left));
 }
 
 .onboarding-intro {
   max-width: 560px;
+}
+
+/* The founders' note and the share offer: beside the form on a desktop,
+   AFTER it once the layout stacks. */
+.onboarding-aside {
+  grid-column: 1;
+  max-width: 560px;
+}
+
+.onboarding-card {
+  grid-row: 1 / span 2;
 }
 
 /* Nursery at night — the screen's one ambient illustration. One-time
@@ -359,6 +373,13 @@
 
   .onboarding-card {
     width: 100%;
+    /* Stacked: intro, form, then the note — the 32px gap above restores the
+       breathing room row-gap:0 removes on the desktop grid. */
+    grid-row: auto;
+  }
+
+  .onboarding-aside .onboarding-note {
+    margin-top: 0;
   }
 }
 
