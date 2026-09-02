@@ -269,6 +269,37 @@ export function summarizeDays(
 
 // Local calendar key — never toISOString(), which would bucket by UTC and
 // shift every evening entry into the next day east of Greenwich.
-function dayKey(date: Date) {
+export function dayKey(date: Date) {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
+
+/**
+ * Every activity under each local day it belongs to, for a screen that
+ * summarizes many days at once (the timeline). One pass over the list; then
+ * summarizeDay over a day's own bucket costs that day's entries, not the
+ * whole log. A sleep is filed under every day it touches, exactly as
+ * summarizeDays files it, so the two can never disagree about a morning.
+ */
+export function bucketByDay(activities: Activity[], now: number): Map<string, Activity[]> {
+  const buckets = new Map<string, Activity[]>();
+  const file = (key: string, activity: Activity) => {
+    const bucket = buckets.get(key);
+    if (bucket) bucket.push(activity);
+    else buckets.set(key, [activity]);
+  };
+  for (const activity of activities) {
+    file(dayKey(new Date(activity.startedAt)), activity);
+    if (activity.type !== "sleep") continue;
+    const endMs = activity.endedAt ? new Date(activity.endedAt).getTime() : now;
+    const cursor = new Date(activity.startedAt);
+    cursor.setHours(0, 0, 0, 0);
+    // A real sleep crosses one midnight; a forgotten timer is capped by the
+    // stale rule in summarizeDay, so two more days is every day worth filing.
+    for (let step = 0; step < 2; step++) {
+      cursor.setDate(cursor.getDate() + 1);
+      if (cursor.getTime() >= endMs) break;
+      file(dayKey(cursor), activity);
+    }
+  }
+  return buckets;
 }

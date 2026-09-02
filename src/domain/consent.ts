@@ -52,6 +52,12 @@ export function saveConsent(choice: ConsentChoice) {
     // The banner still applies the choice for this session.
   }
   window.dispatchEvent(new CustomEvent(CONSENT_EVENT, { detail: choice }));
+  // The tag is only ever fetched for a yes (public/analytics.js); a first
+  // yes fetches it now, so measurement starts with this visit.
+  if (choice === "granted") {
+    const load = (window as unknown as { numalogLoadAnalytics?: () => void }).numalogLoadAnalytics;
+    if (typeof load === "function") load();
+  }
   // Advertising signals are never granted — this app has no ads.
   gtag()?.("consent", "update", {
     analytics_storage: choice === "granted" ? "granted" : "denied",

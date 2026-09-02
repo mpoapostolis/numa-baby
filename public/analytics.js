@@ -1,16 +1,19 @@
 // Google Analytics, gated on consent.
 //
-// Loaded BEFORE gtag.js and without `async` on purpose: Consent Mode has to
-// set its defaults before the tag processes anything, or the first page view
-// is collected before the visitor has been asked.
+// Loaded before the app's own module and kept in a same-origin file rather
+// than the inline snippet Google ships, so the Content-Security-Policy can
+// go on refusing inline scripts. That matters more than usual here: the page
+// holds a family's health log.
 //
 // Everything starts denied. Nothing is measured until someone taps Accept,
 // and the choice is remembered so the banner is asked once — not on every
 // visit to an app people open six times a night.
 //
-// Kept in a same-origin file rather than the inline snippet Google ships so
-// the Content-Security-Policy can keep refusing inline scripts. That matters
-// more than usual here: the page holds a family's health log.
+// The tag itself (gtag.js, about a hundred kilobytes of somebody else's
+// JavaScript) is fetched ONLY for a visitor who has said yes. It used to be
+// downloaded and parsed on every open by everyone, including families who
+// had declined — the app refuses to call gtag without consent anyway, so for
+// them it was pure weight on the one radio the 3am log needs.
 window.dataLayer = window.dataLayer || [];
 function gtag() { window.dataLayer.push(arguments); }
 window.gtag = gtag;
@@ -24,11 +27,23 @@ gtag("consent", "default", {
   wait_for_update: 500,
 });
 
+function loadTag() {
+  if (document.getElementById("ga-tag")) return;
+  var script = document.createElement("script");
+  script.id = "ga-tag";
+  script.async = true;
+  script.src = "https://www.googletagmanager.com/gtag/js?id=G-X94KW80ZGY";
+  document.head.appendChild(script);
+}
+// The consent banner calls this the moment a visitor taps Allow.
+window.numalogLoadAnalytics = loadTag;
+
 // A previous "yes" is restored before the tag loads, so a returning visitor
 // is measured from their first page view rather than from their second.
 try {
   if (window.localStorage.getItem("numa-baby-consent-v1") === "granted") {
     gtag("consent", "update", { analytics_storage: "granted" });
+    loadTag();
   }
 } catch {
   // Private mode, or storage blocked. Staying denied is the safe answer.

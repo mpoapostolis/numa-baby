@@ -1,6 +1,6 @@
 import { BarChart3, ChevronRight, Clock, Home, Newspaper, Ruler, Settings, ShieldCheck, Stethoscope } from "lucide-react";
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "./lib/toast";
 import { Button } from "./components/ui/button";
 import { Dialog, DialogContent } from "./components/ui/dialog";
 import {
@@ -9,27 +9,32 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "./components/ui/sidebar";
-import { Toaster } from "./components/ui/sonner";
 import { AppSidebar } from "./components/AppSidebar";
 import { BabyFace, SleepingBaby } from "./components/illustrations";
 import { ConsentBanner } from "./components/ConsentBanner";
 import { InAppEscape } from "./components/InAppEscape";
-import { milestoneFor, milestoneSeen } from "./domain/milestones";
+import { Milestone, milestoneFor, milestoneSeen } from "./domain/milestones";
+import { useStableCallback } from "./hooks/useStableCallback";
 import { FeedbackBubble } from "./components/FeedbackBubble";
 // Lazy: a returning family boots straight to Today and never downloads the
 // welcome pitch; only a genuinely fresh (or recovering) visit pays for it.
 const OnboardingScreen = lazy(() => import("./screens/OnboardingScreen"));
 import TodayScreen from "./screens/TodayScreen";
-import { Activity, ActivityType, Sheet, Tab } from "./domain/types";
+import { Activity, ActivityType, Profile, Sheet, Tab } from "./domain/types";
 import { JOIN_CODE_PATTERN } from "./domain/familyPairing";
 import { track, suppressTracking } from "./domain/analytics";
 import { LATEST_RELEASE_ID, unseenReleases } from "./domain/changelog";
 import { parseStoredData } from "./domain/validate";
+// Static, all of it: the module is on the boot path anyway for the routing
+// half, so the dynamic imports that used to fetch the codec half moved no
+// bytes and only earned a build warning.
 import {
   HANDOFF_PATH,
   handoffReturnUrl,
+  packHandoff,
   readHandoffPayload,
   readHandoffTarget,
+  unpackHandoff,
 } from "./domain/handoff";
 import { backupNudge } from "./domain/backupNudge";
 import { onConsentChange, readConsent } from "./domain/consent";
@@ -66,6 +71,20 @@ const BackupNudgeCard = lazy(() => import("./components/BackupNudge").then((m) =
 const ProtectIntro = lazy(() => import("./components/ProtectIntro").then((m) => ({ default: m.ProtectIntro })));
 const NewsDialog = lazy(() => import("./components/NewsDialog").then((m) => ({ default: m.NewsDialog })));
 const RecoverLinkDialog = lazy(() => import("./components/RecoverLinkDialog"));
+// The toast library rides its own chunk and attaches to lib/toast when it
+// mounts; nothing on the boot path needs it before the first tap, and a
+// toast fired before then simply waits for it.
+const Toaster = lazy(() => import("./components/ui/sonner").then((m) => ({ default: m.Toaster })));
+
+// The milestone is decided ONCE per calendar day and frozen for the visit.
+// The party card marks its id seen the moment it mounts, so re-reading
+// storage on every render made the milestone vanish on the next minute tick
+// — and let the what's-new card and the protect offer land on top of it,
+// the very stacking the moment chain below exists to prevent.
+function pendingMilestone(profile: Profile, now: number): Milestone | null {
+  const found = milestoneFor(profile.birthDate, profile.name, now);
+  return found !== null && !milestoneSeen(found.id) ? found : null;
+}
 
 // A future-dated feed from a restored backup must never arm a timer that wraps
 // the 32-bit setTimeout ceiling and fires instantly.
@@ -348,10 +367,19 @@ export default function HomePage() {
   // urgency: a milestone has a date, protect happens once in an app's life,
   // news can wait an open, and the nudge is quiet forever once the cloud
   // holds a copy. Whatever yields today simply speaks on the next open.
-  const milestoneToday = (() => {
-    const found = milestoneFor(profile.birthDate, profile.name, minuteClock);
-    return found !== null && !milestoneSeen(found.id);
-  })();
+  // Re-decided when the calendar day (or the baby) changes, never on a tick.
+  // Adjusting state during render is React's own idiom for "derive from the
+  // previous render" — one render, no effect, no storage read per tick.
+  const milestoneKey = `${new Date(minuteClock).toDateString()}|${profile.birthDate}|${profile.name}`;
+  const [milestoneGate, setMilestoneGate] = useState(() => ({
+    key: milestoneKey,
+    milestone: pendingMilestone(profile, minuteClock),
+  }));
+  if (milestoneGate.key !== milestoneKey) {
+    setMilestoneGate({ key: milestoneKey, milestone: pendingMilestone(profile, minuteClock) });
+  }
+  const celebration = milestoneGate.milestone;
+  const milestoneToday = celebration !== null;
   const protectMoment =
     !milestoneToday && consent !== null && sheet === null && !protectIntroDone &&
     (justOnboarded || activities.filter((activity) => !activity.deleted).length >= 5);
@@ -380,8 +408,7 @@ export default function HomePage() {
     if (!payload) return;
     window.history.replaceState(null, "", window.location.pathname + window.location.search);
     let cancelled = false;
-    void import("./domain/handoff")
-      .then(({ unpackHandoff }) => unpackHandoff(payload))
+    void unpackHandoff(payload)
       .then((text) => {
         if (cancelled) return;
         // The same validation and rollback copy as a backup file opened by
@@ -510,6 +537,28 @@ export default function HomePage() {
     setSheet("edit");
   }, []);
 
+  // Stable identities for everything Today receives, so React.memo on the
+  // screen holds: the store's actions are fresh closures every render, and a
+  // fresh function is a fresh prop.
+  const onAdd = useStableCallback(addActivity);
+  const onStopTimer = useStableCallback(stopTimer);
+  const onOpenSheet = useStableCallback((next: Exclude<Sheet, null>) => openSheet(next));
+  const onManualNursing = useStableCallback(() => openSheet("nursing", "manual"));
+  const onSeeTimeline = useStableCallback(() => navigateTo("timeline"));
+  const onOpenProtection = useStableCallback(() => {
+    track("cloud_note_tapped", { synced: Boolean(familySync.pairing) });
+    // Unprotected -> the doors, right here. Synced -> the details.
+    if (familySync.pairing) navigateTo("more");
+    else setProtectAsk((n) => n + 1);
+  });
+  const cloudState = !familySync.pairing
+    ? "none"
+    : familySync.status.phase === "revoked"
+      ? "revoked"
+      : familySync.status.phase === "offline"
+        ? "offline"
+        : familySync.status.phase === "syncing" ? "syncing" : "synced";
+
   function exitDebugPreview() {
     const url = new URL(window.location.href);
     url.searchParams.delete("debug");
@@ -543,7 +592,6 @@ export default function HomePage() {
           onSend={async () => {
             track("handoff_sent");
             try {
-              const { packHandoff } = await import("./domain/handoff");
               const packed = await packHandoff(exportPayload());
               if (!packed) return "too-large" as const;
               window.location.replace(handoffReturnUrl(handoffTarget, packed));
@@ -742,25 +790,15 @@ export default function HomePage() {
               nightMode={nightMode}
               minuteClock={minuteClock}
               stats={stats}
-              onAdd={addActivity}
-              onStopTimer={stopTimer}
-              onOpenSheet={openSheet}
-              onManualNursing={() => openSheet("nursing", "manual")}
+              celebration={celebration}
+              onAdd={onAdd}
+              onStopTimer={onStopTimer}
+              onOpenSheet={onOpenSheet}
+              onManualNursing={onManualNursing}
               onEdit={openEdit}
-              onSeeTimeline={() => navigateTo("timeline")}
-              cloudState={!familySync.pairing
-                ? "none"
-                : familySync.status.phase === "revoked"
-                  ? "revoked"
-                  : familySync.status.phase === "offline"
-                    ? "offline"
-                    : familySync.status.phase === "syncing" ? "syncing" : "synced"}
-              onOpenProtection={() => {
-                track("cloud_note_tapped", { synced: Boolean(familySync.pairing) });
-                // Unprotected -> the doors, right here. Synced -> the details.
-                if (familySync.pairing) navigateTo("more");
-                else setProtectAsk((n) => n + 1);
-              }}
+              onSeeTimeline={onSeeTimeline}
+              cloudState={cloudState}
+              onOpenProtection={onOpenProtection}
             />
           )}
 
@@ -916,19 +954,21 @@ export default function HomePage() {
           />
         )}
 
-        <Toaster
-          theme={nightMode ? "dark" : "light"}
-          position="bottom-center"
-          closeButton
-          mobileOffset={{
-            // The consent banner owns the bottom band until answered —
-            // toasts lift above it rather than landing on its Allow button.
-            bottom: consent === null ? "calc(248px + env(safe-area-inset-bottom))" : "calc(96px + env(safe-area-inset-bottom))",
-            left: "12px",
-            right: "12px",
-          }}
-          offset={{ bottom: "24px" }}
-        />
+        <Suspense fallback={null}>
+          <Toaster
+            theme={nightMode ? "dark" : "light"}
+            position="bottom-center"
+            closeButton
+            mobileOffset={{
+              // The consent banner owns the bottom band until answered —
+              // toasts lift above it rather than landing on its Allow button.
+              bottom: consent === null ? "calc(248px + env(safe-area-inset-bottom))" : "calc(96px + env(safe-area-inset-bottom))",
+              left: "12px",
+              right: "12px",
+            }}
+            offset={{ bottom: "24px" }}
+          />
+        </Suspense>
 
         <Dialog open={Boolean(sheet)} onOpenChange={(open) => { if (!open) setSheet(null); }}>
           {sheet && (

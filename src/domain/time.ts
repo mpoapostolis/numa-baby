@@ -192,10 +192,10 @@ function calendarDaysBetween(birthStart: number, now: number): number | null {
   return days < 0 ? null : days;
 }
 
-export function ageInMonths(birthDate: string) {
+export function ageInMonths(birthDate: string, now: number = Date.now()) {
   const birth = new Date(`${birthDate}T12:00:00`);
   if (!Number.isFinite(birth.getTime())) return null;
-  const today = new Date();
+  const today = new Date(now);
   let months = (today.getFullYear() - birth.getFullYear()) * 12 + today.getMonth() - birth.getMonth();
   if (today.getDate() < birth.getDate()) months -= 1;
   return Math.max(0, months);

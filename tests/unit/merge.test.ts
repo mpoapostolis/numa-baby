@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { mergeActivities, mergeStored, summarizeMerge } from "@/domain/merge";
+import { applyRemote, mergeActivities, mergeStored, summarizeMerge } from "@/domain/merge";
 import { Activity, Profile } from "@/domain/types";
 
 // The merge-on-import truth table. Import must be a union, never a replace:
@@ -207,4 +207,63 @@ test("mergeStored keeps local nightMode and reminders — device preferences, no
   );
   expect(merged.nightMode).toBe(false);
   expect(merged.reminders).toStrictEqual({ feedEnabled: false, feedIntervalMinutes: 180 });
+});
+
+// The sync-ingest path. Same conflict rule as the import merge, examined per
+// incoming row rather than over the whole log, and an unchanged log comes
+// back as the SAME array so the store can skip the write.
+test("applyRemote: rows already held, unchanged, come back as the same array", () => {
+  const local = [entry("a", { updatedAt: at(5) }), entry("b", { updatedAt: at(6) })];
+  const result = applyRemote(local, [entry("a", { updatedAt: at(5) }), entry("b", { updatedAt: at(6) })]);
+  expect(result.activities).toBe(local);
+  expect(result).toMatchObject({ added: 0, updated: 0 });
+  expect(applyRemote(local, []).activities).toBe(local);
+});
+
+test("applyRemote: a newer incoming copy replaces in place, an older one is ignored", () => {
+  const local = [entry("a", { note: "old", updatedAt: at(5) }), entry("b", { note: "mine", updatedAt: at(9) })];
+  const result = applyRemote(local, [
+    entry("a", { note: "new", updatedAt: at(7) }),
+    entry("b", { note: "stale", updatedAt: at(4) }),
+  ]);
+  expect(result.activities.map((item) => item.note)).toEqual(["new", "mine"]);
+  expect(result).toMatchObject({ added: 0, updated: 1 });
+  expect(local[0].note).toBe("old");
+});
+
+test("applyRemote: unknown rows are added in front, duplicates within a page fold by the same rule", () => {
+  const local = [entry("a", { updatedAt: at(5) })];
+  const result = applyRemote(local, [
+    entry("c", { note: "first", updatedAt: at(1) }),
+    entry("c", { note: "second", updatedAt: at(2) }),
+    entry("b", { updatedAt: at(3) }),
+  ]);
+  expect(result.activities.map((item) => item.id)).toEqual(["c", "b", "a"]);
+  expect(result.activities[0].note).toBe("second");
+  expect(result).toMatchObject({ added: 2, updated: 0 });
+});
+
+test("applyRemote: a tombstone beats a live copy on a tie and the deletion sticks", () => {
+  const local = [entry("a", { updatedAt: at(5) })];
+  const result = applyRemote(local, [entry("a", { deleted: true, updatedAt: at(5) })]);
+  expect(result.activities[0].deleted).toBe(true);
+  expect(result.updated).toBe(1);
+});
+
+test("applyRemote agrees with mergeActivities on which copy of every id survives", () => {
+  const local = [
+    entry("a", { note: "l", updatedAt: at(5) }),
+    entry("b", { note: "l", updatedAt: at(9) }),
+    entry("c", { deleted: true, updatedAt: at(4) }),
+    legacyEntry("d", { note: "legacy" }),
+  ];
+  const incoming = [
+    entry("a", { note: "r", updatedAt: at(7) }),
+    entry("b", { note: "r", updatedAt: at(2) }),
+    entry("c", { note: "revived", updatedAt: at(4) }),
+    entry("d", { note: "r", updatedAt: at(1) }),
+    entry("e", { note: "r", updatedAt: at(3) }),
+  ];
+  const byId = (list: Activity[]) => [...list].sort((x, y) => (x.id < y.id ? -1 : 1));
+  expect(byId(applyRemote(local, incoming).activities)).toStrictEqual(byId(mergeActivities(local, incoming)));
 });

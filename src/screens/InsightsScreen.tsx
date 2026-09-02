@@ -95,9 +95,13 @@ export default function InsightsScreen({
   }, [stats.recentDays, stats.latestGrowth, feedingMode]);
 
   const [visitOpen, setVisitOpen] = useState(false);
+  // Five-minute granularity for the two heavy derivations: the rules speak
+  // in hours ("no feed for six hours"), so a few minutes of lag is invisible
+  // and the recompute drops from sixty an hour to twelve.
+  const insightClock = minuteClock - (minuteClock % (5 * 60_000));
   const visit = useMemo(
-    () => buildVisitSummary(activities, minuteClock, 14),
-    [activities, minuteClock],
+    () => buildVisitSummary(activities, insightClock, 14),
+    [activities, insightClock],
   );
 
   const insights = useMemo(
@@ -107,10 +111,10 @@ export default function InsightsScreen({
       ageDays,
       ageMonths: stats.babyAgeMonths,
       feedingMode,
-      now: minuteClock,
+      now: insightClock,
       units,
     })),
-    [activities, stats.recentDays, stats.babyAgeMonths, ageDays, feedingMode, minuteClock, units],
+    [activities, stats.recentDays, stats.babyAgeMonths, ageDays, feedingMode, insightClock, units],
   );
   const {
     typicalGap,

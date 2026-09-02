@@ -67,6 +67,49 @@ export function mergeActivities(local: Activity[], incoming: Activity[]): Activi
   return [...byId.values()].sort(compareMergedOrder);
 }
 
+/**
+ * Sync ingest: a partner's rows into the local list, cheaply.
+ *
+ * A poll carries a handful of rows, and mergeActivities + summarizeMerge
+ * described them by re-merging, re-sorting and canonical()-serializing the
+ * ENTIRE log — over a hundred milliseconds at a year of entries, once a
+ * minute, on the main thread. Only the incoming rows are examined here,
+ * each against its own local twin, under the same conflict rule. When
+ * nothing changes the very same array comes back, so the caller can skip
+ * the write. Order is not a promise on this path (no screen reads stored
+ * order; the merge-on-import path keeps its sorted contract), so new rows
+ * simply go in front.
+ */
+export function applyRemote(
+  local: Activity[],
+  incoming: Activity[],
+): { activities: Activity[]; added: number; updated: number } {
+  if (!incoming.length) return { activities: local, added: 0, updated: 0 };
+  const position = new Map<string, number>();
+  local.forEach((activity, index) => position.set(activity.id, index));
+  const fresh = new Map<string, Activity>();
+  let next: Activity[] | null = null;
+  let updated = 0;
+  for (const activity of incoming) {
+    const index = position.get(activity.id);
+    if (index === undefined) {
+      // Two copies of one id in a single page fold by the same rule.
+      const seen = fresh.get(activity.id);
+      fresh.set(activity.id, seen ? resolveConflict(seen, activity) : activity);
+      continue;
+    }
+    const current = (next ?? local)[index];
+    // resolveConflict hands back `current` on a loss AND on an exact
+    // content tie, so a winner that is not `current` is a real change.
+    if (resolveConflict(current, activity) === current) continue;
+    if (!next) next = [...local];
+    next[index] = activity;
+    updated += 1;
+  }
+  if (!fresh.size && !next) return { activities: local, added: 0, updated: 0 };
+  return { activities: [...fresh.values(), ...(next ?? local)], added: fresh.size, updated };
+}
+
 export type MergeSummary = { added: number; updated: number; unchanged: number };
 
 // The import toast's numbers, from the local timeline's point of view, counted

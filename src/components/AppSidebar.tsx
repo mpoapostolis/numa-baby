@@ -48,7 +48,6 @@ export function AppSidebar({
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
-              tooltip="Numalog"
               aria-label="Numalog"
               className="app-sidebar-brand"
               onClick={() => navigate("today")}
@@ -71,7 +70,6 @@ export function AppSidebar({
                 <SidebarMenuItem key={item.value}>
                   <SidebarMenuButton
                     size="lg"
-                    tooltip={item.label}
                     aria-label={item.label}
                     aria-current={activeTab === item.value ? "page" : undefined}
                     isActive={activeTab === item.value}
@@ -89,7 +87,7 @@ export function AppSidebar({
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" className="sidebar-profile-button" tooltip="Baby profile" aria-label="Baby profile" onClick={onProfile}>
+            <SidebarMenuButton size="lg" className="sidebar-profile-button" aria-label="Baby profile" onClick={onProfile}>
               <span className="baby-avatar"><BabyFace /></span>
               <span className="sidebar-profile-copy">
                 <strong>{profile.name}</strong>

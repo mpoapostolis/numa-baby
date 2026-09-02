@@ -9,7 +9,7 @@ import { ToggleGroup, ToggleGroupItem } from "../components/ui/toggle-group";
 import { ActivityRow } from "../components/ActivityRow";
 import { DayRecapLine } from "../components/DayRecap";
 import { EmptyState } from "../components/EmptyState";
-import { summarizeDay } from "../domain/daySummary";
+import { bucketByDay, dayKey, summarizeDay } from "../domain/daySummary";
 import { formatTimelineDay } from "../domain/time";
 import { Activity, ActivityType } from "../domain/types";
 
@@ -48,14 +48,25 @@ export default function TimelineScreen({
     return [...groups.values()];
   }, [filteredTimeline, limit]);
 
+  // The clock matters to a day's totals only while a timer is running (it
+  // clamps the open span). Without one, a day's numbers are the same at
+  // 03:14 as at 03:15 — so the clock these memos see moves once a day, and
+  // the per-minute recompute (all of history, for every visible day) goes.
+  const hasOpenTimer = useMemo(
+    () => activities.some((activity) => !activity.endedAt && (activity.type === "sleep" || activity.type === "nursing" || activity.type === "burp")),
+    [activities],
+  );
+  const summaryClock = hasOpenTimer ? minuteClock : new Date(minuteClock).setHours(0, 0, 0, 0);
   // Totals always describe the whole day, never the current filter — otherwise
-  // "2 feeds" would quietly mean "2 shown". Memoized: one pass per visible day
-  // instead of one per render.
+  // "2 feeds" would quietly mean "2 shown". Bucketed once per data change, so
+  // each visible day is summarized over its own entries, not the whole log.
+  const buckets = useMemo(() => bucketByDay(activities, summaryClock), [activities, summaryClock]);
   const daySummaries = useMemo(
-    () => timelineGroups.map((group) =>
-      summarizeDay(activities, new Date(group[0].startedAt), minuteClock),
-    ),
-    [timelineGroups, activities, minuteClock],
+    () => timelineGroups.map((group) => {
+      const day = new Date(group[0].startedAt);
+      return summarizeDay(buckets.get(dayKey(day)) ?? [], day, summaryClock);
+    }),
+    [timelineGroups, buckets, summaryClock],
   );
 
   return (

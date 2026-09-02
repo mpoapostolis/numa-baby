@@ -1,5 +1,5 @@
 import { ChangeEvent, useEffect, useRef, useState } from "react";
-import { mergeActivities, mergeStored, summarizeMerge } from "../domain/merge";
+import { applyRemote, mergeStored, summarizeMerge } from "../domain/merge";
 import { activityUpdatedAt, liveActivities, parseStoredData } from "../domain/validate";
 import { Activity, BootState, Profile, ReminderSettings } from "../domain/types";
 import { STALE_OPEN_SPAN_MINUTES } from "../domain/daySummary";
@@ -16,6 +16,11 @@ export const RECOVERY_KEY = "numa-baby-v1-recovery";
     a backup is a fact about this device, and restoring an old blob must not
     resurrect an old answer to "have you backed up lately". */
 export const LAST_BACKUP_KEY = "numa-baby-last-backup-v1";
+/** The theme on its own tiny key, so public/theme-init.js — a render-blocking
+    script in <head> — can paint the right background without JSON.parsing
+    the whole log (megabytes, at a year) to read one boolean. Mirrors the
+    blob's nightMode; the blob stays the source of truth. */
+export const THEME_KEY = "numa-baby-theme-v1";
 const EMPTY_PROFILE: Profile = { name: "", birthDate: "", feedingMode: "mixed" };
 const DEFAULT_REMINDERS: ReminderSettings = {
   feedEnabled: false,
@@ -312,6 +317,11 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
       return false;
     }
     persistedStateRef.current = nextPersisted;
+    try {
+      window.localStorage.setItem(THEME_KEY, nextNightMode ? "dark" : "light");
+    } catch {
+      // The blob carries the theme too; theme-init.js falls back to it.
+    }
     // The warning is the one surface that speaks before quota does: a log
     // that has grown to most of the browser's budget gets a standing
     // "download a backup" long before a tap fails.
@@ -601,8 +611,12 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
   // these rows would skip them forever.
   function mergeRemote(remote: Activity[], remoteProfile?: Profile, remoteProfileUpdatedAt?: string): { added: number; updated: number; persisted: boolean } {
     const current = persistedStateRef.current;
-    const merged = remote.length ? mergeActivities(current.activities, remote) : current.activities;
-    const summary = remote.length ? summarizeMerge(current.activities, merged) : { added: 0, updated: 0 };
+    // applyRemote, not mergeActivities: only the incoming rows are examined
+    // (the whole-log re-merge cost a paired family a long main-thread stall
+    // per poll at a year of entries), and an unchanged log is the same array.
+    const applied = applyRemote(current.activities, remote);
+    const merged = applied.activities;
+    const summary = { added: applied.added, updated: applied.updated };
     // Profile rule: adopt the remote copy only when it cannot clobber a fresher
     // local edit — the local profile is still the untouched empty default, or
     // the remote stamp is strictly newer than the local one. A local profile

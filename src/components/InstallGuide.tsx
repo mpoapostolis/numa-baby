@@ -6,7 +6,7 @@
 // a real browser first.
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "../lib/toast";
 import { Share, Smartphone, SquareArrowOutUpRight } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";

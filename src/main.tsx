@@ -4,7 +4,6 @@ import { captureInstallPrompt } from "./domain/install";
 import App from "./App";
 import { AppErrorBoundary } from "./AppErrorBoundary";
 import { PwaStatus } from "./PwaStatus";
-import { TooltipProvider } from "./components/ui/tooltip";
 import "./styles.css";
 
 // Before render: Chrome fires beforeinstallprompt once, early, and only
@@ -14,10 +13,8 @@ captureInstallPrompt();
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AppErrorBoundary>
-      <TooltipProvider>
-        <App />
-        <PwaStatus />
-      </TooltipProvider>
+      <App />
+      <PwaStatus />
     </AppErrorBoundary>
   </StrictMode>,
 );

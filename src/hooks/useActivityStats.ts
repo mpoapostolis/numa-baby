@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { summarizeDay, summarizeDays } from "../domain/daySummary";
+import { dayKey, summarizeDay, summarizeDays } from "../domain/daySummary";
 import {
   DIAPER_BOUNDS,
   FEED_BOUNDS,
@@ -8,7 +8,7 @@ import {
   forecast,
   gapsBetween,
 } from "../domain/forecast";
-import { ageInMonths, isSameDay, minutesOnDay } from "../domain/time";
+import { ageInMonths } from "../domain/time";
 import { Activity, Profile } from "../domain/types";
 
 // Every derived figure the screens read, split into two memos: one pass over
@@ -140,15 +140,6 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
     const { sortedActivities } = base;
     // Derived from minuteClock, not a render-time `new Date()`, so every figure
     // rolls over together at midnight while the app stays open.
-    const todayActivities = sortedActivities.filter((activity) =>
-      isSameDay(activity.startedAt, new Date(minuteClock)),
-    );
-    const feedsToday = todayActivities.filter(
-      (activity) => activity.type === "bottle" || activity.type === "nursing",
-    );
-    const bottleMlToday = feedsToday.reduce((sum, activity) => sum + (activity.amount ?? 0), 0);
-    const diapersToday = todayActivities.filter((activity) => activity.type === "diaper").length;
-
     // Re-judged every minute, so a window that has gone by stops presenting
     // history as a forecast the moment it does.
     const forecasts = {
@@ -157,24 +148,29 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
       diaper: atClock(base.forecasts.diaper, minuteClock),
     };
 
-    const weekly = Array.from({ length: 7 }, (_, index) => {
-      const date = new Date(minuteClock);
-      date.setHours(12, 0, 0, 0);
-      date.setDate(date.getDate() - (6 - index));
-      const dayActivities = sortedActivities.filter((activity) => isSameDay(activity.startedAt, date));
-      const feeds = dayActivities.filter(
-        (activity) => activity.type === "bottle" || activity.type === "nursing",
-      );
-      return {
-        date,
-        feeds,
-        ml: feeds.reduce((sum, activity) => sum + (activity.amount ?? 0), 0),
-        diapers: dayActivities.filter((activity) => activity.type === "diaper").length,
-        sleep: sortedActivities
-          .filter((activity) => activity.type === "sleep")
-          .reduce((sum, activity) => sum + minutesOnDay(activity, date, minuteClock), 0),
-      };
-    });
+    // The full breakdown every recap quotes — one shared source so Today,
+    // Timeline and Insights can never disagree about a number.
+    const today = summarizeDay(sortedActivities, new Date(minuteClock), minuteClock);
+    // A fortnight of daily totals for the trend line — one pass, not fourteen.
+    const recentDays = summarizeDays(sortedActivities, new Date(minuteClock), 14, minuteClock);
+
+    // The week is the tail of that fortnight. This used to be seven filters
+    // over the whole list plus a sleep walk per day, every minute — fourteen
+    // full passes to redraw a chart that had not changed. Only the feed LISTS
+    // are gathered here, in one pass; Insights counts bottles inside them.
+    const weekDays = recentDays.slice(-7);
+    const feedsByDay = new Map(weekDays.map((day) => [dayKey(day.date), [] as Activity[]]));
+    for (const activity of sortedActivities) {
+      if (activity.type !== "bottle" && activity.type !== "nursing") continue;
+      feedsByDay.get(dayKey(new Date(activity.startedAt)))?.push(activity);
+    }
+    const weekly = weekDays.map((day) => ({
+      date: day.date,
+      feeds: feedsByDay.get(dayKey(day.date)) ?? [],
+      ml: day.ml,
+      diapers: day.diapers,
+      sleep: day.sleepMinutes,
+    }));
     const maxMl = Math.max(...weekly.map((day) => day.ml), 1);
 
     // Average over days actually tracked, not a fixed 7 — a two-day-old install
@@ -187,19 +183,10 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
       ? Math.round((weekly.reduce((sum, day) => sum + day.feeds.length, 0) / trackedDays) * 10) / 10
       : null;
 
-    // The full breakdown every recap quotes — one shared source so Today,
-    // Timeline and Insights can never disagree about a number.
-    const today = summarizeDay(sortedActivities, new Date(minuteClock), minuteClock);
-    // A fortnight of daily totals for the trend line — one pass, not fourteen.
-    const recentDays = summarizeDays(sortedActivities, new Date(minuteClock), 14, minuteClock);
-
     return {
       today,
       recentDays,
-      todayActivities,
-      feedsToday,
-      bottleMlToday,
-      diapersToday,
+      bottleMlToday: today.ml,
       forecasts,
       weekly,
       maxMl,
@@ -208,7 +195,9 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
     };
   }, [base, minuteClock]);
 
-  const babyAgeMonths = ageInMonths(profile.birthDate);
+  const babyAgeMonths = ageInMonths(profile.birthDate, minuteClock);
 
-  return { ...base, ...timeSensitive, babyAgeMonths };
+  // One object identity per change, not per render: every screen takes this
+  // whole and React.memo on them is only as good as this reference.
+  return useMemo(() => ({ ...base, ...timeSensitive, babyAgeMonths }), [base, timeSensitive, babyAgeMonths]);
 }

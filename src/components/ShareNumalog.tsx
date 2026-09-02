@@ -7,7 +7,7 @@
 // dependency would cost more bytes than this whole file.
 
 import { Copy, ExternalLink } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "../lib/toast";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 import { track } from "../domain/analytics";
 import { APP_SHARE } from "../domain/shareApp";

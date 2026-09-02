@@ -1,5 +1,5 @@
-import { Suspense, lazy, useEffect, useState } from "react";
-import { ChevronRight, Cloud, CloudOff, ExternalLink, Gift, Milk, Pill, ShieldCheck, Square, Thermometer, Utensils, Waves, Weight } from "lucide-react";
+import { Suspense, lazy, memo, useState } from "react";
+import { ChevronRight, Cloud, CloudOff, Gift, Milk, Pill, ShieldCheck, Square, Thermometer, Utensils, Waves, Weight } from "lucide-react";
 
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -13,10 +13,9 @@ import { TrendChart } from "../components/TrendChart";
 // The noise generator is only needed once someone asks for it, so it stays
 // out of the bundle every parent downloads.
 import { EmptyState } from "../components/EmptyState";
-import { LittleBottle, TinyStars } from "../components/illustrations";
+import { LittleBottle } from "../components/illustrations";
 import { BabyCompanion, CompanionMood } from "../components/BabyCompanion";
 import { mlBucket, track } from "../domain/analytics";
-import { bracketOfAge, factOfTheDay } from "../domain/babyFacts";
 import { summarizeDay } from "../domain/daySummary";
 import { makeId } from "../domain/id";
 import {
@@ -32,7 +31,7 @@ import {
 } from "../domain/time";
 import { Activity, DiaperKind, Profile, Sheet } from "../domain/types";
 import { UnitSystem, formatVolume, useUnits } from "../domain/units";
-import { milestoneFor, milestoneSeen } from "../domain/milestones";
+import { Milestone } from "../domain/milestones";
 
 // A party is downloaded only on a day there is one.
 // The sound player is only needed once someone asks for it — it stays out
@@ -46,6 +45,9 @@ const ShareNumalogDialog = lazy(() => import("../components/ShareNumalog"));
 const MilestoneParty = lazy(() =>
   import("../components/MilestoneParty").then((m) => ({ default: m.MilestoneParty })),
 );
+// The fact card carries the whole eleven-kilobyte fact table with it; it
+// sits below the log tiles, so a frame's delay costs a tired thumb nothing.
+const FactOfTheDay = lazy(() => import("../components/FactOfTheDay"));
 import { ActivityStats } from "../hooks/useActivityStats";
 import { useSecondClock } from "../hooks/useMinuteClock";
 
@@ -215,6 +217,8 @@ type TodayScreenProps = {
   nightMode: boolean;
   minuteClock: number;
   stats: ActivityStats;
+  /** Today's milestone, decided once per day by App and frozen for the visit. */
+  celebration: Milestone | null;
   onAdd: (activity: Activity, message: string) => boolean;
   onStopTimer: (id: string) => void;
   onOpenSheet: (sheet: Exclude<Sheet, null>) => void;
@@ -227,11 +231,12 @@ type TodayScreenProps = {
   onOpenProtection: () => void;
 };
 
-export default function TodayScreen({
+function TodayScreen({
   profile,
   nightMode,
   minuteClock,
   stats,
+  celebration,
   onAdd,
   onStopTimer,
   onOpenSheet,
@@ -242,20 +247,6 @@ export default function TodayScreen({
   onOpenProtection,
 }: TodayScreenProps) {
   const units = useUnits();
-  // Computed per render against the minute clock, so a party that starts at
-  // midnight appears without a reload — but FROZEN in state the moment it
-  // qualifies: MilestoneParty marks its id seen on mount, so re-checking
-  // storage every render made the card vanish on the next minute tick or
-  // first tap. It stays for the visit; its own 🎉 button dismisses it.
-  const milestone = milestoneFor(profile.birthDate, profile.name, minuteClock);
-  const [celebration, setCelebration] = useState(() =>
-    milestone && !milestoneSeen(milestone.id) ? milestone : null,
-  );
-  useEffect(() => {
-    if (milestone && !celebration && !milestoneSeen(milestone.id)) setCelebration(milestone);
-    // The id is the identity; the object is rebuilt every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [milestone?.id]);
   const {
     sortedActivities,
     today,
@@ -481,16 +472,6 @@ export default function TodayScreen({
   // opposite of the last logged side. Both choices stay one tap.
   const lastNursingSide = sortedActivities.find((a) => a.type === "nursing")?.side;
   const nextSide = lastNursingSide === "left" ? "right" : lastNursingSide === "right" ? "left" : null;
-  // One verified fact per day, matched to the baby's exact age — the pick is
-  // deterministic (see babyFacts.ts), so both parents see the same fact.
-  // The stage list ("right now she may be…") comes from the same bracket.
-  const fact = babyDays === null ? null : factOfTheDay(babyDays);
-  const stage = babyDays === null ? null : bracketOfAge(babyDays);
-  const stageSources = stage && fact
-    ? [...new Map(
-        [...stage.doing.map((d) => d.source), fact.source].map((s) => [s.url, s]),
-      ).values()]
-    : [];
   const headline = !babyAge
     ? `Welcome, ${displayName}`
     : babyAge === "born today"
@@ -562,43 +543,10 @@ export default function TodayScreen({
           {/* The fact rides in today-main: on mobile the tap tiles order
               first, so the reading material sits just after the buttons —
               never between a tired thumb and the log. */}
-          {fact && stage && babyAge && (
-            <aside className="fact-card" aria-label="What your baby is doing at this age">
-              <span className="fact-spark" aria-hidden="true"><TinyStars size={20} /></span>
-              <div className="fact-copy">
-                <span className="t-label">
-                  {babyAge === "born today"
-                    ? "From day one"
-                    : babyAge.startsWith("almost")
-                      ? babyAge
-                      : `At ${babyAge}`}
-                </span>
-                <p className="fact-doing-lead">Right now, {displayName} may be:</p>
-                <ul className="fact-doing">
-                  {stage.doing.map((item) => (
-                    <li key={item.text}>{item.text}</li>
-                  ))}
-                </ul>
-                <p className="fact-text t-body">
-                  <strong className="fact-kicker">Did you know?</strong> {fact.text}
-                </p>
-                <p className="fact-foot">
-                  <span className="fact-pace">Every baby has their own pace.</span>
-                  {stageSources.map((source) => (
-                    <a
-                      key={source.url}
-                      className="fact-source"
-                      onClick={() => track("source_opened", { name: source.name })}
-                      href={source.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {source.name} <ExternalLink size={12} aria-hidden="true" />
-                    </a>
-                  ))}
-                </p>
-              </div>
-            </aside>
+          {babyDays !== null && babyAge && (
+            <Suspense fallback={null}>
+              <FactOfTheDay babyDays={babyDays} babyAge={babyAge} displayName={displayName} />
+            </Suspense>
           )}
           <div className="hearth">
             {!lastFeed ? (
@@ -998,3 +946,8 @@ export default function TodayScreen({
     </section>
   );
 }
+
+// Memoized: App re-renders on every minute tick, toast, sheet and sync flip,
+// and this screen is the most expensive thing it renders. With stable
+// callbacks from App, only a data change or the minute clock reaches it.
+export default memo(TodayScreen);

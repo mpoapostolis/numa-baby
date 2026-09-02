@@ -6,7 +6,7 @@
 import "../styles/screens/recovery.css";
 import { useEffect, useRef, useState } from "react";
 import { Mail, ShieldCheck } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "../lib/toast";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "./ui/dialog";
 import { InputGroup, InputGroupInput } from "./ui/input-group";

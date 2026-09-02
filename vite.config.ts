@@ -19,10 +19,36 @@ export default defineConfig({
     tailwindcss(),
     react(),
     sites(),
+    // The latin subset of the typeface, preloaded. Vite hashes the file name,
+    // so the tag is written from the bundle at build time. Without it the
+    // font was discovered only after the stylesheet had been parsed, and the
+    // first paint was in the system face with a swap mid-read.
+    {
+      name: "preload-latin-font",
+      transformIndexHtml: {
+        order: "post",
+        handler(_html, ctx) {
+          if (!ctx.bundle) return;
+          const file = Object.keys(ctx.bundle).find((name) => /geist-latin-wght-normal.*\.woff2$/.test(name));
+          if (!file) return;
+          return [{
+            tag: "link",
+            attrs: { rel: "preload", as: "font", type: "font/woff2", href: `/${file}`, crossorigin: "" },
+            injectTo: "head",
+          }];
+        },
+      },
+    },
     VitePWA({
       registerType: "prompt",
       injectRegister: null,
-      includeAssets: ["favicon.svg", "icon-192.png", "icon-512.png"],
+      // The 512px icons are read by the OS once, at install; keeping them out
+      // of the precache (see globIgnores) spares every first visit their
+      // download. The 192s are precached through the glob like anything else.
+      includeAssets: ["favicon.svg"],
+      // Otherwise every icon the manifest names is precached regardless of
+      // the glob rules below — which is exactly how the 512s got in.
+      includeManifestIcons: false,
       manifest: {
         name: "Numalog — Calm, private baby tracker",
         short_name: "Numalog",
@@ -73,8 +99,20 @@ export default defineConfig({
           // its URL.
           /\.[a-z0-9]+$/i,
         ],
-        globPatterns: ["**/*.{html,js,css,png,svg,webmanifest}"],
-        globIgnores: ["**/og-baby-tracker.png"],
+        // woff2 too: the typeface is part of the offline promise. An installed
+        // app opened after the HTTP cache had been evicted rendered in the
+        // system face with Geist's tracking applied to the wrong letters.
+        // Only the latin subsets, though — cyrillic and vietnamese never
+        // render an English UI and unicode-range keeps them lazy online.
+        globPatterns: ["**/*.{html,js,css,png,svg,webmanifest,woff2}"],
+        globIgnores: [
+          "**/og-baby-tracker.png",
+          "**/icon-512.png",
+          "**/icon-maskable-512.png",
+          "**/geist-cyrillic-*.woff2",
+          "**/geist-cyrillic-ext-*.woff2",
+          "**/geist-vietnamese-*.woff2",
+        ],
         // The soothing sounds are ~1.5MB of media nobody should pay for at
         // install time — cached on first play instead, then they work
         // offline like everything else.

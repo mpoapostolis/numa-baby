@@ -26,7 +26,6 @@
     <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
     <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
-    <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="canonical" href="https://numalog.app/" />
     <title>Numalog — Calm, private baby tracker</title>
     <script type="application/ld+json">
@@ -97,12 +96,11 @@
         Health Organization or the NHS page it came from.
       </p>
     </noscript>
-    <!-- Consent Mode defaults must be set before the tag processes anything,
-         so /analytics.js loads first and synchronously. It also keeps the
-         configuration out of an inline script, so the CSP can go on refusing
-         those. -->
-    <script src="/analytics.js"></script>
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-X94KW80ZGY"></script>
+    <!-- Consent Mode defaults and the tag loader. The tag itself is only
+         fetched once a visitor has said yes (see /analytics.js); keeping the
+         configuration out of an inline script lets the CSP go on refusing
+         those. Deferred: nothing here has to run before the page paints. -->
+    <script src="/analytics.js" defer></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

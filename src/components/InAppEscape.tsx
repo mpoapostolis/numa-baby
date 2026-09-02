@@ -8,7 +8,7 @@
 // while their record is still empty and moving costs nothing.
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "../lib/toast";
 import { SquareArrowOutUpRight } from "lucide-react";
 import { Button } from "./ui/button";
 import { inAppBrowser, inAppBrowserName } from "../domain/install";
