@@ -293,9 +293,11 @@ export function bucketByDay(activities: Activity[], now: number): Map<string, Ac
     const endMs = activity.endedAt ? new Date(activity.endedAt).getTime() : now;
     const cursor = new Date(activity.startedAt);
     cursor.setHours(0, 0, 0, 0);
-    // A real sleep crosses one midnight; a forgotten timer is capped by the
-    // stale rule in summarizeDay, so two more days is every day worth filing.
-    for (let step = 0; step < 2; step++) {
+    // Every day the span touches, exactly as summarizeDays files it — a
+    // closed span with a wrong end date is not capped by the stale rule
+    // (that guards open timers), and two screens must agree about it. The
+    // bound only stops a corrupt row from walking for ever.
+    for (let step = 0; step < 31; step++) {
       cursor.setDate(cursor.getDate() + 1);
       if (cursor.getTime() >= endMs) break;
       file(dayKey(cursor), activity);

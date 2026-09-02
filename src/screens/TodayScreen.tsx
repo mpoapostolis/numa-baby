@@ -219,6 +219,8 @@ type TodayScreenProps = {
   stats: ActivityStats;
   /** Today's milestone, decided once per day by App and frozen for the visit. */
   celebration: Milestone | null;
+  /** The party's own 🎉: dismissed for the day, on every return to Today. */
+  onDismissCelebration: () => void;
   onAdd: (activity: Activity, message: string) => boolean;
   onStopTimer: (id: string) => void;
   onOpenSheet: (sheet: Exclude<Sheet, null>) => void;
@@ -237,6 +239,7 @@ function TodayScreen({
   minuteClock,
   stats,
   celebration,
+  onDismissCelebration,
   onAdd,
   onStopTimer,
   onOpenSheet,
@@ -502,7 +505,7 @@ function TodayScreen({
     >
       {celebration && (
         <Suspense fallback={null}>
-          <MilestoneParty milestone={celebration} />
+          <MilestoneParty milestone={celebration} onDismiss={onDismissCelebration} />
         </Suspense>
       )}
 

@@ -247,7 +247,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
       // We're clearly online: flush anything the partner is still missing.
       schedulePush();
     } catch (error) {
-      markFailed(error);
+      markFailed(error, before.token);
     } finally {
       l.pullBusy = false;
     }
@@ -360,12 +360,20 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
   // and a heartbeat while visible. One interval, always cleaned up. The
   // opening pull is deferred to a timer so no state ever changes synchronously
   // inside the effect body.
+  // The heartbeat on its own, so a change of cadence (the device count
+  // arriving, a partner joining) re-arms the interval and nothing else.
   useEffect(() => {
     if (debugMode || !paired || bootState !== "ready") return;
-    const opener = window.setTimeout(() => void runPull(true), 0);
     const interval = window.setInterval(() => {
       if (!document.hidden) void runPull(false);
     }, solo ? SOLO_PULL_INTERVAL_MS : PULL_INTERVAL_MS);
+    return () => window.clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debugMode, paired, bootState, solo]);
+
+  useEffect(() => {
+    if (debugMode || !paired || bootState !== "ready") return;
+    const opener = window.setTimeout(() => void runPull(true), 0);
     const onVisibility = () => {
       if (!document.hidden) {
         void runPull(true);
@@ -382,7 +390,6 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     window.addEventListener("pagehide", flushPush);
     return () => {
       window.clearTimeout(opener);
-      window.clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pagehide", flushPush);
     };
@@ -390,7 +397,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     // value through live.current, and re-arming the listeners per render would
     // tear down the heartbeat on every keystroke.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debugMode, paired, bootState, solo]);
+  }, [debugMode, paired, bootState]);
 
   // BACKFILL trigger: a merged backup bumps backfillVersion. The flag is
   // raised here rather than inside the merge because the store cannot reach

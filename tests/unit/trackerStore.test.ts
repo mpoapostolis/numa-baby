@@ -716,3 +716,17 @@ test("a fresh install starts on the system theme; a phone with a log keeps its o
   await waitFor(() => expect(settled.result.current.bootState).toBe("ready"));
   expect(settled.result.current.themeChoice).toBe("light");
 });
+
+test("a fresh install's first save keeps the theme on 'system'", async () => {
+  const toasts: Toast[] = [];
+  const { result } = renderStore(toasts);
+  await waitFor(() => expect(result.current.bootState).toBe("onboarding"));
+  expect(result.current.themeChoice).toBe("system");
+
+  act(() => {
+    result.current.completeOnboarding({ name: "Mia", birthDate: "2026-05-01", feedingMode: "mixed" });
+  });
+  await waitFor(() => expect(result.current.bootState).toBe("ready"));
+  // The backfill writes the CHOICE, so the phone keeps following its OS.
+  expect(window.localStorage.getItem(THEME_KEY)).toBe("system");
+});

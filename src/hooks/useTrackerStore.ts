@@ -378,11 +378,12 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     }
     persistedStateRef.current = nextPersisted;
     try {
-      // A legacy backfill only: from then on the key is written by
-      // changeTheme, and "system" must never be overwritten by the theme
-      // that happens to be in effect.
+      // A legacy backfill only, and of the CHOICE, never of the theme in
+      // effect: a fresh install is on "system" and its first save must not
+      // pin it to whatever the phone happened to be at noon. From then on
+      // the key is written by changeTheme.
       if (window.localStorage.getItem(THEME_KEY) === null) {
-        window.localStorage.setItem(THEME_KEY, nextNightMode ? "dark" : "light");
+        window.localStorage.setItem(THEME_KEY, themeChoiceRef.current);
       }
     } catch {
       // The blob carries the theme too; theme-init.js falls back to it.
@@ -529,6 +530,15 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     // edit sheet, not a one-handed 3am operation. Now it is the same Undo
     // every other tap has.
     showToast(`${TIMER_LABEL[target.type] ?? "Session"} saved — ${humanDuration(ranForMinutes)}`, () => {
+      // Not while another timer of the same kind has started since: two open
+      // sleeps is a mess the stop button cannot untangle.
+      const anotherRunning = persistedStateRef.current.activities.some(
+        (activity) => activity.id !== id && activity.type === target.type && !activity.endedAt && !activity.deleted,
+      );
+      if (anotherRunning) {
+        showToast(`Another ${TIMER_NOUN[target.type] ?? "timer"} is already running — stop that one first.`);
+        return;
+      }
       const reopened = persistedStateRef.current.activities.map((activity) => {
         if (activity.id !== id) return activity;
         const running: Activity = { ...activity, updatedAt: new Date().toISOString() };

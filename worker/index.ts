@@ -1,6 +1,7 @@
 /// <reference types="@cloudflare/workers-types" />
 import { createClient } from "@libsql/client/web";
 import { handleAdmin } from "./admin";
+import { budgetKey } from "./budgetKey";
 import { handleFeedback } from "./feedback";
 import {
   handleEmailLink,
@@ -264,14 +265,6 @@ async function handleInvite(env: Env, familyId: string): Promise<Response> {
     "write",
   );
   return json({ code, expiresAt });
-}
-
-// Behind mobile NAT a whole carrier shares one IPv4 address; on IPv6 one
-// household owns 2^64 of them, and a budget per full address was a budget
-// per guess. Budget at the size that stands for one connection: the whole
-// v4 address, the first 64 bits of v6.
-function budgetKey(ip: string): string {
-  return ip.includes(":") ? ip.split(":").slice(0, 4).join(":") : ip;
 }
 
 let budgetTableReady = false;

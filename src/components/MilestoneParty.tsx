@@ -10,7 +10,7 @@ import "../styles/screens/milestone.css";
 import { useEffect, useState } from "react";
 import { PartyPopper } from "lucide-react";
 import { Button } from "./ui/button";
-import { Milestone, markMilestoneSeen } from "../domain/milestones";
+import { Milestone, markMilestoneSeen, milestoneSeen } from "../domain/milestones";
 import { track } from "../domain/analytics";
 
 const COLORS = ["var(--glyph-bottle)", "var(--glyph-nursing)", "var(--glyph-diaper)", "var(--glyph-sleep)", "var(--glyph-burp)"];
@@ -23,10 +23,13 @@ const PIECES = Array.from({ length: 28 }, (_, i) => ({
   size: 6 + ((i * 13) % 3) * 2,
 }));
 
-export function MilestoneParty({ milestone }: { milestone: Milestone }) {
+export function MilestoneParty({ milestone, onDismiss }: { milestone: Milestone; onDismiss?: () => void }) {
   const [dismissed, setDismissed] = useState(false);
   // Confetti falls once and cleans up after itself; the card stays until read.
-  const [raining, setRaining] = useState(true);
+  // Once per milestone, not once per mount: Today unmounts on every tab
+  // switch, and the card is held for the day by App, so a return to Today
+  // remounts this — the card again, the paper not.
+  const [raining, setRaining] = useState(() => !milestoneSeen(milestone.id));
   useEffect(() => {
     track("milestone_shown", { id: milestone.id });
     markMilestoneSeen(milestone.id);
@@ -62,7 +65,7 @@ export function MilestoneParty({ milestone }: { milestone: Milestone }) {
           <strong>{milestone.title}</strong>
           <small>{milestone.sub}</small>
         </div>
-        <Button variant="ghost" size="sm" aria-label="Dismiss the celebration" onClick={() => setDismissed(true)}>🎉</Button>
+        <Button variant="ghost" size="sm" aria-label="Dismiss the celebration" onClick={() => { setDismissed(true); onDismiss?.(); }}>🎉</Button>
       </div>
     </>
   );

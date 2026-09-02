@@ -30,7 +30,7 @@ execFileSync(process.execPath, [
   join(here, "prerender", "entry.ts"),
   "--format", "esm",
   "--file", tmp,
-  "--log-level", "silent",
+  "--logLevel", "silent",
 ], { stdio: "inherit" });
 const data = await import(pathToFileURL(tmp).href);
 

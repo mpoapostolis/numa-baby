@@ -397,6 +397,7 @@ export default function HomePage() {
   }
   const celebration = milestoneGate.milestone;
   const milestoneToday = celebration !== null;
+  const dismissCelebration = useCallback(() => setMilestoneGate((gate) => ({ ...gate, milestone: null })), []);
   const protectMoment =
     !milestoneToday && consent !== null && sheet === null && !protectIntroDone &&
     (justOnboarded || activities.filter((activity) => !activity.deleted).length >= 5);
@@ -808,6 +809,7 @@ export default function HomePage() {
               minuteClock={minuteClock}
               stats={stats}
               celebration={celebration}
+              onDismissCelebration={dismissCelebration}
               onAdd={onAdd}
               onStopTimer={onStopTimer}
               onOpenSheet={onOpenSheet}
