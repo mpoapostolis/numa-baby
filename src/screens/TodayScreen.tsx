@@ -8,6 +8,8 @@ import { ActivityGlyph } from "../components/ActivityGlyph";
 import { ActivityRow } from "../components/ActivityRow";
 import { DayBand } from "../components/DayBand";
 import { ComingUp, ComingUpEntry } from "../components/ComingUp";
+import { LastNight } from "../components/LastNight";
+import { NormalCheck } from "../components/NormalCheck";
 import { DayRecap } from "../components/DayRecap";
 import { TrendChart } from "../components/TrendChart";
 // The noise generator is only needed once someone asks for it, so it stays
@@ -32,7 +34,11 @@ import {
 import { Activity, DiaperKind, Profile, Sheet } from "../domain/types";
 import { UnitSystem, formatVolume, useUnits } from "../domain/units";
 import { Milestone } from "../domain/milestones";
-import { LifetimeTotals } from "../domain/shareCards";
+import { LifetimeTotals } from "../domain/lifetime";
+import { shareLink } from "../domain/shareApp";
+import { isMorning, summarizeNight } from "../domain/nightSummary";
+import { typicalVerdict } from "../domain/typical";
+import { shareCardOnTap } from "../lib/shareOnTap";
 
 // A party is downloaded only on a day there is one.
 // The sound player is only needed once someone asks for it — it stays out
@@ -266,6 +272,7 @@ function TodayScreen({
     activeTimers,
     typicalGap,
     forecasts,
+    rhythm,
   } = stats;
 
   // The companion notices the moment a completed care entry lands: the entry
@@ -469,6 +476,20 @@ function TodayScreen({
 
   const babyAge = formatBabyAge(profile.birthDate, minuteClock);
   const babyDays = ageInDays(profile.birthDate, minuteClock);
+
+  // Last night, in the morning. Recomputed on the minute clock like every
+  // other figure on this screen, so it appears and retires on its own.
+  const lastNight = isMorning(minuteClock) ? summarizeNight(sortedActivities, minuteClock) : null;
+  // "Is this normal?" reads YESTERDAY — a day that is over. recentDays runs
+  // oldest-first and ends with today, so the day before is second from last.
+  const normal = typicalVerdict(recentDays[recentDays.length - 2], babyDays);
+
+  // The app calling it right, as a picture. Offered only on a run the card
+  // itself judges worth showing.
+  function shareRhythm() {
+    track("rhythm_shared", { checked: rhythm.feed.checked, hits: rhythm.feed.hits });
+    void shareCardOnTap((cards) => cards.rhythmCard(profile.name, rhythm.feed), "numalog-rhythm.png", `${displayName} · ${shareLink("rhythm")}`);
+  }
   const trimmedName = profile.name.trim();
   // Display-capitalize the name — "mia" typed at onboarding still
   // deserves a headline. The stored profile is never rewritten.
@@ -545,6 +566,12 @@ function TodayScreen({
           thing a parent had just started was off the bottom of the screen and
           had to be scrolled to. Whatever is counting is what they came back to
           look at. */}
+      {/* The first question of the morning, answered before it is asked, and
+          ABOVE the tiles: inside the clock column it landed a screen and a
+          half down, which is no use to anybody at seven. Mornings only, and
+          only when the night holds something. */}
+      {lastNight && <LastNight night={lastNight} name={profile.name} />}
+
       <div className={`today-dashboard${activeTimers.length > 0 ? " has-live" : ""}`}>
         <div className="today-main">
           {/* The fact rides in today-main: on mobile the tap tiles order
@@ -600,7 +627,13 @@ function TodayScreen({
 
           </div>
 
-          <ComingUp entries={comingUp} now={minuteClock} />
+          <ComingUp
+            entries={comingUp}
+            now={minuteClock}
+            name={profile.name}
+            record={rhythm.feed}
+            onShareRecord={shareRhythm}
+          />
 
           {/* Shown from the first thing ever logged. A fresh install skips it
               — four em-dashes read as breakage, not calm — but a quiet morning
@@ -618,6 +651,9 @@ function TodayScreen({
               } : undefined}
             />
           )}
+
+          {/* The question the numbers above are being asked in aid of. */}
+          <NormalCheck verdict={normal} name={profile.name} />
 
           {/* Day-by-day totals: the question a single day cannot answer. Shown
               once there is more than one day of history to compare. */}

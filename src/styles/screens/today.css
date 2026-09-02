@@ -1381,3 +1381,209 @@
   color: color-mix(in oklab, var(--glyph-diaper) 70%, var(--ink-2));
   border-color: color-mix(in oklab, var(--glyph-diaper) 30%, var(--border));
 }
+
+/* The Rhythm card's track record — the line that makes the forecast a claim
+   the app can be held to rather than a horoscope. */
+.rhythm-record {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 0 6px;
+  border-top: 1px solid var(--border);
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.rhythm-record button {
+  flex: 0 0 auto;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  min-height: 40px;
+  margin: -8px -6px -8px 0;
+  padding: 0;
+  color: var(--signal);
+}
+
+/* ——— Last night ————————————————————————————————————————————————
+   A morning card. The figures are the ones a parent is actually asked for
+   on the phone, in the order they are asked. */
+.night-card {
+  margin-bottom: 16px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(135deg, color-mix(in oklab, var(--glyph-sleep) 7%, var(--card)), var(--card) 65%);
+}
+
+.night-card header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.night-card header > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.night-card h2 {
+  margin: 0;
+}
+
+.night-line {
+  margin: 2px 0 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.night-card header button {
+  flex: 0 0 auto;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  color: var(--signal);
+}
+
+.night-figures {
+  display: grid;
+  /* Two abreast on a phone, so four figures make a tidy square rather than
+     a row of three and an orphan. */
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.night-figure {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  background: color-mix(in oklab, var(--card) 70%, transparent);
+}
+
+.night-figure .figure {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.night-figure span {
+  color: var(--ink-2);
+  font-size: 0.75rem;
+}
+
+/* ——— Is this normal? ——————————————————————————————————————————
+   The answer first, the numbers under it, one source. Sage when the day was
+   ordinary; never red when it was not — a card that frightens a parent at
+   3am has failed even when it is right. */
+.normal-check {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid color-mix(in oklab, var(--signal) 22%, var(--border));
+  border-radius: var(--radius-xl);
+  background: var(--card);
+}
+
+.normal-check.is-ordinary {
+  border-color: color-mix(in oklab, var(--glyph-diaper) 26%, var(--border));
+  background: linear-gradient(135deg, color-mix(in oklab, var(--glyph-diaper) 7%, var(--card)), var(--card) 70%);
+}
+
+.normal-check header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.normal-check .action-icon {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--signal) var(--glyph-wash), var(--card));
+  color: var(--signal);
+}
+
+.normal-check.is-ordinary .action-icon {
+  background: color-mix(in oklab, var(--glyph-diaper) var(--glyph-wash), var(--card));
+  color: var(--glyph-diaper);
+}
+
+.normal-check h2 {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.normal-check ul {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+  list-style: none;
+}
+
+.normal-check li {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  background: var(--muted);
+}
+
+/* Outside the range is a fact, not an alarm: the app's own accent, never a
+   warning colour. */
+.normal-check li.is-outside {
+  background: color-mix(in oklab, var(--signal) 10%, var(--card));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--signal) 26%, transparent);
+}
+
+.normal-label {
+  color: var(--ink-2);
+  font-size: 0.75rem;
+}
+
+.normal-value {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.normal-value strong {
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.normal-value small {
+  color: var(--ink-3);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.normal-note {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.normal-note a {
+  color: var(--signal);
+}

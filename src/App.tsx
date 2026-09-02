@@ -14,7 +14,8 @@ import { BabyFace, SleepingBaby } from "./components/illustrations";
 import { ConsentBanner } from "./components/ConsentBanner";
 import { InAppEscape } from "./components/InAppEscape";
 import { Milestone, milestoneFor, milestoneSeen } from "./domain/milestones";
-import { lifetimeTotals } from "./domain/shareCards";
+import { lifetimeTotals } from "./domain/lifetime";
+import { shouldOfferNightHelp } from "./domain/nightAlone";
 import { useStableCallback } from "./hooks/useStableCallback";
 import { FeedbackBubble } from "./components/FeedbackBubble";
 // Lazy: a returning family boots straight to Today and never downloads the
@@ -70,6 +71,7 @@ const HandoffScreen = lazy(() => import("./screens/HandoffScreen").then((m) => (
 // a parent downloads at 3am.
 const BackupNudgeCard = lazy(() => import("./components/BackupNudge").then((m) => ({ default: m.BackupNudgeCard })));
 // The one-time cloud-protection announcement for families that predate it.
+const NightHelp = lazy(() => import("./components/NightHelp").then((m) => ({ default: m.NightHelp })));
 const ProtectIntro = lazy(() => import("./components/ProtectIntro").then((m) => ({ default: m.ProtectIntro })));
 const NewsDialog = lazy(() => import("./components/NewsDialog").then((m) => ({ default: m.NewsDialog })));
 const RecoverLinkDialog = lazy(() => import("./components/RecoverLinkDialog"));
@@ -122,6 +124,8 @@ function NavTrigger() {
 
 const SEEN_RELEASE_KEY = "numa-baby-seen-release-v1";
 const BACKUP_DISMISSED_KEY = "numa-baby-backup-nudge-v1";
+/** Asked once for a second phone at 3am; the value is only ever "1". */
+const NIGHT_HELP_KEY = "numalog-night-help-v1";
 
 function readStamp(key: string): string | null {
   try {
@@ -464,11 +468,30 @@ export default function HomePage() {
   // the first entry, not after five entries.
   const oldestEntry = sortedActivities[sortedActivities.length - 1];
   const firstMorning = oldestEntry !== undefined && dayKey(new Date(oldestEntry.startedAt)) !== dayKey(new Date(minuteClock));
+  // The 3am offer: a second phone, at the hour the reason for it is obvious.
+  // Once in the life of this phone, and never while it is already shared.
+  const [nightHelpAsked, setNightHelpAsked] = useState(() => {
+    try {
+      return window.localStorage.getItem(NIGHT_HELP_KEY) !== null;
+    } catch {
+      return true;
+    }
+  });
+  const nightHelp = shouldOfferNightHelp({
+    activities: sortedActivities,
+    now: minuteClock,
+    paired: Boolean(familySync.pairing),
+    askedBefore: nightHelpAsked,
+  });
+  function closeNightHelp() {
+    try { window.localStorage.setItem(NIGHT_HELP_KEY, "1"); } catch { /* storage blocked */ }
+    setNightHelpAsked(true);
+  }
   const protectMoment =
     !milestoneToday && consent !== null && sheet === null && !protectIntroDone &&
     (justOnboarded || firstMorning || activities.length >= 5);
   const showWhatsNew =
-    activeTab === "today" && releasesToShow.length > 0 && !milestoneToday && !protectMoment;
+    activeTab === "today" && releasesToShow.length > 0 && !milestoneToday && !protectMoment && !nightHelp;
 
   useEffect(() => {
     // Everything is new to someone who just arrived; greeting them with a
@@ -840,7 +863,17 @@ export default function HomePage() {
         {/* Gated on releases EXISTING, not on the tab-dependent showWhatsNew
             flag — otherwise the nudge shows on Timeline and vanishes the
             moment the person returns to Today, which reads as a glitch. */}
-        {pendingBackupNudge && !milestoneToday && !protectMoment && releasesToShow.length === 0 && !familySync.pairing && (
+        {nightHelp && activeTab === "today" && !milestoneToday && !protectMoment && (
+          <Suspense fallback={null}>
+            <NightHelp
+              name={profile.name}
+              onInvite={() => { track("night_help_accepted"); closeNightHelp(); navigateTo("more"); }}
+              onDismiss={() => { track("night_help_dismissed"); closeNightHelp(); }}
+            />
+          </Suspense>
+        )}
+
+        {pendingBackupNudge && !nightHelp && !milestoneToday && !protectMoment && releasesToShow.length === 0 && !familySync.pairing && (
           <Suspense fallback={null}>
           <BackupNudgeCard
             nudge={pendingBackupNudge}

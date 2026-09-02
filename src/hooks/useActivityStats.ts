@@ -8,6 +8,7 @@ import {
   forecast,
   gapsBetween,
 } from "../domain/forecast";
+import { rhythmRecord, stepsFromMoments } from "../domain/rhythm";
 import { ageInMonths } from "../domain/time";
 import { Activity, Profile } from "../domain/types";
 
@@ -115,8 +116,23 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
       ),
     };
 
+    // How well those forecasts have actually done — recomputed from the same
+    // log, so the app can be checked rather than believed.
+    const rhythm = {
+      feed: rhythmRecord("feed", stepsFromMoments(feedTimes), FEED_BOUNDS),
+      sleep: rhythmRecord(
+        "sleep",
+        chronologicalSleeps.slice(1).map((sleep, index) => ({
+          from: new Date(chronologicalSleeps[index].endedAt!).getTime(),
+          to: new Date(sleep.startedAt).getTime(),
+        })),
+        SLEEP_BOUNDS,
+      ),
+    };
+
     return {
       sortedActivities,
+      rhythm,
       lastFeed,
       lastBottle,
       activeNursing,

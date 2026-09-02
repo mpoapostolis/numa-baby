@@ -11,12 +11,10 @@ import { ActivityGlyph } from "./ActivityGlyph";
 import { track } from "../domain/analytics";
 import { Button } from "./ui/button";
 import { DaySummary } from "../domain/daySummary";
-import { dayCard } from "../domain/shareCards";
 import { shareLink } from "../domain/shareApp";
 import { formatTime, humanDuration } from "../domain/time";
 import { formatVolume, useUnits, volumeParts } from "../domain/units";
-import { renderCard, shareImage } from "../lib/shareCard";
-import { toast } from "../lib/toast";
+import { shareCardOnTap } from "../lib/shareOnTap";
 
 // Unit demotion, the house rule: digits speak, units recede.
 function Duration({ minutes }: { minutes: number }) {
@@ -118,10 +116,11 @@ export function DayRecap({ summary, title, name = "", stepper }: DayRecapProps) 
   const dayKey = `${summary.date.getFullYear()}-${String(summary.date.getMonth() + 1).padStart(2, "0")}-${String(summary.date.getDate()).padStart(2, "0")}`;
   function share() {
     track("day_shared", { today: summary.isToday });
-    void renderCard(dayCard(name, summary, units))
-      .then((blob) => shareImage(blob, `numalog-${dayKey}.png`, `${name.trim() || "Baby"} · ${title.toLowerCase()} · ${shareLink("day")}`))
-      .then((outcome) => { if (outcome === "saved") toast("Picture saved to your device"); })
-      .catch(() => toast("Could not make the picture on this phone"));
+    void shareCardOnTap(
+      (cards) => cards.dayCard(name, summary, units),
+      `numalog-${dayKey}.png`,
+      `${name.trim() || "Baby"} · ${title.toLowerCase()} · ${shareLink("day")}`,
+    );
   }
   const milk = volumeParts(summary.ml, units);
   const bracket =

@@ -7,10 +7,15 @@
 
 import { DaySummary } from "./daySummary";
 import { Milestone } from "./milestones";
+import { NightSummary } from "./nightSummary";
+import { RhythmRecord } from "./rhythm";
 import { formatTime, humanDuration } from "./time";
 import { UnitSystem, formatVolume, weightParts } from "./units";
 import { VisitSummary } from "./visitSummary";
+import { LifetimeTotals } from "./lifetime";
 import { Activity } from "./types";
+
+export type { LifetimeTotals };
 
 export type CardStat = { value: string; label: string };
 
@@ -51,41 +56,6 @@ function hours(minutes: number): string {
 function bigVolume(ml: number, units: UnitSystem): string {
   if (units === "metric" && ml >= 10_000) return `${(ml / 1_000).toFixed(1)} L`;
   return formatVolume(ml, units);
-}
-
-export type LifetimeTotals = { feeds: number; nappies: number; sleepMinutes: number; ml: number };
-
-/**
- * Everything since day one. Tombstones are skipped; a sleep still running,
- * or one left open for days, is not counted — a forgotten stopwatch is not
- * a week of sleep.
- */
-export function lifetimeTotals(activities: Activity[]): LifetimeTotals {
-  const totals: LifetimeTotals = { feeds: 0, nappies: 0, sleepMinutes: 0, ml: 0 };
-  for (const activity of activities) {
-    if (activity.deleted) continue;
-    switch (activity.type) {
-      case "bottle":
-        totals.feeds += 1;
-        totals.ml += activity.amount ?? 0;
-        break;
-      case "nursing":
-        totals.feeds += 1;
-        break;
-      case "diaper":
-        totals.nappies += 1;
-        break;
-      case "sleep": {
-        if (!activity.endedAt) break;
-        const minutes = (new Date(activity.endedAt).getTime() - new Date(activity.startedAt).getTime()) / 60_000;
-        if (minutes > 0 && minutes <= 24 * 60) totals.sleepMinutes += Math.round(minutes);
-        break;
-      }
-      default:
-        break;
-    }
-  }
-  return totals;
 }
 
 /**
@@ -190,5 +160,44 @@ export function visitCard(summary: VisitSummary, name: string, age: string | nul
     sub: first && last ? `${dayFormat.format(first)} – ${dayFormat.format(last)} · ${summary.loggedDays} of ${summary.days.length} days logged` : undefined,
     stats: stats.slice(0, 6),
     footnote: "Recorded at home by a parent, not a clinical measurement.",
+  };
+}
+
+/**
+ * The night, for the person who slept through it and the grandmother who
+ * asks every morning. The one message a parent is actually asked for.
+ */
+export function nightCard(name: string, night: NightSummary): CardSpec {
+  const stats: CardStat[] = [];
+  if (night.sleepMinutes > 0) {
+    stats.push({ value: humanDuration(night.sleepMinutes), label: "asleep" });
+    stats.push({ value: humanDuration(night.longestStretchMinutes), label: "longest stretch" });
+  }
+  if (night.wakeUps > 0) stats.push({ value: String(night.wakeUps), label: night.wakeUps === 1 ? "waking" : "wakings" });
+  if (night.feeds > 0) stats.push({ value: String(night.feeds), label: night.feeds === 1 ? "night feed" : "night feeds" });
+  return {
+    eyebrow: `Last night · ${longFormat.format(night.from)}`,
+    headline: `${possessive(name)} night`,
+    sub: night.firstFeedAt ? `First feed at ${formatTime(night.firstFeedAt)}.` : undefined,
+    stats: stats.slice(0, 4),
+  };
+}
+
+/**
+ * The app calling it right. This is the card built for one moment: the
+ * parent who has just watched a prediction land and wants to show somebody.
+ */
+export function rhythmCard(name: string, record: RhythmRecord): CardSpec {
+  const who = name.trim() || "our baby";
+  const stats: CardStat[] = [
+    { value: `${record.hits}/${record.checked}`, label: "calls right" },
+    { value: record.typicalMiss === 0 ? "spot on" : `${record.typicalMiss} min`, label: "typical miss" },
+  ];
+  return {
+    eyebrow: record.kind === "sleep" ? "It knew when the next sleep was coming" : "It knew when the next feed was coming",
+    headline: `Numalog called ${who}’s last ${record.checked} ${record.kind === "sleep" ? "sleeps" : "feeds"}`,
+    sub: "Learned from our own log — no account, nothing sent anywhere.",
+    stats,
+    footnote: "It works out the rhythm from what you have already logged.",
   };
 }

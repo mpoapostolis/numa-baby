@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { dayCard, lifetimeTotals, milestoneCard, visitCard, weekCard, WeekDay } from "@/domain/shareCards";
+import { dayCard, milestoneCard, visitCard, weekCard, WeekDay } from "@/domain/shareCards";
+import { lifetimeTotals } from "@/domain/lifetime";
 import { summarizeDay } from "@/domain/daySummary";
 import { buildVisitSummary } from "@/domain/visitSummary";
 import { Activity } from "@/domain/types";

@@ -1366,6 +1366,56 @@ body:has(.feedback-bubble) .content {
   .feedback-bubble { transition: none; }
 }
 
+/* ——— The 3am offer ————————————————————————————————————————————
+   A card, never a dialog: at this hour a modal is an assault. "Not now" is
+   the same size as "Add their phone", because the answer is usually no and
+   a no must cost one easy tap. */
+.night-help {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in oklab, var(--signal) 24%, var(--border));
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, color-mix(in oklab, var(--signal) 8%, var(--card)), var(--card) 70%);
+}
+
+.night-help .action-icon {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--signal) var(--glyph-wash), var(--card));
+  color: var(--signal);
+}
+
+.night-help-copy h2 {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.night-help-copy p {
+  margin: 4px 0 0;
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.night-help-actions {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.night-help-actions button {
+  min-height: 44px;
+}
+
 /* The backup nudge. Calm by default; the warn tone is for when the browser has
    actually said it may evict the data, which is no longer a precaution. */
 .backup-nudge {

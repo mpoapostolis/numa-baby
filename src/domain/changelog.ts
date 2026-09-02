@@ -22,6 +22,9 @@ export const RELEASES: Release[] = [
     items: [
       "Share a picture: the month-birthday card has a share button and now says everything since day one — every feed and nappy you logged. Any day's recap can go out as a picture, Insights can send the whole week, and the paediatrician summary can go ahead to the clinic the same way.",
       "Family Sync: when the other parent is not in the room, send the invite as a link instead of holding up a QR code.",
+      "The forecasts now keep score. The card is your baby’s rhythm, and under it the app says how often it has actually been right — “right 11 of the last 12 times, within 9 minutes”. A guess nobody can check is a horoscope.",
+      "Last night, waiting for you in the morning: hours asleep, the longest stretch, wakings, night feeds, first feed — and one tap to send it to whoever asks how the night went.",
+      "Is this normal? Under the day’s numbers, yesterday’s feeds, nappies and sleep are set against the published ranges, with the AAP or NHS page they came from. A range, never a target.",
       "Logging something that happened earlier is one tap now: Now, 15m ago, 30m ago, 1h ago sit under the time on every quick form, and “Past” on Sleep opens with both times already filled in.",
       "Every form has a way out at the bottom, next to Save, where your thumb already is — and deleting an entry no longer asks twice, because Undo was always the real safety net.",
       "The setup screen puts the form first on a phone, the date of birth looks like the date picker it is, and the first thing you log no longer summons this very card.",
