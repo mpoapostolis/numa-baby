@@ -3,7 +3,6 @@ import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
-import { sites } from "./build/sites-vite-plugin.ts";
 
 const APP_VERSION = new Date().toISOString().slice(0, 16).replace("T", " ");
 
@@ -18,7 +17,6 @@ export default defineConfig({
   plugins: [
     tailwindcss(),
     react(),
-    sites(),
     // The latin subset of the typeface, preloaded. Vite hashes the file name,
     // so the tag is written from the bundle at build time. Without it the
     // font was discovered only after the stylesheet had been parsed, and the

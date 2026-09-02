@@ -9,7 +9,6 @@
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "moduleDetection": "force",
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     },
@@ -21,5 +20,5 @@
     "noFallthroughCasesInSwitch": true,
     "types": ["vite/client", "node"]
   },
-  "include": ["src", "tests", "vite.config.ts"]
+  "include": ["src", "tests", "vite.config.ts", "vitest.config.ts", "scripts/prerender/entry.ts"]
 }

@@ -20,10 +20,18 @@ const dist = join(here, "..", "dist");
 const tmp = join(here, "..", "node_modules", ".cache", "prerender.mjs");
 
 // TypeScript, bundled to something node can import. Cheaper and more honest
-// than keeping a second copy of the data in JavaScript.
+// than keeping a second copy of the data in JavaScript. Bundled by rolldown —
+// the bundler Vite 8 already ships — rather than by `npx esbuild`, which was
+// not in the lockfile at all and fetched an unpinned esbuild from the
+// registry on every clean build, deploy included.
 mkdirSync(dirname(tmp), { recursive: true });
-execFileSync("npx", ["esbuild", join(here, "prerender", "entry.ts"),
-  "--bundle", "--format=esm", `--outfile=${tmp}`, "--log-level=error"], { stdio: "inherit" });
+execFileSync(process.execPath, [
+  join(here, "..", "node_modules", "rolldown", "bin", "cli.mjs"),
+  join(here, "prerender", "entry.ts"),
+  "--format", "esm",
+  "--file", tmp,
+  "--log-level", "silent",
+], { stdio: "inherit" });
 const data = await import(pathToFileURL(tmp).href);
 
 const pages = [];

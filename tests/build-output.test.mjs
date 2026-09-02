@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import { gzipSync } from "node:zlib";
 import test from "node:test";
+import { BAG_PAGE, DOCTOR_PAGE, INDEX_PAGE, MILK_PAGE, SITE, SOURCES_PAGE, STAGES } from "../scripts/prerender/pages.mjs";
 
 const dist = new URL("../dist/", import.meta.url);
 
@@ -16,59 +17,92 @@ test("builds a complete installable application shell", async () => {
   assert.match(html, /manifest\.webmanifest/i);
   assert.match(html, /og-baby-tracker\.png/i);
   assert.match(html, /assets\/index-[^"']+\.js/i);
+  // The latin face is preloaded so the first paint is in the app's own type.
+  assert.match(html, /<link rel="preload" as="font"[^>]*geist-latin-wght-normal[^>]*\.woff2/);
+  // gtag.js is fetched only after consent — never from the shell itself.
+  assert.doesNotMatch(html, /googletagmanager\.com\/gtag\/js/);
   assert.equal(manifest.id, "/");
   assert.equal(manifest.display, "standalone");
   assert.ok(manifest.icons.length >= 2);
   assert.ok(manifest.icons.some((icon) => icon.purpose?.includes("maskable")));
 });
 
-test("ships offline assets, security headers, reminders and SPA fallback", async () => {
-  const [files, headers, workerText, notificationWorker] = await Promise.all([
+test("ships offline assets, security headers, reminders and a real 404", async () => {
+  const [files, headers, notificationWorker, sw] = await Promise.all([
     readdir(dist),
     readFile(new URL("_headers", dist), "utf8"),
-    readFile(new URL("server/index.js", dist), "utf8"),
     readFile(new URL("notification-sw.js", dist), "utf8"),
+    readFile(new URL("sw.js", dist), "utf8"),
   ]);
 
   assert.ok(files.includes("sw.js"));
   assert.ok(files.includes("notification-sw.js"));
   assert.ok(files.some((file) => file.startsWith("workbox-") && file.endsWith(".js")));
   assert.match(headers, /Content-Security-Policy:/);
+  assert.match(headers, /Strict-Transport-Security:/);
   assert.match(headers, /X-Content-Type-Options: nosniff/);
-  assert.match(workerText, /env\.ASSETS\.fetch/);
-  assert.match(workerText, /\/index\.html/);
   assert.match(notificationWorker, /notificationclick/);
   assert.match(notificationWorker, /clients\.openWindow/);
+  // wrangler.jsonc answers unknown paths with a real 404 and the one client
+  // route has its own file — so no SPA-fallback worker may be emitted, and a
+  // test must never again bless one (the old Sites plugin's leftover was
+  // asserted here for months while wrangler.jsonc forbade it).
+  assert.ok(files.includes("404.html"), "404 page is emitted");
+  assert.ok(files.includes("handoff.html"), "/handoff has its own file");
+  assert.ok(!files.includes("server"), "no leftover fallback worker");
+  // The offline promise covers the typeface, but not half a megabyte of
+  // icons the OS reads once at install.
+  assert.match(sw, /geist-latin-wght-normal-[^"']+\.woff2/);
+  assert.doesNotMatch(sw, /icon-maskable-512\.png/);
+  assert.doesNotMatch(sw, /geist-cyrillic/);
 });
 
-test("keeps the initial production UI bundle lightweight", async () => {
-  const assetFiles = await readdir(new URL("assets/", dist));
-  const initialFiles = assetFiles.filter((file) => /^(index-.*\.(js|css))$/.test(file));
-  const compressedSizes = await Promise.all(initialFiles.map(async (file) => {
-    const contents = await readFile(new URL(`assets/${file}`, dist));
-    return gzipSync(contents).byteLength;
-  }));
-  const totalGzip = compressedSizes.reduce((sum, size) => sum + size, 0);
+// Gzip budgets per initial chunk, not one aggregate: an accidental static
+// import of a lazy screen could eat the whole margin and still pass a single
+// number. Measured after the boot-path work: index-*.js 111 kB, index-*.css
+// 26 kB. Raise a budget only after the split rule has been honoured (a lazy
+// screen's stylesheet ships with its chunk) — see the history of this file.
+const BUDGET_GZIP = {
+  "index-*.js": 118_000,
+  "index-*.css": 29_000,
+};
+const LAZY_SCREENS = ["SettingsScreen", "GrowthGuideScreen", "InsightsScreen", "TimelineScreen", "LogSheet", "OnboardingScreen", "sonner", "FactOfTheDay"];
 
-  // +7KB allowance over the old 165_000 pin: safety fixes (fever advice on the
-  // edit path, single-timer guards, recovery banners) plus the W3 accessibility
-  // work (visible focus indicators, reduced-motion, accessible names).
-  //
-  // +500B on top of that for the overlay-clearance rules: the consent banner,
-  // the update toast and the feedback bubble each float over the bottom corner
-  // and were covering the last line of real screens.
-  //
-  // Worth knowing before this is raised again: 31KB gzip of the 172KB is CSS,
-  // and insights/settings/growth-guide/timeline stylesheets are all eager even
-  // though their screens are lazy. Splitting them is worth ~6KB, far more than
-  // any shaving here — but they share classes with eager components
-  // (insights.css with TodayScreen, timeline.css with ActivityRow), so it is a
-  // real refactor and not a line move. Do that before granting more headroom.
-  // Raised to 173k after the cloud pill, the welcome-back onboarding and the
-  // total-erase sweep. The split rule has been honored since the last raise:
-  // settings.css, insights.css, growth-guide.css and the shared recovery.css
-  // all ship with their lazy chunks now. Next candidate before another
-  // raise: timeline.css (ActivityRow and DayRecap borrow two classes that
-  // would need rehoming first).
-  assert.ok(totalGzip < 173_000, `Initial JS + CSS is ${totalGzip} gzip bytes`);
+test("initial chunks stay inside their gzip budgets", async () => {
+  const files = await readdir(new URL("assets/", dist));
+  for (const [pattern, limit] of Object.entries(BUDGET_GZIP)) {
+    const re = new RegExp(`^${pattern.replace(".", "\\.").replace("*", ".*")}$`);
+    const file = files.find((name) => re.test(name));
+    assert.ok(file, `no file matches ${pattern}`);
+    const gz = gzipSync(await readFile(new URL(`assets/${file}`, dist))).byteLength;
+    assert.ok(gz <= limit, `${file} is ${gz} gzip bytes, budget ${limit}`);
+  }
+});
+
+test("lazy screens stay out of the shell", async () => {
+  const files = await readdir(new URL("assets/", dist));
+  const shell = files.find((name) => /^index-.*\.js$/.test(name));
+  const source = await readFile(new URL(`assets/${shell}`, dist), "utf8");
+  for (const screen of LAZY_SCREENS) {
+    assert.ok(files.some((name) => name.startsWith(`${screen}-`)), `${screen} has its own chunk`);
+    // A lazy chunk is referenced by the shell only through import() — its
+    // file name appears in the preload map, never as a static `from`.
+    assert.doesNotMatch(source, new RegExp(`from"\\./${screen}-`), `${screen} is not statically imported`);
+  }
+});
+
+test("every prerendered page is whole", async () => {
+  const files = new Set(await readdir(dist));
+  for (const page of [...STAGES, DOCTOR_PAGE, MILK_PAGE, BAG_PAGE, SOURCES_PAGE, INDEX_PAGE]) {
+    assert.ok(files.has(`${page.slug}.html`), `${page.slug}.html is emitted`);
+    const html = await readFile(new URL(`${page.slug}.html`, dist), "utf8");
+    assert.doesNotMatch(html, /undefined|\[object Object\]|NaN/, `${page.slug} has no leaked value`);
+    assert.match(html, new RegExp(`<link rel="canonical" href="${SITE.origin}/${page.slug}"`), `${page.slug} canonical`);
+    const ld = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+    assert.ok(ld, `${page.slug} has structured data`);
+    JSON.parse(ld[1]);
+    for (const [, href] of html.matchAll(/href="\/([a-z0-9-]+)"/g)) {
+      assert.ok(files.has(`${href}.html`) || href === "handoff", `${page.slug} links to /${href}`);
+    }
+  }
 });

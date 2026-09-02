@@ -146,9 +146,11 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Validation
 
 ```bash
-npm run lint
-npm test
+npm run check   # typecheck, lint, unit tests, build, build-output checks
+npm test        # unit tests only, a few seconds
 ```
+
+CI runs the same `check` on every push and pull request.
 
 ## Stack
 
@@ -158,15 +160,19 @@ npm test
 - Lucide icons
 - localStorage persistence
 - Workbox service worker via `vite-plugin-pwa`
-- Cloudflare static-assets deployment with SPA fallback
+- A Cloudflare Worker (`worker/`) serving `dist/` as static assets, with a
+  real 404 page rather than an SPA fallback — every content page and the
+  handoff route are emitted as their own files
 
 ## Deploy
 
 ```bash
-npm run build
+npm run deploy
 ```
 
-Use `npm run build` as the Cloudflare build command and `dist` as the output directory. No Node server or database is required; `wrangler.jsonc` also contains the SPA fallback configuration for CLI deployments.
+Builds `dist/` (typecheck, Vite, the prerendered pages) and runs `wrangler
+deploy` against `wrangler.jsonc`. The Family Sync database is optional for
+the static app but the Worker expects its bindings; see above.
 
 ## License
 
