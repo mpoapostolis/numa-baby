@@ -1,6 +1,6 @@
 // "For the paediatrician" — the whole picture on one page.
 //
-// Designed to survive three exits: printed on paper (lib/printDocument),
+// Designed to survive three exits: sent as a PDF (lib/visitPdf),
 // sent as a picture (domain/shareCards) or read off the screen across a
 // desk — this component. All three draw from the same VisitSummary, and the
 // words on this screen and on the printed page come from ONE builder,
@@ -10,13 +10,13 @@
 // completely different if four of the fourteen days were never logged, and
 // a doctor cannot know that unless the sheet says so.
 
-import { Printer, Share2 } from "lucide-react";
+import { FileDown, Share2 } from "lucide-react";
 import { toast } from "../lib/toast";
 import { visitCard } from "../domain/shareCards";
 import { shareLink } from "../domain/shareApp";
-import { VISIT_PRINT_CSS, VisitDay, VisitFigure, renderVisitHtml, visitDocument } from "../domain/visitDocument";
-import { printDocument } from "../lib/printDocument";
-import { renderCard, shareImage } from "../lib/shareCard";
+import { VisitDay, VisitFigure, visitDocument } from "../domain/visitDocument";
+import { renderCard, shareFile } from "../lib/shareCard";
+import { visitPdf } from "../lib/visitPdf";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
 import { track } from "../domain/analytics";
@@ -84,6 +84,9 @@ export function VisitSummarySheet({ open, onOpenChange, summary, profile, ageMon
   const band = ageMonths === null ? null : expectedWeightRange(ageMonths, profile.sex);
   const gainBand = ageMonths === null ? null : typicalWeeklyGain(ageMonths);
   const doc = visitDocument(summary, name, age, units, band, gainBand, now);
+  // Label the button by what the phone can do, so nobody taps "Share" on a
+  // laptop and gets a download they did not expect.
+  const canShareFiles = typeof navigator.canShare === "function" && navigator.canShare({ files: [new File([""], "x.pdf", { type: "application/pdf" })] });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -130,17 +133,23 @@ export function VisitSummarySheet({ open, onOpenChange, summary, profile, ageMon
           </footer>
         </div>
 
-        {/* Pinned under the scroll, so Print and Share are never a page away.
+        {/* Pinned under the scroll, so the two buttons are never a page away.
             The dialog's own X closes; a third button here only pushed the
             two that matter onto a second row on a phone. */}
         <div className="visit-actions">
+          {/* The PDF goes straight to the share sheet (WhatsApp to the
+              clinic, mail to the doctor) or, where there is none, to the
+              downloads — never through a print dialog. */}
           <Button
             onClick={() => {
-              track("visit_summary_printed");
-              void printDocument(`${name} · summary for the paediatrician`, renderVisitHtml(doc), VISIT_PRINT_CSS);
+              track("visit_summary_pdf");
+              void visitPdf(doc)
+                .then((blob) => shareFile(blob, `numalog-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "baby"}-summary.pdf`, `${name} · summary for the paediatrician · ${shareLink("visit")}`))
+                .then((outcome) => { if (outcome === "saved") toast("PDF saved to your device"); })
+                .catch(() => toast("Could not make the PDF on this phone"));
             }}
           >
-            <Printer size={16} aria-hidden="true" /> Print or save as PDF
+            <FileDown size={16} aria-hidden="true" /> {canShareFiles ? "Share PDF" : "Download PDF"}
           </Button>
           {/* The same figures as one picture — what actually gets shown
               across the desk, or sent ahead to the clinic on WhatsApp. */}
@@ -149,7 +158,7 @@ export function VisitSummarySheet({ open, onOpenChange, summary, profile, ageMon
             onClick={() => {
               track("visit_summary_shared");
               void renderCard(visitCard(summary, name, age, units))
-                .then((blob) => shareImage(blob, "numalog-visit-summary.png", `${name} · summary for the paediatrician · ${shareLink("visit")}`))
+                .then((blob) => shareFile(blob, "numalog-visit-summary.png", `${name} · summary for the paediatrician · ${shareLink("visit")}`))
                 .then((outcome) => { if (outcome === "saved") toast("Picture saved to your device"); })
                 .catch(() => toast("Could not make the picture on this phone"));
             }}

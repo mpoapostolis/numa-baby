@@ -9,16 +9,21 @@ const W = 1080;
 const H = 1350;
 const MARGIN = 96;
 
-const INK = "#2b2326";
-const INK_2 = "#6a5c60";
-const BG = "#fdf5f2";
-const CARD = "#fffaf8";
-const BORDER = "#eadcd6";
-const ROSE = "#a3496f";
-const ROSE_SOFT = "#f5e1e8";
-const FONT = '"Geist Variable", "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+// Shared with the PDF page (lib/visitPdf.ts), which is the same design on paper.
+export const PALETTE = {
+  INK: "#2b2326",
+  INK_2: "#6a5c60",
+  INK_3: "#8a7a80",
+  BG: "#fdf5f2",
+  CARD: "#fffaf8",
+  BORDER: "#eadcd6",
+  ROSE: "#a3496f",
+  ROSE_SOFT: "#f5e1e8",
+} as const;
+export const FONT = '"Geist Variable", "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+const { INK, INK_2, BG, CARD, BORDER, ROSE, ROSE_SOFT } = PALETTE;
 
-async function loadFonts() {
+export async function loadFonts() {
   try {
     await Promise.all([
       document.fonts.load(`600 80px ${FONT}`),
@@ -29,7 +34,7 @@ async function loadFonts() {
   }
 }
 
-function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+export function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
   const lines: string[] = [];
   let line = "";
   for (const word of text.split(/\s+/)) {
@@ -45,7 +50,7 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): st
   return lines;
 }
 
-function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+export function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.arcTo(x + w, y, x + w, y + h, r);
@@ -57,10 +62,12 @@ function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: num
 
 // The app's own face, in the illustration language of illustrations.tsx:
 // round strokes, one accent, nothing that grades anyone.
-function drawFace(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
+export function drawFace(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
   ctx.save();
   ctx.lineCap = "round";
-  ctx.lineWidth = 7;
+  // Stroke in proportion to the face, so the same drawing works at 72px on
+  // a card and at 22pt on a page.
+  ctx.lineWidth = r * 0.097;
   ctx.strokeStyle = ROSE;
   ctx.fillStyle = CARD;
   ctx.beginPath();
@@ -204,8 +211,13 @@ export async function renderCard(spec: CardSpec): Promise<Blob> {
 }
 
 /** The native share sheet when it takes files, a download when it does not. */
-export async function shareImage(blob: Blob, name: string, text: string): Promise<"shared" | "saved" | "cancelled"> {
-  const file = new File([blob], name, { type: "image/png" });
+export function shareImage(blob: Blob, name: string, text: string): Promise<"shared" | "saved" | "cancelled"> {
+  return shareFile(blob, name, text);
+}
+
+/** Any file — a picture or a PDF — through the share sheet, else a download. */
+export async function shareFile(blob: Blob, name: string, text: string): Promise<"shared" | "saved" | "cancelled"> {
+  const file = new File([blob], name, { type: blob.type });
   if (navigator.canShare?.({ files: [file] })) {
     try {
       await navigator.share({ files: [file], text });

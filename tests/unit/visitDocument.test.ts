@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { renderVisitHtml, visitDocument } from "@/domain/visitDocument";
+import { visitDocument } from "@/domain/visitDocument";
 import { buildVisitSummary } from "@/domain/visitSummary";
 import { Activity } from "@/domain/types";
 
-// The printed page for the paediatrician: the same figures as the sheet,
-// written as a document. What is under test is the words and the escaping;
-// the print itself needs a browser.
+// The words for the paediatrician: the same builder feeds the sheet, the
+// PDF page and the picture. What is under test is the words; the drawing
+// needs a browser.
 
 function log(): Activity[] {
   const out: Activity[] = [];
@@ -37,13 +37,12 @@ describe("visitDocument", () => {
     expect(doc.days.filter((d) => d.blank).map((d) => d.label)).toEqual(["Aug 19", "Aug 25", "Sep 1"]);
   });
 
-  it("renders a whole page with nothing leaked and the name escaped", () => {
-    const html = renderVisitHtml(visitDocument(summary, "<Mia & Co>", null, "us", null, null, now));
-    expect(html).toContain("&lt;Mia &amp; Co&gt;");
-    expect(html).not.toMatch(/undefined|NaN|\[object/);
-    expect(html).toContain("numalog.app");
-    expect(html).toContain('<th>oz</th>');
-    expect(html).toContain("No age on file");
-    expect(html.match(/<tr>/g)?.length).toBe(15);
+  it("speaks the phone's units and says when there is no age on file", () => {
+    const plain = visitDocument(summary, "", null, "us", null, null, now);
+    expect(plain.title).toBe("Baby");
+    expect(plain.volumeUnit).toBe("oz");
+    expect(plain.sections[2].note).toBe("No age on file, so no WHO reference is shown.");
+    expect(plain.days).toHaveLength(14);
+    expect(JSON.stringify(plain)).not.toMatch(/undefined|NaN|\[object/);
   });
 });

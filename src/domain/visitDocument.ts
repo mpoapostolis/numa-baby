@@ -1,9 +1,6 @@
-// The paediatrician summary as a printed page: what goes on it and how it
-// is written, apart from how it is sent to the printer (lib/printDocument).
-//
-// The same figures as the on-screen sheet — built from the same VisitSummary
-// — laid out like the share card, so the page a doctor is handed looks like
-// it came from the same hands as the picture on the parent's phone.
+// The paediatrician summary as words: what goes on the sheet, the PDF page
+// (lib/visitPdf.ts) and the picture, built once from the same VisitSummary
+// so the three can never disagree.
 
 import { hasRoutineCare } from "./daySummary";
 import { UnitSystem, formatKg, formatVolume, volumeParts, weightParts } from "./units";
@@ -101,60 +98,4 @@ export function visitDocument(
     }),
     footnote: "Recorded at home by a parent, not a clinical measurement. WHO Child Growth Standards; typical weekly gain per AAP.",
   };
-}
-
-const esc = (value: string) =>
-  value.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] ?? c);
-
-/** The face from the share card, as a small inline mark. */
-const FACE = `<svg class="face" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="52" r="42" fill="#fffaf8" stroke="#a3496f" stroke-width="5"/><path d="M50 10c6-8 14-6 16 0" fill="none" stroke="#a3496f" stroke-width="5" stroke-linecap="round"/><circle cx="36" cy="46" r="4" fill="#a3496f"/><circle cx="64" cy="46" r="4" fill="#a3496f"/><path d="M36 62q14 12 28 0" fill="none" stroke="#a3496f" stroke-width="5" stroke-linecap="round"/></svg>`;
-
-export const VISIT_PRINT_CSS = `
-@page { size: A4; margin: 12mm 14mm 12mm; }
-* { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; }
-body {
-  color: #2b2326; background: #fff;
-  font: 10.5pt/1.4 "Geist Variable", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  -webkit-print-color-adjust: exact; print-color-adjust: exact;
-}
-.head { display: flex; align-items: flex-start; gap: 14pt; margin-bottom: 10pt; }
-.face { width: 44pt; height: 44pt; flex: 0 0 auto; }
-.eyebrow { margin: 0; color: #a3496f; font-size: 9pt; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
-h1 { margin: 2pt 0 0; font-size: 24pt; font-weight: 600; letter-spacing: -.02em; line-height: 1.1; }
-.sub { margin: 4pt 0 0; color: #6a5c60; font-size: 10pt; }
-.coverage { margin: 0 0 8pt; padding: 7pt 11pt; border-radius: 8pt; background: #fdf5f2; font-size: 10pt; }
-h2 { margin: 9pt 0 5pt; color: #6a5c60; font-size: 8.5pt; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
-.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8pt; }
-.tile { padding: 7pt 11pt 6pt; border: 1px solid #eadcd6; border-radius: 10pt; background: #fffaf8; break-inside: avoid; }
-.tile b { display: block; font-size: 18pt; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.tile b small { margin-left: 2pt; font-size: 10pt; font-weight: 500; color: #6a5c60; }
-.tile span { display: block; margin-top: 2pt; color: #6a5c60; font-size: 9pt; }
-.note { margin: 5pt 0 0; color: #6a5c60; font-size: 9.5pt; }
-table { width: 100%; margin-top: 2pt; border-collapse: collapse; font-size: 10pt; font-variant-numeric: tabular-nums; }
-th { padding: 3pt 6pt; color: #6a5c60; font-size: 8pt; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; text-align: right; border-bottom: 1px solid #eadcd6; }
-td { padding: 2.5pt 6pt; text-align: right; border-bottom: 1px solid #f3e9e4; }
-th:first-child, td:first-child { text-align: left; }
-tr { break-inside: avoid; }
-td.blank { color: #8a7a80; font-style: italic; text-align: left; }
-.foot { display: flex; align-items: baseline; justify-content: space-between; gap: 12pt; margin-top: 10pt; padding-top: 7pt; break-inside: avoid; border-top: 1px solid #eadcd6; }
-.foot .brand { color: #a3496f; font-weight: 600; font-size: 11pt; white-space: nowrap; }
-.foot p { margin: 0; color: #6a5c60; font-size: 8.5pt; text-align: right; }
-`;
-
-export function renderVisitHtml(doc: VisitDocument): string {
-  const figure = (f: VisitFigure) =>
-    `<div class="tile"><b>${esc(f.value)}${f.unit && f.value !== "—" ? `<small>${esc(f.unit)}</small>` : ""}</b><span>${esc(f.label)}</span></div>`;
-  const section = (s: VisitSection) =>
-    `<h2>${esc(s.heading)}</h2><div class="tiles">${s.figures.map(figure).join("")}</div><p class="note">${esc(s.note)}</p>`;
-  const row = (d: VisitDay) =>
-    d.blank
-      ? `<tr><td>${esc(d.label)}</td><td class="blank" colspan="4">not logged</td></tr>`
-      : `<tr><td>${esc(d.label)}</td><td>${esc(d.feeds)}</td><td>${esc(d.ml)}</td><td>${esc(d.wet)}</td><td>${esc(d.dirty)}</td></tr>`;
-  return `<header class="head">${FACE}<div><p class="eyebrow">${esc(doc.eyebrow)}</p><h1>${esc(doc.title)}</h1><p class="sub">${esc(doc.sub)}</p></div></header>
-<p class="coverage">${esc(doc.coverage)}</p>
-${doc.sections.map(section).join("")}
-<h2>Day by day</h2>
-<table><thead><tr><th>Day</th><th>Feeds</th><th>${esc(doc.volumeUnit)}</th><th>Wet</th><th>Dirty</th></tr></thead><tbody>${doc.days.map(row).join("")}</tbody></table>
-<footer class="foot"><span class="brand">numalog.app</span><p>${esc(doc.footnote)}</p></footer>`;
 }
