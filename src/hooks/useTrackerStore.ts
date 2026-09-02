@@ -31,6 +31,47 @@ const DEFAULT_REMINDERS: ReminderSettings = {
 const TOMBSTONE_RETENTION_DAYS = 90;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+// localStorage is counted in UTF-16 code units against a budget of 5 MiB on
+// Safari and Firefox (10 MiB on Chromium). 1.8 million characters is about
+// 70% of the smaller budget: months of entries still fit, and "download a
+// backup" arrives as advice rather than as an autopsy. Once quota is actually
+// hit nothing can be written — not even a deletion, which is a tombstone
+// write — so the warning has to come first.
+const STORAGE_WATERMARK_CHARS = 1_800_000;
+const LARGE_LOG_WARNING = "Your log is getting large for this browser. Download a backup so nothing is ever lost.";
+
+function isQuotaError(error: unknown): boolean {
+  if (!(error instanceof DOMException)) return false;
+  return (
+    error.name === "QuotaExceededError" ||
+    error.name === "NS_ERROR_DOM_QUOTA_REACHED" ||
+    error.code === 22 ||
+    error.code === 1014
+  );
+}
+
+/** setItem with one retry at quota. The recovery copy — a pre-import rollback
+    snapshot, or the raw blob of a boot that skipped rows — is the only other
+    thing this origin stores at size, and at quota the entry being logged right
+    now matters more than an old rollback. Only in the ready state: on the
+    recovery screen that copy may be a family's only surviving version. */
+function writeBlob(text: string, mayDropRecovery: boolean): "written" | "freed" | "failed" {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, text);
+    return "written";
+  } catch (error) {
+    if (!mayDropRecovery || !isQuotaError(error)) return "failed";
+    try {
+      if (window.localStorage.getItem(RECOVERY_KEY) === null) return "failed";
+      window.localStorage.removeItem(RECOVERY_KEY);
+      window.localStorage.setItem(STORAGE_KEY, text);
+      return "freed";
+    } catch {
+      return "failed";
+    }
+  }
+}
+
 function sweepExpiredTombstones(list: Activity[]): Activity[] {
   const cutoff = Date.now() - TOMBSTONE_RETENTION_DAYS * DAY_MS;
   const swept = list.filter(
@@ -261,22 +302,23 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
       setPersistVersion((version) => version + 1);
       return true;
     }
-    try {
-      // profileUpdatedAt is undefined until a profile save stamps it;
-      // JSON.stringify drops the key, keeping legacy blobs byte-identical.
-      window.localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ activities: sweptActivities, profile: nextProfile, nightMode: nextNightMode, reminders: nextReminders, onboardingComplete: nextOnboardingComplete, profileUpdatedAt: nextProfileUpdatedAt }),
-      );
-      persistedStateRef.current = nextPersisted;
-      setStorageWarning(null);
-      setPersistVersion((version) => version + 1);
-      return true;
-    } catch {
+    // profileUpdatedAt is undefined until a profile save stamps it;
+    // JSON.stringify drops the key, keeping legacy blobs byte-identical.
+    const text = JSON.stringify({ activities: sweptActivities, profile: nextProfile, nightMode: nextNightMode, reminders: nextReminders, onboardingComplete: nextOnboardingComplete, profileUpdatedAt: nextProfileUpdatedAt });
+    const outcome = writeBlob(text, persistedStateRef.current.bootState === "ready");
+    if (outcome === "failed") {
       setStorageWarning("This browser could not save the latest change. Your previous data is still intact.");
       showToast("Could not save on this device. Nothing was changed.");
       return false;
     }
+    persistedStateRef.current = nextPersisted;
+    // The warning is the one surface that speaks before quota does: a log
+    // that has grown to most of the browser's budget gets a standing
+    // "download a backup" long before a tap fails.
+    setStorageWarning(text.length > STORAGE_WATERMARK_CHARS ? LARGE_LOG_WARNING : null);
+    if (outcome === "freed") showToast("Storage was full — an older recovery copy was removed to make room.");
+    setPersistVersion((version) => version + 1);
+    return true;
   }
 
   // After a successful persistSnapshot the ref holds the swept full list;
@@ -292,9 +334,18 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     syncActivitiesFromRef();
     showToast(message, () => {
       // Remove exactly this entry — never restore a whole stale array, which
-      // would silently delete anything logged after it. A just-added entry has
-      // never left this device, so it needs no tombstone.
-      const undone = persistedStateRef.current.activities.filter((item) => item.id !== stamped.id);
+      // would silently delete anything logged after it. And remove it as a
+      // TOMBSTONE, like any other deletion, never as a filter-out: the entry
+      // may already have left this device. Family Sync pushes two seconds
+      // after a save and this toast stays for four, so an entry filtered out
+      // of the list was still on the server, came straight back on the next
+      // poll, and was announced as "new from your partner". A tombstone
+      // travels; a gap does not.
+      const undone = persistedStateRef.current.activities.map((item) =>
+        item.id === stamped.id
+          ? { ...item, deleted: true as const, updatedAt: new Date().toISOString() }
+          : item,
+      );
       if (!persistSnapshot(undone)) return;
       syncActivitiesFromRef();
       showToast("Last change undone");
@@ -588,7 +639,12 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
   // never be restorable over a real log.
   function buildExportFile() {
     const exportProfile = debugMode ? { ...profile, isDemo: true } : profile;
-    const payload = JSON.stringify({ profile: exportProfile, activities: persistedStateRef.current.activities, nightMode, reminders, onboardingComplete: true, exportedAt: new Date().toISOString() }, null, 2);
+    // Compact, not pretty-printed: the indented form was a third larger, and
+    // a year of one baby's log crossed the import path's own size cap at
+    // about eleven months — the backup the app itself wrote was refused by
+    // its own Restore button, discovered on the new phone after the old one
+    // was gone. Nobody reads a backup file; everybody needs it to open.
+    const payload = JSON.stringify({ profile: exportProfile, activities: persistedStateRef.current.activities, nightMode, reminders, onboardingComplete: true, exportedAt: new Date().toISOString() });
     const name = debugMode
       ? `numalog-DEBUG-${new Date().toISOString().slice(0, 10)}.json`
       : `numalog-backup-${new Date().toISOString().slice(0, 10)}.json`;
@@ -747,12 +803,6 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
             reminders: parsed.reminders ?? DEFAULT_REMINDERS,
           },
         );
-        if (merged.activities.length > 25_000) {
-          // parseStoredData rejects blobs beyond this cap; persisting one would
-          // make the tracker unreadable on the next boot.
-          showToast("Merging would create more entries than this app can store safely. Nothing was changed.");
-          return false;
-        }
         const summary = summarizeMerge(localActivities, merged.activities);
         // Only a file the parent chose may clear the recovery copy, and only
         // when they were on the recovery screen to choose it. In that state the
@@ -808,7 +858,10 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
   function importData(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (file.size > 2_000_000) {
+    // A memory bound, not a data bound: a year of one baby is under two
+    // megabytes, so this is a hundred years of logging, and the earlier
+    // 2 MB cap refused the app's own year-old backups.
+    if (file.size > 25_000_000) {
       showToast("That backup is too large to import safely");
       event.target.value = "";
       return;

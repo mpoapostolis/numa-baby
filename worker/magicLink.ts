@@ -22,6 +22,9 @@ import { Client } from "@libsql/client";
 
 const TOKEN_TTL_MS = 15 * 60_000;
 const SENDS_PER_HOUR = 3;
+// How often one family may ask "guard this address" in an hour. A parent
+// retyping an address is a handful; a scan is not.
+const LINK_ASKS_PER_FAMILY_HOUR = 10;
 
 type SendEmail = {
   send: (message: {
@@ -103,18 +106,28 @@ async function guardedFamily(client: Client, email: string): Promise<string | nu
   return rows.rows.length ? String(rows.rows[0].family_id) : null;
 }
 
-/** Spend one send from the address's hourly budget; false means exhausted. */
-async function reserveSend(client: Client, email: string, now: number): Promise<boolean> {
+/** Spend one send from the key's hourly budget; false means exhausted. The
+    key is normally an address; a family id (prefixed "family:") budgets a
+    caller rather than a target. Rows older than the window are swept in the
+    same statement's batch, so the table never becomes a permanent list of
+    every address anyone ever typed. */
+async function reserveSend(client: Client, key: string, now: number, max = SENDS_PER_HOUR): Promise<boolean> {
   const windowStart = new Date(now - 3600_000).toISOString();
-  const result = await client.execute({
-    sql: `INSERT INTO magic_budget (email, window_start, sends) VALUES (?, ?, 1)
-          ON CONFLICT(email) DO UPDATE SET
-            sends = CASE WHEN magic_budget.window_start < ? THEN 1 ELSE magic_budget.sends + 1 END,
-            window_start = CASE WHEN magic_budget.window_start < ? THEN excluded.window_start ELSE magic_budget.window_start END
-          RETURNING sends`,
-    args: [email, new Date(now).toISOString(), windowStart, windowStart],
-  });
-  return Number(result.rows[0]?.sends ?? SENDS_PER_HOUR + 1) <= SENDS_PER_HOUR;
+  const [, result] = await client.batch(
+    [
+      { sql: "DELETE FROM magic_budget WHERE window_start < ?", args: [windowStart] },
+      {
+        sql: `INSERT INTO magic_budget (email, window_start, sends) VALUES (?, ?, 1)
+              ON CONFLICT(email) DO UPDATE SET
+                sends = CASE WHEN magic_budget.window_start < ? THEN 1 ELSE magic_budget.sends + 1 END,
+                window_start = CASE WHEN magic_budget.window_start < ? THEN excluded.window_start ELSE magic_budget.window_start END
+              RETURNING sends`,
+        args: [key, new Date(now).toISOString(), windowStart, windowStart],
+      },
+    ],
+    "write",
+  );
+  return Number(result.rows[0]?.sends ?? max + 1) <= max;
 }
 
 /** The one sender for everything Numalog mails. no-reply on purpose: these
@@ -199,9 +212,17 @@ export async function handleEmailLink(
   const email = normalise(body.email);
   if (!email) return json({ error: "That doesn't look like an email address." }, 400);
   await ensureTables(client);
+  const now = Date.now();
+  // Spend first, look second. The caller is authenticated, but a family is
+  // free to create, so "does this address guard a log?" asked at full speed
+  // would be a membership oracle for a health app. Ten asks an hour per
+  // family is a parent retyping an address; it is not a scan.
+  if (!(await reserveSend(client, `family:${familyId}`, now, LINK_ASKS_PER_FAMILY_HOUR))) {
+    return json({ error: "Too many attempts just now — try again in an hour." }, 429);
+  }
   // Refuse at SEND time, not at tap time: learning "this address is taken"
   // fifteen minutes later, from inside an inbox, is the confusing version of
-  // the same refusal. The caller is authenticated, so this leaks nothing.
+  // the same refusal.
   const guards = await guardedFamily(client, email);
   if (guards && guards !== familyId) {
     return json({
@@ -209,7 +230,6 @@ export async function handleEmailLink(
         "This address already protects another log. To bring that log onto a phone, use Restore — or remove its protection from the other device first.",
     }, 409);
   }
-  const now = Date.now();
   if (!(await reserveSend(client, email, now))) {
     return json({ error: "Too many emails to that address just now — try again in an hour." }, 429);
   }

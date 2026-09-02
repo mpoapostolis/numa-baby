@@ -77,8 +77,24 @@ CREATE INDEX IF NOT EXISTS idx_activities_family_updated
 CREATE INDEX IF NOT EXISTS idx_activities_family_received
   ON activities(family_id, received_at);
 
+-- Pull pages are ordered by (received_at, id) so that rows sharing an arrival
+-- stamp — every row the one-time backfill touched shares one — page through
+-- instead of repeating. This index is that order.
+CREATE INDEX IF NOT EXISTS idx_activities_family_received_id
+  ON activities(family_id, received_at, id);
+
+-- The lookups the device, invite and recovery paths actually make. Small
+-- tables today; indexed so they stay cheap when they are not.
+CREATE INDEX IF NOT EXISTS idx_devices_family ON devices(family_id);
+CREATE INDEX IF NOT EXISTS idx_device_tokens_device ON device_tokens(device_id);
+CREATE INDEX IF NOT EXISTS idx_device_tokens_family ON device_tokens(family_id);
+CREATE INDEX IF NOT EXISTS idx_invites_family ON invites(family_id);
+
 -- The 6-digit invite space is a million codes in a 15-minute window — fine
--- against fingers, farmable by a loop. Twenty tries an hour per address.
+-- against fingers, farmable by a loop. Thirty tries an hour per address
+-- (the first 64 bits of an IPv6 address count as one), plus one budget for
+-- the whole door under the key "global" — wrong codes only — so buying more
+-- addresses buys nothing.
 CREATE TABLE IF NOT EXISTS join_budget (
   ip TEXT PRIMARY KEY,
   window_start TEXT NOT NULL,
@@ -169,6 +185,7 @@ CREATE TABLE IF NOT EXISTS recovery_identities (
   email TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
+CREATE INDEX IF NOT EXISTS idx_recovery_identities_family ON recovery_identities(family_id);
 
 -- Magic-link recovery: which address guards which family, the outstanding
 -- one-time tokens (hashes only), and the per-address send budget. The
@@ -179,6 +196,7 @@ CREATE TABLE IF NOT EXISTS recovery_emails (
   family_id TEXT NOT NULL REFERENCES families(id),
   created_at TEXT NOT NULL
 );
+CREATE INDEX IF NOT EXISTS idx_recovery_emails_family ON recovery_emails(family_id);
 
 CREATE TABLE IF NOT EXISTS magic_tokens (
   token_hash TEXT PRIMARY KEY,

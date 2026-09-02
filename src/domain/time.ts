@@ -115,10 +115,11 @@ export function minutesOnDay(activity: TimedSpan, day: Date, now = Date.now()) {
 // plain welcome.
 export function formatBabyAge(birthDate: string | undefined, now: number): string | null {
   if (!birthDate) return null;
-  const birth = new Date(birthDate);
-  const birthMs = birth.getTime();
-  if (Number.isNaN(birthMs) || birthMs > now) return null;
-  const days = Math.floor((now - birthMs) / 86_400_000);
+  const birthStart = birthMidnight(birthDate);
+  if (birthStart === null) return null;
+  const days = calendarDaysBetween(birthStart, now);
+  if (days === null) return null;
+  const birth = new Date(birthStart);
   const weeks = Math.floor(days / 7);
   if (days === 0) return "born today";
   if (weeks < 1) return days === 1 ? "1 day" : `${days} days`;
@@ -151,9 +152,44 @@ export function formatBabyAge(birthDate: string | undefined, now: number): strin
 // formatBabyAge above.
 export function ageInDays(birthDate: string | undefined, now: number): number | null {
   if (!birthDate) return null;
-  const birthMs = new Date(birthDate).getTime();
-  if (Number.isNaN(birthMs) || birthMs > now) return null;
-  return Math.floor((now - birthMs) / 86_400_000);
+  const birthStart = birthMidnight(birthDate);
+  if (birthStart === null) return null;
+  return calendarDaysBetween(birthStart, now);
+}
+
+// The profile's birth date is a date-only string ("2026-07-01") from a date
+// input, and `new Date("2026-07-01")` reads that as UTC midnight — in Athens
+// or Manila that is the previous evening; west of Greenwich it is the same
+// morning, hours late. milestones.ts anchors at LOCAL midnight for exactly
+// this reason, and the age line, the day counter and the milestone card must
+// count the same days, or a parent sees "1 week old today" above "6 days
+// old". So: local midnight of the birth date, and ages in CALENDAR days —
+// born on the 1st, one day old on the 2nd whatever the hour, and a 23-hour
+// DST day never counts as zero.
+function localMidnight(ms: number): number {
+  const date = new Date(ms);
+  date.setHours(0, 0, 0, 0);
+  return date.getTime();
+}
+
+function birthMidnight(birthDate: string): number | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(birthDate);
+  if (match) {
+    const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
+    const birth = new Date(year, month - 1, day);
+    // A rolled-over date ("2026-13-45") is not a date.
+    if (birth.getMonth() !== month - 1 || birth.getDate() !== day) return null;
+    return birth.getTime();
+  }
+  const ms = new Date(birthDate).getTime();
+  return Number.isFinite(ms) ? localMidnight(ms) : null;
+}
+
+// Whole calendar days from a local midnight to `now`; null for a birth date
+// still in the future (tomorrow is not an age).
+function calendarDaysBetween(birthStart: number, now: number): number | null {
+  const days = Math.round((localMidnight(now) - birthStart) / 86_400_000);
+  return days < 0 ? null : days;
 }
 
 export function ageInMonths(birthDate: string) {

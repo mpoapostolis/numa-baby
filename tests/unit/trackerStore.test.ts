@@ -63,8 +63,14 @@ test("undoing the first of two adds keeps the second, in state and in storage", 
   });
 
   expect(result.current.activities.map((entry) => entry.id)).toEqual(["second"]);
+  // The undone entry stays in storage as a TOMBSTONE: a copy that already
+  // reached the family's server is deleted there too, instead of coming
+  // straight back on the next poll as "new from your partner".
   const stored = JSON.parse(window.localStorage.getItem(STORAGE_KEY)!) as { activities: Activity[] };
-  expect(stored.activities.map((entry) => entry.id)).toEqual(["second"]);
+  expect(stored.activities.filter((entry) => !entry.deleted).map((entry) => entry.id)).toEqual(["second"]);
+  const undone = stored.activities.find((entry) => entry.id === "first");
+  expect(undone?.deleted).toBe(true);
+  expect(isRecentIso(undone?.updatedAt)).toBe(true);
 });
 
 test("a failed localStorage write changes nothing, warns and returns false", async () => {
@@ -585,4 +591,66 @@ test("joining a family reaches ready without inventing a profile", async () => {
   expect(persisted.profile.name).toBe("");
   expect(persisted.profileUpdatedAt).toBeUndefined();
   expect(persisted.activities).toEqual([]);
+});
+
+test("at quota, an old recovery copy is dropped so the entry being logged still lands", async () => {
+  window.localStorage.setItem(STORAGE_KEY, makeBlob([makeActivity("keep")]));
+  window.localStorage.setItem(RECOVERY_KEY, makeBlob([makeActivity("old-rollback")]));
+  const toasts: Toast[] = [];
+  const { result } = renderStore(toasts);
+  await waitFor(() => expect(result.current.bootState).toBe("ready"));
+
+  // The first write hits quota; once the recovery copy is gone there is room.
+  const realSetItem = Storage.prototype.setItem;
+  let writes = 0;
+  vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (this: Storage, key: string, value: string) {
+    writes += 1;
+    if (writes === 1) throw new DOMException("The quota has been exceeded.", "QuotaExceededError");
+    return realSetItem.call(this, key, value);
+  });
+  let saved = false;
+  act(() => {
+    saved = result.current.addActivity(makeActivity("three-am-feed"), "Saved");
+  });
+
+  expect(saved).toBe(true);
+  expect(result.current.activities.map((entry) => entry.id)).toEqual(["three-am-feed", "keep"]);
+  expect(window.localStorage.getItem(RECOVERY_KEY)).toBeNull();
+  expect(toasts.some((entry) => entry.message.includes("recovery copy"))).toBe(true);
+  vi.restoreAllMocks();
+  expect(storedActivities().map((entry) => entry.id)).toEqual(["three-am-feed", "keep"]);
+});
+
+test("a quota error with no recovery copy to drop still changes nothing", async () => {
+  window.localStorage.setItem(STORAGE_KEY, makeBlob([makeActivity("keep")]));
+  const toasts: Toast[] = [];
+  const { result } = renderStore(toasts);
+  await waitFor(() => expect(result.current.bootState).toBe("ready"));
+
+  vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    throw new DOMException("The quota has been exceeded.", "QuotaExceededError");
+  });
+  let saved = true;
+  act(() => {
+    saved = result.current.addActivity(makeActivity("lost"), "Saved");
+  });
+
+  expect(saved).toBe(false);
+  expect(result.current.activities.map((entry) => entry.id)).toEqual(["keep"]);
+  expect(result.current.storageWarning).toContain("could not save");
+});
+
+test("the backup file is compact JSON that the import path accepts at any age", async () => {
+  window.localStorage.setItem(STORAGE_KEY, makeBlob([makeActivity("one"), makeActivity("two")]));
+  const toasts: Toast[] = [];
+  const { result } = renderStore(toasts);
+  await waitFor(() => expect(result.current.bootState).toBe("ready"));
+
+  const payload = result.current.exportPayload();
+  // No pretty-printing: the indented form was a third larger and crossed the
+  // import path's size cap after about eleven months of one baby.
+  expect(payload).not.toContain("\n");
+  const parsed = JSON.parse(payload) as { activities: Activity[]; profile: { name: string } };
+  expect(parsed.activities.map((entry) => entry.id)).toEqual(["one", "two"]);
+  expect(parsed.profile.name).toBe("Mia");
 });

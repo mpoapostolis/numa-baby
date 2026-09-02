@@ -111,13 +111,33 @@ export function emailRedeem(
   return request("/api/family/email-redeem", { method: "POST", body: JSON.stringify({ token, deviceLabel }) });
 }
 
-export function pullSince(token: string, since: string, deviceId: string): Promise<PullResult> {
-  const query = `since=${encodeURIComponent(since)}&device=${encodeURIComponent(deviceId)}`;
-  return request(`/api/sync/pull?${query}`, { method: "GET" }, token);
+/**
+ * @param options.after the id of the last row already received at exactly
+ *        `since` — the second half of the page cursor (see nextPullCursor)
+ * @param options.count ask for the family's device count; polls leave it
+ *        off to spare the server a scan a minute
+ */
+export function pullSince(
+  token: string,
+  since: string,
+  deviceId: string,
+  options: { after?: string; count?: boolean } = {},
+): Promise<PullResult> {
+  const params = new URLSearchParams({ since, device: deviceId });
+  if (options.after) params.set("after", options.after);
+  if (options.count) params.set("count", "1");
+  return request(`/api/sync/pull?${params.toString()}`, { method: "GET" }, token);
 }
 
+// keepalive lets the request outlive the page: a feed logged and the phone
+// locked within the two-second push debounce still reaches the server.
+// Browsers cap keepalive bodies at 64 KB; a normal delta is a few rows, a
+// backfill chunk is not, and a backfill is retried on the next open anyway.
+const KEEPALIVE_MAX_CHARS = 48_000;
+
 export function pushBatch(token: string, body: PushBody): Promise<PushResult> {
-  return request("/api/sync/push", { method: "POST", body: JSON.stringify(body) }, token);
+  const text = JSON.stringify(body);
+  return request("/api/sync/push", { method: "POST", body: text, keepalive: text.length < KEEPALIVE_MAX_CHARS }, token);
 }
 
 export type FamilyDevice = {

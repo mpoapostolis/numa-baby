@@ -90,12 +90,34 @@ describe("parseStoredData", () => {
     expect(() => parseStoredData(JSON.stringify(null))).toThrow("Invalid Numalog backup");
   });
 
-  it("rejects an activities array above the 25,000 cap", () => {
+  it("loads a log of any length — a big family is not a corrupt file", () => {
+    // 25,000 rows used to throw, which sent a healthy two-year log (sooner
+    // with twins, or a partner's phone feeding the same list) to the
+    // recovery screen one morning as "could not be read".
     const activities = Array.from({ length: 25_001 }, (_, index) => ({
       ...baseActivity,
       id: `a-${index}`,
     }));
-    expect(() => parseStoredData(storedBlob({ activities }))).toThrow("Invalid Numalog activities");
+    expect(parseStoredData(storedBlob({ activities })).activities).toHaveLength(25_001);
+  });
+
+  it("clamps a far-future updatedAt to now instead of keeping or dropping the row", () => {
+    // A partner's phone with its clock a year ahead stamps rows nobody
+    // could ever delete: the tombstone lost every last-write-wins contest.
+    // The row is kept (it is a real feed), the stamp becomes "arrived now".
+    const before = Date.now();
+    const parsed = parseStoredData(storedBlob({
+      activities: [
+        { ...baseActivity, id: "skewed", updatedAt: "2099-01-01T00:00:00.000Z" },
+        { ...baseActivity, id: "fine", updatedAt: "2026-08-02T10:00:00.000Z" },
+      ],
+    }));
+    const skewed = parsed.activities.find((activity) => activity.id === "skewed")!;
+    const fine = parsed.activities.find((activity) => activity.id === "fine")!;
+    expect(parsed.droppedActivities).toBe(0);
+    expect(new Date(skewed.updatedAt!).getTime()).toBeGreaterThanOrEqual(before);
+    expect(new Date(skewed.updatedAt!).getTime()).toBeLessThanOrEqual(Date.now());
+    expect(fine.updatedAt).toBe("2026-08-02T10:00:00.000Z");
   });
 
   it("detects legacy demo blobs and derives onboarding from isDemo", () => {

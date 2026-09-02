@@ -27,8 +27,21 @@ function isValidDate(value: unknown): value is string {
    The local quick-log path stays stricter (safeStartedAt clamps to now). */
 const FUTURE_TOLERANCE_MS = 48 * 60 * 60 * 1000;
 
-function tooFarInFuture(value: string) {
-  return new Date(value).getTime() > Date.now() + FUTURE_TOLERANCE_MS;
+function tooFarInFuture(value: string, now = Date.now()) {
+  return new Date(value).getTime() > now + FUTURE_TOLERANCE_MS;
+}
+
+/* The write stamp gets the same fence, but CLAMPED rather than rejected.
+   updatedAt decides every last-write-wins conflict, on the server and on
+   every phone. A partner's phone a day ahead (a battery reset, a clock set by
+   hand) stamps rows nobody else can ever delete or correct: the tombstone or
+   edit is written, the next poll pulls the future-stamped live copy back, and
+   the deletion quietly undoes itself. Rejecting such a row would throw away a
+   real feed for a bad clock; taking it as "written just now" keeps the entry
+   and takes away its immortality. */
+export function clampFutureUpdatedAt(activity: Activity, now = Date.now()): Activity {
+  if (activity.updatedAt === undefined || !tooFarInFuture(activity.updatedAt, now)) return activity;
+  return { ...activity, updatedAt: new Date(now).toISOString() };
 }
 
 function invalidStoredNumber(name: NumericFieldName, value: unknown) {
@@ -132,10 +145,17 @@ export function parseStoredData(value: string): StoredData {
   if (!isRecord(parsed) || !isValidProfile(parsed.profile) || !Array.isArray(parsed.activities)) {
     throw new Error("Invalid Numalog backup");
   }
-  if (parsed.activities.length > 25_000) {
-    throw new Error("Invalid Numalog activities");
-  }
-  const activities = parsed.activities.filter(isValidActivity);
+  // No row-count ceiling here any more. One used to throw at 25,000 rows,
+  // which sent a perfectly healthy log — reachable by an ordinary family in
+  // a couple of years, sooner with twins or a partner's phone feeding the
+  // same list — to the recovery screen one morning with "could not be read".
+  // The byte caps on the import and handoff paths bound the work; the blob
+  // in storage is bounded by the browser's quota, which persistSnapshot
+  // watches and warns about long before it is reached.
+  const now = Date.now();
+  const activities = parsed.activities
+    .filter(isValidActivity)
+    .map((activity) => clampFutureUpdatedAt(activity, now));
   const storedProfile = parsed.profile;
   const onboardingComplete = typeof parsed.onboardingComplete === "boolean" ? parsed.onboardingComplete : undefined;
   return {

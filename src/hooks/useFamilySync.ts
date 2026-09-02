@@ -7,10 +7,10 @@ import {
   savePairing,
 } from "../domain/familyPairing";
 import { saveAuthHint } from "../domain/authHint";
-import { selectPushDelta } from "../domain/syncCursor";
+import { nextPullCursor, selectPushDelta } from "../domain/syncCursor";
 import * as transport from "../domain/syncTransport";
 import { Activity, BootState, Profile } from "../domain/types";
-import { activityUpdatedAt, isValidActivity, sanitizeProfile } from "../domain/validate";
+import { activityUpdatedAt, clampFutureUpdatedAt, isValidActivity, sanitizeProfile } from "../domain/validate";
 
 // The family-sync orchestrator. Owns the pairing lifecycle (create / invite /
 // join / leave), pulls the family's changes into the store and pushes local
@@ -24,13 +24,17 @@ import { activityUpdatedAt, isValidActivity, sanitizeProfile } from "../domain/v
 
 const PULL_INTERVAL_MS = 60_000;
 const PUSH_DEBOUNCE_MS = 2_000;
-// The server filters pulls by CLIENT-stamped updatedAt, so `since` must reach
-// back past what we've seen: a partner stamps a row, then debounces ~2s (or
-// stays offline for hours) before pushing it — by which time our cursor has
-// moved past the stamp. Polls re-cover a short window; open/visible pulls a
-// long one. Re-pulled rows are free: the merge is idempotent.
-const POLL_OVERLAP_MS = 15 * 60_000;
-const OPEN_OVERLAP_MS = 7 * 24 * 60 * 60_000;
+// The server filters pulls by ITS OWN arrival clock (received_at) and the
+// cursor is the server's own serverTime, so the only gap an overlap must
+// cover is a push whose rows were stamped just before our pull's SELECT ran
+// and committed just after it — seconds, plus whatever clock spread two
+// Cloudflare colos have. These were fifteen minutes and SEVEN DAYS, sized
+// for an older server that filtered on the client's stamp, and every screen
+// unlock re-downloaded a week of the log for nothing. Re-pulled rows are
+// still free (the merge is idempotent), which is why the windows stay
+// generous by the measure that matters.
+const POLL_OVERLAP_MS = 5 * 60_000;
+const OPEN_OVERLAP_MS = 15 * 60_000;
 // Server page/batch caps (LIMIT 2000, MAX_PUSH_BATCH 500).
 const PAGE = 2000;
 const PUSH_CHUNK = 500;
@@ -67,7 +71,9 @@ function rowToActivity(row: transport.PulledRow): Activity | null {
   const candidate: Record<string, unknown> = { ...payload, id: row.id, updatedAt: row.updatedAt };
   if (row.deleted) candidate.deleted = true;
   else delete candidate.deleted;
-  return isValidActivity(candidate) ? candidate : null;
+  // A partner's far-future write stamp is taken as "arrived now" — kept, but
+  // no longer able to win every conflict for ever (see clampFutureUpdatedAt).
+  return isValidActivity(candidate) ? clampFutureUpdatedAt(candidate) : null;
 }
 
 // The inverse: strip the sync columns out of the stored payload.
@@ -121,8 +127,21 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     else clearPairing();
   }
 
-  function markFailed(error: unknown) {
+  // A cursor move is bookkeeping, not news: the ref and storage take it and
+  // React does not. Routing it through setPairing re-rendered the whole app
+  // once a minute for a value no screen reads (the status line shows
+  // status.lastSyncAt, which is set separately and only when it changes).
+  function advanceCursor(next: FamilyPairing) {
+    live.current.pairing = next;
+    savePairing(next);
+  }
+
+  function markFailed(error: unknown, token?: string) {
     live.current.lastSyncFailed = true;
+    // A 401 for a key this device has already handed back (a family switch
+    // mid-push) says nothing about the NEW key; ignoring it is what keeps
+    // the fresh pairing from being born "revoked".
+    if (token && error instanceof transport.PairingRevokedError && token !== live.current.pairing?.token) return;
     if (error instanceof transport.PairingRevokedError) {
       // The server no longer honours this token. Keep the record — the UI
       // shows reconnect guidance; only an explicit leave discards it.
@@ -138,7 +157,19 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     const l = live.current;
     if (!l.pairing || debugMode || l.revoked) return;
     window.clearTimeout(l.pushTimer);
-    l.pushTimer = window.setTimeout(() => void runPush(), PUSH_DEBOUNCE_MS);
+    l.pushTimer = window.setTimeout(() => {
+      l.pushTimer = 0;
+      void runPush();
+    }, PUSH_DEBOUNCE_MS);
+  }
+
+  /** Send whatever the debounce is holding, right now. */
+  function flushPush() {
+    const l = live.current;
+    if (!l.pushTimer) return;
+    window.clearTimeout(l.pushTimer);
+    l.pushTimer = 0;
+    void runPush();
   }
 
   async function runPull(open: boolean) {
@@ -146,15 +177,22 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     const before = l.pairing;
     if (!before || debugMode || l.revoked || l.pullBusy) return;
     l.pullBusy = true;
-    setStatus((s) => (s.phase === "syncing" ? s : { ...s, phase: "syncing" }));
+    // Only a pull somebody can see flips the pill to "Syncing…": the
+    // sixty-second heartbeat flipping it there and back re-rendered the whole
+    // screen twice a minute for a word nobody was reading.
+    if (open) setStatus((s) => (s.phase === "syncing" ? s : { ...s, phase: "syncing" }));
     try {
       let added = 0;
       let allPersisted = true;
       let since = sinceParam(before.lastSyncAt, open ? OPEN_OVERLAP_MS : POLL_OVERLAP_MS);
+      let after: string | undefined;
       let page: transport.PullResult;
       let guard = 0;
+      let full: boolean;
       do {
-        page = await transport.pullSince(before.token, since, before.deviceId);
+        // The device count rides open pulls (boot, unlock, Sync now, the
+        // invite screen) — polls skip it to spare the server a scan a minute.
+        page = await transport.pullSince(before.token, since, before.deviceId, { after, count: open });
         const rows: Activity[] = [];
         if (Array.isArray(page.activities)) {
           for (const row of page.activities) {
@@ -170,26 +208,39 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
         // cursor advance past rows this device never actually kept.
         if (rows.length && merged.persisted === false) allPersisted = false;
         // Keyset pagination for oversized backlogs (the first pull after a
-        // join): pages are capped at 2000 rows, receivedAt ascending — the
-        // server's arrival clock, so a restored backup's months-old entries
-        // still page through. Step the cursor 1ms behind the last row so
-        // boundary ties re-fetch instead of skip; the idempotent merge makes
-        // the repeats free, and the guard bounds the pathological page.
+        // join): pages are capped at 2000 rows in (receivedAt, id) order —
+        // the server's arrival clock, so a restored backup's months-old
+        // entries still page through, and the id, so rows SHARING an
+        // arrival stamp page through too (see nextPullCursor for the family
+        // that never received its own history). The idempotent merge makes
+        // any repeat free; the guard bounds the pathological page.
         const last = Array.isArray(page.activities) ? page.activities[page.activities.length - 1] : undefined;
-        const lastMs = last ? new Date(last.receivedAt ?? last.updatedAt).getTime() : NaN;
-        if (Number.isFinite(lastMs)) since = new Date(lastMs - 1).toISOString();
+        const cursor = nextPullCursor(last);
+        if (cursor) {
+          since = cursor.since;
+          after = cursor.after;
+        }
         guard += 1;
-      } while (Array.isArray(page.activities) && page.activities.length >= PAGE && guard < 20);
+        full = Array.isArray(page.activities) && page.activities.length >= PAGE;
+      } while (full && guard < 20);
       const cur = live.current.pairing;
       // Left (or re-paired) while the pull was in flight — drop the result.
       if (!cur || cur.token !== before.token) return;
-      if (allPersisted) adoptPairing({ ...cur, lastSyncAt: page.serverTime });
-      setStatus((s) => ({
-        phase: "idle",
-        lastSyncAt: allPersisted ? page.serverTime : cur.lastSyncAt || null,
-        // Polls omit the count to spare a scan; the number already shown stays.
-        deviceCount: page.deviceCount ?? s.deviceCount,
-      }));
+      // A backlog the guard cut short resumes from the last row delivered,
+      // not from the server's clock: the rest is still up there.
+      const reached = full ? since : page.serverTime;
+      if (allPersisted) advanceCursor({ ...cur, lastSyncAt: reached });
+      setStatus((s) => {
+        const next: SyncStatus = {
+          phase: "idle",
+          lastSyncAt: allPersisted ? reached : cur.lastSyncAt || null,
+          // Polls omit the count to spare a scan; the number already shown stays.
+          deviceCount: page.deviceCount ?? s.deviceCount,
+        };
+        return s.phase === next.phase && s.lastSyncAt === next.lastSyncAt && s.deviceCount === next.deviceCount
+          ? s
+          : next;
+      });
       // Remote arrivals surface exactly once per pull, and only real ones.
       if (added > 0) showToast(`Synced — ${added} new from your partner`);
       // We're clearly online: flush anything the partner is still missing.
@@ -211,6 +262,10 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
       l.pushAgain = true;
       return;
     }
+    // The clock is read BEFORE the delta. It clamps the cursor after the
+    // requests; read after them, it sat past any entry logged while they were
+    // in flight, and that entry fell below the cursor and was never sent.
+    const now = new Date().toISOString();
     const { activities, profile, profileUpdatedAt } = readPersisted();
     // Delta selection: everything written since the last successful push —
     // unless a backup has been merged in, in which case the whole log goes,
@@ -228,7 +283,9 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
       // Chunked to the server's batch cap; Math.max keeps one iteration for a
       // profile-only save.
       for (let index = 0; index < Math.max(delta.length, 1); index += PUSH_CHUNK) {
-        if (!live.current.pairing) return;
+        // Left, or switched families, mid-push: the next chunk would go out
+        // under a key already handed back.
+        if (live.current.pairing?.token !== before.token) return;
         const chunk = delta.slice(index, index + PUSH_CHUNK);
         await transport.pushBatch(before.token, {
           activities: chunk.map((activity) => ({
@@ -248,7 +305,6 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
       }
       // Clamp the cursor to this device's clock: a partner's future-skewed
       // stamp we merged and echoed must never freeze our own future pushes.
-      const now = new Date().toISOString();
       if (maxStamp > now) maxStamp = now;
       const cur = live.current.pairing;
       if (!cur || cur.token !== before.token) return;
@@ -261,7 +317,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
       } else {
         // The whole log is across; the cursor can be trusted again.
         if (backfilled) live.current.backfilled = false;
-        adoptPairing({
+        advanceCursor({
           ...cur,
           lastPushedAt: maxStamp,
           lastPushedProfileAt: sendProfile && profileUpdatedAt ? profileUpdatedAt : cur.lastPushedProfileAt,
@@ -269,7 +325,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
       }
       setStatus((s) => (s.phase === "syncing" ? { ...s, phase: "idle" } : s));
     } catch (error) {
-      markFailed(error);
+      markFailed(error, before.token);
     } finally {
       l.pushBusy = false;
       if (l.pushAgain) {
@@ -304,13 +360,24 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
       if (!document.hidden) void runPull(false);
     }, PULL_INTERVAL_MS);
     const onVisibility = () => {
-      if (!document.hidden) void runPull(true);
+      if (!document.hidden) {
+        void runPull(true);
+        return;
+      }
+      // Going dark. A feed logged and the phone locked inside the two-second
+      // push debounce used to sit on this phone until the next open — iOS
+      // freezes a backgrounded page almost at once, so the timer never
+      // fired, and the partner learned of the 3am feed at breakfast. Send
+      // now; pushBatch is keepalive, so the request outlives the page.
+      flushPush();
     };
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", flushPush);
     return () => {
       window.clearTimeout(opener);
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", flushPush);
     };
     // runPull is an event handler, not a dependency: it reads every changing
     // value through live.current, and re-arming the listeners per render would

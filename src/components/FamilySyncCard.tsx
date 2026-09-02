@@ -78,17 +78,23 @@ export function FamilySyncCard({
 
   const deviceLabel = profile.name.trim() ? `${profile.name.trim()}’s tracker` : "This phone";
 
-  // Fetched once the card is paired, and refreshed after a revocation so the
-  // list never shows a phone that no longer holds a key. The unpaired case
-  // needs no reset — `paired` already gates the whole block from rendering.
+  // Fetched once per pairing, and refreshed after a revocation so the list
+  // never shows a phone that no longer holds a key. The unpaired case needs
+  // no reset — `paired` already gates the whole block from rendering.
+  // Keyed on the family id, not the pairing object or the function: both are
+  // rebuilt on every App render, and this effect used to fetch the device
+  // list (two queries, one without an index) once a minute for nothing.
+  const familyId = pairing?.familyId ?? null;
   useEffect(() => {
-    if (!pairing) return;
+    if (!familyId) return;
     let cancelled = false;
     void listDevices().then((found) => {
       if (!cancelled) setDevices(found);
     });
     return () => { cancelled = true; };
-  }, [pairing, listDevices]);
+    // listDevices reads the live pairing; its identity is per-render by design.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [familyId]);
 
   async function removeDevice(target: { deviceId: string } | { all: true }) {
     const confirmed = "all" in target

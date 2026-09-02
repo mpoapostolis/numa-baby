@@ -274,17 +274,20 @@ export default function HomePage() {
     const tapped = magicTokenRef.current;
     if (!tapped || bootState === "loading") return;
     magicTokenRef.current = null;
-    if (tapped.purpose === "recover" && bootState !== "onboarding") {
-      if (bootState === "ready") {
-        // A phone WITH a log tapped a recovery link: that is the standard
-        // merge-or-adopt decision, and it gets the standard real dialog —
-        // not a four-second toast that spends the link's one moment on a
-        // dead end. Cancel leaves the token unspent and this phone whole.
-        setRecoverAsk(tapped.token);
-      } else {
+    if (tapped.purpose === "recover") {
+      if (bootState === "recovery") {
         // recovery boot: the local copy is unreadable and downloading it
         // comes first — the restore doors are on the screen already.
         showToast("Save this phone's copy first — then use the restore options right here.");
+      } else {
+        // A phone WITH a log tapped a recovery link: that is the standard
+        // merge-or-adopt decision, and it gets the standard real dialog —
+        // not a four-second toast that spends the link's one moment on a
+        // dead end. An EMPTY phone gets the same dialog with one button:
+        // the token is spent by a tap, never by a page load, because the
+        // browsers that open links inside mail scanners run JavaScript too.
+        // Cancel leaves the token unspent and this phone whole.
+        setRecoverAsk(tapped.token);
       }
       return;
     }
@@ -593,6 +596,16 @@ export default function HomePage() {
         onResetRecovery={resetUnreadableData}
       />
       </Suspense>
+      {recoverAsk && (
+        <Suspense fallback={null}>
+          <RecoverLinkDialog
+            token={recoverAsk}
+            familySync={familySync}
+            onRecovered={() => { completeJoin(); }}
+            onClosed={() => setRecoverAsk(null)}
+          />
+        </Suspense>
+      )}
       {/* No consent question on this screen, deliberately.
           This is the first ten seconds for everyone who arrives from a link,
           and it is a good ten seconds — an illustration, a headline, three

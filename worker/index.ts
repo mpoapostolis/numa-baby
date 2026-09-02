@@ -60,6 +60,18 @@ const MAX_PAYLOAD_BYTES = 8_192;
 // real family must never be locked out by a stranger's typos — while thirty
 // tries against a million codes stays a lottery ticket.
 const JOIN_TRIES_PER_HOUR = 30;
+// Wrong codes across the WHOLE door per hour. A family mistypes a handful;
+// six hundred is a loop — and a loop with a thousand addresses used to have
+// a thousand budgets.
+const JOIN_FAILURES_PER_HOUR = 600;
+// New families per address per hour. Creating one is free, so it is bounded:
+// a family is a bearer token, and a bearer token is a way to put questions
+// to the authenticated endpoints.
+const CREATES_PER_HOUR = 60;
+// Mirrors FUTURE_TOLERANCE_MS in src/domain/validate.ts: a write stamp this
+// far past the server's clock is a broken clock, not a newer write.
+const FUTURE_TOLERANCE_MS = 48 * 60 * 60 * 1000;
+const ISO_STAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
 
 // activities predates received_at. Rows carry two clocks on purpose:
 // updated_at is the CLIENT's stamp and decides LWW conflicts; received_at is
@@ -91,6 +103,10 @@ async function ensureReceivedAt(client: ReturnType<typeof createClient>) {
   await client
     .execute("CREATE INDEX IF NOT EXISTS idx_activities_family_received ON activities(family_id, received_at)")
     .catch(() => undefined);
+  // Pull pages are ordered by (received_at, id); this is that order.
+  await client
+    .execute("CREATE INDEX IF NOT EXISTS idx_activities_family_received_id ON activities(family_id, received_at, id)")
+    .catch(() => undefined);
   await client
     .execute("CREATE INDEX IF NOT EXISTS idx_devices_family ON devices(family_id)")
     .catch(() => undefined);
@@ -104,7 +120,14 @@ function db(env: Env) {
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "content-type": "application/json", "cache-control": "no-store" },
+    headers: {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      // public/_headers covers only what the asset layer serves; the API's
+      // own answers carry their own belt and braces.
+      "x-content-type-options": "nosniff",
+      "strict-transport-security": "max-age=31536000; includeSubDomains",
+    },
   });
 }
 
@@ -159,6 +182,10 @@ async function touchDevice(env: Env, familyId: string, deviceId: string | undefi
 }
 
 async function handleCreateFamily(env: Env, request: Request): Promise<Response> {
+  const ip = budgetKey(request.headers.get("cf-connecting-ip") ?? "unknown");
+  if (!(await spendBudget(db(env), `create:${ip}`, CREATES_PER_HOUR))) {
+    return bad("Too many new families from this connection — wait a while and try again.", 429);
+  }
   await ensureDeviceLink(db(env));
   const body = (await request.json().catch(() => ({}))) as { deviceLabel?: string };
   const familyId = crypto.randomUUID();
@@ -231,25 +258,66 @@ async function handleInvite(env: Env, familyId: string): Promise<Response> {
   return json({ code, expiresAt });
 }
 
-// Six digits is a million codes and a 15-minute window — safe against a
-// human, farmable by a loop. The hourly budget is a family mistyping freely
-// and a brute force getting nowhere.
-async function reserveJoinTry(client: ReturnType<typeof db>, ip: string): Promise<boolean> {
+// Behind mobile NAT a whole carrier shares one IPv4 address; on IPv6 one
+// household owns 2^64 of them, and a budget per full address was a budget
+// per guess. Budget at the size that stands for one connection: the whole
+// v4 address, the first 64 bits of v6.
+function budgetKey(ip: string): string {
+  return ip.includes(":") ? ip.split(":").slice(0, 4).join(":") : ip;
+}
+
+let budgetTableReady = false;
+async function ensureBudgetTable(client: ReturnType<typeof db>) {
+  if (budgetTableReady) return;
   await client
     .execute(
       "CREATE TABLE IF NOT EXISTS join_budget (ip TEXT PRIMARY KEY, window_start TEXT NOT NULL, tries INTEGER NOT NULL)",
     )
     .catch(() => undefined);
+  budgetTableReady = true;
+}
+
+// Six digits is a million codes and a 15-minute window — safe against a
+// human, farmable by a loop. An hourly budget per key is a family mistyping
+// freely and a brute force getting nowhere. The budget is spent BEFORE the
+// answer is known, in one atomic statement, so a thousand simultaneous
+// guesses draw a thousand different numbers. Rows past their window are
+// swept in the same batch: the table lists who is knocking now, not everyone
+// who ever did.
+async function spendBudget(client: ReturnType<typeof db>, key: string, max: number): Promise<boolean> {
+  await ensureBudgetTable(client);
   const windowStart = new Date(Date.now() - 3600_000).toISOString();
-  const result = await client.execute({
-    sql: `INSERT INTO join_budget (ip, window_start, tries) VALUES (?, ?, 1)
-          ON CONFLICT(ip) DO UPDATE SET
-            tries = CASE WHEN join_budget.window_start < ? THEN 1 ELSE join_budget.tries + 1 END,
-            window_start = CASE WHEN join_budget.window_start < ? THEN excluded.window_start ELSE join_budget.window_start END
-          RETURNING tries`,
-    args: [ip, new Date().toISOString(), windowStart, windowStart],
-  });
-  return Number(result.rows[0]?.tries ?? JOIN_TRIES_PER_HOUR + 1) <= JOIN_TRIES_PER_HOUR;
+  const [, result] = await client.batch(
+    [
+      { sql: "DELETE FROM join_budget WHERE window_start < ? AND ip <> 'global'", args: [windowStart] },
+      {
+        sql: `INSERT INTO join_budget (ip, window_start, tries) VALUES (?, ?, 1)
+              ON CONFLICT(ip) DO UPDATE SET
+                tries = CASE WHEN join_budget.window_start < ? THEN 1 ELSE join_budget.tries + 1 END,
+                window_start = CASE WHEN join_budget.window_start < ? THEN excluded.window_start ELSE join_budget.window_start END
+              RETURNING tries`,
+        args: [key, new Date().toISOString(), windowStart, windowStart],
+      },
+    ],
+    "write",
+  );
+  return Number(result.rows[0]?.tries ?? max + 1) <= max;
+}
+
+/** Has the whole door seen too many WRONG codes this hour? Read-only: a
+    right code must never count against anyone, and a family's own retries
+    are budgeted per address above. */
+async function joinDoorOpen(client: ReturnType<typeof db>): Promise<boolean> {
+  await ensureBudgetTable(client);
+  const windowStart = new Date(Date.now() - 3600_000).toISOString();
+  const found = await client.execute({ sql: "SELECT tries, window_start FROM join_budget WHERE ip = 'global'", args: [] });
+  if (!found.rows.length) return true;
+  const row = found.rows[0];
+  return String(row.window_start) < windowStart || Number(row.tries) < JOIN_FAILURES_PER_HOUR;
+}
+
+function noteWrongCode(client: ReturnType<typeof db>): Promise<unknown> {
+  return spendBudget(client, "global", JOIN_FAILURES_PER_HOUR).catch(() => undefined);
 }
 
 async function handleJoin(env: Env, request: Request): Promise<Response> {
@@ -258,18 +326,28 @@ async function handleJoin(env: Env, request: Request): Promise<Response> {
   const code = String(body.code ?? "").trim();
   if (!/^\d{6}$/.test(code)) return bad("Enter the 6-digit code from the other phone.");
   const client = db(env);
-  const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
-  if (!(await reserveJoinTry(client, ip))) {
+  const ip = budgetKey(request.headers.get("cf-connecting-ip") ?? "unknown");
+  if (!(await spendBudget(client, ip, JOIN_TRIES_PER_HOUR))) {
     return bad("Too many attempts from this connection — wait a while and try again.", 429);
+  }
+  if (!(await joinDoorOpen(client))) {
+    return bad("Pairing is busy right now — wait a little while and try again.", 429);
   }
   const found = await client.execute({
     sql: "SELECT family_id, expires_at, used_at FROM invites WHERE code = ?",
     args: [code],
   });
-  if (!found.rows.length) return bad("That code isn't valid. Ask for a fresh one.", 404);
+  if (!found.rows.length) {
+    await noteWrongCode(client);
+    return bad("That code isn't valid. Ask for a fresh one.", 404);
+  }
   const row = found.rows[0];
-  if (row.used_at) return bad("That code was already used. Ask for a fresh one.", 409);
+  if (row.used_at) {
+    await noteWrongCode(client);
+    return bad("That code was already used. Ask for a fresh one.", 409);
+  }
   if (new Date(String(row.expires_at)).getTime() < Date.now()) {
+    await noteWrongCode(client);
     return bad("That code expired. Ask for a fresh one.", 410);
   }
   const familyId = String(row.family_id);
@@ -295,27 +373,37 @@ async function handleJoin(env: Env, request: Request): Promise<Response> {
 async function handlePull(env: Env, request: Request, familyId: string): Promise<Response> {
   const url = new URL(request.url);
   const since = url.searchParams.get("since") ?? "";
+  // The second half of the page cursor: the id of the last row the client
+  // already holds at exactly `since`. Arrival stamps tie — every row the
+  // one-time backfill touched carries the same one — and a page ordered by
+  // stamp alone re-served the first 2000 of them for ever. A client that
+  // predates the parameter simply never sends it.
+  const after = url.searchParams.get("after") ?? "";
   const deviceId = url.searchParams.get("device") ?? undefined;
+  // The device count is decoration for the Settings card, not sync state —
+  // counting it on every 60-second poll was a table scan a minute per phone.
+  // A full pull (no cursor) and any pull that ASKS (the client asks on open,
+  // unlock, Sync now and while the invite screen waits for the other phone)
+  // carry it; polls omit it and the client keeps the number it already has.
+  const wantCount = !since || url.searchParams.get("count") === "1";
   const client = db(env);
   await ensureReceivedAt(client);
   // Filter and order by the SERVER clock: "give me what arrived after my
   // cursor" is the only question a pull can ask that a backfilled restore
   // (old client stamps, fresh arrival) still answers correctly.
-  // The device count is decoration for the Settings card, not sync state —
-  // counting it on every 60-second poll was a table scan a minute per phone.
-  // Full pulls (open, join, restore) still carry it; polls omit it and the
-  // client keeps the number it already has.
   const [rows, meta, devices] = await Promise.all([
     client.execute({
       sql: since
-        ? "SELECT id, payload, updated_at, deleted, received_at FROM activities WHERE family_id = ? AND received_at > ? ORDER BY received_at LIMIT 2000"
-        : "SELECT id, payload, updated_at, deleted, received_at FROM activities WHERE family_id = ? ORDER BY received_at LIMIT 2000",
-      args: since ? [familyId, since] : [familyId],
+        ? after
+          ? "SELECT id, payload, updated_at, deleted, received_at FROM activities WHERE family_id = ? AND (received_at > ? OR (received_at = ? AND id > ?)) ORDER BY received_at, id LIMIT 2000"
+          : "SELECT id, payload, updated_at, deleted, received_at FROM activities WHERE family_id = ? AND received_at > ? ORDER BY received_at, id LIMIT 2000"
+        : "SELECT id, payload, updated_at, deleted, received_at FROM activities WHERE family_id = ? ORDER BY received_at, id LIMIT 2000",
+      args: since ? (after ? [familyId, since, since, after] : [familyId, since]) : [familyId],
     }),
     client.execute({ sql: "SELECT profile, updated_at FROM family_meta WHERE family_id = ?", args: [familyId] }),
-    since
-      ? Promise.resolve(null)
-      : client.execute({ sql: "SELECT COUNT(*) AS n FROM devices WHERE family_id = ?", args: [familyId] }),
+    wantCount
+      ? client.execute({ sql: "SELECT COUNT(*) AS n FROM devices WHERE family_id = ?", args: [familyId] })
+      : Promise.resolve(null),
   ]);
   await touchDevice(env, familyId, deviceId);
   return json({
@@ -345,9 +433,20 @@ async function handlePush(env: Env, request: Request, familyId: string): Promise
   await ensureReceivedAt(db(env));
 
   const receivedAt = new Date().toISOString();
+  // A write stamp past this is a phone whose clock is wrong, not a newer
+  // write. It is stored as "arrived now": the entry is kept, but it can no
+  // longer win every conflict for ever — a partner's later deletion or edit
+  // must be able to beat it. A stored stamp already past the fence has lost
+  // that immortality too (the last clause of the guard), so a row a broken
+  // clock planted before this rule existed can finally be corrected.
+  const futureFence = new Date(Date.now() + FUTURE_TOLERANCE_MS).toISOString();
   const statements = [];
   for (const activity of body.activities) {
     if (typeof activity.id !== "string" || typeof activity.updatedAt !== "string") continue;
+    // ISO shape or nothing: the guard below compares strings, and a string
+    // that merely sorts high would out-rank every real stamp.
+    if (!ISO_STAMP.test(activity.updatedAt)) continue;
+    const updatedAt = activity.updatedAt > futureFence ? receivedAt : activity.updatedAt;
     const payload = JSON.stringify(activity.payload ?? {});
     if (payload.length > MAX_PAYLOAD_BYTES) continue;
     // Server-side LWW guard: an older write can never clobber a newer row.
@@ -364,20 +463,28 @@ async function handlePush(env: Env, request: Request, familyId: string): Promise
               deleted = excluded.deleted,
               received_at = excluded.received_at
             WHERE excluded.updated_at > activities.updated_at
-               OR (excluded.updated_at = activities.updated_at AND excluded.deleted > activities.deleted)`,
-      args: [familyId, activity.id, payload, activity.updatedAt, activity.deleted ? 1 : 0, receivedAt],
+               OR (excluded.updated_at = activities.updated_at AND excluded.deleted > activities.deleted)
+               OR activities.updated_at > ?`,
+      args: [familyId, activity.id, payload, updatedAt, activity.deleted ? 1 : 0, receivedAt, futureFence],
     });
   }
-  if (body.profile && typeof body.profileUpdatedAt === "string") {
-    statements.push({
-      sql: `INSERT INTO family_meta (family_id, profile, updated_at)
-            VALUES (?, ?, ?)
-            ON CONFLICT(family_id) DO UPDATE SET
-              profile = excluded.profile,
-              updated_at = excluded.updated_at
-            WHERE excluded.updated_at > family_meta.updated_at`,
-      args: [familyId, JSON.stringify(body.profile), body.profileUpdatedAt],
-    });
+  if (body.profile && typeof body.profileUpdatedAt === "string" && ISO_STAMP.test(body.profileUpdatedAt)) {
+    const profileText = JSON.stringify(body.profile);
+    // The profile rides every pull for every phone; a runaway one is a
+    // cost every phone in the family pays each minute.
+    if (profileText.length <= MAX_PAYLOAD_BYTES) {
+      const profileUpdatedAt = body.profileUpdatedAt > futureFence ? receivedAt : body.profileUpdatedAt;
+      statements.push({
+        sql: `INSERT INTO family_meta (family_id, profile, updated_at)
+              VALUES (?, ?, ?)
+              ON CONFLICT(family_id) DO UPDATE SET
+                profile = excluded.profile,
+                updated_at = excluded.updated_at
+              WHERE excluded.updated_at > family_meta.updated_at
+                 OR family_meta.updated_at > ?`,
+        args: [familyId, profileText, profileUpdatedAt, futureFence],
+      });
+    }
   }
   if (statements.length) await db(env).batch(statements, "write");
   await touchDevice(env, familyId, body.deviceId);

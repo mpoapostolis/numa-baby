@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { milestoneFor } from "@/domain/milestones";
 import {
   ageInDays,
   ageInMonths,
@@ -159,9 +160,10 @@ describe("formatBabyAge", () => {
 describe("ageInDays", () => {
   const birth = "2026-07-01T09:00:00";
 
-  it("counts whole days since birth", () => {
+  it("counts calendar days since birth, whatever the hour", () => {
     expect(ageInDays(birth, Date.parse("2026-07-01T23:00:00"))).toBe(0);
-    expect(ageInDays(birth, Date.parse("2026-07-02T08:59:00"))).toBe(0);
+    // Born on the 1st, one day old on the 2nd — even before the birth hour.
+    expect(ageInDays(birth, Date.parse("2026-07-02T08:59:00"))).toBe(1);
     expect(ageInDays(birth, Date.parse("2026-07-02T09:00:00"))).toBe(1);
     expect(ageInDays(birth, Date.parse("2026-08-10T10:00:00"))).toBe(40);
   });
@@ -171,5 +173,39 @@ describe("ageInDays", () => {
     expect(ageInDays(undefined, now)).toBeNull();
     expect(ageInDays("nope", now)).toBeNull();
     expect(ageInDays("2026-09-01T00:00:00", now)).toBeNull();
+  });
+});
+
+// The profile's birth date is stored date-only ("2026-05-01"), and the suite
+// runs in Pacific/Auckland (vitest.config.ts) — the zone where parsing that
+// as UTC midnight put the age eleven hours behind the milestone card.
+describe("date-only birth dates", () => {
+  const birth = "2026-05-01";
+  const local = (year: number, month: number, day: number, hour: number) =>
+    new Date(year, month - 1, day, hour, 0, 0).getTime();
+
+  it("counts calendar days from local midnight, agreeing with the milestone card", () => {
+    expect(ageInDays(birth, local(2026, 5, 1, 6))).toBe(0);
+    expect(ageInDays(birth, local(2026, 5, 2, 0))).toBe(1);
+    expect(ageInDays(birth, local(2026, 5, 8, 9))).toBe(7);
+    expect(formatBabyAge(birth, local(2026, 5, 8, 9))).toBe("1 week");
+    expect(milestoneFor(birth, "Mia", local(2026, 5, 8, 9))?.id).toBe("d7");
+    expect(formatBabyAge(birth, local(2026, 5, 1, 6))).toBe("born today");
+  });
+
+  it("has an age on the birth morning, not at noon UTC", () => {
+    expect(ageInDays(birth, local(2026, 5, 1, 0))).toBe(0);
+    expect(formatBabyAge(birth, local(2026, 5, 1, 0))).toBe("born today");
+  });
+
+  it("treats tomorrow's birth date and impossible dates as no usable age", () => {
+    expect(ageInDays(birth, local(2026, 4, 30, 23))).toBeNull();
+    expect(ageInDays("2026-13-45", local(2026, 6, 1, 9))).toBeNull();
+  });
+
+  it("survives a DST switch without a 23-hour day counting as zero", () => {
+    // Auckland leaves daylight time on the first Sunday of April.
+    expect(ageInDays("2026-04-04", local(2026, 4, 5, 9))).toBe(1);
+    expect(ageInDays("2026-04-04", local(2026, 4, 11, 0))).toBe(7);
   });
 });

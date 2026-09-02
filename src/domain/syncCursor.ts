@@ -23,6 +23,31 @@ import { activityUpdatedAt } from "./validate";
  * nothing or correctly loses to a newer version. Under-selection is silent
  * data loss.
  */
+/**
+ * Where the next pull page starts, from the last row of this one.
+ *
+ * Pages are ordered by the server's arrival stamp, and arrival stamps TIE:
+ * the one-time backfill that gave every pre-existing row a received_at gave
+ * them all the same one, and a family with more than a page of such rows
+ * had a joining phone fetch the first page twenty times over and never see
+ * the rest — "Sync now" said done, the partner's log was silently short.
+ * So the cursor is the pair (stamp, id): the server returns rows strictly
+ * after it in (received_at, id) order, and a tie costs nothing.
+ *
+ * A row without receivedAt came from a worker that predates the arrival
+ * clock; for that the old rule stands — step the client stamp back one
+ * millisecond and let the idempotent merge absorb the repeat.
+ */
+export function nextPullCursor(
+  last: { id: string; updatedAt: string; receivedAt?: string } | undefined,
+): { since: string; after?: string } | null {
+  if (!last) return null;
+  if (last.receivedAt) return { since: last.receivedAt, after: last.id };
+  const ms = new Date(last.updatedAt).getTime();
+  if (!Number.isFinite(ms)) return null;
+  return { since: new Date(ms - 1).toISOString() };
+}
+
 export function selectPushDelta(
   activities: Activity[],
   lastPushedAt: string,
