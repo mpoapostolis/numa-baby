@@ -55,6 +55,8 @@ async function computeHeavy(client: Client, now: number) {
     invites,
     hours,
     families,
+    funnel,
+    lifespan,
   ] = await Promise.all([
     safe(
       client,
@@ -196,6 +198,42 @@ async function computeHeavy(client: Client, now: number) {
        from families f order by f.created_at desc limit 500`,
     ),
 
+    // The week in one row: who arrived, who of them ever wrote anything, and
+    // who came back who was already here. "New families" alone cannot tell a
+    // service that is growing from one that is refilling a leaking bucket.
+    safe(
+      client,
+      `select
+         (select count(*) from families where created_at >= ${ago(7)}) as joined_7d,
+         (select count(*) from families where created_at >= ${ago(14)} and created_at < ${ago(7)}) as joined_prev_7d,
+         (select count(*) from families f where f.created_at >= ${ago(7)}
+            and exists(select 1 from activities a where a.family_id = f.id)) as activated_7d,
+         (select count(*) from families f where f.created_at >= ${ago(14)} and f.created_at < ${ago(7)}
+            and exists(select 1 from activities a where a.family_id = f.id)) as activated_prev_7d,
+         (select count(distinct a.family_id) from activities a join families f on f.id = a.family_id
+            where a.updated_at >= ${ago(7)} and f.created_at < ${ago(7)}) as returning_7d,
+         (select count(*) from families f where f.created_at >= ${ago(14)} and f.created_at < ${ago(7)}
+            and exists(select 1 from activities a where a.family_id = f.id and a.updated_at >= ${ago(7)})) as stayed_a_week,
+         (select count(*) from families f where f.created_at >= ${ago(7)}
+            and (select count(*) from devices d where d.family_id = f.id) > 1) as paired_7d`,
+    ),
+
+    // How long a family lasts, from its first entry to its last. The one-day
+    // families are the number that matters: they arrived, they tried it once,
+    // and nothing brought them back.
+    safe(
+      client,
+      `select
+         count(*) as with_entries,
+         sum(case when days = 0 then 1 else 0 end) as one_day,
+         sum(case when days between 1 and 6 then 1 else 0 end) as under_week,
+         sum(case when days between 7 and 29 then 1 else 0 end) as under_month,
+         sum(case when days >= 30 then 1 else 0 end) as over_month
+       from (select family_id,
+                    cast(julianday(substr(max(updated_at), 1, 10)) - julianday(substr(min(updated_at), 1, 10)) as integer) as days
+             from activities group by family_id)`,
+    ),
+
   ]);
 
   // The median is the one figure SQLite will not give cheaply, and it is the
@@ -211,6 +249,8 @@ async function computeHeavy(client: Client, now: number) {
   return {
     totals: totals[0] ?? {},
     invites: invites[0] ?? {},
+    funnel: funnel[0] ?? {},
+    lifespan: lifespan[0] ?? {},
     retention: retention[0] ?? {},
     deviceFreshness: deviceFreshness[0] ?? {},
     spread: { ...(spread[0] ?? {}), median },

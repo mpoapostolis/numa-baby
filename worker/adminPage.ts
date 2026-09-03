@@ -38,6 +38,15 @@ export function adminPageHtml(nonce: string): string {
   .muted { color:var(--ink-2); font-size:.8125rem; margin:0; }
   .tiny { color:var(--ink-3); font-size:.6875rem; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; }
+  /* The report reads before it counts, so its sentences get the room. */
+  .report ul { margin:0 0 16px; padding:0 0 0 18px; display:grid; gap:8px; }
+  .report li { line-height:1.5; }
+  .report b { font-weight:600; font-variant-numeric:tabular-nums; }
+  .report em { font-style:normal; font-size:.8125rem; font-weight:600; padding:1px 6px;
+    border-radius:999px; margin-left:2px; }
+  .report em.up { color:var(--good); background:color-mix(in oklab, var(--good) 14%, transparent); }
+  .report em.down { color:var(--bad); background:color-mix(in oklab, var(--bad) 14%, transparent); }
+  .report em.flat { color:var(--ink-3); background:color-mix(in oklab, var(--ink-3) 14%, transparent); }
   .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(112px,1fr)); gap:14px; }
   .stat b { display:block; font-size:1.7rem; font-weight:650; line-height:1.15;
     font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
@@ -228,10 +237,71 @@ export function adminPageHtml(nonce: string): string {
     return out + '</tbody></table></div>';
   }
 
+  // The week in sentences.
+  //
+  // Every other card on this page is a number waiting for somebody to work
+  // out what it means. This one does the working out: who arrived, how many
+  // of them ever wrote anything, who came back, and how many are gone. The
+  // arrows compare with the seven days before, because a count with nothing
+  // beside it cannot say whether things are getting better.
+  function delta(now, before) {
+    var a = Number(now || 0), b = Number(before || 0);
+    if (!b) return a ? '<em class="up">new</em>' : "";
+    var change = Math.round(((a - b) / b) * 100);
+    if (change === 0) return '<em class="flat">level</em>';
+    return '<em class="' + (change > 0 ? "up" : "down") + '">' +
+      (change > 0 ? "+" : "") + change + '%</em>';
+  }
+
+  function report(d) {
+    var t = d.totals || {}, f = d.funnel || {}, life = d.lifespan || {}, ret = d.retention || {};
+    var joined = Number(f.joined_7d || 0);
+    var activated = Number(f.activated_7d || 0);
+    var lost = Math.max(0, Number(ret.total || 0) - Number(ret.d30 || 0) - Number(ret.never || 0));
+    var prevJoined = Number(f.joined_prev_7d || 0);
+    var stayed = Number(f.stayed_a_week || 0);
+
+    var lines = [];
+    lines.push('<b>' + n(joined) + '</b> ' + (joined === 1 ? "family" : "families") +
+      ' turned on Family Sync in the last seven days ' + delta(joined, prevJoined) + '.');
+    lines.push('<b>' + n(activated) + '</b> of them (' + pct(activated, joined) +
+      ') went on to log something. ' +
+      (joined - activated > 0
+        ? n(joined - activated) + ' set it up and never wrote an entry.'
+        : 'Every one of them wrote at least one.'));
+    lines.push('<b>' + n(f.returning_7d) + '</b> ' +
+      (Number(f.returning_7d || 0) === 1 ? "family that was already here came back" : "families that were already here came back") +
+      ' and logged this week.');
+    lines.push('Of the ' + n(prevJoined) + ' who arrived the week before, <b>' + n(stayed) +
+      '</b> (' + pct(stayed, prevJoined) + ') were still logging seven days later.');
+    lines.push('<b>' + n(life.one_day) + '</b> ' + (Number(life.one_day || 0) === 1 ? "family has" : "families have") +
+      ' entries from one single day and nothing since — they tried it once. ' +
+      '<b>' + n(lost) + '</b> logged for longer and then went quiet more than a month ago.');
+    lines.push('<b>' + n(f.paired_7d) + '</b> of the arrivals this week added a second phone (' +
+      pct(f.paired_7d, joined) + '). Across the whole service it is ' + pct(t.paired, t.families) + '.');
+
+    return '<div class="card report"><h2>The week in words</h2>' +
+      '<ul>' + lines.map(function (line) { return "<li>" + line + "</li>"; }).join("") + '</ul>' +
+      '<div class="grid">' +
+        stat("Arrived", n(joined), "last 7 days") +
+        stat("Logged something", n(activated), pct(activated, joined) + " of arrivals") +
+        stat("Came back", n(f.returning_7d), "already here, logged this week") +
+        stat("Tried once", n(life.one_day), "one day of entries, ever") +
+        stat("Gone quiet", n(lost), "silent 30+ days") +
+        stat("Never logged", n(ret.never), "synced, wrote nothing") +
+      '</div>' +
+      '<p class="tiny" style="margin:12px 0 0">This counts only families who turned Family Sync ON — ' +
+      'the app works without it and those phones are invisible here, by design. ' +
+      'For everyone else there is only the anonymous usage counter, and only where it was allowed.</p>' +
+      '</div>';
+  }
+
   function render(d) {
     var t = d.totals || {}, ret = d.retention || {}, sp = d.spread || {}, inv = d.invites || {};
     var df = d.deviceFreshness || {};
     var parts = [];
+
+    parts.push(report(d));
 
     parts.push('<div class="card"><h2>Pulse</h2><div class="grid">' +
       stat("Families", n(t.families), n(t.paired) + " with 2+ phones") +
