@@ -37,6 +37,8 @@ export type Broadcast = {
   gone: number;
   failed: number;
   finishedAt: string | null;
+  /** The chosen households, or null for everyone. */
+  audience: string[] | null;
 };
 
 let tableReady = false;
@@ -59,6 +61,9 @@ export async function ensureBroadcastTable(client: Client): Promise<void> {
        )`,
     )
     .catch(() => undefined);
+  // Added with the checkbox list. NULL means everyone, which is what every
+  // row written before this existed meant too.
+  await client.execute("ALTER TABLE broadcasts ADD COLUMN audience TEXT").catch(() => undefined);
   tableReady = true;
 }
 
@@ -74,6 +79,15 @@ function toBroadcast(row: Record<string, unknown>): Broadcast {
     gone: Number(row.gone ?? 0),
     failed: Number(row.failed ?? 0),
     finishedAt: row.finished_at == null ? null : String(row.finished_at),
+    audience: (() => {
+      if (row.audience == null) return null;
+      try {
+        const parsed = JSON.parse(String(row.audience));
+        return Array.isArray(parsed) ? (parsed as string[]) : null;
+      } catch {
+        return null;
+      }
+    })(),
   };
 }
 
@@ -96,7 +110,7 @@ export async function broadcastHistory(client: Client, limit = 20): Promise<Broa
   return (result?.rows ?? []).map((row) => toBroadcast(row as unknown as Record<string, unknown>));
 }
 
-export type BroadcastDraft = { title?: unknown; body?: unknown; url?: unknown };
+export type BroadcastDraft = { title?: unknown; body?: unknown; url?: unknown; audience?: unknown };
 
 /** Control characters have no business in a notification, and are how a
     one-line message becomes three on somebody's lock screen. */
@@ -142,10 +156,18 @@ export async function queueBroadcast(
   if (await pendingBroadcast(client)) {
     return { error: "One announcement is still going out. Wait for it to finish." };
   }
+  // Absent means everyone. An EMPTY list means the operator opened the
+  // chooser and ticked nothing, which is a mistake worth refusing rather
+  // than quietly promoting to "send to all of them".
+  const audience = draft.audience === undefined ? null : readAudience(draft.audience);
+  if (audience !== null && audience.length === 0) {
+    return { error: "No households are ticked, so there is nobody to send to." };
+  }
   const id = crypto.randomUUID();
   await client.execute({
-    sql: "INSERT INTO broadcasts (id, title, body, url, created_at) VALUES (?, ?, ?, ?, ?)",
-    args: [id, message.title, message.body, message.url, new Date(now).toISOString()],
+    sql: "INSERT INTO broadcasts (id, title, body, url, created_at, audience) VALUES (?, ?, ?, ?, ?, ?)",
+    args: [id, message.title, message.body, message.url, new Date(now).toISOString(),
+      audience === null ? null : JSON.stringify(audience)],
   });
   return { id };
 }
@@ -164,11 +186,21 @@ export async function stopBroadcast(client: Client, now: number): Promise<boolea
 
 /** Endpoints after the cursor in a stable order, so the chunks of one
     announcement cover every phone exactly once. */
-async function nextTargets(client: Client, cursor: string, limit: number): Promise<Target[]> {
+async function nextTargets(
+  client: Client,
+  cursor: string,
+  limit: number,
+  audience: string[] | null,
+): Promise<Target[]> {
+  // The cursor still pages over endpoints, so a chosen-household send resumes
+  // exactly where it left off like any other.
+  const narrow = audience === null
+    ? ""
+    : ` AND family_id IN (${audience.map(() => "?").join(",")})`;
   const rows = await client.execute({
     sql: `SELECT endpoint, p256dh, auth FROM push_subscriptions
-          WHERE endpoint > ? ORDER BY endpoint LIMIT ?`,
-    args: [cursor, limit],
+          WHERE endpoint > ?${narrow} ORDER BY endpoint LIMIT ?`,
+    args: audience === null ? [cursor, limit] : [cursor, ...audience, limit],
   });
   return rows.rows.map((row) => ({
     endpoint: String(row.endpoint),
@@ -199,7 +231,7 @@ export async function sendBroadcastChunk(
   const vapid = await vapidKeys(client, env);
   if (!vapid) return null;
 
-  const targets = await nextTargets(client, broadcast.cursor, limit);
+  const targets = await nextTargets(client, broadcast.cursor, limit, broadcast.audience);
   if (!targets.length) {
     await client.execute({
       sql: "UPDATE broadcasts SET finished_at = ? WHERE id = ?",
@@ -255,4 +287,175 @@ export async function sendBroadcastChunk(
   await client.batch(statements as never, "write");
 
   return { id: broadcast.id, sent, gone, failed, done };
+}
+
+// ---------------------------------------------------------------------------
+// One family.
+//
+// The broadcast above reaches everyone and can aim at nobody, which is what
+// makes it safe. This is the opposite and needs its own care: it is the one
+// place in this service where the operator picks a household.
+//
+// It works only for families that turned Family Sync on, because only they
+// have an id at all, and only for phones that PROVED the link with a token
+// (see saveSchedule). A local-only family cannot be addressed here — there is
+// nothing in the database that could address them, which is the design
+// working rather than a gap in it.
+//
+// Sent immediately rather than queued: a family is two or three phones, not
+// two or three thousand.
+
+/** Nobody has more phones than this, and an operator typing a prefix that
+    matched more than one family should not discover it by sending. */
+const FAMILY_DEVICE_CAP = 10;
+
+export type FamilyNotifyResult =
+  | { error: string }
+  | { sent: number; gone: number; failed: number; phones: number };
+
+/**
+ * Resolve what the operator typed to exactly one family.
+ *
+ * The dashboard shows ids truncated to eight characters — deliberately, so
+ * that a column of them is not a directory of who — so a prefix is what an
+ * operator can actually copy. Ambiguity is refused rather than guessed at:
+ * sending a note to the wrong household is not recoverable.
+ */
+export async function resolveFamily(client: Client, typed: unknown): Promise<{ id: string } | { error: string }> {
+  const prefix = typeof typed === "string" ? typed.trim().toLowerCase() : "";
+  if (prefix.length < 6) return { error: "Give at least the first six characters of a family id." };
+  if (!/^[a-z0-9-]{6,64}$/.test(prefix)) return { error: "That is not a family id." };
+  const rows = await client.execute({
+    sql: "SELECT id FROM families WHERE id LIKE ? LIMIT 5",
+    args: [`${prefix}%`],
+  });
+  if (!rows.rows.length) return { error: "No family starts with that." };
+  if (rows.rows.length > 1) return { error: "More than one family starts with that. Type more of it." };
+  return { id: String(rows.rows[0].id) };
+}
+
+/**
+ * Send one note to one family's phones.
+ *
+ * The message is the operator's words, checked by the same readDraft as a
+ * broadcast: still no name, still one line, still a path inside this app.
+ * Being able to aim at a household is not a licence to say more to it — the
+ * server does not know a baby's name here either.
+ */
+export async function notifyFamily(
+  client: Client,
+  env: VapidEnv,
+  typedId: unknown,
+  draft: BroadcastDraft,
+): Promise<FamilyNotifyResult> {
+  const message = readDraft(draft);
+  if (!message) {
+    return { error: "A title and a message are needed, short enough for a lock screen and on one line." };
+  }
+  const family = await resolveFamily(client, typedId);
+  if ("error" in family) return family;
+
+  const rows = await client.execute({
+    sql: `SELECT endpoint, p256dh, auth FROM push_subscriptions
+          WHERE family_id = ? ORDER BY endpoint LIMIT ?`,
+    args: [family.id, FAMILY_DEVICE_CAP],
+  });
+  const targets: Target[] = rows.rows.map((row) => ({
+    endpoint: String(row.endpoint),
+    p256dh: String(row.p256dh),
+    auth: String(row.auth),
+  }));
+  if (!targets.length) {
+    return { error: "That family has no phone with reminders on, so there is nothing to ring." };
+  }
+
+  const vapid = await vapidKeys(client, env);
+  if (!vapid) return { error: "No signing key, so nothing can be sent." };
+
+  const results = await deliver(
+    vapid,
+    targets,
+    () => ({ title: message.title, body: message.body, tag: "note", url: message.url }),
+    24 * 60 * 60,
+  );
+
+  const statements: Array<{ sql: string; args: unknown[] }> = [];
+  let sent = 0;
+  let gone = 0;
+  let failed = 0;
+  for (const { row, status } of results) {
+    if (isGone(status)) {
+      gone += 1;
+      statements.push({ sql: "DELETE FROM push_subscriptions WHERE endpoint = ?", args: [row.endpoint] });
+    } else if (isSent(status)) sent += 1;
+    else failed += 1;
+  }
+  if (statements.length) await client.batch(statements as never, "write");
+  return { sent, gone, failed, phones: targets.length };
+}
+
+// ---------------------------------------------------------------------------
+// Choosing who.
+//
+// Everything below shows a NAME and an AGE to whoever is holding the laptop,
+// which nothing else in this service does: the dashboard truncates family ids
+// to eight characters precisely so a column of them is not a directory of
+// children. That was a deliberate decision and this is a deliberate exception
+// to it, asked for and understood. Two things follow from that:
+//
+//   • It is served only to the local composer (tools/broadcast), behind the
+//     admin password, on a machine somebody had to start a program on. It is
+//     NOT on the dashboard, and it must not drift there.
+//   • It lists only families that BOTH turned Family Sync on and have a phone
+//     with reminders on. A local-only family is not in here, because nothing
+//     about them ever reached this server.
+
+export type Recipient = { familyId: string; name: string; ageDays: number | null; phones: number };
+
+/** How many households the composer will list. Past this the checkbox list is
+    not a way to choose anyway, and the broadcast is the right tool. */
+const RECIPIENT_CAP = 500;
+
+export async function recipients(client: Client, now: number): Promise<Recipient[]> {
+  await ensureBroadcastTable(client);
+  const rows = await client
+    .execute({
+      sql: `SELECT s.family_id AS id, COUNT(*) AS phones, m.profile AS profile
+            FROM push_subscriptions s
+            LEFT JOIN family_meta m ON m.family_id = s.family_id
+            WHERE s.family_id IS NOT NULL
+            GROUP BY s.family_id
+            ORDER BY phones DESC, s.family_id
+            LIMIT ?`,
+      args: [RECIPIENT_CAP],
+    })
+    .catch(() => null);
+
+  return (rows?.rows ?? []).map((row) => {
+    let name = "";
+    let ageDays: number | null = null;
+    try {
+      const profile = JSON.parse(String(row.profile ?? "null")) as { name?: unknown; birthDate?: unknown } | null;
+      if (profile && typeof profile.name === "string") name = profile.name.slice(0, 40);
+      if (profile && typeof profile.birthDate === "string") {
+        const born = Date.parse(`${profile.birthDate}T00:00:00Z`);
+        if (Number.isFinite(born)) ageDays = Math.max(0, Math.floor((now - born) / 86_400_000));
+      }
+    } catch {
+      // A profile that will not parse is a family with no name to show, not
+      // a family that cannot be sent to.
+    }
+    return { familyId: String(row.id), name, ageDays, phones: Number(row.phones ?? 0) };
+  });
+}
+
+/** The chosen households, as the broadcast stores them: null means everyone. */
+export function readAudience(value: unknown): string[] | null {
+  if (!Array.isArray(value)) return null;
+  const ids = value
+    .filter((id): id is string => typeof id === "string" && /^[a-z0-9-]{6,64}$/i.test(id))
+    .slice(0, RECIPIENT_CAP);
+  // An empty selection is not "everyone" — it is a mistake, and treating it
+  // as everyone would be the worst possible way to resolve one.
+  return ids.length ? ids : [];
 }

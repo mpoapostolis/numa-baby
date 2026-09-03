@@ -122,6 +122,12 @@ const server = createServer(async (req, res) => {
       return json(res, 200, { ...broadcast, phones: stats.push?.phones ?? null, target: TARGET });
     }
 
+    if (req.method === "GET" && url.pathname === "/api/recipients") {
+      // Names and ages. They exist nowhere else in the tooling and they stay
+      // on this machine — see the note at the top of worker/broadcast.ts.
+      return relay(res, await callWorker("/api/admin/recipients"));
+    }
+
     if (req.method === "POST" && url.pathname === "/api/send") {
       const body = await readJson(req);
       return relay(res, await callWorker("/api/admin/broadcast", {

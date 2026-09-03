@@ -648,7 +648,7 @@ export default function HomePage() {
       // False means the server does not have it — no key, no subscription, a
       // refused permission, a request that failed — and the in-page timers
       // are the only thing left.
-      setPushArmed(await push.sendSchedule({ feedDueAt, diaperDueAt }));
+      setPushArmed(await push.sendSchedule({ feedDueAt, diaperDueAt }, familySync.pairing?.token));
     });
   }, [
     notificationPermission,
@@ -656,6 +656,7 @@ export default function HomePage() {
     reminders.diaperEnabled,
     feedReminderTargetAt,
     diaperReminderTargetAt,
+    familySync.pairing?.token,
   ]);
 
   useEffect(() => {

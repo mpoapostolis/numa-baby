@@ -684,6 +684,21 @@ export function adminPageHtml(nonce: string): string {
       '<button type="submit">Find &amp; mint link</button></form>' +
       '<p id="rec-out" class="muted" style="margin-top:8px"></p></div>');
 
+    // A note to ONE family. The broadcast reaches everyone and can aim at
+    // nobody, which is what makes it safe to keep on a laptop; this one aims,
+    // so it lives here where the family ids are, and every send is audited
+    // with the id it went to.
+    parts.push('<div class="card"><h2>Send a note to one family</h2>' +
+      '<p class="muted" style="margin-bottom:8px">Paste a family id from the table below — the first eight ' +
+      'characters are enough. Only families with Family Sync on can be reached, and only their phones that ' +
+      'turned reminders on. Still no name and no baby: the server does not know one. It cannot be recalled.</p>' +
+      '<form id="notify" class="fieldset">' +
+      '<input id="not-id" placeholder="Family id" autocomplete="off" spellcheck="false" />' +
+      '<input id="not-title" placeholder="Title" maxlength="60" autocomplete="off" />' +
+      '<input id="not-body" placeholder="Message" maxlength="160" autocomplete="off" />' +
+      '<button type="submit">Send to this family</button></form>' +
+      '<p id="not-out" class="muted" style="margin-top:8px"></p></div>');
+
     // Five hundred rows is four screens of table nobody reads. Sorted the way
     // the operator asked, filtered if they typed something, then the first
     // twenty-five and a button for the rest — the sort runs over ALL of them,
@@ -789,6 +804,34 @@ export function adminPageHtml(nonce: string): string {
     });
   }
 
+  // Rebuilt with the dashboard like the recovery form, and confirmed once —
+  // naming the household, because "are you sure" is a question nobody reads.
+  function wireNotify() {
+    var form = $("notify");
+    if (!form) return;
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var out = $("not-out");
+      var id = $("not-id").value.trim();
+      var title = $("not-title").value.trim();
+      if (!confirm("Send “" + title + "” to every phone in family " + id + "?\\n\\nIt cannot be recalled."))
+        return;
+      out.textContent = "Sending…";
+      fetch("/api/admin/notify", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ familyId: id, title: title, body: $("not-body").value.trim() }),
+      }).then(function (res) { return res.json(); }).then(function (r) {
+        if (r.error) { out.textContent = r.error; return; }
+        out.textContent = "Sent to " + r.sent + " of " + r.phones + " phone" + (r.phones === 1 ? "" : "s") +
+          (r.gone ? " · " + r.gone + " dead subscription removed" : "") +
+          (r.failed ? " · " + r.failed + " refused" : "") + ".";
+        $("not-title").value = "";
+        $("not-body").value = "";
+      }).catch(function () { out.textContent = "Something went wrong."; });
+    });
+  }
+
   function load() {
     return fetch("/api/admin/stats").then(function (res) {
       if (!res.ok) return false;
@@ -796,6 +839,7 @@ export function adminPageHtml(nonce: string): string {
         last = d;
         render(d);
         wireRecovery();
+        wireNotify();
         $("gate").className = "gate hide";
         $("dash").className = "";
         $("head").className = "row";

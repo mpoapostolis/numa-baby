@@ -100,6 +100,14 @@ export async function ensurePushTable(client: Client): Promise<void> {
   await client
     .execute("CREATE INDEX IF NOT EXISTS idx_push_diaper_due ON push_subscriptions(diaper_due_at)")
     .catch(() => undefined);
+  // Added later, so live tables gain it here rather than in a migration.
+  // NULL is the normal state and the one this app is built around: it is set
+  // only for a phone that PROVED which family it belongs to, and only from a
+  // token the server verified. See saveSchedule.
+  await client.execute("ALTER TABLE push_subscriptions ADD COLUMN family_id TEXT").catch(() => undefined);
+  await client
+    .execute("CREATE INDEX IF NOT EXISTS idx_push_family ON push_subscriptions(family_id)")
+    .catch(() => undefined);
   tableReady = true;
 }
 
@@ -123,8 +131,23 @@ export type ScheduleBody = {
   diaperDueAt?: unknown;
 };
 
-/** Store (or update) one phone's alarm clock. */
-export async function saveSchedule(client: Client, body: ScheduleBody, now: number): Promise<boolean> {
+/**
+ * Store (or update) one phone's alarm clock.
+ *
+ * `familyId` is the ONLY thing here that is ever about who, and it comes from
+ * the caller having already verified a device token — never from the request
+ * body. That distinction is the whole safety of it: a body-supplied family id
+ * would let anyone attach their own endpoint to somebody else's family and
+ * receive whatever the operator sends them. Null is the normal case: a phone
+ * that never turned Family Sync on has no family to be, and its row stays an
+ * anonymous alarm clock exactly as before.
+ */
+export async function saveSchedule(
+  client: Client,
+  body: ScheduleBody,
+  now: number,
+  familyId: string | null = null,
+): Promise<boolean> {
   const endpoint = typeof body.endpoint === "string" ? body.endpoint : "";
   const p256dh = typeof body.keys?.p256dh === "string" ? body.keys.p256dh : "";
   const auth = typeof body.keys?.auth === "string" ? body.keys.auth : "";
@@ -133,16 +156,20 @@ export async function saveSchedule(client: Client, body: ScheduleBody, now: numb
   const at = new Date(now).toISOString();
   await ensurePushTable(client);
   await client.execute({
-    sql: `INSERT INTO push_subscriptions (endpoint, p256dh, auth, feed_due_at, diaper_due_at, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+    sql: `INSERT INTO push_subscriptions (endpoint, p256dh, auth, feed_due_at, diaper_due_at, created_at, updated_at, family_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
           ON CONFLICT(endpoint) DO UPDATE SET
             p256dh = excluded.p256dh,
             auth = excluded.auth,
             feed_due_at = excluded.feed_due_at,
             diaper_due_at = excluded.diaper_due_at,
             updated_at = excluded.updated_at,
-            failures = 0`,
-    args: [endpoint, p256dh, auth, dueAt(body.feedDueAt, now), dueAt(body.diaperDueAt, now), at, at],
+            failures = 0,
+            -- An unauthenticated write must never CLEAR a link that an
+            -- authenticated one established, or unpairing would be a matter
+            -- of dropping a header.
+            family_id = COALESCE(excluded.family_id, push_subscriptions.family_id)`,
+    args: [endpoint, p256dh, auth, dueAt(body.feedDueAt, now), dueAt(body.diaperDueAt, now), at, at, familyId],
   });
   return true;
 }

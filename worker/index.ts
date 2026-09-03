@@ -588,7 +588,11 @@ export default {
           return bad("Too many reminder updates from this connection.", 429);
         }
         const body = (await request.json().catch(() => null)) as ScheduleBody | null;
-        if (!body || !(await saveSchedule(db(env), body, Date.now()))) {
+        // A paired phone may say which family it is, but only by proving it:
+        // the id comes from the token, never from the body. An unpaired one
+        // sends no header and stays an anonymous alarm clock.
+        const paired = await authFamily(env, request).catch(() => null);
+        if (!body || !(await saveSchedule(db(env), body, Date.now(), paired?.familyId ?? null))) {
           return bad("That is not a push subscription this app can use.");
         }
         return json({ ok: true });

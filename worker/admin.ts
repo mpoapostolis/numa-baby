@@ -6,7 +6,7 @@
 // and the page in adminPage.ts.
 
 import { Client } from "@libsql/client/web";
-import { broadcastHistory, pendingBroadcast, queueBroadcast, stopBroadcast } from "./broadcast";
+import { broadcastHistory, notifyFamily, pendingBroadcast, queueBroadcast, recipients, stopBroadcast } from "./broadcast";
 import {
   audit,
   browserIsKnown,
@@ -36,6 +36,11 @@ export type AdminEnv = {
   ADMIN_PASSWORD?: string;
   /** Set it and every other address is told there is nothing here. */
   ADMIN_ALLOW_IPS?: string;
+  /** Only for signing a note to one family; all three are optional and the
+      Worker mints its own pair when they are absent (see push.ts). */
+  VAPID_PUBLIC_KEY?: string;
+  VAPID_PRIVATE_KEY?: string;
+  VAPID_SUBJECT?: string;
 };
 
 const COOKIE_FLAGS = "Path=/; HttpOnly; Secure; SameSite=Strict";
@@ -277,6 +282,13 @@ async function route(
   // on every subscribed lock screen — so it is audited with its own wording
   // recorded, and it QUEUES rather than sends: the cron drains it behind the
   // reminders. See worker/broadcast.ts for why each rule is there.
+  // Who could be sent to, with a name and an age against each. The ONLY place
+  // in this service that shows either, served for the local composer and
+  // deliberately absent from the dashboard — see the note in broadcast.ts.
+  if (url.pathname === "/api/admin/recipients" && request.method === "GET") {
+    return json({ recipients: await recipients(client, now) });
+  }
+
   if (url.pathname === "/api/admin/broadcast" && request.method === "GET") {
     return json({ pending: await pendingBroadcast(client), history: await broadcastHistory(client) });
   }
@@ -289,6 +301,17 @@ async function route(
     await audit(client, `broadcast queued: ${String(body.title ?? "").slice(0, 60)}`, callerOf(request), now);
     return json({ ok: true, id: queued.id });
   }
+  // One family, by id. Unlike the broadcast this CAN be aimed, so it is the
+  // one send that names its target in the audit log — the record of who was
+  // contacted is the point of writing it down at all.
+  if (url.pathname === "/api/admin/notify" && request.method === "POST") {
+    const body = await readBody(request);
+    const result = await notifyFamily(client, env, body.familyId, body);
+    if ("error" in result) return json({ error: result.error }, 400);
+    await audit(client, `note sent to family ${String(body.familyId).slice(0, 8)}`, callerOf(request), now);
+    return json(result);
+  }
+
   if (url.pathname === "/api/admin/broadcast/stop" && request.method === "POST") {
     const stopped = await stopBroadcast(client, now);
     if (stopped) await audit(client, "broadcast stopped", callerOf(request), now);

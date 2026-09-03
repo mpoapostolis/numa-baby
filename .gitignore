@@ -26,6 +26,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# Wrangler reads local secrets from here. It is not covered by .env*, and it
+# is the one file in this project whose accidental commit would matter.
+.dev.vars
+.dev.vars.*
 
 # build
 /dist/

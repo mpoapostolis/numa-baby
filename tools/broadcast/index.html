@@ -94,6 +94,25 @@
   th { color: var(--muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; }
   td.num { text-align: right; font-variant-numeric: tabular-nums; }
   h2 { font-size: 14px; margin: 0 0 12px; }
+
+  /* The chooser. A name and an age against each household — the only place
+     in this project that shows either, and it never leaves this machine. */
+  .who-head { display:flex; align-items:baseline; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
+  .who-head h2 { margin:0; }
+  .who-head .pick { margin-left:auto; display:flex; gap:6px; }
+  .who-head button { padding:5px 10px; font-size:12px; font-weight:500; }
+  .who { max-height: 300px; overflow-y:auto; border:1px solid var(--line); border-radius:10px; }
+  .who label { display:flex; gap:10px; align-items:center; padding:8px 12px; font-weight:400;
+    border-bottom:1px solid var(--line); margin:0; cursor:pointer; }
+  .who label:last-child { border-bottom:0; }
+  .who label:hover { background:var(--cream); }
+  .who input { width:auto; margin:0; flex:none; }
+  .who .nm { font-weight:600; }
+  .who .ag { color:var(--muted); font-size:12.5px; }
+  .who .ph { margin-left:auto; color:var(--muted); font-size:12px; }
+  .scope { display:flex; gap:8px; margin-bottom:14px; }
+  .scope button { flex:1; background:var(--cream); color:var(--muted); border:1px solid var(--line); }
+  .scope button.on { background:var(--rose); color:#fff; border-color:var(--rose); }
 </style>
 </head>
 <body>
@@ -102,6 +121,25 @@
   <p class="sub">Goes to every phone with reminders on, at <code id="target">…</code>. It cannot be recalled.</p>
 
   <div id="live"></div>
+
+  <div class="card">
+    <div class="scope">
+      <button type="button" id="scope-all" class="on">Everyone</button>
+      <button type="button" id="scope-some">Choose households</button>
+    </div>
+    <div id="chooser" hidden>
+      <div class="who-head">
+        <h2>Who gets it</h2>
+        <span class="pick">
+          <button type="button" id="pick-all" class="ghost">All</button>
+          <button type="button" id="pick-none" class="ghost">None</button>
+        </span>
+      </div>
+      <div class="who" id="who"></div>
+      <p class="hint" id="who-note"></p>
+    </div>
+    <p class="hint" id="all-note"></p>
+  </div>
 
   <form class="card" id="form">
     <div class="field">
@@ -174,12 +212,60 @@
     counter($("bodyCount"), body, BODY_MAX);
     $("pvTitle").textContent = title || "Title";
     $("pvBody").textContent = body || "Message";
-    const ok = title && body && title.length <= TITLE_MAX && body.length <= BODY_MAX && !pending;
+    const nobody = chosen !== null && chosen.size === 0;
+    const ok = title && body && title.length <= TITLE_MAX && body.length <= BODY_MAX && !pending && !nobody;
     $("send").disabled = !ok;
-    $("note").textContent = pending ? "One is still going out." : "";
+    $("send").textContent = chosen === null ? "Send to everyone" : "Send to " + chosen.size +
+      (chosen.size === 1 ? " household" : " households");
+    $("note").textContent = pending ? "One is still going out."
+      : nobody ? "Nothing is ticked." : "";
   }
 
   let pending = null;
+  // null = everyone. A Set = the ticked households, and an empty Set is a
+  // mistake the send refuses rather than reading as "all of them".
+  let chosen = null;
+  let people = [];
+
+  function ageLabel(days) {
+    if (days == null) return "age unknown";
+    if (days < 14) return days + (days === 1 ? " day old" : " days old");
+    if (days < 90) return Math.floor(days / 7) + " weeks old";
+    if (days < 730) return Math.floor(days / 30.44) + " months old";
+    return (days / 365.25).toFixed(1) + " years old";
+  }
+
+  function drawWho() {
+    const list = $("who");
+    if (!people.length) {
+      list.innerHTML = '<p class="hint" style="padding:12px">Nobody has both Family Sync and reminders on yet.</p>';
+    } else {
+      list.innerHTML = people
+        .map(function (r) {
+          const on = chosen && chosen.has(r.familyId);
+          return '<label><input type="checkbox" data-id="' + esc(r.familyId) + '"' + (on ? " checked" : "") + ">" +
+            '<span class="nm">' + esc(r.name || "No name") + "</span>" +
+            '<span class="ag">' + esc(ageLabel(r.ageDays)) + "</span>" +
+            '<span class="ph">' + r.phones + (r.phones === 1 ? " phone" : " phones") + "</span></label>";
+        })
+        .join("");
+      for (const box of list.querySelectorAll("input")) {
+        box.addEventListener("change", function (e) {
+          const id = e.currentTarget.getAttribute("data-id");
+          if (!chosen) chosen = new Set();
+          if (e.currentTarget.checked) chosen.add(id); else chosen.delete(id);
+          drawWho();
+          draw();
+        });
+      }
+    }
+    const picked = chosen ? chosen.size : 0;
+    const phones = people.filter(function (r) { return !chosen || chosen.has(r.familyId); })
+      .reduce(function (sum, r) { return sum + r.phones; }, 0);
+    $("who-note").textContent = chosen
+      ? picked + (picked === 1 ? " household" : " households") + " ticked · " + phones + (phones === 1 ? " phone" : " phones")
+      : "";
+  }
 
   function when(iso) {
     if (!iso) return "—";
@@ -187,7 +273,11 @@
   }
 
   async function load() {
-    const state = await fetch("/api/state").then((r) => r.json()).catch(() => ({}));
+    const [state, who] = await Promise.all([
+      fetch("/api/state").then((r) => r.json()).catch(() => ({})),
+      fetch("/api/recipients").then((r) => r.json()).catch(() => ({})),
+    ]);
+    people = who.recipients || [];
     $("target").textContent = state.target ?? "?";
     pending = state.pending ?? null;
 
@@ -208,7 +298,10 @@
         load();
       });
     } else if (state.phones != null) {
-      live.innerHTML = `<p class="status">${state.phones} phone${state.phones === 1 ? "" : "s"} have reminders on.</p>`;
+      const named = people.reduce((sum, r) => sum + r.phones, 0);
+      live.innerHTML = `<p class="status">${state.phones} phone${state.phones === 1 ? "" : "s"} have reminders on` +
+        (named ? `, ${named} of them in ${people.length} household${people.length === 1 ? "" : "s"} you can pick from` : "") +
+        ".</p>";
     } else {
       live.innerHTML = "";
     }
@@ -223,10 +316,27 @@
       )
       .join("");
 
+    drawWho();
     draw();
   }
 
   for (const id of ["title", "body"]) $(id).addEventListener("input", draw);
+
+  function setScope(some) {
+    chosen = some ? (chosen || new Set()) : null;
+    $("scope-all").classList.toggle("on", !some);
+    $("scope-some").classList.toggle("on", some);
+    $("chooser").hidden = !some;
+    drawWho();
+    draw();
+  }
+  $("scope-all").addEventListener("click", function () { setScope(false); });
+  $("scope-some").addEventListener("click", function () { setScope(true); });
+  $("pick-all").addEventListener("click", function () {
+    chosen = new Set(people.map(function (r) { return r.familyId; }));
+    drawWho(); draw();
+  });
+  $("pick-none").addEventListener("click", function () { chosen = new Set(); drawWho(); draw(); });
 
   $("form").addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -234,13 +344,21 @@
     const body = $("body").value.trim();
     // The one confirmation. It names the thing that cannot be undone rather
     // than asking "are you sure", which nobody reads.
-    if (!confirm(`Send "${title}" to every phone with reminders on?\n\nIt cannot be recalled.`)) return;
+    const scope = chosen === null
+      ? "every phone with reminders on"
+      : chosen.size + (chosen.size === 1 ? " household" : " households");
+    if (!confirm(`Send "${title}" to ${scope}?\n\nIt cannot be recalled.`)) return;
 
     $("send").disabled = true;
     const result = await fetch("/api/send", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ title, body, url: $("url").value.trim() || "/" }),
+      body: JSON.stringify({
+        title, body, url: $("url").value.trim() || "/",
+        // Absent means everyone; the server refuses an empty list rather
+        // than promoting it to one.
+        ...(chosen === null ? {} : { audience: [...chosen] }),
+      }),
     })
       .then((r) => r.json())
       .catch((error) => ({ error: String(error) }));

@@ -57,15 +57,24 @@ export type Schedule = { feedDueAt: string | null; diaperDueAt: string | null };
 /**
  * Tell the server when to ring, and nothing else. Returns false when there is
  * nothing to tell it with — the caller keeps its own timer either way.
+ *
+ * A paired phone passes its sync token so the server can record WHICH family
+ * this alarm clock belongs to — the one thing here that is about who, and
+ * the reason the operator can send a note to one family instead of everyone.
+ * It is sent as a bearer token rather than an id in the body precisely so
+ * that nobody can claim to be a family they are not. An unpaired phone sends
+ * nothing and stays anonymous, which is still the normal case.
  */
-export async function sendSchedule(schedule: Schedule): Promise<boolean> {
+export async function sendSchedule(schedule: Schedule, token?: string): Promise<boolean> {
   const subscription = await ensureSubscription();
   if (!subscription) return false;
   const json = subscription.toJSON() as { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
   if (!json.endpoint || !json.keys?.p256dh || !json.keys.auth) return false;
   return fetch(SCHEDULE_URL, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: token
+      ? { "content-type": "application/json", authorization: `Bearer ${token}` }
+      : { "content-type": "application/json" },
     // keepalive: the schedule is usually written as the app is being closed,
     // which is exactly the moment a plain fetch is abandoned.
     keepalive: true,
