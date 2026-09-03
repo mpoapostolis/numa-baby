@@ -19,6 +19,7 @@
     "deploy": "node scripts/stamp-worker.mjs && npm run build && wrangler deploy"
   },
   "dependencies": {
+    "@block65/webcrypto-web-push": "^2.0.0",
     "@fontsource-variable/geist": "^5.3.0",
     "@libsql/client": "^0.17.4",
     "class-variance-authority": "^0.7.1",

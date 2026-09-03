@@ -44,7 +44,11 @@
   // row reads than the entire sync fleet. 03:12 UTC is the quiet hour, and
   // the odd minute keeps it off the crowded top of the hour.
   "triggers": {
-    "crons": ["12 3 * * *"]
+    // 03:12 — the dashboard's heavy statistics (see adminStats.ts).
+    // Every five minutes — the reminder alarm clock (see push.ts). A phone
+    // asks to be woken at a time; this is what does the waking, and five
+    // minutes is the resolution a feed reminder deserves.
+    "crons": ["12 3 * * *", "*/5 * * * *"]
   },
   "observability": {
     "enabled": true

@@ -364,7 +364,7 @@ export async function collectStats(client: Client, now: number) {
   // The live half stays live: messages must be markable and the security
   // panels must tell the truth of this minute. All of these are small,
   // indexed reads.
-  const [feedback, auditLog, lockouts, sessions, knownBrowsers] = await Promise.all([
+  const [feedback, auditLog, lockouts, sessions, knownBrowsers, push] = await Promise.all([
     safe(
       client,
       `select id, substr(created_at, 1, 16) as sent, message, contact, app_version, handled
@@ -394,10 +394,21 @@ export async function collectStats(client: Client, now: number) {
               ip, country, user_agent
        from admin_known where expires_at > ${NOW} order by last_seen_at desc limit 20`,
     ),
+    // The reminder alarm clock. Counts only — the table holds nothing else.
+    safe(
+      client,
+      `select count(*) as phones,
+              sum(case when feed_due_at is not null then 1 else 0 end) as feed_armed,
+              sum(case when diaper_due_at is not null then 1 else 0 end) as diaper_armed,
+              sum(case when failures > 0 then 1 else 0 end) as failing,
+              substr(max(updated_at), 1, 16) as newest
+       from push_subscriptions`,
+    ),
   ]);
 
   return {
     ...(heavy ?? {}),
+    push: push[0] ?? {},
     // Null until the first run has happened. The page shows the button.
     heavyComputedAt: heavyAt,
     previous,

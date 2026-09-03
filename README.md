@@ -234,3 +234,40 @@ the static app but the Worker expects its bindings; see above.
 ## License
 
 [MIT](LICENSE) — use it, fork it, ship it for your own tiny human.
+
+## Reminders that ring with the app closed
+
+The feed and nappy reminders used to be `setTimeout` inside the page: close
+the app and nothing fired. They now go out as Web Push from the Worker, so
+the phone rings whether or not the app is running — on Android always, and
+on iPhone from iOS 16.4 provided the app was added to the Home Screen (a
+Safari tab cannot receive push). The in-page timer stays for when the app IS
+open; both carry the same notification tag, so a reminder can never show up
+twice.
+
+**What the server learns.** One thing: a time. A phone says "wake me at
+17:20"; the row (`push_subscriptions`) holds a push endpoint, its two keys,
+and up to two future timestamps. No family id, no device, no entry, no baby.
+The notification text is fixed in `worker/push.ts` — the server could not
+personalise it if it wanted to, which is also why it is safe on a lock screen
+in a shared room.
+
+Set it up once:
+
+```bash
+node scripts/vapid-keys.mjs          # prints a P-256 pair, once
+npx wrangler secret put VAPID_PRIVATE_KEY
+npx wrangler secret put VAPID_PUBLIC_KEY
+npx wrangler secret put VAPID_SUBJECT   # mailto:you@example.com
+npm run deploy
+```
+
+Without those three the push routes answer with no key and the app falls
+back to the in-page timer — nothing breaks, reminders just stop surviving a
+closed app. Keep the pair for the life of the app: changing it silently
+unsubscribes every phone that ever said yes.
+
+The `*/5 * * * *` cron does the ringing, capped at 45 sends a run to stay
+inside the Workers free plan's 50 subrequests per invocation; anything still
+due goes out on the next run. The `/admin` dashboard has a "Reminder alarm
+clock" card so a schedule that is never armed is visible rather than silent.

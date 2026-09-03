@@ -226,3 +226,28 @@ CREATE TABLE IF NOT EXISTS stats_cache (
   payload TEXT NOT NULL,
   computed_at TEXT NOT NULL
 );
+
+-- One row per phone that asked to be reminded. Created by the worker on
+-- first use as well; written down here for the same reason as everything
+-- above.
+--
+-- THIS TABLE IS AN ALARM CLOCK, NOT A LOG. It holds a push endpoint, its two
+-- keys, and up to two future timestamps. No family id, no device id, no
+-- baby, no entry — a phone tells the server WHEN to ring and nothing about
+-- why, which is what keeps reminders compatible with an app whose entries
+-- never leave the phone unless Family Sync is on.
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  endpoint TEXT PRIMARY KEY,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  -- Null means that reminder is off. Cleared the moment it is sent.
+  feed_due_at TEXT,
+  diaper_due_at TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  failures INTEGER NOT NULL DEFAULT 0
+);
+
+-- The cron asks one question every five minutes: what is due?
+CREATE INDEX IF NOT EXISTS idx_push_feed_due ON push_subscriptions(feed_due_at);
+CREATE INDEX IF NOT EXISTS idx_push_diaper_due ON push_subscriptions(diaper_due_at);

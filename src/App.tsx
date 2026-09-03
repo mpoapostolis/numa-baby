@@ -566,6 +566,35 @@ export default function HomePage() {
     ? new Date(lastFeed.startedAt).getTime() + reminders.feedIntervalMinutes * 60_000
     : null;
 
+  // The half that survives the app being closed. The in-page timers below
+  // still fire while it is open — instant, no network — and both carry the
+  // same notification tag, so a reminder can never arrive twice.
+  //
+  // What the server is told is two timestamps and nothing else: not the
+  // baby, not the entry, not how long it has been. It is an alarm clock.
+  useEffect(() => {
+    if (notificationPermission !== "granted") return;
+    const feedDueAt = reminders.feedEnabled && feedReminderTargetAt !== null
+      ? new Date(feedReminderTargetAt).toISOString()
+      : null;
+    const diaperDueAt = reminders.diaperEnabled && diaperReminderTargetAt !== null
+      ? new Date(diaperReminderTargetAt).toISOString()
+      : null;
+    // Fetched on the tap that needs it: a phone that never allowed
+    // notifications should not carry the subscription code in its first
+    // download, and by the time this runs the app has long since opened.
+    void import("./domain/pushClient").then(async (push) => {
+      if (feedDueAt === null && diaperDueAt === null) await push.stopPush();
+      else await push.sendSchedule({ feedDueAt, diaperDueAt });
+    });
+  }, [
+    notificationPermission,
+    reminders.feedEnabled,
+    reminders.diaperEnabled,
+    feedReminderTargetAt,
+    diaperReminderTargetAt,
+  ]);
+
   useEffect(() => {
     if (
       !reminders.feedEnabled ||
@@ -583,7 +612,7 @@ export default function HomePage() {
           body: "A feed reminder is due. Follow your baby’s cues and care plan.",
           icon: "/icon-192.png",
           badge: "/icon-192.png",
-          tag: `feed-reminder-${lastFeed?.id ?? "latest"}`,
+          tag: "feed-reminder",
           data: { url: "/" },
         }))
         .catch(() => undefined);
@@ -609,7 +638,7 @@ export default function HomePage() {
           body: "It has been a while since the last change.",
           icon: "/icon-192.png",
           badge: "/icon-192.png",
-          tag: `diaper-reminder-${lastDiaperAt ?? "latest"}`,
+          tag: "diaper-reminder",
           data: { url: "/" },
         }))
         .catch(() => undefined);

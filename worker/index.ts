@@ -2,6 +2,7 @@
 import { createClient } from "@libsql/client/web";
 import { handleAdmin } from "./admin";
 import { refreshStats } from "./adminStats";
+import { ScheduleBody, forgetSubscription, saveSchedule, sendDue } from "./push";
 import { budgetKey } from "./budgetKey";
 import { handleFeedback } from "./feedback";
 import {
@@ -36,6 +37,11 @@ type Env = {
   TURSO_AUTH_TOKEN: string;
   /** Operator password for /admin. Unset means the page does not exist. */
   ADMIN_PASSWORD?: string;
+  /** Web Push. Unset on a deployment that never ran scripts/vapid-keys.mjs,
+      and the reminder routes then do nothing rather than half-working. */
+  VAPID_PUBLIC_KEY?: string;
+  VAPID_PRIVATE_KEY?: string;
+  VAPID_SUBJECT?: string;
   /** Public OAuth client id. Unset means Google recovery does not exist. */
   GOOGLE_CLIENT_ID?: string;
   /** Email Sending binding. Unset means magic-link recovery does not exist. */
@@ -62,6 +68,8 @@ const MAX_PAYLOAD_BYTES = 8_192;
 // real family must never be locked out by a stranger's typos — while thirty
 // tries against a million codes stays a lottery ticket.
 const JOIN_TRIES_PER_HOUR = 30;
+/** A phone re-schedules on every feed; a busy night is perhaps twenty. */
+const PUSH_WRITES_PER_HOUR = 120;
 // Wrong codes across the WHOLE door per hour. A family mistypes a handful;
 // six hundred is a loop — and a loop with a thousand addresses used to have
 // a thousand budgets.
@@ -505,11 +513,22 @@ export default {
    * than by whoever happens to open the page — which is what made looking at
    * the numbers the most expensive thing the service did.
    */
-  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+  async scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    // Two schedules share this handler (see the crons in wrangler.jsonc).
+    // The frequent one rings phones; the nightly one computes the dashboard.
+    if (event.cron === "12 3 * * *") {
+      ctx.waitUntil(
+        refreshStats(db(env), Date.now()).then(
+          () => undefined,
+          (error) => { console.error("nightly stats failed", error); },
+        ),
+      );
+      return;
+    }
     ctx.waitUntil(
-      refreshStats(db(env), Date.now()).then(
-        () => undefined,
-        (error) => { console.error("nightly stats failed", error); },
+      sendDue(db(env), env, Date.now()).then(
+        (result) => { if (result.sent || result.failed) console.log("push", JSON.stringify(result)); },
+        (error) => { console.error("push run failed", error); },
       ),
     );
   },
@@ -542,6 +561,30 @@ export default {
       }
       if (url.pathname === "/api/family/join" && request.method === "POST") {
         return await handleJoin(env, request);
+      }
+      // Push reminders. Unauthenticated by necessity: the phones that need a
+      // reminder most are the ones that never paired, and they hold no token.
+      // What they can store is a push endpoint and a future timestamp, and
+      // the endpoint is checked against the real push services before this
+      // Worker will ever fetch it.
+      if (url.pathname === "/api/push/key" && request.method === "GET") {
+        return json({ key: env.VAPID_PUBLIC_KEY ?? null });
+      }
+      if (url.pathname === "/api/push/schedule" && request.method === "POST") {
+        const ip = budgetKey(request.headers.get("cf-connecting-ip") ?? "unknown");
+        if (!(await spendBudget(db(env), `push:${ip}`, PUSH_WRITES_PER_HOUR))) {
+          return bad("Too many reminder updates from this connection.", 429);
+        }
+        const body = (await request.json().catch(() => null)) as ScheduleBody | null;
+        if (!body || !(await saveSchedule(db(env), body, Date.now()))) {
+          return bad("That is not a push subscription this app can use.");
+        }
+        return json({ ok: true });
+      }
+      if (url.pathname === "/api/push/off" && request.method === "POST") {
+        const body = (await request.json().catch(() => null)) as { endpoint?: unknown } | null;
+        await forgetSubscription(db(env), body?.endpoint);
+        return json({ ok: true });
       }
       // Unauthenticated on purpose: the people most likely to need this are
       // the ones who never paired a second phone.

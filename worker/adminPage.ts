@@ -491,6 +491,19 @@ export function adminPageHtml(nonce: string): string {
           '<td>' + esc(a.ip) + ' ' + esc(a.country) + '</td><td>' + esc(a.asn || "—") + '</td>';
       });
   parts.push(sec + '</div>');
+
+  // The alarm clock. If "armed" is zero while phones exist, reminders are
+  // being registered and never scheduled — which is silent everywhere else.
+  var push = d.push || {};
+  parts.push('<div class="card"><h2>Reminder alarm clock</h2><div class="grid">' +
+    stat("Phones", n(push.phones), "subscribed to reminders") +
+    stat("Feed armed", n(push.feed_armed), "waiting to ring") +
+    stat("Nappy armed", n(push.diaper_armed), "waiting to ring") +
+    stat("Failing", n(push.failing), "push service refused") +
+    '</div><p class="tiny" style="margin:12px 0 0">Newest schedule ' +
+    esc(push.newest || "\u2014") + '. The table holds an endpoint, its keys and up to two ' +
+    'future times \u2014 no family, no entry, nothing about a baby.</p></div>');
+
     return parts.join("");
   }
 
