@@ -30,13 +30,21 @@ const here = dirname(fileURLToPath(import.meta.url));
 const TARGET = process.env.BROADCAST_TARGET ?? "https://numalog.app";
 const PORT = Number(process.env.BROADCAST_PORT ?? 8788);
 
-/** Asked once, on the terminal, with the echo off. */
+/**
+ * Asked once, on the terminal, with the echo off.
+ *
+ * The echo is silenced through readline's own _writeToOutput and NOT by
+ * reassigning rl.output.write — rl.output IS process.stdout, so that version
+ * permanently replaced the process's stdout with a no-op and every later
+ * console.log vanished, the URL to open among them. The program ran perfectly
+ * and looked completely dead.
+ */
 function askPassword() {
   if (process.env.ADMIN_PASSWORD) return Promise.resolve(process.env.ADMIN_PASSWORD);
+  process.stdout.write(`Admin password for ${TARGET}: `);
   const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
+  rl._writeToOutput = () => {};
   return new Promise((resolve) => {
-    process.stdout.write(`Admin password for ${TARGET}: `);
-    rl.output.write = () => {};
     rl.question("", (answer) => {
       rl.close();
       process.stdout.write("\n");
