@@ -133,6 +133,9 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
     return {
       sortedActivities,
       rhythm,
+      // Capped at 30 by the loop above, which is plenty: the only question
+      // anyone asks of it is "are there enough feeds for a rhythm yet".
+      feedCount: feedTimes.length,
       lastFeed,
       lastBottle,
       activeNursing,

@@ -39,6 +39,7 @@ import {
   unpackHandoff,
 } from "./domain/handoff";
 import { backupNudge } from "./domain/backupNudge";
+import { reminderNudge } from "./domain/reminderNudge";
 import { onConsentChange, readConsent } from "./domain/consent";
 import { ageInDays } from "./domain/time";
 import { dayKey } from "./domain/daySummary";
@@ -70,6 +71,7 @@ const HandoffScreen = lazy(() => import("./screens/HandoffScreen").then((m) => (
 // pure function and stays here; the card itself has no business in the bundle
 // a parent downloads at 3am.
 const BackupNudgeCard = lazy(() => import("./components/BackupNudge").then((m) => ({ default: m.BackupNudgeCard })));
+const ReminderNudgeCard = lazy(() => import("./components/ReminderNudge").then((m) => ({ default: m.ReminderNudgeCard })));
 // The one-time cloud-protection announcement for families that predate it.
 const NightHelp = lazy(() => import("./components/NightHelp").then((m) => ({ default: m.NightHelp })));
 const ProtectIntro = lazy(() => import("./components/ProtectIntro").then((m) => ({ default: m.ProtectIntro })));
@@ -124,6 +126,11 @@ function NavTrigger() {
 
 const SEEN_RELEASE_KEY = "numa-baby-seen-release-v1";
 const BACKUP_DISMISSED_KEY = "numa-baby-backup-nudge-v1";
+/** "Not now" on the reminders announcement. */
+const REMINDER_NUDGE_KEY = "numalog-reminder-nudge-v1";
+/** A fact about this browser, not a piece of state: it cannot change while
+    the page is open, and asking it in an effect would only be a render. */
+const PUSH_CAPABLE = "serviceWorker" in navigator && "PushManager" in window;
 /** Asked once for a second phone at 3am; the value is only ever "1". */
 const NIGHT_HELP_KEY = "numalog-night-help-v1";
 
@@ -257,6 +264,11 @@ export default function HomePage() {
   const minuteClock = useMinuteClock();
 
   const [backupDismissedAt, setBackupDismissedAt] = useState(() => readStamp(BACKUP_DISMISSED_KEY));
+  const [reminderDismissedAt, setReminderDismissedAt] = useState(() => readStamp(REMINDER_NUDGE_KEY));
+  // Null until asked. The announcement promises reminders that survive a
+  // closed app, so it must not appear where the deployment cannot deliver
+  // one — and that is only knowable by asking for the signing key.
+  const [pushReady, setPushReady] = useState<boolean | null>(null);
 
   const closeSheet = useCallback(() => setSheet(null), []);
   // On Android, back is how you leave a screen — and a sheet is a screen.
@@ -426,7 +438,7 @@ export default function HomePage() {
   }
 
   const stats = useActivityStats(activities, profile, minuteClock);
-  const { sortedActivities, lastFeed, lastBottle, activeNursing, babyAgeMonths } = stats;
+  const { sortedActivities, feedCount, lastFeed, lastBottle, activeNursing, babyAgeMonths } = stats;
 
   // A fresh install is latched the first time it is seen, not re-tested on
   // every render: without the latch the parent's very first entry made the
@@ -556,6 +568,36 @@ export default function HomePage() {
     return () => window.clearTimeout(settle);
   }, [showWhatsNew]);
 
+
+  // Reminders that survive a closed app are new, and off by default, so the
+  // people who would most want them are the ones who will never find them.
+  // The rules for when this is worth interrupting anyone live in
+  // domain/reminderNudge.ts.
+  // Asked once with the key assumed present: everything except the one
+  // condition that costs a request. Null here means the banner was never
+  // going to show, and the key is never asked for.
+  const wouldNudge = reminderNudge(
+    {
+      pushReady: PUSH_CAPABLE,
+      permission: notificationPermission,
+      remindersOn: reminders.feedEnabled || Boolean(reminders.diaperEnabled),
+      feeds: feedCount,
+      dismissedAt: reminderDismissedAt,
+    },
+    minuteClock,
+  );
+
+  useEffect(() => {
+    if (!wouldNudge || pushReady !== null) return;
+    let alive = true;
+    fetch("/api/push/key")
+      .then((response) => (response.ok ? (response.json() as Promise<{ key?: string }>) : null))
+      .then((body) => { if (alive) setPushReady(Boolean(body?.key)); })
+      .catch(() => { if (alive) setPushReady(false); });
+    return () => { alive = false; };
+  }, [wouldNudge, pushReady]);
+
+  const pendingReminderNudge = pushReady ? wouldNudge : null;
 
   const lastDiaperAt = sortedActivities.find((a) => a.type === "diaper")?.startedAt;
   const diaperReminderTargetAt = lastDiaperAt && reminders.diaperEnabled
@@ -914,6 +956,25 @@ export default function HomePage() {
               setBackupDismissedAt(at);
             }}
           />
+          </Suspense>
+        )}
+
+        {/* Last in the stack, and never alongside the changelog that already
+            announces it — one mention of a new thing is an announcement, two
+            is nagging. */}
+        {pendingReminderNudge && !pendingBackupNudge && !nightHelp && !milestoneToday && !protectMoment
+          && releasesToShow.length === 0 && activeTab === "today" && (
+          <Suspense fallback={null}>
+            <ReminderNudgeCard
+              nudge={pendingReminderNudge}
+              onEnable={() => { track("reminder_nudge_accepted"); void changeFeedReminders(true); }}
+              onDismiss={() => {
+                track("reminder_nudge_dismissed");
+                const at = new Date().toISOString();
+                try { window.localStorage.setItem(REMINDER_NUDGE_KEY, at); } catch { /* storage blocked */ }
+                setReminderDismissedAt(at);
+              }}
+            />
           </Suspense>
         )}
 
