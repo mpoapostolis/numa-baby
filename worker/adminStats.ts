@@ -265,45 +265,100 @@ async function computeHeavy(client: Client, now: number) {
   };
 }
 
-const HEAVY_TTL_MS = 15 * 60_000;
-
 // Once per isolate, like every other self-heal: this used to run on every
 // stats call, a write-path round trip per dashboard refresh.
 let cacheTableReady = false;
 
-export async function collectStats(client: Client, now: number) {
-  if (!cacheTableReady) {
-    await client
-      .execute(
-        "CREATE TABLE IF NOT EXISTS stats_cache (id TEXT PRIMARY KEY, payload TEXT NOT NULL, computed_at TEXT NOT NULL)",
-      )
-      .catch(() => undefined);
-    cacheTableReady = true;
-  }
+async function ensureCacheTable(client: Client) {
+  if (cacheTableReady) return;
+  await client
+    .execute(
+      "CREATE TABLE IF NOT EXISTS stats_cache (id TEXT PRIMARY KEY, payload TEXT NOT NULL, computed_at TEXT NOT NULL)",
+    )
+    .catch(() => undefined);
+  cacheTableReady = true;
+}
 
-  // Serve the heavy half from the cache while it is fresh — however many
-  // tabs, reloads or auto-refreshes ask. A stale or missing cache recomputes
-  // once and pays it forward.
+/** How many daily snapshots to keep. A quarter is enough to see a season. */
+const SNAPSHOTS_KEPT = 90;
+
+/**
+ * Compute the heavy half and store it — the ONLY place that runs those
+ * queries. Called by the nightly cron, and by the operator's own "Recompute"
+ * button. Never by a page load: opening the dashboard used to cost the
+ * service more than the sync fleet did.
+ *
+ * Two rows are written: 'heavy', which the page reads, and one dated
+ * snapshot, so the report can say what changed since yesterday without
+ * asking the database a single extra question.
+ */
+export async function refreshStats(client: Client, now: number) {
+  await ensureCacheTable(client);
+  const heavy = await computeHeavy(client, now);
+  const payload = JSON.stringify(heavy);
+  const at = new Date(now).toISOString();
+  const write = (id: string) =>
+    client
+      .execute({
+        sql: `INSERT INTO stats_cache (id, payload, computed_at) VALUES (?, ?, ?)
+              ON CONFLICT(id) DO UPDATE SET payload = excluded.payload, computed_at = excluded.computed_at`,
+        args: [id, payload, at],
+      })
+      .catch(() => undefined);
+  await Promise.all([write("heavy"), write(`day:${at.slice(0, 10)}`)]);
+  // Keep the shelf short: ninety days of snapshots, no more.
+  await client
+    .execute({
+      sql: `DELETE FROM stats_cache WHERE id LIKE 'day:%' AND id < ?`,
+      args: [`day:${new Date(now - SNAPSHOTS_KEPT * 86_400_000).toISOString().slice(0, 10)}`],
+    })
+    .catch(() => undefined);
+  return heavy;
+}
+
+export async function collectStats(client: Client, now: number) {
+  await ensureCacheTable(client);
+
+  // Read-only. Whatever the last run left behind is what the page shows,
+  // however many tabs, reloads or refreshes ask for it — and if nothing has
+  // ever run, the page says so and offers the button rather than quietly
+  // spending a hundred thousand row reads to fill itself in.
   let heavy: Awaited<ReturnType<typeof computeHeavy>> | null = null;
+  let heavyAt: string | null = null;
   const cached = await client
     .execute("SELECT payload, computed_at FROM stats_cache WHERE id = 'heavy'")
     .catch(() => null);
-  if (cached?.rows.length && now - Date.parse(String(cached.rows[0].computed_at)) < HEAVY_TTL_MS) {
+  if (cached?.rows.length) {
+    heavyAt = String(cached.rows[0].computed_at);
     try {
       heavy = JSON.parse(String(cached.rows[0].payload));
     } catch {
-      // Unreadable cache: recompute below.
+      // An unreadable row is the same as no row: the button, not a recompute.
+      heavy = null;
     }
   }
-  if (!heavy) {
-    heavy = await computeHeavy(client, now);
-    await client
-      .execute({
-        sql: `INSERT INTO stats_cache (id, payload, computed_at) VALUES ('heavy', ?, ?)
-              ON CONFLICT(id) DO UPDATE SET payload = excluded.payload, computed_at = excluded.computed_at`,
-        args: [JSON.stringify(heavy), new Date(now).toISOString()],
-      })
-      .catch(() => undefined);
+
+  // Yesterday's snapshot, so the report can say which way things moved. One
+  // indexed read of a row that is already written.
+  let previous: { at: string; totals: Row; funnel: Row } | null = null;
+  const before = await client
+    .execute({
+      sql: `SELECT id, payload, computed_at FROM stats_cache
+            WHERE id LIKE 'day:%' AND id < ? ORDER BY id DESC LIMIT 1`,
+      args: [`day:${new Date(now).toISOString().slice(0, 10)}`],
+    })
+    .catch(() => null);
+  if (before?.rows.length) {
+    try {
+      const parsed = JSON.parse(String(before.rows[0].payload));
+      previous = {
+        at: String(before.rows[0].computed_at),
+        totals: parsed.totals ?? {},
+        funnel: parsed.funnel ?? {},
+      };
+    } catch {
+      previous = null;
+    }
   }
 
   // The live half stays live: messages must be markable and the security
@@ -342,7 +397,10 @@ export async function collectStats(client: Client, now: number) {
   ]);
 
   return {
-    ...heavy,
+    ...(heavy ?? {}),
+    // Null until the first run has happened. The page shows the button.
+    heavyComputedAt: heavyAt,
+    previous,
     feedback,
     auditLog,
     lockouts,

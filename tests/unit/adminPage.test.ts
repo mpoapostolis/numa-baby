@@ -51,6 +51,17 @@ const STATS = {
   knownBrowsers: [{ trusted: "2026-08-28", last_seen: "2026-08-28 22:33", ip: "1.2.3.4",
     country: "GR", user_agent: XSS }],
   trendDays: 30,
+  // The heavy half is computed by the nightly job and read from the cache;
+  // a payload without this stamp is a service that has never run it.
+  heavyComputedAt: "2026-08-28T03:12:00.000Z",
+  previous: {
+    at: "2026-08-27T03:12:00.000Z",
+    totals: { families: 2, entries: 96 },
+    funnel: { joined_7d: 1 },
+  },
+  funnel: { joined_7d: 2, joined_prev_7d: 1, activated_7d: 2, activated_prev_7d: 1,
+    returning_7d: 2, stayed_a_week: 1, paired_7d: 1 },
+  lifespan: { with_entries: 3, one_day: 1, under_week: 1, under_month: 1, over_month: 0 },
   generatedAt: "2026-08-28T22:33:00.000Z",
 };
 
@@ -82,7 +93,7 @@ describe("the dashboard renders", () => {
   it("paints every section", () => {
     const text = document.getElementById("dash")!.textContent ?? "";
     for (const heading of [
-      "Pulse", "Entries synced", "New families", "Are they still here?",
+      "The week in words", "Pulse", "Entries synced", "New families", "Are they still here?",
       "How much do they log?", "Weekly cohorts", "What gets logged", "Hour of day",
       "Pairing", "Phones", "Messages", "Families", "Who has been at this door",
       "Browsers that skip the lockout",
@@ -96,6 +107,16 @@ describe("the dashboard renders", () => {
     expect(text).toContain("120"); // entries
     expect(text).toContain("Median 30");
     expect(text).toContain("60% of invite codes were scanned");
+  });
+
+  it("reads the report out of the nightly snapshot, and says which one", () => {
+    const text = document.getElementById("dash")!.textContent ?? "";
+    expect(text).toContain("2 families turned on Family Sync in the last seven days");
+    expect(text).toContain("1 family has entries from one single day");
+    // The delta against yesterday's stored snapshot, not a fresh query.
+    expect(text).toMatch(/Against the last snapshot: 3 families\s*\+1 and 120 entries\s*\+24\./);
+    expect(text).toContain("only families who turned Family Sync ON");
+    expect(document.getElementById("stamp")!.textContent).toContain("opening it costs no computation");
   });
 
   it("swaps the sign-in screen for the dashboard", () => {

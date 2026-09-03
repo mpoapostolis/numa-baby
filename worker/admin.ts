@@ -28,7 +28,7 @@ import {
   type Caller,
 } from "./adminAuth";
 import { adminPageHtml } from "./adminPage";
-import { collectStats } from "./adminStats";
+import { collectStats, refreshStats } from "./adminStats";
 
 export type AdminEnv = {
   /** Unset means the page does not exist at all. */
@@ -260,6 +260,16 @@ async function route(
 
   if (url.pathname === "/api/admin/stats" && request.method === "GET") {
     return json(await collectStats(client, now));
+  }
+
+  // The nightly run computes these; this is the operator saying "not
+  // tomorrow, now" — after a release, or on the first day, when the cache is
+  // still empty. Audited like every other button behind this door, because
+  // it is the one that costs real money.
+  if (url.pathname === "/api/admin/stats/refresh" && request.method === "POST") {
+    await audit(client, "stats recomputed", callerOf(request), now);
+    const heavy = await refreshStats(client, now);
+    return json({ ok: true, computedAt: new Date(now).toISOString(), families: heavy.totals?.families ?? 0 });
   }
 
   // Recovery: the manual rescue, made 30 seconds instead of a shell session.

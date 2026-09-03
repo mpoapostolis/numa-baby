@@ -155,6 +155,7 @@ export function adminPageHtml(nonce: string): string {
     </div>
     <div class="tools" id="tools">
       <button class="ghost" id="refresh">Refresh</button>
+      <button class="ghost" id="recompute">Recompute</button>
       <button class="ghost" id="copy">Copy JSON</button>
       <button class="ghost" id="out">Sign out</button>
       <button class="ghost" id="outall">Sign out everywhere</button>
@@ -339,8 +340,19 @@ export function adminPageHtml(nonce: string): string {
       (change > 0 ? "+" : "") + change + '%</em>';
   }
 
+  /* "+9" against the stored snapshot, not a fresh query. */
+  function since(now, before) {
+    if (before == null) return "";
+    var change = Number(now || 0) - Number(before || 0);
+    if (!change) return ' <span class="tiny">level</span>';
+    return ' <em class="' + (change > 0 ? "up" : "down") + '">' +
+      (change > 0 ? "+" : "") + n(change) + '</em>';
+  }
+
   function report(d) {
     var t = d.totals || {}, f = d.funnel || {}, life = d.lifespan || {}, ret = d.retention || {};
+    var prev = d.previous || null;
+    var prevTotals = prev ? (prev.totals || {}) : {};
     var joined = Number(f.joined_7d || 0);
     var activated = Number(f.activated_7d || 0);
     var lost = Math.max(0, Number(ret.total || 0) - Number(ret.d30 || 0) - Number(ret.never || 0));
@@ -365,8 +377,16 @@ export function adminPageHtml(nonce: string): string {
       '<b>' + n(lost) + '</b> logged for longer and then went quiet more than a month ago.');
     lines.push('<b>' + n(f.paired_7d) + '</b> of the arrivals this week added a second phone (' +
       pct(f.paired_7d, joined) + '). Across the whole service it is ' + pct(t.paired, t.families) + '.');
+    if (prev) {
+      lines.push('Against the last snapshot: <b>' + n(t.families) + '</b> families' +
+        since(t.families, prevTotals.families) + ' and <b>' + n(t.entries) + '</b> entries' +
+        since(t.entries, prevTotals.entries) + '.');
+    }
 
-    return '<div class="card report"><h2>The week in words</h2>' +
+    var stamp = '<p class="tiny" style="margin:-4px 0 14px">Computed ' + esc(when(d.heavyComputedAt)) +
+      (prev ? ' · compared with the snapshot from ' + esc(when(prev.at)) : '') + '.</p>';
+
+    return '<div class="card report"><h2>The week in words</h2>' + stamp +
       '<ul>' + lines.map(function (line) { return "<li>" + line + "</li>"; }).join("") + '</ul>' +
       '<div class="grid">' +
         stat("Arrived", n(joined), "last 7 days") +
@@ -382,6 +402,91 @@ export function adminPageHtml(nonce: string): string {
       '</div>';
   }
 
+  /* The half that is always live: messages must be markable and the security
+     panels must tell the truth of this minute. Small, indexed reads — they
+     are not part of the nightly computation and never wait for it. */
+  function liveSections(d) {
+    var parts = [];
+  if (d.feedback.length) {
+    var msgs = "";
+    for (var m = 0; m < d.feedback.length; m++) {
+      var f = d.feedback[m];
+      // The triage chip the owner asked for: which build the report came
+      // from, and whether that build predates what is live right now —
+      // "is this already fixed?" answered at a glance.
+      var buildBit = '';
+      if (f.app_version) {
+        var stale = d.workerBuild && String(f.app_version) < String(d.workerBuild);
+        buildBit = ' · build ' + esc(f.app_version) +
+          (stale ? ' <span style="color:#c96">· before current deploy</span>'
+                 : ' <span style="color:#7a6">· current</span>');
+      }
+      msgs += '<div class="msg"><div class="tiny">' + esc(f.sent) +
+        (f.contact ? ' · <b>' + esc(f.contact) + '</b>' : ' · no contact') +
+        buildBit + '</div>' +
+        '<p>' + esc(f.message) + '</p>' +
+        '<div><button class="ghost mark" data-id="' + esc(f.id) + '" data-to="' +
+        (Number(f.handled) ? 0 : 1) + '">' +
+        (Number(f.handled) ? 'Handled ✓ — undo' : 'Mark handled') + '</button></div></div>';
+    }
+    parts.push('<div class="card"><h2>Messages · ' + d.feedback.length + '</h2>' +
+      (d.workerBuild ? '<p class="tiny">Live build: ' + esc(d.workerBuild) + '</p>' : '') +
+      msgs + '</div>');
+  }
+  var sec = '<div class="card"><h2>Who has been at this door</h2>';
+  if (d.lockouts.length) {
+    sec += '<p class="muted" style="margin-bottom:8px">Locked out right now</p>' +
+      table([{ label: "Scope" }, { label: "Strikes", num: 1 }, { label: "Until" }],
+        d.lockouts, function (l) {
+          return '<td>' + esc(l.scope) + '</td><td class="num">' + n(l.strikes) + '</td>' +
+            '<td>' + esc(l.locked_until) + '</td>';
+        });
+  }
+  sec += '<p class="muted" style="margin:14px 0 8px">Open sessions</p>' +
+    table([{ label: "Signed in" }, { label: "Last seen" }, { label: "Expires" },
+           { label: "From" }, { label: "Browser" }],
+      d.sessions, function (s) {
+        return '<td>' + esc(s.created) + '</td><td>' + esc(s.last_seen || "—") + '</td>' +
+          '<td>' + esc(s.expires) + '</td>' +
+          '<td>' + esc(s.ip) + ' ' + esc(s.country) + '</td>' +
+          '<td style="max-width:280px;overflow:hidden;text-overflow:ellipsis">' +
+          esc(s.user_agent || "—") + '</td>';
+      });
+  sec += '<p class="muted" style="margin:14px 0 8px">Browsers that skip the lockout</p>' +
+    table([{ label: "Trusted since" }, { label: "Last seen" }, { label: "From" }, { label: "Browser" }],
+      d.knownBrowsers || [], function (k) {
+        return '<td>' + esc(k.trusted) + '</td><td>' + esc(k.last_seen || "—") + '</td>' +
+          '<td>' + esc(k.ip) + ' ' + esc(k.country) + '</td>' +
+          '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis">' +
+          esc(k.user_agent || "—") + '</td>';
+      });
+  sec += '<p class="muted" style="margin:14px 0 8px">Recent attempts</p>' +
+    table([{ label: "When" }, { label: "Event" }, { label: "From" }, { label: "AS" }],
+      d.auditLog, function (a) {
+        var ok = String(a.event).indexOf("ok") >= 0;
+        return '<td>' + esc(a.at) + '</td>' +
+          '<td><span class="pill ' + (ok ? 'ok' : (String(a.event).indexOf('bad') >= 0 ||
+            String(a.event).indexOf('lock') >= 0 ? 'bad' : '')) + '">' + esc(a.event) + '</span></td>' +
+          '<td>' + esc(a.ip) + ' ' + esc(a.country) + '</td><td>' + esc(a.asn || "—") + '</td>';
+      });
+  parts.push(sec + '</div>');
+    return parts.join("");
+  }
+
+  /* The one listener the live half needs. */
+  function wireLive() {
+    var marks = document.querySelectorAll(".mark");
+    for (var i = 0; i < marks.length; i++) {
+      marks[i].addEventListener("click", function (e) {
+        var b = e.currentTarget;
+        fetch("/api/admin/feedback", {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ id: b.getAttribute("data-id"), handled: Number(b.getAttribute("data-to")) })
+        }).then(function () { load(); });
+      });
+    }
+  }
+
   // The families table opens short; this remembers when it was opened up.
   var allFamilies = false;
 
@@ -389,6 +494,23 @@ export function adminPageHtml(nonce: string): string {
     var t = d.totals || {}, ret = d.retention || {}, sp = d.spread || {}, inv = d.invites || {};
     var df = d.deviceFreshness || {};
     var parts = [];
+
+    if (!d.heavyComputedAt) {
+      // Nothing has ever run. The page says so and offers the button — it
+      // does NOT quietly spend a hundred thousand row reads filling itself in,
+      // which is the whole reason the computation moved to a nightly job.
+      parts.push('<div class="card"><h2>Not computed yet</h2>' +
+        '<p class="muted">The heavy figures — cohorts, retention, per-family — are worked out ' +
+        'once a night and stored, so that opening this page costs nothing. Nothing has been ' +
+        'stored yet. Press Recompute above to do it now; after that the nightly run keeps it fresh.</p>' +
+        '</div>');
+      parts.push(band("Live"));
+      parts.push(liveSections(d));
+      $("dash").innerHTML = parts.join("");
+      $("stamp").textContent = "Waiting for the first nightly run.";
+      wireLive();
+      return;
+    }
 
     parts.push(band("This week"));
     parts.push(report(d));
@@ -474,32 +596,6 @@ export function adminPageHtml(nonce: string): string {
         n(df.total) + ' phones.</p></div>' +
       '</div>');
 
-    if (d.feedback.length) {
-      var msgs = "";
-      for (var m = 0; m < d.feedback.length; m++) {
-        var f = d.feedback[m];
-        // The triage chip the owner asked for: which build the report came
-        // from, and whether that build predates what is live right now —
-        // "is this already fixed?" answered at a glance.
-        var buildBit = '';
-        if (f.app_version) {
-          var stale = d.workerBuild && String(f.app_version) < String(d.workerBuild);
-          buildBit = ' · build ' + esc(f.app_version) +
-            (stale ? ' <span style="color:#c96">· before current deploy</span>'
-                   : ' <span style="color:#7a6">· current</span>');
-        }
-        msgs += '<div class="msg"><div class="tiny">' + esc(f.sent) +
-          (f.contact ? ' · <b>' + esc(f.contact) + '</b>' : ' · no contact') +
-          buildBit + '</div>' +
-          '<p>' + esc(f.message) + '</p>' +
-          '<div><button class="ghost mark" data-id="' + esc(f.id) + '" data-to="' +
-          (Number(f.handled) ? 0 : 1) + '">' +
-          (Number(f.handled) ? 'Handled ✓ — undo' : 'Mark handled') + '</button></div></div>';
-      }
-      parts.push('<div class="card"><h2>Messages · ' + d.feedback.length + '</h2>' +
-        (d.workerBuild ? '<p class="tiny">Live build: ' + esc(d.workerBuild) + '</p>' : '') +
-        msgs + '</div>');
-    }
 
     parts.push('<div class="card"><h2>Recover a family</h2>' +
       '<p class="muted" style="margin-bottom:8px">For a parent who lost their phone or deleted the app but had Family Sync on. ' +
@@ -531,67 +627,20 @@ export function adminPageHtml(nonce: string): string {
       '</div>');
 
     parts.push(band("Operations"));
+    parts.push(liveSections(d));
 
-    var sec = '<div class="card"><h2>Who has been at this door</h2>';
-    if (d.lockouts.length) {
-      sec += '<p class="muted" style="margin-bottom:8px">Locked out right now</p>' +
-        table([{ label: "Scope" }, { label: "Strikes", num: 1 }, { label: "Until" }],
-          d.lockouts, function (l) {
-            return '<td>' + esc(l.scope) + '</td><td class="num">' + n(l.strikes) + '</td>' +
-              '<td>' + esc(l.locked_until) + '</td>';
-          });
-    }
-    sec += '<p class="muted" style="margin:14px 0 8px">Open sessions</p>' +
-      table([{ label: "Signed in" }, { label: "Last seen" }, { label: "Expires" },
-             { label: "From" }, { label: "Browser" }],
-        d.sessions, function (s) {
-          return '<td>' + esc(s.created) + '</td><td>' + esc(s.last_seen || "—") + '</td>' +
-            '<td>' + esc(s.expires) + '</td>' +
-            '<td>' + esc(s.ip) + ' ' + esc(s.country) + '</td>' +
-            '<td style="max-width:280px;overflow:hidden;text-overflow:ellipsis">' +
-            esc(s.user_agent || "—") + '</td>';
-        });
-    sec += '<p class="muted" style="margin:14px 0 8px">Browsers that skip the lockout</p>' +
-      table([{ label: "Trusted since" }, { label: "Last seen" }, { label: "From" }, { label: "Browser" }],
-        d.knownBrowsers || [], function (k) {
-          return '<td>' + esc(k.trusted) + '</td><td>' + esc(k.last_seen || "—") + '</td>' +
-            '<td>' + esc(k.ip) + ' ' + esc(k.country) + '</td>' +
-            '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis">' +
-            esc(k.user_agent || "—") + '</td>';
-        });
-    sec += '<p class="muted" style="margin:14px 0 8px">Recent attempts</p>' +
-      table([{ label: "When" }, { label: "Event" }, { label: "From" }, { label: "AS" }],
-        d.auditLog, function (a) {
-          var ok = String(a.event).indexOf("ok") >= 0;
-          return '<td>' + esc(a.at) + '</td>' +
-            '<td><span class="pill ' + (ok ? 'ok' : (String(a.event).indexOf('bad') >= 0 ||
-              String(a.event).indexOf('lock') >= 0 ? 'bad' : '')) + '">' + esc(a.event) + '</span></td>' +
-            '<td>' + esc(a.ip) + ' ' + esc(a.country) + '</td><td>' + esc(a.asn || "—") + '</td>';
-        });
-    parts.push(sec + '</div>');
 
     $("dash").innerHTML = parts.join("");
-    $("stamp").textContent = "Computed " + when(d.generatedAt) +
-      (d.statsComputedAt && d.statsComputedAt !== d.generatedAt
-        ? " · the heavy figures at " + when(d.statsComputedAt)
-        : "") +
-      " · refreshes every five minutes while this tab is open";
+    $("stamp").textContent = "Nightly figures computed " + when(d.heavyComputedAt) +
+      " · this page read them at " + when(d.generatedAt) +
+      " · opening it costs no computation";
 
     var more = $("more");
     if (more) {
       more.addEventListener("click", function () { allFamilies = !allFamilies; render(last); });
     }
 
-    var marks = document.querySelectorAll(".mark");
-    for (var i = 0; i < marks.length; i++) {
-      marks[i].addEventListener("click", function (e) {
-        var b = e.currentTarget;
-        fetch("/api/admin/feedback", {
-          method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify({ id: b.getAttribute("data-id"), handled: Number(b.getAttribute("data-to")) })
-        }).then(load);
-      });
-    }
+    wireLive();
   }
 
   // Re-wired after every render: the form is rebuilt with the dashboard.
@@ -662,6 +711,18 @@ export function adminPageHtml(nonce: string): string {
       body: JSON.stringify({ all: !!all })
     }).then(function () { location.reload(); });
   }
+  // "Not tomorrow, now": the operator asking for the nightly computation on
+  // demand. It is the one button on this page that costs real money, so it
+  // says what it is doing and comes back with the answer.
+  $("recompute").addEventListener("click", function () {
+    var b = $("recompute");
+    b.disabled = true;
+    b.textContent = "Computing\u2026";
+    fetch("/api/admin/stats/refresh", { method: "POST" })
+      .then(function (res) { return res.ok ? load() : false; })
+      .then(function () { b.disabled = false; b.textContent = "Recompute"; })
+      .catch(function () { b.disabled = false; b.textContent = "Recompute"; });
+  });
   $("out").addEventListener("click", function () { signOut(false); });
   $("outall").addEventListener("click", function () { signOut(true); });
   $("refresh").addEventListener("click", function () { load(); });

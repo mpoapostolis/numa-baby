@@ -213,10 +213,14 @@ CREATE TABLE IF NOT EXISTS magic_budget (
   sends INTEGER NOT NULL
 );
 
--- The admin dashboard's heavy statistics, computed at most once per TTL
--- window and served from here to every tab and refresh in between. Seven
--- dashboard loads once cost ~790k row reads in six hours; now they cost one
--- computation and six cache hits.
+-- The admin dashboard's heavy statistics. Computed by the NIGHTLY CRON (see
+-- the trigger in wrangler.jsonc) and read from here by every page load, tab
+-- and refresh — a dashboard load runs no statistics at all. Seven loads once
+-- cost ~790k row reads in six hours.
+--
+-- Two kinds of row: 'heavy' is what the page reads, and 'day:YYYY-MM-DD' is
+-- that night's snapshot, kept 90 days, so the report can say what changed
+-- since yesterday without asking the database anything extra.
 CREATE TABLE IF NOT EXISTS stats_cache (
   id TEXT PRIMARY KEY,
   payload TEXT NOT NULL,

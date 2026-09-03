@@ -38,6 +38,14 @@
     "TURSO_DATABASE_URL": "https://numa-baby-sync-mpoapostolis.aws-eu-west-1.turso.io",
     "GOOGLE_CLIENT_ID": "705272946048-nprhdf7r57ufsvu20hvschnb733oivp2.apps.googleusercontent.com"
   },
+  // The dashboard's heavy statistics are computed HERE, once a night, and
+  // stored — not on a page load. Opening the dashboard used to run a dozen
+  // full scans of the activities table; seven opens in six hours cost more
+  // row reads than the entire sync fleet. 03:12 UTC is the quiet hour, and
+  // the odd minute keeps it off the crowded top of the hour.
+  "triggers": {
+    "crons": ["12 3 * * *"]
+  },
   "observability": {
     "enabled": true
   }

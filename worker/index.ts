@@ -1,6 +1,7 @@
 /// <reference types="@cloudflare/workers-types" />
 import { createClient } from "@libsql/client/web";
 import { handleAdmin } from "./admin";
+import { refreshStats } from "./adminStats";
 import { budgetKey } from "./budgetKey";
 import { handleFeedback } from "./feedback";
 import {
@@ -498,6 +499,21 @@ async function handlePush(env: Env, request: Request, familyId: string, ctx: Exe
 }
 
 export default {
+  /**
+   * The nightly run (see the cron in wrangler.jsonc). It exists so that the
+   * dashboard's expensive half is computed once a day by the service rather
+   * than by whoever happens to open the page — which is what made looking at
+   * the numbers the most expensive thing the service did.
+   */
+  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(
+      refreshStats(db(env), Date.now()).then(
+        () => undefined,
+        (error) => { console.error("nightly stats failed", error); },
+      ),
+    );
+  },
+
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
