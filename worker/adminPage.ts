@@ -48,6 +48,29 @@ export function adminPageHtml(nonce: string): string {
   .report em.down { color:var(--bad); background:color-mix(in oklab, var(--bad) 14%, transparent); }
   .report em.flat { color:var(--ink-3); background:color-mix(in oklab, var(--ink-3) 14%, transparent); }
   .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(112px,1fr)); gap:14px; }
+
+  /* A ten-thousand-pixel page needs signposts. Each band names what the cards
+     under it are for, so the wall of identical cards stops being a wall. */
+  .band { display:flex; align-items:center; gap:12px; margin:14px 2px 0; }
+  .band h3 { margin:0; font-size:.6875rem; font-weight:600; text-transform:uppercase;
+    letter-spacing:.1em; color:var(--ink-3); white-space:nowrap; }
+  .band hr { flex:1; height:1px; border:0; background:var(--line); }
+
+  /* The cohort grid. Colour carries the percentage so a bad month is visible
+     before a single figure has been read; the number stays, because colour
+     alone is never the answer. */
+  .heat td.h { position:relative; text-align:right; }
+  .heat td.h u { position:absolute; inset:3px 4px; border-radius:6px; display:block;
+    background:var(--signal); }
+  .heat td.h span { position:relative; }
+  .heat td.h b { font-weight:600; font-variant-numeric:tabular-nums; }
+  .heat td.h i { font-style:normal; color:var(--ink-3); font-size:.6875rem; margin-left:5px; }
+
+  /* Night is the shift this app is for, so the chart says where it is. */
+  .bars { position:relative; }
+  .bars .night { position:absolute; top:0; bottom:0; background:color-mix(in oklab, var(--ink) 5%, transparent);
+    border-radius:4px; pointer-events:none; }
+  .peak { color:var(--ink-3); font-size:.6875rem; margin:6px 0 0; }
   .stat b { display:block; font-size:1.7rem; font-weight:650; line-height:1.15;
     font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
   .stat span { color:var(--ink-2); font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; }
@@ -82,6 +105,11 @@ export function adminPageHtml(nonce: string): string {
     padding:6px 12px; font-size:.8125rem; font-weight:500; }
   button.ghost:hover { color:var(--ink); border-color:var(--ink-3); }
   .row { display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+  /* The tools were at the top of a page ten screens tall: to refresh, you
+     scrolled back. */
+  #head { position:sticky; top:0; z-index:5; margin:-20px -16px 0; padding:12px 16px;
+    background:color-mix(in oklab, var(--bg) 88%, transparent);
+    border-bottom:1px solid var(--line); backdrop-filter:blur(8px); }
   .tools { display:flex; gap:8px; flex-wrap:wrap; }
   .bars { display:flex; align-items:flex-end; gap:2px; height:78px; }
   /* One column per day. A column holds one or two bars, each scaled against
@@ -188,7 +216,7 @@ export function adminPageHtml(nonce: string): string {
   // the first. Each is scaled against its own maximum, because the question
   // "was this a busy week" and the question "was it busy for more than one
   // household" have different answers and deserve different bars.
-  function barChart(rows, key, second, labelKey, names) {
+  function barChart(rows, key, second, labelKey, names, nightBand) {
     if (!rows.length) return '<p class="muted">Nothing yet.</p>';
     var maxA = 1, maxB = 1, i;
     for (i = 0; i < rows.length; i++) {
@@ -204,6 +232,14 @@ export function adminPageHtml(nonce: string): string {
         '<u style="height:' + Math.max(2, Math.round((a / maxA) * 100)) + '%"></u>' +
         (second ? '<u class="b" style="height:' + Math.max(2, Math.round((b / maxB) * 100)) + '%"></u>' : '') +
         '</i>';
+    }
+    // The night shift, marked where it happens. Hours are UTC and the chart
+    // says so; the band is 22:00-06:00, which is the stretch this whole app
+    // was written for.
+    if (nightBand && rows.length === 24) {
+      out = out.replace('<div class="bars">',
+        '<div class="bars"><span class="night" style="left:0;width:' + ((6 / 24) * 100) + '%"></span>' +
+        '<span class="night" style="left:' + ((22 / 24) * 100) + '%;width:' + ((2 / 24) * 100) + '%"></span>');
     }
     out += '</div>';
     if (second && names) {
@@ -226,9 +262,59 @@ export function adminPageHtml(nonce: string): string {
     return out + '</div>';
   }
 
-  function table(head, rows, cells) {
+  /* A stamp somebody can read: the operator's own clock, not a UTC string. */
+  function when(iso) {
+    if (!iso) return "just now";
+    var at = new Date(iso);
+    return isNaN(at.getTime()) ? String(iso) : at.toLocaleString("en-GB", {
+      day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+    });
+  }
+
+  /* "Busiest at 03:00" — the one sentence the 24 bars are there to say. */
+  function peakLine(rows) {
+    if (!rows || !rows.length) return "";
+    var best = rows[0], total = 0, i;
+    for (i = 0; i < rows.length; i++) {
+      total += Number(rows[i].n || 0);
+      if (Number(rows[i].n || 0) > Number(best.n || 0)) best = rows[i];
+    }
+    var night = 0;
+    for (i = 0; i < rows.length; i++) {
+      var h = Number(rows[i].hour);
+      if (h >= 22 || h < 6) night += Number(rows[i].n || 0);
+    }
+    return "Busiest at " + esc(best.hour) + ":00 UTC · " + pct(night, total) +
+      " of everything logged falls in the shaded night hours.";
+  }
+
+  function band(title) {
+    return '<div class="band"><h3>' + esc(title) + '</h3><hr /></div>';
+  }
+
+  /* A percentage cell that carries its own colour, scaled against the best
+     week in its own column — 88% and 92% painted the same shade is a coloured
+     table, not a heatmap. The number stays: colour is never the answer. */
+  function heat(value, of, best) {
+    var share = Number(of || 0) ? Number(value || 0) / Number(of) : 0;
+    var alpha = best > 0 ? 0.05 + (share / best) * 0.30 : 0.05;
+    return '<td class="h"><u style="opacity:' + alpha.toFixed(3) + '"></u>' +
+      '<span><b>' + n(value) + '</b><i>' + pct(value, of) + '</i></span></td>';
+  }
+
+  /* The best ratio in a column, so the column can be scaled to itself. */
+  function bestShare(rows, key, ofKey) {
+    var best = 0;
+    for (var i = 0; i < rows.length; i++) {
+      var of = Number(rows[i][ofKey] || 0);
+      if (of > 0) best = Math.max(best, Number(rows[i][key] || 0) / of);
+    }
+    return best;
+  }
+
+  function table(head, rows, cells, cls) {
     if (!rows.length) return '<p class="muted">Nothing yet.</p>';
-    var out = '<div class="scroll"><table><thead><tr>';
+    var out = '<div class="scroll"><table class="' + (cls || "") + '"><thead><tr>';
     for (var h = 0; h < head.length; h++) {
       out += '<th' + (head[h].num ? ' class="num"' : '') + '>' + esc(head[h].label || head[h]) + '</th>';
     }
@@ -296,13 +382,18 @@ export function adminPageHtml(nonce: string): string {
       '</div>';
   }
 
+  // The families table opens short; this remembers when it was opened up.
+  var allFamilies = false;
+
   function render(d) {
     var t = d.totals || {}, ret = d.retention || {}, sp = d.spread || {}, inv = d.invites || {};
     var df = d.deviceFreshness || {};
     var parts = [];
 
+    parts.push(band("This week"));
     parts.push(report(d));
 
+    parts.push(band("The service"));
     parts.push('<div class="card"><h2>Pulse</h2><div class="grid">' +
       stat("Families", n(t.families), n(t.paired) + " with 2+ phones") +
       stat("Devices", n(t.devices), n(df.d7) + " seen this week") +
@@ -338,16 +429,25 @@ export function adminPageHtml(nonce: string): string {
         n(Math.round(Number(sp.mean || 0))) + ' · most ' + n(sp.most) + '.</p></div>' +
       '</div>');
 
+    // Colour on the three ratios: the week a cohort stopped sticking is
+    // visible before a single number has been read.
+    var bestLogged = bestShare(d.cohorts, "ever_logged", "joined");
+    var bestPaired = bestShare(d.cohorts, "paired", "joined");
+    var bestActive = bestShare(d.cohorts, "active_7d", "joined");
     parts.push('<div class="card"><h2>Weekly cohorts</h2>' +
-      table([{ label: "Week" }, { label: "From" }, { label: "Families", num: 1 },
-             { label: "Ever logged", num: 1 }, { label: "Paired", num: 1 }, { label: "Active 7d", num: 1 }],
+      table([{ label: "Week" }, { label: "From" }, { label: "Arrived", num: 1 },
+             { label: "Ever logged", num: 1 }, { label: "Second phone", num: 1 }, { label: "Active 7d", num: 1 }],
         d.cohorts, function (c) {
           return '<td>' + esc(c.week) + '</td><td>' + esc(c.starts) + '</td>' +
             '<td class="num">' + n(c.joined) + '</td>' +
-            '<td class="num">' + n(c.ever_logged) + ' <span class="tiny">' + pct(c.ever_logged, c.joined) + '</span></td>' +
-            '<td class="num">' + n(c.paired) + '</td>' +
-            '<td class="num">' + n(c.active_7d) + ' <span class="tiny">' + pct(c.active_7d, c.joined) + '</span></td>';
-        }) + '</div>');
+            heat(c.ever_logged, c.joined, bestLogged) +
+            heat(c.paired, c.joined, bestPaired) +
+            heat(c.active_7d, c.joined, bestActive);
+        }, "heat") +
+      '<p class="tiny" style="margin:10px 0 0">Each week of arrivals, and what became of them. ' +
+      'The newest row is still filling up.</p></div>');
+
+    parts.push(band("What they do"));
 
     var kindTotal = 0;
     for (var k = 0; k < d.kinds.length; k++) kindTotal += Number(d.kinds[k].n || 0);
@@ -356,8 +456,9 @@ export function adminPageHtml(nonce: string): string {
         meter(d.kinds.map(function (x) { return [x.kind, x.n]; }), kindTotal) +
         '<p class="tiny" style="margin:10px 0 0">Entry type only, counted across every family at once.</p></div>' +
       '<div class="card"><h2>Hour of day · UTC · 30 days</h2>' +
-        barChart(d.hours, "n", null, "hour") +
-        '<div class="axis tiny"><span>00</span><span>12</span><span>23</span></div></div>' +
+        barChart(d.hours, "n", null, "hour", null, true) +
+        '<div class="axis tiny"><span>00</span><span>12</span><span>23</span></div>' +
+        '<p class="peak">' + peakLine(d.hours) + '</p></div>' +
       '</div>');
 
     parts.push('<div class="split">' +
@@ -409,17 +510,27 @@ export function adminPageHtml(nonce: string): string {
       '<button type="submit">Find &amp; mint link</button></form>' +
       '<p id="rec-out" class="muted" style="margin-top:8px"></p></div>');
 
+    // Five hundred rows is four screens of table nobody reads. The newest
+    // twenty-five, and a button for the rest.
+    var shown = allFamilies ? d.families : d.families.slice(0, 25);
     parts.push('<div class="card"><h2>Families · ' + d.families.length + '</h2>' +
       table([{ label: "Id" }, { label: "Created" }, { label: "Phones", num: 1 },
              { label: "Entries", num: 1 }, { label: "Deleted", num: 1 },
              { label: "First" }, { label: "Last entry" }, { label: "Profile" }],
-        d.families, function (f) {
+        shown, function (f) {
           return '<td>' + esc(f.family) + '</td><td>' + esc(f.created) + '</td>' +
             '<td class="num">' + n(f.devices) + '</td><td class="num">' + n(f.entries) + '</td>' +
             '<td class="num">' + n(f.deleted) + '</td>' +
             '<td>' + esc(f.first_entry || "—") + '</td><td>' + esc(f.last_entry || "—") + '</td>' +
             '<td>' + (Number(f.has_profile) ? "yes" : "—") + '</td>';
-        }) + '</div>');
+        }) +
+      (d.families.length > 25
+        ? '<button class="ghost" id="more" style="margin-top:12px">' +
+          (allFamilies ? "Show the newest 25" : "Show all " + n(d.families.length)) + '</button>'
+        : "") +
+      '</div>');
+
+    parts.push(band("Operations"));
 
     var sec = '<div class="card"><h2>Who has been at this door</h2>';
     if (d.lockouts.length) {
@@ -460,7 +571,16 @@ export function adminPageHtml(nonce: string): string {
     parts.push(sec + '</div>');
 
     $("dash").innerHTML = parts.join("");
-    $("stamp").textContent = "Generated " + d.generatedAt + " · refreshes every minute";
+    $("stamp").textContent = "Computed " + when(d.generatedAt) +
+      (d.statsComputedAt && d.statsComputedAt !== d.generatedAt
+        ? " · the heavy figures at " + when(d.statsComputedAt)
+        : "") +
+      " · refreshes every five minutes while this tab is open";
+
+    var more = $("more");
+    if (more) {
+      more.addEventListener("click", function () { allFamilies = !allFamilies; render(last); });
+    }
 
     var marks = document.querySelectorAll(".mark");
     for (var i = 0; i < marks.length; i++) {
