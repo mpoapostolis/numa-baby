@@ -14,6 +14,7 @@
     "test:build": "node --test tests/build-output.test.mjs",
     "check": "npm run lint && npm test && npm run build && npm run test:build",
     "icons": "node scripts/make-maskable.mjs",
+    "broadcast": "node tools/broadcast/serve.mjs",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.worker.json",
     "deploy": "node scripts/stamp-worker.mjs && npm run build && wrangler deploy"

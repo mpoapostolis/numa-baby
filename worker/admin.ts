@@ -6,6 +6,7 @@
 // and the page in adminPage.ts.
 
 import { Client } from "@libsql/client/web";
+import { broadcastHistory, pendingBroadcast, queueBroadcast, stopBroadcast } from "./broadcast";
 import {
   audit,
   browserIsKnown,
@@ -270,6 +271,28 @@ async function route(
     await audit(client, "stats recomputed", callerOf(request), now);
     const heavy = await refreshStats(client, now);
     return json({ ok: true, computedAt: new Date(now).toISOString(), families: heavy.totals?.families ?? 0 });
+  }
+
+  // Announcements. The most abusable button in the service — it puts a line
+  // on every subscribed lock screen — so it is audited with its own wording
+  // recorded, and it QUEUES rather than sends: the cron drains it behind the
+  // reminders. See worker/broadcast.ts for why each rule is there.
+  if (url.pathname === "/api/admin/broadcast" && request.method === "GET") {
+    return json({ pending: await pendingBroadcast(client), history: await broadcastHistory(client) });
+  }
+  if (url.pathname === "/api/admin/broadcast" && request.method === "POST") {
+    const body = await readBody(request);
+    const queued = await queueBroadcast(client, body, now);
+    if ("error" in queued) return json({ error: queued.error }, 400);
+    // The wording goes in the audit log, not just the fact that a button was
+    // pressed: "who sent that?" and "what did it say?" are the same question.
+    await audit(client, `broadcast queued: ${String(body.title ?? "").slice(0, 60)}`, callerOf(request), now);
+    return json({ ok: true, id: queued.id });
+  }
+  if (url.pathname === "/api/admin/broadcast/stop" && request.method === "POST") {
+    const stopped = await stopBroadcast(client, now);
+    if (stopped) await audit(client, "broadcast stopped", callerOf(request), now);
+    return json({ ok: stopped });
   }
 
   // Recovery: the manual rescue, made 30 seconds instead of a shell session.

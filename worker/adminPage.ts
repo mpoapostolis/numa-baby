@@ -511,7 +511,23 @@ export function adminPageHtml(nonce: string): string {
       ? 'Signing key <code>' + esc(String(d.vapid.publicKey).slice(0, 12)) + '\u2026</code> since ' +
         esc(String(d.vapid.createdAt).slice(0, 10)) + '. Never rotate it: phones subscribed to that key.'
       : 'No signing key yet \u2014 the first phone to ask for one mints it.') +
-    '</p></div>');
+    '</p>' +
+    // Sending is deliberately not a button on this page: it is a program you
+    // start on a laptop (see tools/broadcast). But what went out has to be
+    // visible where the operator already looks, one still going out included.
+    (!(d.announcements || []).length ? '' :
+      '<h3 class="tiny" style="margin:18px 0 6px">Announcements</h3>' +
+      table(
+        [{ label: "When" }, { label: "Title" }, { label: "Sent", num: 1 }, { label: "Dropped", num: 1 }, { label: "Refused", num: 1 }],
+        d.announcements,
+        function (a) {
+          return '<td>' + esc(String(a.createdAt).slice(0, 16).replace('T', ' ')) + '</td>' +
+            '<td>' + esc(a.title) + (a.finishedAt ? '' : ' <span class="pill">sending</span>') + '</td>' +
+            '<td class="num">' + n(a.sent) + '</td><td class="num">' + n(a.gone) + '</td>' +
+            '<td class="num">' + n(a.failed) + '</td>';
+        },
+      )) +
+    '</div>');
 
     return parts.join("");
   }

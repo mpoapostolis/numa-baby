@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>Announcement · Numalog</title>
+<style>
+  /* The app's own palette, so a message composed here is judged in roughly
+     the colours it will be read in. */
+  :root {
+    --ink: #2d2622;
+    --muted: #7a6a5f;
+    --cream: #fbf7f2;
+    --card: #ffffff;
+    --line: #e8ded3;
+    --rose: #c96f5a;
+    --rose-soft: #f6e4de;
+    --warn: #8a5a2b;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px 20px 64px;
+    background: var(--cream); color: var(--ink);
+    font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 620px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); font-size: 13px; margin: 0 0 24px; }
+  .sub code { background: #fff; border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 20px; margin-bottom: 16px;
+  }
+  label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+  .count { float: right; font-weight: 400; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .count.over { color: var(--rose); font-weight: 600; }
+  input, textarea {
+    width: 100%; font: inherit; color: inherit;
+    padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px;
+    background: var(--cream); resize: vertical;
+  }
+  input:focus, textarea:focus { outline: 2px solid var(--rose); outline-offset: 1px; }
+  .field + .field { margin-top: 16px; }
+  .hint { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
+
+  /* What it will look like where it actually lands. */
+  .preview-label { font-size: 12px; color: var(--muted); margin: 0 0 8px; }
+  .lock {
+    background: linear-gradient(160deg, #3b3230, #221c1a);
+    border-radius: 16px; padding: 22px 16px 26px;
+  }
+  .toast {
+    background: rgba(255,255,255,0.93); border-radius: 13px;
+    padding: 11px 13px; display: flex; gap: 10px; align-items: flex-start;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.28);
+  }
+  .toast .icon {
+    width: 26px; height: 26px; border-radius: 7px; flex: none;
+    background: var(--rose-soft); color: var(--rose);
+    display: grid; place-items: center; font-size: 15px;
+  }
+  .toast .text { min-width: 0; }
+  .toast strong { display: block; font-size: 13.5px; }
+  .toast small {
+    display: block; color: #55483f; font-size: 12.5px;
+    /* Two lines is what a phone shows before it collapses the rest. */
+    overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+  .toast .when { margin-left: auto; color: #8a7d73; font-size: 11px; flex: none; }
+
+  button {
+    font: inherit; font-weight: 600; border-radius: 9px;
+    padding: 10px 16px; border: 1px solid transparent; cursor: pointer;
+  }
+  button[disabled] { opacity: 0.45; cursor: not-allowed; }
+  .send { background: var(--rose); color: #fff; }
+  .ghost { background: transparent; border-color: var(--line); color: var(--muted); }
+  .row { display: flex; gap: 10px; align-items: center; margin-top: 20px; }
+  .row .note { color: var(--muted); font-size: 12.5px; }
+
+  .warn {
+    background: #fdf5ea; border-color: #e8d5b8; color: var(--warn);
+    font-size: 13px;
+  }
+  .warn strong { display: block; margin-bottom: 4px; }
+  .status { margin: 0 0 16px; font-size: 13.5px; }
+  .status.bad { color: var(--rose); }
+  .bar { height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; margin-top: 10px; }
+  .bar span { display: block; height: 100%; background: var(--rose); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  h2 { font-size: 14px; margin: 0 0 12px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Announcement</h1>
+  <p class="sub">Goes to every phone with reminders on, at <code id="target">…</code>. It cannot be recalled.</p>
+
+  <div id="live"></div>
+
+  <form class="card" id="form">
+    <div class="field">
+      <label for="title">Title <span class="count" id="titleCount"></span></label>
+      <input id="title" maxlength="120" autocomplete="off" placeholder="Reminders now work with the app closed" />
+    </div>
+    <div class="field">
+      <label for="body">Message <span class="count" id="bodyCount"></span></label>
+      <textarea id="body" rows="3" maxlength="300" placeholder="Turn them on in Settings and we'll ring even when the app isn't open."></textarea>
+    </div>
+    <div class="field">
+      <label for="url">Opens</label>
+      <input id="url" value="/" autocomplete="off" />
+      <p class="hint">A path inside the app. Anything else is refused.</p>
+    </div>
+
+    <p class="preview-label" style="margin-top:22px">On a lock screen</p>
+    <div class="lock">
+      <div class="toast">
+        <span class="icon">🍼</span>
+        <span class="text">
+          <strong id="pvTitle">Title</strong>
+          <small id="pvBody">Message</small>
+        </span>
+        <span class="when">now</span>
+      </div>
+    </div>
+
+    <div class="row">
+      <button type="submit" class="send" id="send">Send to everyone</button>
+      <span class="note" id="note"></span>
+    </div>
+  </form>
+
+  <div class="card warn">
+    <strong>No name, no baby, no family.</strong>
+    The table this goes to holds an endpoint and a time — there is nothing to
+    address anyone by, and nothing to personalise with. Everyone gets the same
+    words, or nobody does. Write them for a phone face-up on a table at 3am.
+  </div>
+
+  <div class="card" id="historyCard" hidden>
+    <h2>Already sent</h2>
+    <table>
+      <thead><tr><th>When</th><th>Title</th><th class="num">Sent</th><th class="num">Dropped</th><th class="num">Refused</th></tr></thead>
+      <tbody id="history"></tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+  // These mirror BROADCAST_TITLE_MAX / BROADCAST_BODY_MAX in
+  // worker/broadcast.ts, which is the real gate — a test keeps the two
+  // numbers from drifting apart.
+  const TITLE_MAX = 60;
+  const BODY_MAX = 160;
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => s.replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[c]);
+
+  function counter(el, value, max) {
+    el.textContent = `${value.length}/${max}`;
+    el.classList.toggle("over", value.length > max);
+  }
+
+  function draw() {
+    const title = $("title").value.trim();
+    const body = $("body").value.trim();
+    counter($("titleCount"), title, TITLE_MAX);
+    counter($("bodyCount"), body, BODY_MAX);
+    $("pvTitle").textContent = title || "Title";
+    $("pvBody").textContent = body || "Message";
+    const ok = title && body && title.length <= TITLE_MAX && body.length <= BODY_MAX && !pending;
+    $("send").disabled = !ok;
+    $("note").textContent = pending ? "One is still going out." : "";
+  }
+
+  let pending = null;
+
+  function when(iso) {
+    if (!iso) return "—";
+    return new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  }
+
+  async function load() {
+    const state = await fetch("/api/state").then((r) => r.json()).catch(() => ({}));
+    $("target").textContent = state.target ?? "?";
+    pending = state.pending ?? null;
+
+    const live = $("live");
+    if (pending) {
+      const total = state.phones ?? 0;
+      const done = pending.sent + pending.gone + pending.failed;
+      const pct = total ? Math.min(100, Math.round((done / total) * 100)) : 0;
+      live.innerHTML =
+        `<div class="card"><p class="status"><strong>${esc(pending.title)}</strong> is going out — ` +
+        `${pending.sent} sent so far${total ? ` of about ${total}` : ""}. ` +
+        `The cron sends a slice every five minutes.</p>` +
+        `<div class="bar"><span style="width:${pct}%"></span></div>` +
+        `<div class="row"><button class="ghost" id="stop">Stop sending</button>` +
+        `<span class="note">The phones already reached keep it. Nothing can undo those.</span></div></div>`;
+      $("stop").addEventListener("click", async () => {
+        await fetch("/api/stop", { method: "POST" });
+        load();
+      });
+    } else if (state.phones != null) {
+      live.innerHTML = `<p class="status">${state.phones} phone${state.phones === 1 ? "" : "s"} have reminders on.</p>`;
+    } else {
+      live.innerHTML = "";
+    }
+
+    const history = (state.history ?? []).filter((b) => b.finishedAt);
+    $("historyCard").hidden = history.length === 0;
+    $("history").innerHTML = history
+      .map(
+        (b) =>
+          `<tr><td>${when(b.createdAt)}</td><td>${esc(b.title)}</td>` +
+          `<td class="num">${b.sent}</td><td class="num">${b.gone}</td><td class="num">${b.failed}</td></tr>`,
+      )
+      .join("");
+
+    draw();
+  }
+
+  for (const id of ["title", "body"]) $(id).addEventListener("input", draw);
+
+  $("form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const title = $("title").value.trim();
+    const body = $("body").value.trim();
+    // The one confirmation. It names the thing that cannot be undone rather
+    // than asking "are you sure", which nobody reads.
+    if (!confirm(`Send "${title}" to every phone with reminders on?\n\nIt cannot be recalled.`)) return;
+
+    $("send").disabled = true;
+    const result = await fetch("/api/send", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ title, body, url: $("url").value.trim() || "/" }),
+    })
+      .then((r) => r.json())
+      .catch((error) => ({ error: String(error) }));
+
+    if (result.error) {
+      $("note").textContent = result.error;
+      $("note").className = "note status bad";
+      $("send").disabled = false;
+      return;
+    }
+    $("title").value = "";
+    $("body").value = "";
+    load();
+  });
+
+  load();
+  // The cron moves every five minutes; this keeps the progress honest without
+  // anyone reaching for reload.
+  setInterval(load, 30000);
+</script>
+</body>
+</html>

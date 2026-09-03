@@ -263,6 +263,28 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   failures INTEGER NOT NULL DEFAULT 0
 );
 
+-- Announcements: the one message the operator can put on every subscribed
+-- lock screen. Queued here rather than sent from the request, because the
+-- free plan allows fifty subrequests per invocation and there may be more
+-- phones than that; the five-minute cron drains it a slice at a time, BEHIND
+-- the reminders, and `cursor` is how far down push_subscriptions it has got.
+-- Rows are kept for ever: "what did we send that night" deserves an answer.
+CREATE TABLE IF NOT EXISTS broadcasts (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  -- A path inside this app, never a URL.
+  url TEXT NOT NULL DEFAULT '/',
+  created_at TEXT NOT NULL,
+  -- The last endpoint attempted, in endpoint order. '' means "not started".
+  cursor TEXT NOT NULL DEFAULT '',
+  sent INTEGER NOT NULL DEFAULT 0,
+  gone INTEGER NOT NULL DEFAULT 0,
+  failed INTEGER NOT NULL DEFAULT 0,
+  -- Null means still going out, and is what blocks a second announcement.
+  finished_at TEXT
+);
+
 -- The cron asks one question every five minutes: what is due?
 CREATE INDEX IF NOT EXISTS idx_push_feed_due ON push_subscriptions(feed_due_at);
 CREATE INDEX IF NOT EXISTS idx_push_diaper_due ON push_subscriptions(diaper_due_at);

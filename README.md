@@ -287,3 +287,35 @@ The `*/5 * * * *` cron does the ringing, capped at 45 sends a run to stay
 inside the Workers free plan's 50 subrequests per invocation; anything still
 due goes out on the next run. The `/admin` dashboard has a "Reminder alarm
 clock" card so a schedule that is never armed is visible rather than silent.
+
+### Announcements
+
+The other direction: one message to every phone that turned reminders on.
+
+```bash
+npm run broadcast          # asks for the admin password, opens 127.0.0.1:8788
+```
+
+It is a program you start on a laptop rather than a button on the dashboard,
+and that is the point. Sending puts a line on every subscribed lock screen, in
+rooms with sleeping babies, and it cannot be recalled — so reaching it should
+take a deliberate act instead of sitting one stray tap away from the numbers
+you look at every day. The password stays in the Node process and the browser
+only ever talks to `127.0.0.1`, so no admin endpoint has to answer a
+cross-origin request for the tool's convenience.
+
+The real boundary is still the Worker: the same admin password, the same
+lockout, and the wording itself goes into the audit log, because "who sent
+that?" and "what did it say?" are the same question. What it will accept is
+narrow on purpose — a title and a message short enough for a lock screen, on
+one line, opening a path inside this app and never a URL. One announcement at
+a time, so a double tap cannot become two notifications.
+
+It queues rather than sends. The five-minute cron drains it **behind** the
+reminders, taking whatever subrequests they left, because a feed reminder is
+time-critical and an announcement never is. The cursor advances past every
+phone it attempted, refusals included, so one broken subscription cannot wedge
+the queue. What went out — including one still going — shows on the dashboard.
+
+There is nothing to personalise with, and that is structural: `push_subscriptions`
+holds an endpoint and a time. Everyone gets the same words, or nobody does.

@@ -18,6 +18,7 @@ import { WORKER_BUILD } from "./buildInfo";
 
 import type { Client } from "@libsql/client/web";
 import { storedVapid } from "./push";
+import { broadcastHistory } from "./broadcast";
 
 /** An ISO stamp `n` days ago, in exactly the format the tables store — the
     shorter `datetime()` returns a space where the rows have a T, which
@@ -410,11 +411,16 @@ export async function collectStats(client: Client, now: number) {
   // The public half of the signing identity, so the dashboard can say the
   // alarm clock has a name to ring under. Null until the first phone asks.
   const vapid = await storedVapid(client).catch(() => null);
+  // What was last put on everyone's lock screen. Read-only here: sending is
+  // deliberately not a button on this page (see tools/broadcast), but seeing
+  // what went out belongs where the operator already looks.
+  const announcements = await broadcastHistory(client, 5).catch(() => []);
 
   return {
     ...(heavy ?? {}),
     push: push[0] ?? {},
     vapid,
+    announcements,
     // Null until the first run has happened. The page shows the button.
     heavyComputedAt: heavyAt,
     previous,

@@ -336,37 +336,30 @@ export async function storedVapid(client: Client): Promise<{ publicKey: string; 
   return stored ? { publicKey: stored.publicKey, createdAt: stored.createdAt } : null;
 }
 
+export type PushMessage = { title: string; body: string; tag: string; url: string };
+
+export type Target = { endpoint: string; p256dh: string; auth: string };
+
 /**
- * Send everything that is due. Called by the cron; returns what happened so
- * the operator's dashboard can say whether the alarm clock is working.
+ * Encrypt one message for a list of phones and post it to each of them.
  *
- * A push service that answers 404 or 410 is telling us the subscription is
- * dead — the app was uninstalled, or permission was withdrawn — and the row
- * is deleted rather than retried for ever.
+ * Every send is a subrequest, so the CALLER decides how many rows to hand
+ * over — the cron's whole budget is fifty. A thrown fetch and a refused fetch
+ * come back the same way, as a status the caller decides what to do with:
+ * this function does not touch the database, so nothing it does can be half
+ * done.
  */
-export async function sendDue(client: Client, env: VapidEnv, now: number): Promise<{ sent: number; gone: number; failed: number }> {
-  // Ask what is due before asking who we are: on the overwhelming majority of
-  // runs nothing is, and a cron with nothing to do should touch nothing.
-  const due = await findDue(client, now);
-  if (!due.length) return { sent: 0, gone: 0, failed: 0 };
-
-  const vapid = await vapidKeys(client, env);
-  if (!vapid) return { sent: 0, gone: 0, failed: 0 };
-
-  const statements: Array<{ sql: string; args: unknown[] }> = [];
-  let sent = 0;
-  let gone = 0;
-  let failed = 0;
-
-  const results = await Promise.all(
-    due.map(async (row) => {
-      const copy = REMINDERS[row.kind];
+export async function deliver<T extends Target>(
+  vapid: VapidKeys,
+  targets: T[],
+  messageFor: (row: T) => PushMessage,
+  ttlSeconds: number,
+): Promise<Array<{ row: T; status: number }>> {
+  return Promise.all(
+    targets.map(async (row) => {
       try {
         const payload = await buildPushPayload(
-          {
-            data: { title: copy.title, body: copy.body, tag: copy.tag, url: "/" },
-            options: { ttl: 30 * 60, urgency: "high" },
-          },
+          { data: messageFor(row), options: { ttl: ttlSeconds, urgency: "high" } },
           { endpoint: row.endpoint, expirationTime: null, keys: { p256dh: row.p256dh, auth: row.auth } },
           vapid,
         );
@@ -381,14 +374,48 @@ export async function sendDue(client: Client, env: VapidEnv, now: number): Promi
       }
     }),
   );
+}
+
+/** A 404 or 410 is the push service saying this subscription is dead — the
+    app was uninstalled, or permission was withdrawn. */
+export const isGone = (status: number) => status === 404 || status === 410;
+export const isSent = (status: number) => status >= 200 && status < 300;
+
+/**
+ * Send everything that is due. Called by the cron; returns what happened so
+ * the operator's dashboard can say whether the alarm clock is working.
+ *
+ * A subscription the push service calls dead is deleted rather than retried
+ * for ever.
+ */
+export async function sendDue(
+  client: Client,
+  env: VapidEnv,
+  now: number,
+  limit = SEND_LIMIT,
+): Promise<{ sent: number; gone: number; failed: number; attempted: number }> {
+  // Ask what is due before asking who we are: on the overwhelming majority of
+  // runs nothing is, and a cron with nothing to do should touch nothing.
+  const due = limit > 0 ? await findDue(client, now, limit) : [];
+  if (!due.length) return { sent: 0, gone: 0, failed: 0, attempted: 0 };
+
+  const vapid = await vapidKeys(client, env);
+  if (!vapid) return { sent: 0, gone: 0, failed: 0, attempted: 0 };
+
+  const statements: Array<{ sql: string; args: unknown[] }> = [];
+  let sent = 0;
+  let gone = 0;
+  let failed = 0;
+
+  const results = await deliver(vapid, due, (row) => ({ ...REMINDERS[row.kind], url: "/" }), 30 * 60);
 
   for (const { row, status } of results) {
-    if (status === 404 || status === 410) {
+    if (isGone(status)) {
       gone += 1;
       statements.push({ sql: "DELETE FROM push_subscriptions WHERE endpoint = ?", args: [row.endpoint] });
       continue;
     }
-    if (status >= 200 && status < 300) {
+    if (isSent(status)) {
       sent += 1;
       statements.push(clearDue(row.kind, row.endpoint));
       continue;
@@ -404,5 +431,5 @@ export async function sendDue(client: Client, env: VapidEnv, now: number): Promi
   }
 
   if (statements.length) await client.batch(statements as never, "write");
-  return { sent, gone, failed };
+  return { sent, gone, failed, attempted: due.length };
 }

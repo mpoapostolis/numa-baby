@@ -2,7 +2,8 @@
 import { createClient } from "@libsql/client/web";
 import { handleAdmin } from "./admin";
 import { refreshStats } from "./adminStats";
-import { ScheduleBody, forgetSubscription, saveSchedule, sendDue, vapidKeys } from "./push";
+import { SEND_LIMIT, ScheduleBody, forgetSubscription, saveSchedule, sendDue, vapidKeys } from "./push";
+import { sendBroadcastChunk } from "./broadcast";
 import { budgetKey } from "./budgetKey";
 import { handleFeedback } from "./feedback";
 import {
@@ -527,11 +528,18 @@ export default {
       );
       return;
     }
+    // Reminders first, announcements with whatever subrequests are left.
+    // A feed reminder is time-critical and an announcement never is, so a
+    // busy five minutes delays the announcement rather than the reminder.
     ctx.waitUntil(
-      sendDue(db(env), env, Date.now()).then(
-        (result) => { if (result.sent || result.failed) console.log("push", JSON.stringify(result)); },
-        (error) => { console.error("push run failed", error); },
-      ),
+      (async () => {
+        const client = db(env);
+        const now = Date.now();
+        const reminders = await sendDue(client, env, now);
+        if (reminders.sent || reminders.failed) console.log("push", JSON.stringify(reminders));
+        const chunk = await sendBroadcastChunk(client, env, now, SEND_LIMIT - reminders.attempted);
+        if (chunk) console.log("broadcast", JSON.stringify(chunk));
+      })().catch((error) => { console.error("push run failed", error); }),
     );
   },
 

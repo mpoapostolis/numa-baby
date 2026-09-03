@@ -66,6 +66,14 @@ const STATS = {
   funnel: { joined_7d: 2, joined_prev_7d: 1, activated_7d: 2, activated_prev_7d: 1,
     returning_7d: 2, stayed_a_week: 1, paired_7d: 1 },
   lifespan: { with_entries: 3, one_day: 1, under_week: 1, under_month: 1, over_month: 0 },
+  vapid: { publicKey: "BPublicKeyBytes0000", createdAt: "2026-08-30T10:00:00.000Z" },
+  // A title an operator typed, which is to say a string that must not be able
+  // to stop being text — one still going out, one finished.
+  announcements: [
+    { id: "b2", title: XSS, createdAt: "2026-09-01T09:00:00.000Z", sent: 4, gone: 0, failed: 1, finishedAt: null },
+    { id: "b1", title: "Reminders work closed now", createdAt: "2026-08-30T09:00:00.000Z", sent: 12, gone: 1, failed: 0,
+      finishedAt: "2026-08-30T09:20:00.000Z" },
+  ],
   generatedAt: "2026-08-28T22:33:00.000Z",
 };
 
@@ -111,6 +119,20 @@ describe("the dashboard renders", () => {
     expect(text).toContain("120"); // entries
     expect(text).toContain("Median 30");
     expect(text).toContain("60% of invite codes were scanned");
+  });
+
+  it("says what went on everybody's lock screen, and what is still going", () => {
+    const text = document.getElementById("dash")!.textContent ?? "";
+    expect(text).toContain("Announcements");
+    expect(text).toContain("Reminders work closed now");
+    // The counts that say whether it worked.
+    expect(text).toMatch(/Reminders work closed now\s*12\s*1\s*0/);
+    // One that has not finished is marked, because "sent 4" on its own reads
+    // like the whole story when it is a quarter of it.
+    expect(text).toContain("sending");
+    // The signing identity, and never the private half.
+    expect(text).toContain("BPublicKey");
+    expect(text).not.toContain("privateKey");
   });
 
   it("reads the report out of the nightly snapshot, and says which one", () => {
