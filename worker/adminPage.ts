@@ -502,7 +502,16 @@ export function adminPageHtml(nonce: string): string {
     stat("Failing", n(push.failing), "push service refused") +
     '</div><p class="tiny" style="margin:12px 0 0">Newest schedule ' +
     esc(push.newest || "\u2014") + '. The table holds an endpoint, its keys and up to two ' +
-    'future times \u2014 no family, no entry, nothing about a baby.</p></div>');
+    'future times \u2014 no family, no entry, nothing about a baby.</p>' +
+    // The identity every push is signed with. It is minted on the first ask
+    // and then fixed for ever, so it is worth being able to see that it
+    // exists \u2014 and to notice if it ever changed, which would mean every
+    // subscribed phone had gone quiet.
+    '<p class="tiny" style="margin:6px 0 0">' + (d.vapid
+      ? 'Signing key <code>' + esc(String(d.vapid.publicKey).slice(0, 12)) + '\u2026</code> since ' +
+        esc(String(d.vapid.createdAt).slice(0, 10)) + '. Never rotate it: phones subscribed to that key.'
+      : 'No signing key yet \u2014 the first phone to ask for one mints it.') +
+    '</p></div>');
 
     return parts.join("");
   }

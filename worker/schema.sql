@@ -227,6 +227,21 @@ CREATE TABLE IF NOT EXISTS stats_cache (
   computed_at TEXT NOT NULL
 );
 
+-- The one long-lived key this app holds: the VAPID pair that signs its push
+-- notifications. Written by the worker the first time a phone asks for the
+-- public key, and never rewritten — a VAPID pair is the name phones learned
+-- this app by, so changing it unsubscribes every one of them, silently.
+--
+-- Set the VAPID_PRIVATE_KEY / VAPID_PUBLIC_KEY secrets before the first
+-- subscription if you would rather the key never lived in this database;
+-- that seeds this row instead of a generated pair. Rotating on purpose means
+-- DELETE FROM app_secrets WHERE id = 'vapid' — and re-subscribing everyone.
+CREATE TABLE IF NOT EXISTS app_secrets (
+  id TEXT PRIMARY KEY,
+  payload TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
 -- One row per phone that asked to be reminded. Created by the worker on
 -- first use as well; written down here for the same reason as everything
 -- above.

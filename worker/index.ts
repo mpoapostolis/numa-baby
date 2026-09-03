@@ -2,7 +2,7 @@
 import { createClient } from "@libsql/client/web";
 import { handleAdmin } from "./admin";
 import { refreshStats } from "./adminStats";
-import { ScheduleBody, forgetSubscription, saveSchedule, sendDue } from "./push";
+import { ScheduleBody, forgetSubscription, saveSchedule, sendDue, vapidKeys } from "./push";
 import { budgetKey } from "./budgetKey";
 import { handleFeedback } from "./feedback";
 import {
@@ -37,8 +37,10 @@ type Env = {
   TURSO_AUTH_TOKEN: string;
   /** Operator password for /admin. Unset means the page does not exist. */
   ADMIN_PASSWORD?: string;
-  /** Web Push. Unset on a deployment that never ran scripts/vapid-keys.mjs,
-      and the reminder routes then do nothing rather than half-working. */
+  /** Web Push, all three optional. The Worker mints and stores its own VAPID
+      pair on first use (see vapidKeys in ./push), so reminders work on a
+      deployment that set none of these; the keys here only SEED that first
+      write, for an operator who would rather hold the key than store it. */
   VAPID_PUBLIC_KEY?: string;
   VAPID_PRIVATE_KEY?: string;
   VAPID_SUBJECT?: string;
@@ -568,7 +570,9 @@ export default {
       // the endpoint is checked against the real push services before this
       // Worker will ever fetch it.
       if (url.pathname === "/api/push/key" && request.method === "GET") {
-        return json({ key: env.VAPID_PUBLIC_KEY ?? null });
+        // Mints the pair on the very first ask and keeps it for ever after,
+        // so a deployment needs no key ceremony to have working reminders.
+        return json({ key: (await vapidKeys(db(env), env))?.publicKey ?? null });
       }
       if (url.pathname === "/api/push/schedule" && request.method === "POST") {
         const ip = budgetKey(request.headers.get("cf-connecting-ip") ?? "unknown");

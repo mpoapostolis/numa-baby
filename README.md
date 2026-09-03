@@ -252,20 +252,36 @@ The notification text is fixed in `worker/push.ts` — the server could not
 personalise it if it wanted to, which is also why it is safe on a lock screen
 in a shared room.
 
-Set it up once:
+**Setting it up is `npm run deploy`.** There is no key ceremony. Web Push
+needs a VAPID pair — the name a phone learns this app by when it subscribes —
+and the Worker mints its own the first time a browser asks for one, storing it
+in `app_secrets`. From then on the stored pair wins over everything, including
+the environment, because a second pair would silently unsubscribe every phone
+that ever said yes: the push service simply refuses a signature it does not
+recognise, with no error anywhere.
+
+Two optional knobs:
 
 ```bash
+# 1. Hold the key yourself instead of letting it live in the database.
+#    Do this BEFORE the first subscription — it seeds that first write, and
+#    setting it afterwards changes nothing.
 node scripts/vapid-keys.mjs          # prints a P-256 pair, once
 npx wrangler secret put VAPID_PRIVATE_KEY
 npx wrangler secret put VAPID_PUBLIC_KEY
+
+# 2. Who a push service should complain to if this app ever floods it.
+#    Defaults to https://numalog.app. Unlike the keys, safe to change later.
 npx wrangler secret put VAPID_SUBJECT   # mailto:you@example.com
-npm run deploy
 ```
 
-Without those three the push routes answer with no key and the app falls
-back to the in-page timer — nothing breaks, reminders just stop surviving a
-closed app. Keep the pair for the life of the app: changing it silently
-unsubscribes every phone that ever said yes.
+Rotating on purpose costs every existing subscription and is therefore a
+deliberate `DELETE FROM app_secrets WHERE id = 'vapid'`, never a config
+change. If the database is unreachable the key route answers with nothing and
+the app falls back to the in-page timer — reminders stop surviving a closed
+app, but nothing breaks. The admin dashboard shows the first characters of
+the key in use and the day it was minted, so a pair that ever changed is
+visible rather than merely silent.
 
 The `*/5 * * * *` cron does the ringing, capped at 45 sends a run to stay
 inside the Workers free plan's 50 subrequests per invocation; anything still

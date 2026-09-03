@@ -203,6 +203,139 @@ function clearDue(kind: ReminderKind, endpoint: string) {
 
 export type VapidEnv = { VAPID_PUBLIC_KEY?: string; VAPID_PRIVATE_KEY?: string; VAPID_SUBJECT?: string };
 
+export type VapidKeys = { subject: string; publicKey: string; privateKey: string };
+
+/**
+ * Who a push service should complain to if this app ever floods it
+ * (RFC 8292 §2.1). Unlike the key pair, this is not an identity phones
+ * remember, so it can change between deploys without unsubscribing anyone —
+ * which is why it reads the environment every time and the keys do not.
+ */
+const SUBJECT_FALLBACK = "https://numalog.app";
+
+const b64url = (buffer: ArrayBuffer) =>
+  btoa(String.fromCharCode(...new Uint8Array(buffer)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+
+/**
+ * A fresh VAPID identity: a P-256 pair in the two shapes web push wants —
+ * the public key as the raw 65-byte point a browser is handed at subscribe
+ * time, the private key as the JWK `d` that signs every send.
+ */
+export async function generateVapidKeys(): Promise<{ publicKey: string; privateKey: string }> {
+  // The workers-types signatures are unions covering both a single key and a
+  // pair, and both raw and JWK exports; an asymmetric algorithm with these
+  // arguments only ever produces the halves named here.
+  const pair = (await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, [
+    "sign",
+    "verify",
+  ])) as CryptoKeyPair;
+  const publicKey = b64url((await crypto.subtle.exportKey("raw", pair.publicKey)) as ArrayBuffer);
+  const jwk = (await crypto.subtle.exportKey("jwk", pair.privateKey)) as JsonWebKey;
+  return { publicKey, privateKey: jwk.d ?? "" };
+}
+
+let secretsReady = false;
+
+async function ensureSecretsTable(client: Client): Promise<void> {
+  if (secretsReady) return;
+  await client
+    .execute(
+      `CREATE TABLE IF NOT EXISTS app_secrets (
+         id TEXT PRIMARY KEY,
+         payload TEXT NOT NULL,
+         created_at TEXT NOT NULL
+       )`,
+    )
+    .catch(() => undefined);
+  secretsReady = true;
+}
+
+type StoredKeys = { publicKey: string; privateKey: string; createdAt: string };
+
+async function readStoredKeys(client: Client): Promise<StoredKeys | null> {
+  const result = await client
+    .execute("SELECT payload, created_at FROM app_secrets WHERE id = 'vapid'")
+    .catch(() => null);
+  const row = result?.rows[0];
+  if (!row || typeof row.payload !== "string") return null;
+  try {
+    const stored = JSON.parse(row.payload) as { publicKey?: unknown; privateKey?: unknown };
+    if (typeof stored.publicKey !== "string" || !stored.publicKey) return null;
+    if (typeof stored.privateKey !== "string" || !stored.privateKey) return null;
+    return { publicKey: stored.publicKey, privateKey: stored.privateKey, createdAt: String(row.created_at ?? "") };
+  } catch {
+    return null;
+  }
+}
+
+let cachedKeys: StoredKeys | null = null;
+
+/**
+ * The identity this app signs its pushes with — decided once, then never
+ * again.
+ *
+ * A VAPID pair is not a password: it is the name a phone learned this app by
+ * when it subscribed. Change it and every phone that ever said yes goes
+ * silent, with no error anywhere — the push service simply refuses a
+ * signature it does not recognise. So the pair is written down on first use,
+ * and from then on the STORED pair wins, including over the environment.
+ *
+ * Setting VAPID_PRIVATE_KEY seeds that first write, and is worth doing if you
+ * would rather hold the key yourself than have it live in the database
+ * (`node scripts/vapid-keys.mjs` prints a pair). Setting it afterwards changes
+ * nothing, because by then phones are already answering to the old name. To
+ * rotate on purpose — and it costs every existing subscription — delete the
+ * row: DELETE FROM app_secrets WHERE id = 'vapid'.
+ *
+ * Null means the database could not be reached, which callers treat exactly
+ * as they treat a phone that refused permission: no push, and the app falls
+ * back to its own in-page timer.
+ */
+export async function vapidKeys(client: Client, env: VapidEnv): Promise<VapidKeys | null> {
+  const subject = env.VAPID_SUBJECT?.trim() || SUBJECT_FALLBACK;
+  if (cachedKeys) return { subject, publicKey: cachedKeys.publicKey, privateKey: cachedKeys.privateKey };
+  await ensureSecretsTable(client);
+
+  const existing = await readStoredKeys(client);
+  if (existing) {
+    cachedKeys = existing;
+    return { subject, publicKey: existing.publicKey, privateKey: existing.privateKey };
+  }
+
+  const seed =
+    env.VAPID_PUBLIC_KEY?.trim() && env.VAPID_PRIVATE_KEY?.trim()
+      ? { publicKey: env.VAPID_PUBLIC_KEY.trim(), privateKey: env.VAPID_PRIVATE_KEY.trim() }
+      : await generateVapidKeys();
+  // INSERT OR IGNORE, then read back what actually landed: two isolates that
+  // reach this line in the same second both defer to whichever row won, so a
+  // phone is never handed one public key and then pushed with another.
+  await client
+    .execute({
+      sql: "INSERT OR IGNORE INTO app_secrets (id, payload, created_at) VALUES ('vapid', ?, ?)",
+      args: [JSON.stringify(seed), new Date().toISOString()],
+    })
+    .catch(() => undefined);
+
+  const settled = await readStoredKeys(client);
+  if (!settled) return null;
+  cachedKeys = settled;
+  return { subject, publicKey: settled.publicKey, privateKey: settled.privateKey };
+}
+
+/**
+ * What the operator's dashboard shows. Deliberately NOT vapidKeys(): the
+ * dashboard only ever looks, so opening it can never be what mints the pair,
+ * and it is handed the public half alone — the private key has no business
+ * leaving this file.
+ */
+export async function storedVapid(client: Client): Promise<{ publicKey: string; createdAt: string } | null> {
+  const stored = cachedKeys ?? (await readStoredKeys(client).catch(() => null));
+  return stored ? { publicKey: stored.publicKey, createdAt: stored.createdAt } : null;
+}
+
 /**
  * Send everything that is due. Called by the cron; returns what happened so
  * the operator's dashboard can say whether the alarm clock is working.
@@ -212,15 +345,13 @@ export type VapidEnv = { VAPID_PUBLIC_KEY?: string; VAPID_PRIVATE_KEY?: string; 
  * is deleted rather than retried for ever.
  */
 export async function sendDue(client: Client, env: VapidEnv, now: number): Promise<{ sent: number; gone: number; failed: number }> {
-  const vapid = {
-    subject: env.VAPID_SUBJECT,
-    publicKey: env.VAPID_PUBLIC_KEY,
-    privateKey: env.VAPID_PRIVATE_KEY,
-  };
-  if (!vapid.publicKey || !vapid.privateKey || !vapid.subject) return { sent: 0, gone: 0, failed: 0 };
-
+  // Ask what is due before asking who we are: on the overwhelming majority of
+  // runs nothing is, and a cron with nothing to do should touch nothing.
   const due = await findDue(client, now);
   if (!due.length) return { sent: 0, gone: 0, failed: 0 };
+
+  const vapid = await vapidKeys(client, env);
+  if (!vapid) return { sent: 0, gone: 0, failed: 0 };
 
   const statements: Array<{ sql: string; args: unknown[] }> = [];
   let sent = 0;

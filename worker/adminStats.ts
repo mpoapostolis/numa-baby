@@ -17,6 +17,7 @@ import { WORKER_BUILD } from "./buildInfo";
 // Everything else is counts, dates and buckets.
 
 import type { Client } from "@libsql/client/web";
+import { storedVapid } from "./push";
 
 /** An ISO stamp `n` days ago, in exactly the format the tables store — the
     shorter `datetime()` returns a space where the rows have a T, which
@@ -406,9 +407,14 @@ export async function collectStats(client: Client, now: number) {
     ),
   ]);
 
+  // The public half of the signing identity, so the dashboard can say the
+  // alarm clock has a name to ring under. Null until the first phone asks.
+  const vapid = await storedVapid(client).catch(() => null);
+
   return {
     ...(heavy ?? {}),
     push: push[0] ?? {},
+    vapid,
     // Null until the first run has happened. The page shows the button.
     heavyComputedAt: heavyAt,
     previous,

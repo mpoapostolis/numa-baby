@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { webcrypto as crypto } from "node:crypto";
 import { buildPushPayload } from "@block65/webcrypto-web-push";
 import { REMINDERS, dueAt, isPushEndpoint } from "../../worker/push";
@@ -146,5 +146,154 @@ describe("what the endpoint will accept", () => {
     expect(dueAt("tomorrow", now)).toBeNull();
     expect(dueAt(1_759_000_000_000, now)).toBeNull();
     expect(dueAt(null, now)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The signing identity.
+//
+// A VAPID pair is not a password, it is the NAME a phone learned this app by
+// when it subscribed. Mint a second one and every subscribed phone goes
+// silent — no error, no log, the push service just refuses a signature it has
+// never seen. So the two things worth proving are that a deployment gets a
+// pair without anybody performing a key ceremony, and that once it has one it
+// can never accidentally get another.
+
+type SecretRow = { payload: string; created_at: string };
+
+/** The four statements vapidKeys() makes, and nothing else. */
+function fakeDb(seed: SecretRow | null = null) {
+  let row = seed;
+  let inserts = 0;
+  const client = {
+    execute: async (query: unknown) => {
+      const sql = typeof query === "string" ? query : (query as { sql: string }).sql;
+      const args = typeof query === "string" ? [] : ((query as { args?: unknown[] }).args ?? []);
+      if (sql.trimStart().startsWith("CREATE TABLE")) return { rows: [] };
+      if (sql.includes("SELECT payload")) return { rows: row ? [{ ...row }] : [] };
+      if (sql.includes("INSERT OR IGNORE INTO app_secrets")) {
+        inserts += 1;
+        // OR IGNORE: the first writer wins and the rest are no-ops.
+        if (!row) row = { payload: String(args[0]), created_at: String(args[1]) };
+        return { rows: [] };
+      }
+      throw new Error(`unexpected sql: ${sql}`);
+    },
+  };
+  return {
+    client: client as unknown as Parameters<typeof import("../../worker/push").vapidKeys>[0],
+    peek: () => row,
+    writes: () => inserts,
+  };
+}
+
+/** A fresh copy of the module, because the pair is cached per isolate. */
+async function freshPush() {
+  vi.resetModules();
+  return import("../../worker/push");
+}
+
+describe("the signing identity", () => {
+  it("mints itself on first use, so a deployment needs no key ceremony", async () => {
+    const push = await freshPush();
+    const db = fakeDb();
+
+    const keys = await push.vapidKeys(db.client, {});
+    expect(keys).not.toBeNull();
+    // The raw uncompressed P-256 point is 65 bytes; base64url of that is 87
+    // characters, which is exactly what a browser expects to be handed.
+    expect(keys?.publicKey).toMatch(/^[\w-]{87}$/);
+    expect(keys?.privateKey).toMatch(/^[\w-]{43}$/);
+    expect(db.peek()).not.toBeNull();
+  });
+
+  it("keeps the pair it minted, whatever else it is later told", async () => {
+    const push = await freshPush();
+    const db = fakeDb();
+
+    const first = await push.vapidKeys(db.client, {});
+    // A second isolate: same database, no cache, and now an environment that
+    // disagrees. The stored pair has to win, because phones already know it.
+    const second = await freshPush();
+    const later = await second.vapidKeys(db.client, {
+      VAPID_PUBLIC_KEY: "a-different-public-key",
+      VAPID_PRIVATE_KEY: "a-different-private-key",
+    });
+
+    expect(later?.publicKey).toBe(first?.publicKey);
+    expect(later?.privateKey).toBe(first?.privateKey);
+    // And it did not write a second time.
+    expect(db.writes()).toBe(1);
+  });
+
+  it("lets an operator hold the key instead, by seeding the first write", async () => {
+    const push = await freshPush();
+    const db = fakeDb();
+    const mine = await makeVapid();
+
+    const keys = await push.vapidKeys(db.client, {
+      VAPID_PUBLIC_KEY: mine.publicKey,
+      VAPID_PRIVATE_KEY: mine.privateKey,
+      VAPID_SUBJECT: "mailto:ops@example.com",
+    });
+
+    expect(keys?.publicKey).toBe(mine.publicKey);
+    expect(keys?.privateKey).toBe(mine.privateKey);
+    expect(keys?.subject).toBe("mailto:ops@example.com");
+  });
+
+  it("has a subject even when nobody set one — an empty one is rejected downstream", async () => {
+    const push = await freshPush();
+    const keys = await push.vapidKeys(fakeDb().client, {});
+    expect(keys?.subject).toMatch(/^https:\/\/|^mailto:/);
+  });
+
+  it("survives two isolates minting at the same moment", async () => {
+    const db = fakeDb();
+    const [a, b] = await Promise.all([
+      freshPush().then((push) => push.vapidKeys(db.client, {})),
+      freshPush().then((push) => push.vapidKeys(db.client, {})),
+    ]);
+    // Both generated a pair; only one row exists, and both must be signing
+    // with it — a phone handed one public key and pushed with another is a
+    // phone that never rings.
+    expect(a?.publicKey).toBe(b?.publicKey);
+  });
+
+  it("shows the operator the identity and never the secret", async () => {
+    const push = await freshPush();
+    const db = fakeDb();
+    expect(await push.storedVapid(db.client)).toBeNull(); // looking does not mint
+    expect(db.peek()).toBeNull();
+
+    const keys = await push.vapidKeys(db.client, {});
+    const status = await push.storedVapid(db.client);
+    expect(status?.publicKey).toBe(keys?.publicKey);
+    expect(JSON.stringify(status)).not.toContain(keys?.privateKey ?? "never");
+  });
+
+  it("mints a pair the push library can actually sign with", async () => {
+    // The real risk in generating a key ourselves is the EXPORT SHAPE: the
+    // public key must be the raw point and the private key the JWK `d`, and
+    // getting it wrong fails at 3am on somebody's phone rather than here.
+    const push = await freshPush();
+    const generated = await push.generateVapidKeys();
+    const subscriber = await makeSubscriber();
+    const message = { title: REMINDERS.diaper.title, body: REMINDERS.diaper.body, tag: REMINDERS.diaper.tag, url: "/" };
+
+    const payload = await buildPushPayload(
+      { data: message, options: { ttl: 1800, urgency: "high" } },
+      {
+        endpoint: "https://fcm.googleapis.com/fcm/send/abc",
+        expirationTime: null,
+        keys: { p256dh: b64url(subscriber.publicKey), auth: b64url(subscriber.auth) },
+      },
+      { subject: "https://numalog.app", ...generated },
+    );
+
+    // The key the push service is asked to check against is the one a phone
+    // would have subscribed with.
+    expect(payload.headers.authorization).toContain(`k=${generated.publicKey}`);
+    expect(JSON.parse(await decrypt(new Uint8Array(payload.body), subscriber))).toEqual(message);
   });
 });
