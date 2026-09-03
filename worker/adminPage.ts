@@ -81,6 +81,16 @@ export function adminPageHtml(nonce: string): string {
   td { padding:7px 8px; border-top:1px solid var(--line); font-size:.8125rem; white-space:nowrap; }
   td.num, th.num { text-align:right; }
   .scroll { overflow-x:auto; }
+  /* A sortable header is a button that still looks like a header. The arrow
+     is the state, and the inactive one is a hint that the column can move. */
+  th .sortby { background:none; border:0; padding:0; min-height:0; color:inherit; font:inherit;
+    cursor:pointer; display:inline-flex; align-items:center; gap:4px; }
+  th .sortby:hover { color:var(--ink); filter:none; }
+  th .sortby i { font-style:normal; opacity:.35; font-size:.8em; }
+  th .sortby.on { color:var(--signal); }
+  th .sortby.on i { opacity:1; }
+  th.num .sortby { flex-direction:row-reverse; }
+  .filter { margin-bottom:10px; max-width:280px; font-size:.875rem; padding:8px 11px; }
   input, button, select { font:inherit; border-radius:10px; border:1px solid var(--line); padding:11px 13px; }
   input { width:100%; background:var(--field); color:var(--ink); font-size:16px; }
   input:focus-visible { outline:2px solid color-mix(in oklab, var(--signal) 55%, transparent);
@@ -313,11 +323,22 @@ export function adminPageHtml(nonce: string): string {
     return best;
   }
 
-  function table(head, rows, cells, cls) {
+  /* A header cell is a button when the column names a sort key. The arrow is
+     the state: no arrow means this column is not the one in force. */
+  function headCell(col, sort) {
+    var label = esc(col.label || col);
+    if (!col.sort) return '<th' + (col.num ? ' class="num"' : '') + '>' + label + '</th>';
+    var active = sort && sort.key === col.sort;
+    return '<th' + (col.num ? ' class="num"' : '') + '>' +
+      '<button type="button" class="sortby' + (active ? ' on' : '') + '" data-sort="' + esc(col.sort) + '">' +
+      label + '<i>' + (active ? (sort.dir < 0 ? "\u2193" : "\u2191") : "\u2195") + '</i></button></th>';
+  }
+
+  function table(head, rows, cells, cls, sort) {
     if (!rows.length) return '<p class="muted">Nothing yet.</p>';
     var out = '<div class="scroll"><table class="' + (cls || "") + '"><thead><tr>';
     for (var h = 0; h < head.length; h++) {
-      out += '<th' + (head[h].num ? ' class="num"' : '') + '>' + esc(head[h].label || head[h]) + '</th>';
+      out += headCell(head[h], sort);
     }
     out += '</tr></thead><tbody>';
     for (var r = 0; r < rows.length; r++) out += '<tr>' + cells(rows[r]) + '</tr>';
@@ -487,8 +508,27 @@ export function adminPageHtml(nonce: string): string {
     }
   }
 
-  // The families table opens short; this remembers when it was opened up.
+  // The families table opens short, newest first; these remember how the
+  // operator left it, so a re-render (a refresh, a mark-handled) does not
+  // throw the sort away.
   var allFamilies = false;
+  var familySort = { key: "created", dir: -1 };
+  var familyFilter = "";
+
+  /* Text sorts as text, everything else as a number, and a missing value
+     always sorts last whichever way the arrow points — an empty cell is not
+     a small one. */
+  function sortRows(rows, sort) {
+    var numeric = { devices: 1, entries: 1, deleted: 1, has_profile: 1 };
+    return rows.slice().sort(function (a, b) {
+      var x = a[sort.key], y = b[sort.key];
+      var xEmpty = x == null || x === "";
+      var yEmpty = y == null || y === "";
+      if (xEmpty || yEmpty) return xEmpty && yEmpty ? 0 : (xEmpty ? 1 : -1);
+      if (numeric[sort.key]) return (Number(x) - Number(y)) * sort.dir;
+      return String(x) < String(y) ? -sort.dir : (String(x) > String(y) ? sort.dir : 0);
+    });
+  }
 
   function render(d) {
     var t = d.totals || {}, ret = d.retention || {}, sp = d.spread || {}, inv = d.invites || {};
@@ -606,23 +646,39 @@ export function adminPageHtml(nonce: string): string {
       '<button type="submit">Find &amp; mint link</button></form>' +
       '<p id="rec-out" class="muted" style="margin-top:8px"></p></div>');
 
-    // Five hundred rows is four screens of table nobody reads. The newest
-    // twenty-five, and a button for the rest.
-    var shown = allFamilies ? d.families : d.families.slice(0, 25);
-    parts.push('<div class="card"><h2>Families · ' + d.families.length + '</h2>' +
-      table([{ label: "Id" }, { label: "Created" }, { label: "Phones", num: 1 },
-             { label: "Entries", num: 1 }, { label: "Deleted", num: 1 },
-             { label: "First" }, { label: "Last entry" }, { label: "Profile" }],
+    // Five hundred rows is four screens of table nobody reads. Sorted the way
+    // the operator asked, filtered if they typed something, then the first
+    // twenty-five and a button for the rest — the sort runs over ALL of them,
+    // so "top 25 by entries" means what it says.
+    var pool = d.families;
+    if (familyFilter) {
+      var needle = familyFilter.toLowerCase();
+      pool = pool.filter(function (f) {
+        return String(f.family).toLowerCase().indexOf(needle) >= 0 ||
+          String(f.created).indexOf(needle) >= 0;
+      });
+    }
+    pool = sortRows(pool, familySort);
+    var shown = allFamilies ? pool : pool.slice(0, 25);
+    parts.push('<div class="card"><h2>Families · ' + n(d.families.length) +
+      (familyFilter ? ' <span class="tiny">· ' + n(pool.length) + ' matching</span>' : '') + '</h2>' +
+      '<input id="ffilter" class="filter" placeholder="Filter by id or date\u2026" value="' +
+      esc(familyFilter) + '" autocomplete="off" />' +
+      table([{ label: "Id", sort: "family" }, { label: "Created", sort: "created" },
+             { label: "Phones", num: 1, sort: "devices" },
+             { label: "Entries", num: 1, sort: "entries" }, { label: "Deleted", num: 1, sort: "deleted" },
+             { label: "First", sort: "first_entry" }, { label: "Last entry", sort: "last_entry" },
+             { label: "Profile", sort: "has_profile" }],
         shown, function (f) {
           return '<td>' + esc(f.family) + '</td><td>' + esc(f.created) + '</td>' +
             '<td class="num">' + n(f.devices) + '</td><td class="num">' + n(f.entries) + '</td>' +
             '<td class="num">' + n(f.deleted) + '</td>' +
             '<td>' + esc(f.first_entry || "—") + '</td><td>' + esc(f.last_entry || "—") + '</td>' +
             '<td>' + (Number(f.has_profile) ? "yes" : "—") + '</td>';
-        }) +
-      (d.families.length > 25
+        }, "", familySort) +
+      (pool.length > 25
         ? '<button class="ghost" id="more" style="margin-top:12px">' +
-          (allFamilies ? "Show the newest 25" : "Show all " + n(d.families.length)) + '</button>'
+          (allFamilies ? "Show the first 25" : "Show all " + n(pool.length)) + '</button>'
         : "") +
       '</div>');
 
@@ -638,6 +694,31 @@ export function adminPageHtml(nonce: string): string {
     var more = $("more");
     if (more) {
       more.addEventListener("click", function () { allFamilies = !allFamilies; render(last); });
+    }
+
+    // Click a header to sort by it; click it again to turn it round. A new
+    // column starts on the answer people usually want: biggest and newest
+    // first for numbers and dates, A to Z for text.
+    var sorters = document.querySelectorAll(".sortby");
+    for (var q = 0; q < sorters.length; q++) {
+      sorters[q].addEventListener("click", function (e) {
+        var key = e.currentTarget.getAttribute("data-sort");
+        if (familySort.key === key) familySort = { key: key, dir: -familySort.dir };
+        else familySort = { key: key, dir: key === "family" ? 1 : -1 };
+        render(last);
+      });
+    }
+
+    var filter = $("ffilter");
+    if (filter) {
+      filter.addEventListener("input", function (e) {
+        familyFilter = e.currentTarget.value.trim();
+        render(last);
+        // The re-render replaces the field, so the caret goes back where it
+        // was — otherwise typing a second character is impossible.
+        var again = $("ffilter");
+        if (again) { again.focus(); again.setSelectionRange(again.value.length, again.value.length); }
+      });
     }
 
     wireLive();

@@ -35,6 +35,10 @@ const STATS = {
   families: [
     { family: "a1b2c3d4", created: "2026-08-01", devices: 2, entries: 90, deleted: 1,
       first_entry: "2026-08-01", last_entry: "2026-08-28 09:10", last_seen: "2026-08-28 10:00", has_profile: 1 },
+    { family: "b0000000", created: "2026-07-04", devices: 1, entries: 900, deleted: 0,
+      first_entry: "2026-07-04", last_entry: "2026-08-27 08:00", last_seen: "2026-08-27 08:05", has_profile: 0 },
+    { family: "c0000000", created: "2026-06-09", devices: 3, entries: 5, deleted: 0,
+      first_entry: null, last_entry: null, last_seen: null, has_profile: 0 },
   ],
   feedback: [
     { id: "plain-id", sent: "2026-08-27 10:04", handled: 0, app_version: "1.4.2",
@@ -123,6 +127,49 @@ describe("the dashboard renders", () => {
     expect(document.getElementById("gate")!.className).toContain("hide");
     expect(document.getElementById("dash")!.className).toBe("");
     expect(document.getElementById("head")!.className).toBe("row");
+  });
+});
+
+describe("the families table answers to the operator", () => {
+  const ids = () =>
+    [...document.querySelectorAll("#dash table")]
+      .find((t) => t.querySelector('.sortby[data-sort="entries"]'))!
+      .querySelectorAll("tbody tr td:first-child");
+  const idText = () => [...ids()].map((td) => td.textContent);
+
+  it("opens newest first", () => {
+    expect(idText()).toEqual(["a1b2c3d4", "b0000000", "c0000000"]);
+  });
+
+  it("sorts by a column when its header is clicked, and turns round on a second click", () => {
+    const header = () => document.querySelector('.sortby[data-sort="entries"]') as HTMLElement;
+    header().click();
+    expect(idText()).toEqual(["b0000000", "a1b2c3d4", "c0000000"]);
+    header().click();
+    expect(idText()).toEqual(["c0000000", "a1b2c3d4", "b0000000"]);
+    // The column in force says so; the others do not.
+    expect(document.querySelectorAll(".sortby.on")).toHaveLength(1);
+    expect(header().className).toContain("on");
+  });
+
+  it("keeps a family with no entries at the bottom whichever way the arrow points", () => {
+    const header = () => document.querySelector('.sortby[data-sort="last_entry"]') as HTMLElement;
+    header().click();
+    expect(idText()[2]).toBe("c0000000");
+    header().click();
+    expect(idText()[2]).toBe("c0000000");
+  });
+
+  it("filters on what is typed, and says how many matched", () => {
+    const box = document.getElementById("ffilter") as HTMLInputElement;
+    box.value = "b000";
+    box.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(idText()).toEqual(["b0000000"]);
+    const heading = [...document.querySelectorAll("#dash h2")].find((h) => /^Families/.test(h.textContent ?? ""));
+    expect(heading!.textContent).toContain("1 matching");
+    (document.getElementById("ffilter") as HTMLInputElement).value = "";
+    document.getElementById("ffilter")!.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(idText()).toHaveLength(3);
   });
 });
 
