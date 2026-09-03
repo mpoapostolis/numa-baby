@@ -63,7 +63,14 @@ test("ships offline assets, security headers, reminders and a real 404", async (
 // 26 kB. Raise a budget only after the split rule has been honoured (a lazy
 // screen's stylesheet ships with its chunk) — see the history of this file.
 const BUDGET_GZIP = {
-  "index-*.js": 118_000,
+  // 118_000 → 118_500 when the reminders announcement and the push-armed
+  // handover landed. The split rule was honoured first: the card and its two
+  // paragraphs of copy are both lazy, and only the rules that decide whether
+  // to show it are on the boot path. A budget that never moves while the app
+  // gains features is not a budget, it is a ratchet — but the 500 bytes are
+  // owed back, and the cheapest place to find them is the two reminder
+  // timers in App.tsx, which are the same effect written twice.
+  "index-*.js": 118_500,
   "index-*.css": 29_000,
 };
 const LAZY_SCREENS = ["SettingsScreen", "GrowthGuideScreen", "InsightsScreen", "TimelineScreen", "LogSheet", "OnboardingScreen", "sonner", "FactOfTheDay"];

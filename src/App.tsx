@@ -269,6 +269,9 @@ export default function HomePage() {
   // closed app, so it must not appear where the deployment cannot deliver
   // one — and that is only knowable by asking for the signing key.
   const [pushReady, setPushReady] = useState<boolean | null>(null);
+  /** The server is holding this phone's alarm, so nothing in the page should
+      also be holding it. */
+  const [pushArmed, setPushArmed] = useState(false);
 
   const closeSheet = useCallback(() => setSheet(null), []);
   // On Android, back is how you leave a screen — and a sheet is a screen.
@@ -608,9 +611,20 @@ export default function HomePage() {
     ? new Date(lastFeed.startedAt).getTime() + reminders.feedIntervalMinutes * 60_000
     : null;
 
-  // The half that survives the app being closed. The in-page timers below
-  // still fire while it is open — instant, no network — and both carry the
-  // same notification tag, so a reminder can never arrive twice.
+  // The half that survives the app being closed.
+  //
+  // Once the server HAS the alarm it owns it outright, and the in-page timers
+  // below stand down (see pushArmed). They used to run alongside it, relying
+  // on a shared notification tag to collapse the two — which is not the same
+  // as one reminder: the phone still alerts twice, and being buzzed a second
+  // time for a feed you already knew about is exactly the kind of thing that
+  // gets an app's notifications turned off. The cost is that a reminder can
+  // now be up to five minutes late while the app is open, since the cron is
+  // what rings it; that is the right way round, because a parent with the app
+  // open is already looking at the thing the reminder would tell them.
+  //
+  // The timers remain the fallback for a phone with no subscription — no
+  // signing key, a refused subscribe — where the alternative is no reminder.
   //
   // What the server is told is two timestamps and nothing else: not the
   // baby, not the entry, not how long it has been. It is an alarm clock.
@@ -626,8 +640,15 @@ export default function HomePage() {
     // notifications should not carry the subscription code in its first
     // download, and by the time this runs the app has long since opened.
     void import("./domain/pushClient").then(async (push) => {
-      if (feedDueAt === null && diaperDueAt === null) await push.stopPush();
-      else await push.sendSchedule({ feedDueAt, diaperDueAt });
+      if (feedDueAt === null && diaperDueAt === null) {
+        await push.stopPush();
+        setPushArmed(false);
+        return;
+      }
+      // False means the server does not have it — no key, no subscription, a
+      // refused permission, a request that failed — and the in-page timers
+      // are the only thing left.
+      setPushArmed(await push.sendSchedule({ feedDueAt, diaperDueAt }));
     });
   }, [
     notificationPermission,
@@ -638,6 +659,8 @@ export default function HomePage() {
   ]);
 
   useEffect(() => {
+    // The server has it: one alarm, one alert. See the schedule effect above.
+    if (pushArmed) return;
     if (
       !reminders.feedEnabled ||
       notificationPermission !== "granted" ||
@@ -661,9 +684,10 @@ export default function HomePage() {
     }, delay);
 
     return () => window.clearTimeout(timer);
-  }, [feedReminderTargetAt, lastFeed?.id, notificationPermission, reminders.feedEnabled]);
+  }, [feedReminderTargetAt, lastFeed?.id, notificationPermission, pushArmed, reminders.feedEnabled]);
 
   useEffect(() => {
+    if (pushArmed) return;
     if (
       !reminders.diaperEnabled ||
       notificationPermission !== "granted" ||
@@ -687,7 +711,7 @@ export default function HomePage() {
     }, delay);
 
     return () => window.clearTimeout(timer);
-  }, [diaperReminderTargetAt, lastDiaperAt, notificationPermission, reminders.diaperEnabled]);
+  }, [diaperReminderTargetAt, lastDiaperAt, notificationPermission, pushArmed, reminders.diaperEnabled]);
 
   // Every navigation leaves the guide, so returning to Insights later starts
   // at the Insights content — never a stale sub-screen.
@@ -944,7 +968,7 @@ export default function HomePage() {
           </Suspense>
         )}
 
-        {pendingBackupNudge && !nightHelp && !milestoneToday && !protectMoment && releasesToShow.length === 0 && !familySync.pairing && (
+        {pendingBackupNudge && !pendingReminderNudge && !nightHelp && !milestoneToday && !protectMoment && releasesToShow.length === 0 && !familySync.pairing && (
           <Suspense fallback={null}>
           <BackupNudgeCard
             nudge={pendingBackupNudge}
@@ -962,8 +986,15 @@ export default function HomePage() {
         {/* Last in the stack, and never alongside the changelog that already
             announces it — one mention of a new thing is an announcement, two
             is nagging. */}
-        {pendingReminderNudge && !pendingBackupNudge && !nightHelp && !milestoneToday && !protectMoment
-          && releasesToShow.length === 0 && activeTab === "today" && (
+        {/* Ahead of the backup nudge, and NOT held back by the changelog.
+            Both of those were here and both were wrong: the backup nudge
+            returns every fortnight for ever while this is a one-off that a
+            single tap resolves, so deferring to it meant a phone with an
+            overdue backup never saw this at all — and the changelog card
+            lives further down the page, so waiting for it to be gone was
+            waiting on something that was never in the way. Only the moments
+            that own the whole screen still come first. */}
+        {pendingReminderNudge && !nightHelp && !milestoneToday && !protectMoment && activeTab === "today" && (
           <Suspense fallback={null}>
             <ReminderNudgeCard
               nudge={pendingReminderNudge}
