@@ -31,25 +31,53 @@ const TARGET = process.env.BROADCAST_TARGET ?? "https://numalog.app";
 const PORT = Number(process.env.BROADCAST_PORT ?? 8788);
 
 /**
- * Asked once, on the terminal, with the echo off.
+ * Asked on the terminal, with the typing hidden.
  *
- * The echo is silenced through readline's own _writeToOutput and NOT by
- * reassigning rl.output.write — rl.output IS process.stdout, so that version
- * permanently replaced the process's stdout with a no-op and every later
- * console.log vanished, the URL to open among them. The program ran perfectly
- * and looked completely dead.
+ * Two things here are scar tissue. The echo is silenced through readline's
+ * own _writeToOutput and never by reassigning rl.output.write — rl.output IS
+ * process.stdout, so that replaced the process's stdout with a no-op for
+ * good and every later console.log vanished, the address to open among them.
+ * And the prompt is passed to question() rather than written before the
+ * interface exists, because a terminal-mode interface redraws the line it
+ * starts on and ate it.
+ *
+ * It also re-asks instead of giving up. A blank first answer is how this
+ * reads when stdin is not what anyone expected, and "no password, no
+ * composer" as the whole story is not a program being helpful.
  */
-function askPassword() {
+function askPassword(attempt = 0) {
   if (process.env.ADMIN_PASSWORD) return Promise.resolve(process.env.ADMIN_PASSWORD);
-  process.stdout.write(`Admin password for ${TARGET}: `);
+  if (!process.stdin.isTTY) {
+    console.error(
+      "\n  Nothing to type into: stdin is not a terminal.\n" +
+        "  Run it with the password in the environment instead:\n\n" +
+        "    ADMIN_PASSWORD='…' npm run broadcast\n",
+    );
+    return Promise.resolve("");
+  }
+
   const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
-  rl._writeToOutput = () => {};
+  let hide = false;
+  rl._writeToOutput = (chunk) => { if (!hide) rl.output.write(chunk); };
+
+  let gaveUp = false;
   return new Promise((resolve) => {
-    rl.question("", (answer) => {
+    // Ctrl-D never calls the callback, and a promise that never settles is a
+    // program that hangs with nothing on screen to explain itself.
+    rl.on("close", () => { gaveUp = true; resolve(""); });
+    rl.question(`Admin password for ${TARGET}: `, (answer) => {
+      hide = false;
       rl.close();
       process.stdout.write("\n");
-      resolve(answer);
+      resolve(answer.trim());
     });
+    hide = true;
+  }).then((answer) => {
+    // Re-ask only for a genuinely empty ANSWER. A closed input has nothing
+    // left to re-ask, and looping on it just prints the prompt at a wall.
+    if (answer || gaveUp || attempt >= 2) return answer;
+    console.log("  Nothing typed. Try again, or Ctrl-C to stop.");
+    return askPassword(attempt + 1);
   });
 }
 
