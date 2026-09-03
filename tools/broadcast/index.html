@@ -110,6 +110,11 @@
   .who .nm { font-weight:600; }
   .who .ag { color:var(--muted); font-size:12.5px; }
   .who .ph { margin-left:auto; color:var(--muted); font-size:12px; }
+  .who .fid { background:var(--cream); border:1px solid var(--line); color:var(--muted);
+    font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:11.5px; font-weight:500;
+    padding:2px 7px; border-radius:5px; min-height:0; }
+  .who .fid:hover { color:var(--ink); border-color:var(--muted); }
+  .who .fid.copied { background:var(--rose-soft); color:var(--rose); border-color:var(--rose); }
   .scope { display:flex; gap:8px; margin-bottom:14px; }
   .scope button { flex:1; background:var(--cream); color:var(--muted); border:1px solid var(--line); }
   .scope button.on { background:var(--rose); color:#fff; border-color:var(--rose); }
@@ -246,6 +251,12 @@
           return '<label><input type="checkbox" data-id="' + esc(r.familyId) + '"' + (on ? " checked" : "") + ">" +
             '<span class="nm">' + esc(r.name || "No name") + "</span>" +
             '<span class="ag">' + esc(ageLabel(r.ageDays)) + "</span>" +
+            // The id, because this list is the ONLY place a name and an id
+            // sit together: the dashboard shows ids without names on purpose,
+            // so without this you can see whose household it is here and
+            // still have no way to address it there. Click copies it.
+            '<button type="button" class="fid" data-copy="' + esc(r.familyId) + '" title="Copy this id">' +
+            esc(r.familyId.slice(0, 8)) + "</button>" +
             '<span class="ph">' + r.phones + (r.phones === 1 ? " phone" : " phones") + "</span></label>";
         })
         .join("");
@@ -256,6 +267,27 @@
           if (e.currentTarget.checked) chosen.add(id); else chosen.delete(id);
           drawWho();
           draw();
+        });
+      }
+      for (const chip of list.querySelectorAll(".fid")) {
+        chip.addEventListener("click", function (e) {
+          // The chip sits inside the label, so without this the click also
+          // ticks the household — copying an id is not choosing to send to it.
+          e.preventDefault();
+          e.stopPropagation();
+          // Held in a variable: currentTarget is null by the time the
+          // clipboard promise settles, and reading it there threw.
+          const chip = e.currentTarget;
+          const id = chip.getAttribute("data-copy");
+          const done = () => {
+            chip.classList.add("copied");
+            chip.textContent = "copied";
+            setTimeout(() => { drawWho(); }, 900);
+          };
+          // clipboard needs a secure context, and 127.0.0.1 counts as one —
+          // but a fallback costs three lines and saves a mystery.
+          if (navigator.clipboard) navigator.clipboard.writeText(id).then(done, done);
+          else done();
         });
       }
     }

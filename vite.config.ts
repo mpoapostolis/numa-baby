@@ -88,7 +88,17 @@ export default defineConfig({
       workbox: {
         cleanupOutdatedCaches: true,
         clientsClaim: true,
-        importScripts: ["/notification-sw.js"],
+        // Stamped, and that stamp is load-bearing.
+        //
+        // importScripts goes through the ordinary HTTP cache and this URL is
+        // not in the precache manifest, so it carries no revision of its own.
+        // A phone whose service worker was installed before push existed
+        // could therefore install the NEW worker and still import a cached
+        // copy of this file from before — a copy with no "push" listener at
+        // all. The push then arrives at the phone and there is nobody to
+        // show it: sent, accepted, and silently dropped. The build stamp in
+        // the query makes every build import a URL the cache has never seen.
+        importScripts: [`/notification-sw.js?v=${APP_VERSION.replace(/\D/g, "")}`],
         navigateFallback: "/index.html",
         // Without this the service worker answers EVERY navigation with the
         // cached app shell — including /admin and /api, which live in the
