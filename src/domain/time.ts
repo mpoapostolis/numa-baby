@@ -93,6 +93,17 @@ export function liveDuration(start: string, now: number) {
   const minutes = Math.floor((totalSeconds % 3_600) / 60);
   const seconds = totalSeconds % 60;
   const clock = [minutes, seconds].map((value) => String(value).padStart(2, "0")).join(":");
+  // Past a day it stops being a stopwatch and starts being a number nobody
+  // can read: a sleep timer left running over one night showed "26:14:03",
+  // and after a forgotten month, "960:00:17". Tapping Sleep and then having
+  // the baby wake before anyone taps Wake up is ordinary, so this is a state
+  // real families reach — and six digits of hours tell them nothing except
+  // that something is broken.
+  if (totalSeconds >= 86_400) {
+    const days = Math.floor(totalSeconds / 86_400);
+    const leftover = hours % 24;
+    return leftover > 0 ? `${days}d ${leftover}h` : `${days}d`;
+  }
   return hours > 0 ? `${hours}:${clock}` : clock;
 }
 
@@ -144,7 +155,16 @@ export function formatBabyAge(birthDate: string | undefined, now: number): strin
   // "4 weeks old" (this line) — the same baby, the same morning. Weeks stay
   // for the newborn window where every jab and every midwife speaks weeks.
   if (months < 1) return `${weeks} weeks`;
-  return months === 1 ? "1 month" : `${months} months`;
+  // Years from two, for exactly the reason months start at one: the birthday
+  // card said "Sam is 3 years old today!" and this line, directly beneath it,
+  // said "Sam is 36 months old" — the same child, the same morning, two
+  // vocabularies. Two is where people switch; nobody says "24 months" of
+  // their own child, and everybody says "18 months".
+  if (months < 24) return months === 1 ? "1 month" : `${months} months`;
+  const years = Math.floor(months / 12);
+  const over = months % 12;
+  if (over === 0) return years === 1 ? "1 year" : `${years} years`;
+  return `${years} years ${over === 1 ? "1 month" : `${over} months`}`;
 }
 
 // Whole days since birth for the day counter and the fact engine. Null on

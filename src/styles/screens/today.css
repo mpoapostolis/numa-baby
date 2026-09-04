@@ -1333,6 +1333,20 @@
     grid-column: auto;
   }
 
+  /* A family that only bottle-feeds, or only breastfeeds, has FOUR tiles, and
+     the nappy tile is the second of them. Spanning it across both columns
+     then left the first tile — Bottle, the most-tapped thing on the screen —
+     stranded in half a row with a hole beside it, and the parity rule above
+     is switched off here so nothing closed the gap. When the nappy tile is
+     the second child, the first one takes the row it is already alone on. */
+  .quick-grid > .tile-diaper:nth-child(2) {
+    grid-column: 1 / -1;
+  }
+
+  .quick-grid > .quick-tile:first-child:has(+ .tile-diaper) {
+    grid-column: 1 / -1;
+  }
+
   .tile-split [data-slot="button"] {
     padding: 0 8px;
   }

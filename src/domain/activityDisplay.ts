@@ -57,11 +57,14 @@ export function activityDetail(activity: Activity, units: UnitSystem = "metric")
   if (activity.type === "medicine") {
     // The dose is shown exactly as it was typed. This app has no opinion about
     // how much a baby should be given and must never look like it has one.
-    const detail = [activity.dose?.trim(), formatTime(activity.startedAt)].filter(Boolean).join(" · ");
-    return includeNote(detail, activity.note);
+    //
+    // No time here: ActivityRow renders one beside every row, so including it
+    // read as "Vitamin D / 1 drop · 00:42" with "00:42" again alongside.
+    return includeNote(activity.dose?.trim() ?? "", activity.note);
   }
   if (activity.type === "solid") {
-    return includeNote(formatTime(activity.startedAt), activity.note);
+    // Same as medicine: the row already carries the time.
+    return activity.note?.trim() ?? "";
   }
   // The note IS the title here, and ActivityRow already renders the time — a
   // detail of the time as well read as "Vitamin D · 12:46 · 12:46".

@@ -209,3 +209,43 @@ describe("date-only birth dates", () => {
     expect(ageInDays("2026-04-04", local(2026, 4, 11, 0))).toBe(7);
   });
 });
+
+describe("a timer nobody stopped", () => {
+  it("stops counting in hours once it is past a day", () => {
+    const start = "2026-09-01T13:12:00";
+    // A sleep timer started last night and forgotten. Six digits of hours
+    // ("26:14:03", and "960:00:17" after a month) tell a parent nothing
+    // except that something is broken — and forgetting to tap Wake up when
+    // the baby stirs is ordinary, not exotic.
+    expect(liveDuration(start, Date.parse("2026-09-01T13:12:17"))).toBe("00:17");
+    expect(liveDuration(start, Date.parse("2026-09-01T15:26:03"))).toBe("2:14:03");
+    // Right up to the day it is still a stopwatch.
+    expect(liveDuration(start, Date.parse("2026-09-02T13:11:59"))).toBe("23:59:59");
+    expect(liveDuration(start, Date.parse("2026-09-02T15:26:03"))).toBe("1d 2h");
+    expect(liveDuration(start, Date.parse("2026-09-02T13:12:00"))).toBe("1d");
+    // Elapsed time, not calendar days: a span that crosses a daylight-saving
+    // change is 39d 23h of clock, and the stopwatch counts the clock.
+    expect(liveDuration(start, Date.parse(start) + 40 * 86_400_000)).toBe("40d");
+  });
+});
+
+describe("an age a parent would actually say", () => {
+  const born = "2023-09-04";
+  const at = (iso: string) => formatBabyAge(born, Date.parse(`${iso}T09:00:00`));
+
+  it("switches to years at two, where people do", () => {
+    // The bug this pins: the birthday card said "3 years old today!" and the
+    // line directly beneath it said "36 months old" — same child, same
+    // morning, two vocabularies.
+    expect(at("2026-09-04")).toBe("3 years");
+    expect(at("2025-09-04")).toBe("2 years");
+    // Everybody says "18 months"; nobody says "24 months" of their own child.
+    expect(at("2025-03-04")).toBe("18 months");
+    expect(at("2025-08-04")).toBe("23 months");
+  });
+
+  it("keeps the months when they are what someone would say", () => {
+    expect(at("2026-03-04")).toBe("2 years 6 months");
+    expect(at("2025-10-04")).toBe("2 years 1 month");
+  });
+});

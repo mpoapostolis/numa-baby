@@ -189,6 +189,17 @@
 .activity-copy [data-slot="item-title"] {
   font-size: 0.9375rem;
   font-weight: 500;
+  /* The title box is `w-fit` in the primitive, which lets it grow to its
+     text — so the line-clamp it also carries never had a width to clamp
+     against. A medicine called "Paracetamol suspension" ran under the
+     timestamp and 64px of it off the right edge of a 320px screen, while the
+     description line directly below it truncated correctly. Twenty-two
+     characters was enough. */
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .activity-copy [data-slot="item-description"] {
