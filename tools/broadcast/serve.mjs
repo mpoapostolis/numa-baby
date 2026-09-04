@@ -140,8 +140,50 @@ async function relay(res, response) {
   res.end(body);
 }
 
+/**
+ * The door. Binding to 127.0.0.1 is NOT enough on its own, and both of the
+ * ways it is not were found by pointing a browser at this file:
+ *
+ * CSRF. This process holds a live production admin session. Any page in any
+ * other tab could POST here — a JSON body sent as text/plain is a CORS
+ * "simple request", so there is no preflight to stop it and the browser just
+ * sends it. The response was unreadable to the attacker, and irrelevant:
+ * firing it was the whole attack. A stranger's wording on every subscribed
+ * lock screen in the service, unrecallable. Hence the Origin rule, and hence
+ * requiring the content type that makes a cross-origin write take a
+ * preflight it cannot pass.
+ *
+ * DNS rebinding. Host was parsed away entirely (`new URL(req.url, …)` throws
+ * it out), so a domain that resolves to 127.0.0.1 was same-origin with the
+ * attacker's page and its responses were READABLE. /api/recipients answers
+ * with every baby's name, age and full family id — the one endpoint in the
+ * service that returns any of that. Hence the Host rule.
+ */
+const ALLOWED_HOSTS = new Set([`127.0.0.1:${PORT}`, `localhost:${PORT}`, `[::1]:${PORT}`]);
+
+function refuse(req) {
+  // A request that lies about, or omits, where it is going. A browser always
+  // sends Host; something that does not is not the page this serves.
+  if (!ALLOWED_HOSTS.has(req.headers.host ?? "")) return "host";
+  // An Origin is present on every cross-site request a browser makes. Absent
+  // is fine (a same-origin GET, or curl); present and foreign is not.
+  const origin = req.headers.origin;
+  if (origin && !ALLOWED_HOSTS.has(origin.replace(/^https?:\/\//, ""))) return "origin";
+  // Writes must be real JSON. text/plain is what lets a cross-origin POST
+  // skip its preflight, so refusing it is what puts the preflight back.
+  if (req.method !== "GET" && !(req.headers["content-type"] ?? "").startsWith("application/json")) {
+    return "content-type";
+  }
+  return null;
+}
+
 const server = createServer(async (req, res) => {
   try {
+    const refused = refuse(req);
+    if (refused) {
+      console.warn(`  refused a request (${refused}): ${req.method} ${req.url} from ${req.headers.origin ?? "no origin"}`);
+      return json(res, 403, { error: "This tool only answers the page it serves." });
+    }
     const url = new URL(req.url, "http://127.0.0.1");
 
     if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {

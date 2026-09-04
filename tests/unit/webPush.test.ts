@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { webcrypto as crypto } from "node:crypto";
 import { buildPushPayload } from "@block65/webcrypto-web-push";
-import { REMINDERS, dueAt, isPushEndpoint } from "../../worker/push";
+import { REMINDERS, dueAt, isPushEndpoint, saveSchedule, sendDue } from "../../worker/push";
 
 // A push nobody can decrypt is a reminder that never rings, and the failure
 // is silent — the push service accepts the bytes and the phone drops them.
@@ -295,5 +295,176 @@ describe("the signing identity", () => {
     // would have subscribed with.
     expect(payload.headers.authorization).toContain(`k=${generated.publicKey}`);
     expect(JSON.parse(await decrypt(new Uint8Array(payload.body), subscriber))).toEqual(message);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Losing a reminder silently.
+//
+// The phone stands its own timer down the moment the server says it holds the
+// alarm (pushArmed in App.tsx). Everything below is a way the server could
+// then fail to ring while the client still believes it is armed — which is
+// worse than having no push at all, because the fallback is gone too.
+
+describe("an alarm the server accepts is an alarm the server keeps", () => {
+  type Row = Record<string, unknown>;
+
+  function alarmDb() {
+    const rows = new Map<string, Row>();
+    // The signing pair has to actually persist here: without it vapidKeys
+    // answers null, sendDue returns early, and every count in these tests is
+    // quietly zero for the wrong reason.
+    const secrets = new Map<string, Row>();
+    const client = {
+      execute: async (query: unknown) => {
+        const sql = (typeof query === "string" ? query : (query as { sql: string }).sql).replace(/\s+/g, " ").trim();
+        const args = typeof query === "string" ? [] : ((query as { args?: unknown[] }).args ?? []);
+        if (sql.startsWith("CREATE") || sql.startsWith("ALTER")) return { rows: [] };
+        if (sql.includes("SELECT payload, created_at FROM app_secrets")) {
+          const row = secrets.get("vapid");
+          return { rows: row ? [row] : [] };
+        }
+        if (sql.includes("INSERT OR IGNORE INTO app_secrets")) {
+          if (!secrets.has("vapid")) secrets.set("vapid", { payload: String(args[0]), created_at: String(args[1]) });
+          return { rows: [] };
+        }
+        if (sql.startsWith("INSERT INTO push_subscriptions")) {
+          const [endpoint, p256dh, auth, feed, diaper, created, updated, family] = args as string[];
+          const existing = rows.get(endpoint);
+          rows.set(endpoint, {
+            endpoint, p256dh, auth, feed_due_at: feed, diaper_due_at: diaper,
+            created_at: existing?.created_at ?? created, updated_at: updated,
+            failures: 0, family_id: family,
+          });
+          return { rows: [] };
+        }
+        if (sql.includes("FROM push_subscriptions WHERE feed_due_at")) {
+          const [at, floor] = args as string[];
+          const due: Row[] = [];
+          for (const row of rows.values()) {
+            for (const kind of ["feed", "diaper"] as const) {
+              const value = row[`${kind}_due_at`] as string | null;
+              if (value && value <= at && value > floor) due.push({ ...row, kind, due: value });
+            }
+          }
+          return { rows: due.sort((a, b) => String(a.due).localeCompare(String(b.due))) };
+        }
+        if (sql.startsWith("UPDATE push_subscriptions SET failures = failures + 1")) {
+          const row = rows.get(String(args[0]));
+          if (row) row.failures = Number(row.failures) + 1;
+          return { rows: [] };
+        }
+        if (sql.startsWith("UPDATE push_subscriptions SET failures = 0")) {
+          const row = rows.get(String(args[0]));
+          if (row) row.failures = 0;
+          return { rows: [] };
+        }
+        if (sql.startsWith("UPDATE push_subscriptions SET feed_due_at = NULL")) {
+          const row = rows.get(String(args[0]));
+          if (row) row.feed_due_at = null;
+          return { rows: [] };
+        }
+        if (sql.startsWith("UPDATE push_subscriptions SET diaper_due_at = NULL")) {
+          const row = rows.get(String(args[0]));
+          if (row) row.diaper_due_at = null;
+          return { rows: [] };
+        }
+        if (sql.startsWith("DELETE FROM push_subscriptions")) {
+          rows.delete(String(args[0]));
+          return { rows: [] };
+        }
+        throw new Error(`unexpected sql: ${sql}`);
+      },
+      batch: async (statements: unknown[]) => {
+        for (const statement of statements) await client.execute(statement);
+        return [];
+      },
+    };
+    return { client: client as never, rows };
+  }
+
+  /** A real subscriber, because encryption happens before the fetch and a
+      placeholder key produces no send at all rather than a failed one. */
+  async function subscriber() {
+    const pair = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
+    return {
+      endpoint: "https://fcm.googleapis.com/fcm/send/one",
+      keys: {
+        p256dh: b64url(await crypto.subtle.exportKey("raw", pair.publicKey)),
+        auth: b64url(crypto.getRandomValues(new Uint8Array(16))),
+      },
+    };
+  }
+
+  it("survives a push service having a bad minute", async () => {
+    const { client, rows } = alarmDb();
+    const who = await subscriber();
+    const now = Date.parse("2026-09-04T14:00:00.000Z");
+    await saveSchedule(client, { ...who, feedDueAt: "2026-09-04T15:00:00.000Z" }, now);
+
+    // One 500. This used to delete the alarm outright, and the phone had
+    // already stood its own timer down — so the parent got nothing at all,
+    // from a single transient upstream error.
+    vi.stubGlobal("fetch", async () => ({ status: 500 }) as Response);
+    const first = await sendDue(client, {}, Date.parse("2026-09-04T15:01:00.000Z"));
+    expect(first.failed).toBe(1);
+    expect(rows.get(who.endpoint)?.feed_due_at).toBe("2026-09-04T15:00:00.000Z");
+
+    // Five minutes later the service is fine and the reminder still rings.
+    vi.stubGlobal("fetch", async () => ({ status: 201 }) as Response);
+    const second = await sendDue(client, {}, Date.parse("2026-09-04T15:06:00.000Z"));
+    expect(second.sent).toBe(1);
+    expect(rows.get(who.endpoint)?.feed_due_at).toBeNull();
+    // And the earlier refusal is forgiven, so a phone that had one bad
+    // afternoon is not one failure from being given up on weeks later.
+    expect(rows.get(who.endpoint)?.failures).toBe(0);
+  });
+
+  it("does eventually stop ringing a bell that never works", async () => {
+    const { client, rows } = alarmDb();
+    const who = await subscriber();
+    const now = Date.parse("2026-09-04T14:00:00.000Z");
+    await saveSchedule(client, { ...who, feedDueAt: "2026-09-04T15:00:00.000Z" }, now);
+    vi.stubGlobal("fetch", async () => ({ status: 500 }) as Response);
+
+    let attempts = 0;
+    for (let minute = 1; minute <= 30; minute += 5) {
+      const result = await sendDue(client, {}, Date.parse(`2026-09-04T15:${String(minute).padStart(2, "0")}:00.000Z`));
+      attempts += result.attempted;
+    }
+    // Retried, then given up on — not retried for ever, and not abandoned on
+    // the first refusal either.
+    expect(attempts).toBe(3);
+    expect(rows.get(who.endpoint)?.feed_due_at).toBeNull();
+  });
+
+  it("refuses an alarm it is not going to keep, instead of answering ok", async () => {
+    const { client, rows } = alarmDb();
+    const who = await subscriber();
+    const now = Date.parse("2026-09-04T12:00:00.000Z");
+
+    // A phone whose clock runs behind computes a time already in the server's
+    // past. Answering true here told the client "I hold it", the client stood
+    // its timer down, and the reminder existed nowhere.
+    expect(await saveSchedule(client, { ...who, feedDueAt: "2026-09-04T11:00:00.000Z" }, now)).toBe(false);
+    // A time a decade out, from a clock the other way.
+    expect(await saveSchedule(client, { ...who, feedDueAt: "2036-09-04T11:00:00.000Z" }, now)).toBe(false);
+    // Turning both off is not a refusal — it is how a phone says "stop".
+    expect(await saveSchedule(client, { ...who, feedDueAt: null, diaperDueAt: null }, now)).toBe(true);
+    expect(rows.get(who.endpoint)?.feed_due_at).toBeNull();
+  });
+
+  it("lets go of a family the phone has left", async () => {
+    const { client, rows } = alarmDb();
+    const who = await subscriber();
+    const now = Date.parse("2026-09-04T12:00:00.000Z");
+    await saveSchedule(client, { ...who, feedDueAt: "2026-09-04T15:00:00.000Z" }, now, "alpha-000");
+    expect(rows.get(who.endpoint)?.family_id).toBe("alpha-000");
+
+    // Unpaired: the app stops sending the token, so the next schedule write
+    // arrives unauthenticated. It must not stay in the household — a phone
+    // that left kept receiving that family's notes for ever.
+    await saveSchedule(client, { ...who, feedDueAt: "2026-09-04T16:00:00.000Z" }, now, null);
+    expect(rows.get(who.endpoint)?.family_id).toBeNull();
   });
 });

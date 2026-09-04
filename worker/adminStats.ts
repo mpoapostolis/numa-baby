@@ -414,7 +414,16 @@ export async function collectStats(client: Client, now: number) {
   // What was last put on everyone's lock screen. Read-only here: sending is
   // deliberately not a button on this page (see tools/broadcast), but seeing
   // what went out belongs where the operator already looks.
-  const announcements = await broadcastHistory(client, 5).catch(() => []);
+  //
+  // `audience` is dropped rather than sent. It is a list of FULL family ids,
+  // and this file truncates ids to eight characters everywhere else on
+  // purpose — "enough to follow one family down a column, not enough to be a
+  // directory of who". The page never renders it, but the payload behind the
+  // page is what the Copy JSON button puts on the clipboard, so shipping it
+  // would quietly undo that rule for every household ever ticked.
+  const announcements = await broadcastHistory(client, 5)
+    .then((rows) => rows.map(({ audience, ...rest }) => ({ ...rest, targeted: audience !== null })))
+    .catch(() => []);
 
   return {
     ...(heavy ?? {}),

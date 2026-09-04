@@ -734,7 +734,15 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     const emptyDefault = current.profile.name === "" && current.profile.birthDate === "";
     const adoptProfile = remoteProfile !== undefined && (emptyDefault || remoteMs > localMs);
     if (summary.added === 0 && summary.updated === 0 && !adoptProfile) return { added: 0, updated: 0, persisted: true };
-    const nextProfile = adoptProfile && remoteProfile ? remoteProfile : current.profile;
+    // The profile is adopted whole — except for the routine list, which a
+    // phone on an older build does not know about and therefore sends as
+    // ABSENT rather than as a deliberate empty list (see sanitizeProfile).
+    // Adopting that absence as "no routines" deleted the family's list the
+    // first time anyone renamed the baby on the older phone. An explicit
+    // empty list is still adopted, because clearing the list is a real edit.
+    const nextProfile = adoptProfile && remoteProfile
+      ? { ...remoteProfile, routines: remoteProfile.routines ?? current.profile.routines }
+      : current.profile;
     const nextStamp = adoptProfile && remoteProfileUpdatedAt ? remoteProfileUpdatedAt : current.profileUpdatedAt;
     if (!persistSnapshot(merged, nextProfile, undefined, undefined, undefined, nextStamp)) {
       return { added: 0, updated: 0, persisted: false };

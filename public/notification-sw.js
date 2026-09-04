@@ -32,7 +32,13 @@ self.addEventListener("notificationclick", (event) => {
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
       const existing = windows.find((client) => "focus" in client);
-      return existing ? existing.focus() : self.clients.openWindow(destination);
+      if (!existing) return self.clients.openWindow(destination);
+      // NAVIGATE, then focus. Focusing alone threw the destination away: an
+      // announcement sent to /insights just re-showed whatever screen the
+      // app happened to be on, so the url that readDraft validates so
+      // carefully did nothing for anyone with the app already open.
+      return (existing.navigate ? existing.navigate(destination).catch(() => existing) : Promise.resolve(existing))
+        .then((client) => (client || existing).focus());
     }),
   );
 });

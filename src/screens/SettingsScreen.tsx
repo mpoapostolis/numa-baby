@@ -27,7 +27,6 @@ import {
 import { Switch } from "../components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "../components/ui/toggle-group";
 import { MAX_ROUTINES, LABEL_MAX, addRoutine, removeRoutine, type Routine } from "../domain/routines";
-import { makeId } from "../domain/id";
 import { FamilySyncCard } from "../components/FamilySyncCard";
 import { FeedbackCard } from "../components/FeedbackCard";
 import { AppNews } from "../components/AppNews";
@@ -88,7 +87,7 @@ function RoutineEditor({
 
   function add(event: FormEvent) {
     event.preventDefault();
-    const next = addRoutine(routines, draft, makeId());
+    const next = addRoutine(routines, draft);
     if (!next) {
       // addRoutine refuses blank, duplicate and seventh by answering null.
       // Saying WHICH matters: a button that does nothing when pressed reads

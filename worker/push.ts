@@ -153,6 +153,16 @@ export async function saveSchedule(
   const auth = typeof body.keys?.auth === "string" ? body.keys.auth : "";
   if (!isPushEndpoint(endpoint) || !p256dh || !auth) return false;
   if (p256dh.length > 200 || auth.length > 100) return false;
+  const feedDueAt = dueAt(body.feedDueAt, now);
+  const diaperDueAt = dueAt(body.diaperDueAt, now);
+  // ASKED FOR AN ALARM AND GOT NONE STORED. dueAt() nulls a time that is in
+  // the past or more than a week out, which a phone with a slow clock
+  // produces routinely — and answering true for that was a lie the client
+  // acts on: it reads "the server holds this" and stands its own timer down,
+  // so the reminder rings nowhere. Refusing lets the in-page timer, which
+  // runs on the same clock that computed the time, keep working.
+  if ((body.feedDueAt != null && !feedDueAt) || (body.diaperDueAt != null && !diaperDueAt)) return false;
+
   const at = new Date(now).toISOString();
   await ensurePushTable(client);
   await client.execute({
@@ -165,11 +175,25 @@ export async function saveSchedule(
             diaper_due_at = excluded.diaper_due_at,
             updated_at = excluded.updated_at,
             failures = 0,
-            -- An unauthenticated write must never CLEAR a link that an
-            -- authenticated one established, or unpairing would be a matter
-            -- of dropping a header.
-            family_id = COALESCE(excluded.family_id, push_subscriptions.family_id)`,
-    args: [endpoint, p256dh, auth, dueAt(body.feedDueAt, now), dueAt(body.diaperDueAt, now), at, at, familyId],
+            -- Written every time, INCLUDING to null.
+            --
+            -- This used to COALESCE, so that an unauthenticated write could
+            -- not clear a link an authenticated one had made. The cost of
+            -- that caution was worse than the thing it prevented: a phone
+            -- that left a family kept its family_id for ever, so it went on
+            -- receiving notes addressed to that household and went on being
+            -- counted as one of its phones. There is no path that clears it
+            -- otherwise — the app only calls /api/push/off when BOTH
+            -- reminders go off, which unpairing does not do.
+            --
+            -- What the old rule protected against is somebody who already
+            -- holds this endpoint and both its keys dropping a header to
+            -- unlink it, which costs them operator notes they were never
+            -- entitled to anyway. Losing a link is recoverable on the next
+            -- write; keeping a stale one is a household's notifications
+            -- going to a phone that left it.
+            family_id = excluded.family_id`,
+    args: [endpoint, p256dh, auth, feedDueAt, diaperDueAt, at, at, familyId],
   });
   return true;
 }
@@ -184,19 +208,45 @@ export async function forgetSubscription(client: Client, endpoint: unknown): Pro
  * How many pushes one cron run may send.
  *
  * Each send is a subrequest, and the Workers free plan allows fifty per
- * invocation. Forty-five leaves room for the database round trips in the
- * same run. Anything still due is picked up by the next run five minutes
+ * invocation — pushes AND database round trips together.
+ *
+ * This was 45, on the reasoning that it "leaves room for the database". It
+ * does not. One cron pass was measured at 45 pushes plus 14 database calls
+ * — five lazy DDL statements, findDue, the secrets table, two key reads, an
+ * insert, the reminder batch, the pending-broadcast read, the target read
+ * and the broadcast batch — for 59, and 61 on a cold isolate. Everything
+ * past the fiftieth throws, deliver() records it as status 0, and the
+ * handling below then treated each one as a refusal. Because findDue orders
+ * by due time, the reminders lost that way were the most recent ones.
+ *
+ * Thirty leaves twenty for the database with a cold isolate's worst case
+ * (seventeen) still inside it. Anything still due is picked up five minutes
  * later — a reminder five minutes late is a reminder; a run that dies
  * halfway through is not.
  */
-export const SEND_LIMIT = 45;
+export const SEND_LIMIT = 30;
 
 /** A reminder more than this far past its time is not sent at all: the
     parent has long since fed the baby, and a notification about a feed two
     hours ago is noise at best and alarming at worst. */
 const STALE_AFTER_MS = 45 * 60_000;
 
-export type DueRow = { endpoint: string; p256dh: string; auth: string; kind: ReminderKind };
+/**
+ * How many times one alarm may be refused before it is given up on.
+ *
+ * A single refusal used to delete the alarm outright, on the reasoning that
+ * leaving it set would ring the same broken bell for ever. But the phone has
+ * stood its own timer down by then (see pushArmed in App.tsx), so one 500
+ * from a push service — or one subrequest over the limit — meant the parent
+ * got NO reminder from anywhere, and nothing recorded that it was lost.
+ *
+ * Three attempts across fifteen minutes distinguishes a service having a
+ * moment from a subscription that is genuinely broken, and the alarm still
+ * stops ringing after that rather than for ever.
+ */
+const MAX_SEND_ATTEMPTS = 3;
+
+export type DueRow = { endpoint: string; p256dh: string; auth: string; kind: ReminderKind; failures: number };
 
 /** The rows whose time has come, oldest first, capped. */
 export async function findDue(client: Client, now: number, limit = SEND_LIMIT): Promise<DueRow[]> {
@@ -204,10 +254,10 @@ export async function findDue(client: Client, now: number, limit = SEND_LIMIT): 
   const at = new Date(now).toISOString();
   const floor = new Date(now - STALE_AFTER_MS).toISOString();
   const rows = await client.execute({
-    sql: `SELECT endpoint, p256dh, auth, 'feed' AS kind, feed_due_at AS due FROM push_subscriptions
+    sql: `SELECT endpoint, p256dh, auth, failures, 'feed' AS kind, feed_due_at AS due FROM push_subscriptions
             WHERE feed_due_at IS NOT NULL AND feed_due_at <= ? AND feed_due_at > ?
           UNION ALL
-          SELECT endpoint, p256dh, auth, 'diaper' AS kind, diaper_due_at AS due FROM push_subscriptions
+          SELECT endpoint, p256dh, auth, failures, 'diaper' AS kind, diaper_due_at AS due FROM push_subscriptions
             WHERE diaper_due_at IS NOT NULL AND diaper_due_at <= ? AND diaper_due_at > ?
           ORDER BY due LIMIT ?`,
     args: [at, floor, at, floor, limit],
@@ -217,6 +267,7 @@ export async function findDue(client: Client, now: number, limit = SEND_LIMIT): 
     p256dh: String(row.p256dh),
     auth: String(row.auth),
     kind: String(row.kind) === "diaper" ? "diaper" : "feed",
+    failures: Number(row.failures ?? 0),
   }));
 }
 
@@ -445,16 +496,26 @@ export async function sendDue(
     if (isSent(status)) {
       sent += 1;
       statements.push(clearDue(row.kind, row.endpoint));
+      // A working send forgives the earlier refusals, so a phone that has a
+      // bad afternoon is not one failure away from being given up on weeks
+      // later.
+      statements.push({
+        sql: "UPDATE push_subscriptions SET failures = 0 WHERE endpoint = ?",
+        args: [row.endpoint],
+      });
       continue;
     }
-    // A refusal we do not understand: clear the alarm anyway. Leaving it set
-    // would ring the same broken bell every five minutes for ever.
+    // A refusal we do not understand. Count it and LEAVE THE ALARM SET so the
+    // next run tries again: the phone has already stood its own timer down,
+    // so clearing here means the parent gets nothing from anywhere. Only
+    // after MAX_SEND_ATTEMPTS is it given up on, which still stops the broken
+    // bell — just not on the first hiccup.
     failed += 1;
-    statements.push(clearDue(row.kind, row.endpoint));
     statements.push({
       sql: "UPDATE push_subscriptions SET failures = failures + 1 WHERE endpoint = ?",
       args: [row.endpoint],
     });
+    if (row.failures + 1 >= MAX_SEND_ATTEMPTS) statements.push(clearDue(row.kind, row.endpoint));
   }
 
   if (statements.length) await client.batch(statements as never, "write");

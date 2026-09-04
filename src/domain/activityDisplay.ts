@@ -63,8 +63,9 @@ export function activityDetail(activity: Activity, units: UnitSystem = "metric")
   if (activity.type === "solid") {
     return includeNote(formatTime(activity.startedAt), activity.note);
   }
-  // The note IS the title here, so it must not be repeated as the detail.
-  if (activity.type === "routine") return formatTime(activity.startedAt);
+  // The note IS the title here, and ActivityRow already renders the time — a
+  // detail of the time as well read as "Vitamin D · 12:46 · 12:46".
+  if (activity.type === "routine") return "";
   if (activity.type === "growth") {
     const values = [
       activity.weightGrams ? formatWeight(activity.weightGrams, units) : null,

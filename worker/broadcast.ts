@@ -160,6 +160,13 @@ export async function queueBroadcast(
   // chooser and ticked nothing, which is a mistake worth refusing rather
   // than quietly promoting to "send to all of them".
   const audience = draft.audience === undefined ? null : readAudience(draft.audience);
+  // readAudience answers null for anything that is not a list — a string, an
+  // object, a null — and null means EVERYONE. So a malformed selection was
+  // quietly promoted to the widest possible send, which is the same footgun
+  // the empty list below is refused for.
+  if (draft.audience !== undefined && audience === null) {
+    return { error: "That is not a list of households." };
+  }
   if (audience !== null && audience.length === 0) {
     return { error: "No households are ticked, so there is nobody to send to." };
   }
@@ -234,7 +241,7 @@ export async function sendBroadcastChunk(
   const targets = await nextTargets(client, broadcast.cursor, limit, broadcast.audience);
   if (!targets.length) {
     await client.execute({
-      sql: "UPDATE broadcasts SET finished_at = ? WHERE id = ?",
+      sql: "UPDATE broadcasts SET finished_at = COALESCE(finished_at, ?) WHERE id = ?",
       args: [new Date(now).toISOString(), broadcast.id],
     });
     return { id: broadcast.id, sent: 0, gone: 0, failed: 0, done: true };
@@ -271,9 +278,18 @@ export async function sendBroadcastChunk(
   // The cursor advances past everything ATTEMPTED, refusals included. A row
   // that would not take this announcement will not take it five minutes from
   // now either, and retrying for ever means the queue never drains.
+  // "finished_at IS NULL" is the guard, and it is the brake working.
+  //
+  // deliver() posts up to SEND_LIMIT pushes at once, so there is a real
+  // window between reading the pending broadcast and writing this row — and
+  // that window is exactly when an operator hits Stop. Writing finished_at
+  // unconditionally set it back to NULL and the announcement carried on to
+  // everybody: the brake released itself. The counts are still recorded,
+  // because those phones really were reached.
   statements.push({
     sql: `UPDATE broadcasts
-          SET cursor = ?, sent = sent + ?, gone = gone + ?, failed = failed + ?, finished_at = ?
+          SET cursor = ?, sent = sent + ?, gone = gone + ?, failed = failed + ?,
+              finished_at = COALESCE(finished_at, ?)
           WHERE id = ?`,
     args: [
       targets[targets.length - 1].endpoint,

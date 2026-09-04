@@ -125,10 +125,21 @@ export function sanitizeProfile(value: unknown): Profile | null {
     birthDate: value.birthDate,
     feedingMode: value.feedingMode,
     sex: value.sex === "girl" || value.sex === "boy" ? value.sex : undefined,
-    // A partner's phone can send anything; sanitizeRoutines drops whatever
-    // is not a list of short labelled ids, and never throws the profile away
-    // over it — a bad routine list must not cost a family their baby's name.
-    routines: sanitizeRoutines(value.routines),
+    // ABSENT AND EMPTY ARE NOT THE SAME THING, and conflating them cost a
+    // family their whole list.
+    //
+    // A phone on a build from before routines existed strips the key when it
+    // stores the profile. If that absence became `[]` here, then the moment
+    // anyone edited the baby's name on that phone it would push a profile
+    // whose stamp was newer and whose routine list was empty — and the
+    // profile is adopted as a WHOLE OBJECT, so the other phone's list was
+    // silently deleted. The Today card would vanish and the ticks would sit
+    // in the timeline with nothing left to tick.
+    //
+    // Undefined means "this copy has nothing to say about routines", and the
+    // merge keeps what it already had. An explicit [] still means "the
+    // family cleared the list", which is a real edit and must travel.
+    routines: value.routines === undefined ? undefined : sanitizeRoutines(value.routines),
   };
 }
 

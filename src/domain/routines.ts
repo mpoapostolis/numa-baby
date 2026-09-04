@@ -54,15 +54,31 @@ export function readLabel(value: unknown): string {
   return typeof value === "string" ? value.trim().slice(0, LABEL_MAX) : "";
 }
 
+/**
+ * The id for a label — derived, not minted.
+ *
+ * A random id meant that removing "Vitamin D" and adding it straight back
+ * produced a different id, so a dose already given that morning showed as
+ * still waiting. That is precisely the double-dose question this feature
+ * exists to answer, so the id has to survive the round trip.
+ *
+ * The lowercased label is exactly the key the duplicate rule already uses,
+ * so it is unique across a list by construction, and it works for a label in
+ * any alphabet — slugifying to ASCII would collapse a Greek list to nothing.
+ */
+export function routineId(label: string): string {
+  return label.trim().toLowerCase();
+}
+
 /** Add one, refusing a blank, a duplicate, and a seventh. */
-export function addRoutine(routines: Routine[], label: unknown, id: string): Routine[] | null {
+export function addRoutine(routines: Routine[], label: unknown): Routine[] | null {
   const clean = readLabel(label);
   if (!clean) return null;
   if (routines.length >= MAX_ROUTINES) return null;
+  const id = routineId(clean);
   // Case-insensitive, because two rows reading "Vitamin D" and "vitamin d"
   // are one thing the family has to tick twice.
-  const already = routines.some((routine) => routine.label.toLowerCase() === clean.toLowerCase());
-  if (already) return null;
+  if (routines.some((routine) => routineId(routine.label) === id || routine.id === id)) return null;
   return [...routines, { id, label: clean }];
 }
 
@@ -80,8 +96,12 @@ export function sanitizeRoutines(value: unknown): Routine[] {
     const { id, label } = entry as { id?: unknown; label?: unknown };
     const text = readLabel(label);
     if (typeof id !== "string" || !id || id.length > 64 || !text) continue;
-    if (seen.has(id)) continue;
+    // By id AND by label. Ids are derived from labels now, but a partner on
+    // the build where they were random can still send two rows meaning the
+    // same thing — which would render two pills that tick each other off.
+    if (seen.has(id) || seen.has(routineId(text))) continue;
     seen.add(id);
+    seen.add(routineId(text));
     clean.push({ id, label: text });
     if (clean.length >= MAX_ROUTINES) break;
   }

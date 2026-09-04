@@ -48,7 +48,14 @@ const STATS = {
     { id: '"><img src=x onerror="window.__pwned = true">', sent: "2026-08-26 21:40", handled: 1,
       app_version: XSS, contact: XSS, message: `${XSS}\nSecond line & an ampersand.` },
   ],
-  auditLog: [{ at: "2026-08-28 21:40:00", event: "login_bad", ip: "5.6.7.8", country: "RU", asn: "9999", user_agent: XSS }],
+  auditLog: [
+    { at: "2026-08-28 21:40:00", event: "login_bad", ip: "5.6.7.8", country: "RU", asn: "9999", user_agent: XSS },
+    // The audit log now records the operator's OWN wording — worker/admin.ts
+    // writes `broadcast queued: <title>` — so a stored event is a string that
+    // came from a text box and lands in a class attribute and a cell.
+    { at: "2026-08-28 22:10:00", event: `broadcast queued: ${XSS}`, ip: "1.2.3.4", country: "GR", asn: "1234",
+      user_agent: "curl/8" },
+  ],
   lockouts: [{ scope: `ip:${XSS}`, failures: 0, strikes: 2, window_start: "", locked_until: "2026-08-28 22:09:00" }],
   sessions: [{ created: "2026-08-28 22:01", expires: "2026-08-29 10:01", last_seen: "2026-08-28 22:33",
     ip: "1.2.3.4", country: "GR", user_agent: XSS }],
@@ -59,18 +66,23 @@ const STATS = {
   // a payload without this stamp is a service that has never run it.
   heavyComputedAt: "2026-08-28T03:12:00.000Z",
   previous: {
-    at: "2026-08-27T03:12:00.000Z",
+    at: XSS,
     totals: { families: 2, entries: 96 },
     funnel: { joined_7d: 1 },
   },
   funnel: { joined_7d: 2, joined_prev_7d: 1, activated_7d: 2, activated_prev_7d: 1,
     returning_7d: 2, stayed_a_week: 1, paired_7d: 1 },
   lifespan: { with_entries: 3, one_day: 1, under_week: 1, under_month: 1, over_month: 0 },
-  vapid: { publicKey: "BPublicKeyBytes0000", createdAt: "2026-08-30T10:00:00.000Z" },
+  // The alarm-clock panel. Both of these are read straight out of the database
+  // and both are sliced before they are escaped, which is the order that has
+  // to hold — a slice that lands mid-tag must still not become one.
+  push: { phones: 3, feed_armed: 2, diaper_armed: 1, failing: 0, newest: XSS },
+  vapid: { publicKey: '"><img src=x onerror="window.__pwned = true">', createdAt: XSS },
+  workerBuild: XSS,
   // A title an operator typed, which is to say a string that must not be able
   // to stop being text — one still going out, one finished.
   announcements: [
-    { id: "b2", title: XSS, createdAt: "2026-09-01T09:00:00.000Z", sent: 4, gone: 0, failed: 1, finishedAt: null },
+    { id: "b2", title: XSS, createdAt: XSS, sent: 4, gone: 0, failed: 1, finishedAt: null },
     { id: "b1", title: "Reminders work closed now", createdAt: "2026-08-30T09:00:00.000Z", sent: 12, gone: 1, failed: 0,
       finishedAt: "2026-08-30T09:20:00.000Z" },
   ],
@@ -130,8 +142,11 @@ describe("the dashboard renders", () => {
     // One that has not finished is marked, because "sent 4" on its own reads
     // like the whole story when it is a quarter of it.
     expect(text).toContain("sending");
-    // The signing identity, and never the private half.
-    expect(text).toContain("BPublicKey");
+    // The signing identity, and never the private half. The key is sliced to
+    // twelve characters and only THEN escaped, so the slice lands in the
+    // middle of the tag — it must still arrive as words.
+    expect(text).toContain('"><img src=x');
+    expect(document.querySelectorAll("#dash code")[0].textContent).toBe('"><img src=x\u2026');
     expect(text).not.toContain("privateKey");
   });
 
@@ -206,6 +221,28 @@ describe("hostile database values stay text", () => {
     const messages = [...document.querySelectorAll(".msg p")].map((p) => p.textContent);
     expect(messages[1]).toContain('<img src=x onerror="window.__pwned = true">');
     expect(messages[1]).toContain("Second line & an ampersand.");
+  });
+
+  // Everything below arrived with the announcement work: the alarm-clock
+  // panel, the signing key, the announcement table, and the audit log now
+  // carrying the operator's own wording ("broadcast queued: <title>").
+  it("keeps the new alarm-clock and announcement fields as text", () => {
+    const text = document.getElementById("dash")!.textContent ?? "";
+    // push.newest, straight from the database into a sentence.
+    expect(text).toContain('Newest schedule <img src=x onerror="window.__pwned = true">');
+    // The announcement title and its stamp.
+    const announcements = [...document.querySelectorAll("#dash table")]
+      .find((t) => (t.textContent ?? "").includes("sending"))!;
+    expect(announcements.textContent).toContain('<img src=x onerror="window.__pwned = true">');
+    // The audit row whose event text is a title somebody typed into the
+    // composer, written into a class attribute and a cell.
+    const audit = [...document.querySelectorAll("#dash .pill")].map((p) => p.textContent);
+    expect(audit).toContain('broadcast queued: <img src=x onerror="window.__pwned = true">');
+    // The live build stamp.
+    expect(text).toContain('Live build: <img src=x onerror="window.__pwned = true">');
+    // Nothing above turned into an element, and no attribute was escaped from.
+    expect(document.querySelectorAll("img, script, iframe, svg[onload]").length).toBe(0);
+    expect((window as unknown as { __pwned?: boolean }).__pwned).toBeUndefined();
   });
 
   it("does not let an id break out of the attribute it is written into", () => {
