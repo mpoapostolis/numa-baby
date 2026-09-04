@@ -11,6 +11,10 @@ export function activityTitle(activity: Activity) {
   if (activity.type === "health") return activity.temperatureC ? "Temperature" : "Health note";
   if (activity.type === "medicine") return activity.medicine?.trim() || "Medicine";
   if (activity.type === "solid") return activity.food?.trim() || "Solid food";
+  // The label is carried ON the tick rather than looked up in the profile, so
+  // a log entry stays self-describing: deleting the routine later must not
+  // rename "Vitamin D, 09:12" into something nobody can identify.
+  if (activity.type === "routine") return activity.note?.trim() || "Daily routine";
   if (activity.type === "diaper") {
     if (activity.diaperKind === "both") return "Wet + dirty diaper";
     return activity.diaperKind === "dirty" ? "Dirty diaper" : "Wet diaper";
@@ -59,6 +63,8 @@ export function activityDetail(activity: Activity, units: UnitSystem = "metric")
   if (activity.type === "solid") {
     return includeNote(formatTime(activity.startedAt), activity.note);
   }
+  // The note IS the title here, so it must not be repeated as the detail.
+  if (activity.type === "routine") return formatTime(activity.startedAt);
   if (activity.type === "growth") {
     const values = [
       activity.weightGrams ? formatWeight(activity.weightGrams, units) : null,

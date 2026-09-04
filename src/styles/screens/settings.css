@@ -498,3 +498,77 @@
 
 
 
+
+
+/* Keeping the every-day list. */
+.routine-editor { display: grid; gap: 12px; }
+
+.routine-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.routine-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+}
+
+.routine-glyph {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--glyph-health) var(--glyph-wash), var(--card));
+  color: var(--glyph-health);
+}
+
+.routine-glyph svg { width: 16px; height: 16px; }
+
+.routine-label {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.routine-remove {
+  margin-left: auto;
+  flex: none;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+}
+
+.routine-remove svg { width: 17px; height: 17px; }
+
+.routine-add {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.routine-add input { flex: 1 1 auto; min-width: 0; }
+.routine-add button { flex: none; white-space: nowrap; }
+
+.routine-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.routine-refused {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--alert);
+}

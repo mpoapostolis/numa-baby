@@ -1105,6 +1105,7 @@ export default function HomePage() {
                 onShare={() => void sharePartner()}
                 onImport={importData}
                 onOpenProfile={() => openSheet("profile")}
+                onRoutinesChange={(routines) => saveProfile({ ...profile, routines })}
                 onEraseAll={() => {
                   // ONE confirm gates EVERYTHING. The audit caught the
                   // original order committing the worst possible sin: leave

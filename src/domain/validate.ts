@@ -9,6 +9,7 @@ import {
   roundToStep,
 } from "./activitySchema";
 import { Activity, ActivityType, Profile, ReminderSettings, StoredData } from "./types";
+import { sanitizeRoutines } from "./routines";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -74,6 +75,9 @@ export function isValidActivity(value: unknown): value is Activity {
   if (value.medicine !== undefined && (typeof value.medicine !== "string" || value.medicine.length > NOTE_MAX_LENGTH)) return false;
   if (value.dose !== undefined && (typeof value.dose !== "string" || value.dose.length > NOTE_MAX_LENGTH)) return false;
   if (value.food !== undefined && (typeof value.food !== "string" || value.food.length > NOTE_MAX_LENGTH)) return false;
+  // Which daily routine a tick belongs to. Bounded like every other string
+  // that arrives from storage or from another phone.
+  if (value.routineId !== undefined && (typeof value.routineId !== "string" || value.routineId.length > 64)) return false;
   if (invalidStoredNumber("amount", value.amount)) return false;
   if (invalidStoredNumber("weightGrams", value.weightGrams)) return false;
   if (invalidStoredNumber("lengthCm", value.lengthCm)) return false;
@@ -100,7 +104,7 @@ export function activityUpdatedAt(activity: Activity): string {
   return activity.updatedAt ?? activity.startedAt;
 }
 
-function isValidProfile(value: unknown): value is Profile & { isDemo?: boolean } {
+function isValidProfile(value: unknown): value is Profile & { isDemo?: boolean; routines?: unknown } {
   return (
     isRecord(value) &&
     typeof value.name === "string" &&
@@ -121,6 +125,10 @@ export function sanitizeProfile(value: unknown): Profile | null {
     birthDate: value.birthDate,
     feedingMode: value.feedingMode,
     sex: value.sex === "girl" || value.sex === "boy" ? value.sex : undefined,
+    // A partner's phone can send anything; sanitizeRoutines drops whatever
+    // is not a list of short labelled ids, and never throws the profile away
+    // over it — a bad routine list must not cost a family their baby's name.
+    routines: sanitizeRoutines(value.routines),
   };
 }
 
@@ -169,6 +177,7 @@ export function parseStoredData(value: string): StoredData {
       // Tolerant on purpose: an absent or unrecognised value simply means the
       // growth guide falls back to its combined girls-and-boys envelope.
       sex: storedProfile.sex === "girl" || storedProfile.sex === "boy" ? storedProfile.sex : undefined,
+      routines: sanitizeRoutines(storedProfile.routines),
     },
     activities,
     nightMode: typeof parsed.nightMode === "boolean" ? parsed.nightMode : undefined,

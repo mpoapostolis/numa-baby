@@ -20,6 +20,7 @@ export const RELEASES: Release[] = [
     id: "2026-09-06",
     title: "Faster at 3am, and the theme follows your phone",
     items: [
+      "The things that have to happen every day — vitamin drops, a medicine — now wait on Today until each one is ticked, and then the card is gone until tomorrow. Add yours under Settings → Every day. A tick reaches the other parent, so nobody has to ask whether it was already given, or guess.",
       "Share a picture: the month-birthday card has a share button and now says everything since day one — every feed and nappy you logged. Any day's recap can go out as a picture, Insights can send the whole week, and the paediatrician summary can go ahead to the clinic the same way.",
       "Family Sync: when the other parent is not in the room, send the invite as a link instead of holding up a QR code.",
       "The forecasts now keep score. The card is your baby’s rhythm, and under it the app says how often it has actually been right — “right 11 of the last 12 times, within 9 minutes”. A guess nobody can check is a horoscope.",

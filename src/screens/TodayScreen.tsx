@@ -38,6 +38,7 @@ import { LifetimeTotals } from "../domain/lifetime";
 import { shareLink } from "../domain/shareApp";
 import { isMorning, summarizeNight } from "../domain/nightSummary";
 import { typicalVerdict } from "../domain/typical";
+import { ROUTINE_TYPE, pendingRoutines, type Routine } from "../domain/routines";
 import { shareCardOnTap } from "../lib/shareOnTap";
 
 // A party is downloaded only on a day there is one.
@@ -55,6 +56,13 @@ const MilestoneParty = lazy(() =>
 // The fact card carries the whole eleven-kilobyte fact table with it; it
 // sits below the log tiles, so a frame's delay costs a tired thumb nothing.
 const FactOfTheDay = lazy(() => import("../components/FactOfTheDay"));
+// Lazy on purpose even though it sits high on the screen: most families keep
+// no routine list at all, and they should not download a card they will
+// never be shown. The rules that decide whether it appears are cheap and
+// stay here; only the card itself waits.
+const DailyRoutines = lazy(() =>
+  import("../components/DailyRoutines").then((m) => ({ default: m.DailyRoutines })),
+);
 import { ActivityStats } from "../hooks/useActivityStats";
 import { useSecondClock } from "../hooks/useMinuteClock";
 
@@ -376,6 +384,27 @@ function TodayScreen({
         hint: "Worth a check.",
       },
     });
+  }
+
+  // The list the family keeps, minus what today already has. Empty means the
+  // card is not rendered at all — which covers both "nothing left to do" and
+  // "this family keeps no list", and both deserve the same silence.
+  const routines = profile.routines ?? [];
+  const pendingToday = pendingRoutines(routines, sortedActivities, minuteClock);
+
+  function tickRoutine(routine: Routine) {
+    const entry: Activity = {
+      id: makeId(),
+      type: ROUTINE_TYPE,
+      routineId: routine.id,
+      // The label travels WITH the tick so the timeline can name it even
+      // after the family removes the routine from their list.
+      note: routine.label,
+      startedAt: new Date().toISOString(),
+    };
+    // No confirmation: a mis-tap is caught by the same undo toast every other
+    // log gets, and asking twice about a vitamin is how a card becomes a chore.
+    if (onAdd(entry, `${routine.label} done`)) track("routine_ticked");
   }
 
   function quickLogBottle() {
@@ -700,6 +729,17 @@ function TodayScreen({
         </div>
 
         <section className="log-column" aria-label="One-tap baby care logging">
+          {/* First in the column, above the tiles: it is the one thing here
+              with a deadline, and it is gone the moment it is satisfied.
+              Inside the column rather than beside it because CSS pulls this
+              column to the top of the dashboard, and a sibling would be left
+              at the bottom of the page. */}
+          {pendingToday.length > 0 && (
+            <Suspense fallback={null}>
+              <DailyRoutines pending={pendingToday} total={routines.length} onTick={tickRoutine} />
+            </Suspense>
+          )}
+
           {/* Quick-track grid: four big app-style tiles, one thumb-sized tap
               each. Odd tile counts stretch the last tile so the grid never
               rags. Secondary flows (change amount, past session) ride along

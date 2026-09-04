@@ -2,7 +2,9 @@
 // touches is defined here so the validators, the fixtures and the app agree on
 // one shape.
 
-export type ActivityType = "bottle" | "nursing" | "diaper" | "burp" | "sleep" | "growth" | "health" | "medicine" | "solid";
+import type { Routine } from "./routines";
+
+export type ActivityType = "bottle" | "nursing" | "diaper" | "burp" | "sleep" | "growth" | "health" | "medicine" | "solid" | "routine";
 export type DiaperKind = "wet" | "dirty" | "both";
 export type FeedingMode = "mixed" | "breast" | "bottle";
 export type Tab = "today" | "timeline" | "insights" | "guide" | "more";
@@ -33,6 +35,11 @@ export type Activity = {
   /** What was eaten, for a solid-food entry. Free text like medicine: "banana",
       "carrot purée, two spoons". The app records, it does not nutritionise. */
   food?: string;
+  /** Which daily routine this ticks off (see domain/routines.ts). A tick is an
+      ordinary activity so that it syncs, undoes and appears in the timeline
+      like anything else — the point being that the OTHER parent can see the
+      vitamin was already given. */
+  routineId?: string;
   note?: string;
   // Sync-ready metadata. Absent on legacy rows: a missing updatedAt is treated
   // as equal to startedAt (activityUpdatedAt in validate.ts) and stored data is
@@ -49,6 +56,11 @@ export type Profile = {
   // Optional, only read by the growth guide's reference ranges. Absent means
   // "not set" and the guide shows the combined girls-and-boys envelope.
   sex?: "girl" | "boy";
+  /** The things that have to happen every day — vitamin drops, a medicine.
+      On the PROFILE rather than in device settings because it describes how
+      this family's day is run, not how one phone is configured, and so it
+      reaches the other parent by the path the baby's name already travels. */
+  routines?: Routine[];
 };
 
 export type BootState = "loading" | "onboarding" | "ready" | "recovery";

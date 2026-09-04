@@ -1587,3 +1587,92 @@
 .normal-note a {
   color: var(--signal);
 }
+
+/* The every-day list.
+   Pills, not a checklist with boxes: there is nothing to read down, only
+   things to tap, and each one leaves the moment it is tapped. There is no
+   "all done" state to design because the card is not rendered at all once
+   the list is finished — the absence is the state.
+   Dressed in the medicine family's coral, since that is what it usually is. */
+.routines {
+  margin-bottom: 12px;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(135deg, color-mix(in oklab, var(--glyph-health) 7%, var(--card)), var(--card) 65%);
+}
+
+.routines-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.routines-head h2 {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-foreground);
+}
+
+.routines-count {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.routines-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.routine-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 15px 8px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  /* Tapped one-handed while holding a baby, so it clears 44px on its own
+     rather than relying on the text to make the height. */
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.routine-pill:hover {
+  border-color: var(--border-strong);
+}
+
+.routine-pill:active {
+  transform: scale(0.97);
+}
+
+.routine-check {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--glyph-health) var(--glyph-wash), var(--card));
+  color: var(--glyph-health);
+}
+
+.routine-check svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .routine-pill:active { transform: none; }
+}

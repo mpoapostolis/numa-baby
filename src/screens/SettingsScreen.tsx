@@ -1,7 +1,7 @@
 // Ships with this lazy chunk, not the app shell — the budget rule.
 import "../styles/screens/settings.css";
-import { ArrowLeftRight, Baby, Bell, Download, Gift, Moon, Ruler, Share2, ShieldCheck, Sun, SunMoon, Trash2, Upload } from "lucide-react";
-import { ChangeEvent, Suspense, lazy, useEffect, useRef, useState } from "react";
+import { ArrowLeftRight, Baby, Bell, CheckCheck, Download, Gift, Moon, Plus, Ruler, Share2, ShieldCheck, Sun, SunMoon, Trash2, Upload, X } from "lucide-react";
+import { ChangeEvent, FormEvent, Suspense, lazy, useEffect, useRef, useState } from "react";
 
 // Loads only on browsers without a native share sheet.
 const ShareNumalogDialog = lazy(() => import("../components/ShareNumalog"));
@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
+import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import {
   Item,
@@ -25,6 +26,8 @@ import {
 } from "../components/ui/item";
 import { Switch } from "../components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "../components/ui/toggle-group";
+import { MAX_ROUTINES, LABEL_MAX, addRoutine, removeRoutine, type Routine } from "../domain/routines";
+import { makeId } from "../domain/id";
 import { FamilySyncCard } from "../components/FamilySyncCard";
 import { FeedbackCard } from "../components/FeedbackCard";
 import { AppNews } from "../components/AppNews";
@@ -56,6 +59,7 @@ type SettingsScreenProps = {
   onShare: () => void;
   onImport: (event: ChangeEvent<HTMLInputElement>) => void;
   onOpenProfile: () => void;
+  onRoutinesChange: (routines: Routine[]) => void;
   onEraseAll: () => void;
   familySync: FamilySync;
   /** Live entries on this phone, quoted by the cloud-safety line. */
@@ -63,6 +67,89 @@ type SettingsScreenProps = {
   incomingJoinCode?: string | null;
   onIncomingCodeUsed?: () => void;
 };
+
+/**
+ * Keeping the every-day list.
+ *
+ * Six is the ceiling and it is not arbitrary: the card on Today only goes
+ * away when the list is finished, so a list nobody finishes is a card that
+ * never leaves. Small enough to finish is the feature.
+ */
+function RoutineEditor({
+  routines,
+  onChange,
+}: {
+  routines: Routine[];
+  onChange: (routines: Routine[]) => void;
+}) {
+  const [draft, setDraft] = useState("");
+  const [refused, setRefused] = useState("");
+  const full = routines.length >= MAX_ROUTINES;
+
+  function add(event: FormEvent) {
+    event.preventDefault();
+    const next = addRoutine(routines, draft, makeId());
+    if (!next) {
+      // addRoutine refuses blank, duplicate and seventh by answering null.
+      // Saying WHICH matters: a button that does nothing when pressed reads
+      // as a broken button, and the commonest case here — the same thing
+      // typed twice in different capitals — looks like nothing at all.
+      setRefused(
+        routines.some((routine) => routine.label.toLowerCase() === draft.trim().toLowerCase())
+          ? `${draft.trim()} is already on the list.`
+          : "That needs some words.",
+      );
+      return;
+    }
+    onChange(next);
+    setDraft("");
+    setRefused("");
+  }
+
+  return (
+    <div className="routine-editor">
+      {routines.length > 0 && (
+        <ul className="routine-list">
+          {routines.map((routine) => (
+            <li key={routine.id}>
+              <span className="routine-glyph" aria-hidden="true"><CheckCheck /></span>
+              <span className="routine-label">{routine.label}</span>
+              <Button
+                variant="ghost"
+                className="routine-remove"
+                aria-label={`Remove ${routine.label}`}
+                onClick={() => onChange(removeRoutine(routines, routine.id))}
+              >
+                <X />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <form className="routine-add" onSubmit={add}>
+        <Input
+          value={draft}
+          maxLength={LABEL_MAX}
+          onChange={(event) => { setDraft(event.target.value); setRefused(""); }}
+          placeholder={full ? "That is as many as fit" : "Vitamin D"}
+          aria-label="Add something to do every day"
+          aria-describedby={refused ? "routine-refused" : undefined}
+          disabled={full}
+        />
+        <Button type="submit" disabled={full || !draft.trim()}>
+          <Plus /> Add
+        </Button>
+      </form>
+      {refused && <p className="routine-refused" id="routine-refused" role="alert">{refused}</p>}
+      {routines.length === 0 && !refused && (
+        <p className="routine-hint">Nothing yet, so nothing appears on Today.</p>
+      )}
+      {full && !refused && (
+        <p className="routine-hint">Six is the limit — a list nobody finishes is a card that never goes away.</p>
+      )}
+    </div>
+  );
+}
 
 export default function SettingsScreen({
   profile,
@@ -81,6 +168,7 @@ export default function SettingsScreen({
   onShare,
   onImport,
   onOpenProfile,
+  onRoutinesChange,
   onEraseAll,
   familySync,
   entryCount,
@@ -159,6 +247,21 @@ export default function SettingsScreen({
         </CardContent>
       </Card>
 
+      <Card className="settings-group">
+        <CardHeader>
+          <CardTitle asChild><h2>Every day</h2></CardTitle>
+          <CardDescription>
+            Vitamin drops, a medicine — the things whose difficulty is remembering whether
+            they were done. They wait on Today until every one is ticked, then the card is
+            gone until tomorrow. Ticks reach the other parent, so nobody has to guess
+            whether it was already given.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <RoutineEditor routines={profile.routines ?? []} onChange={onRoutinesChange} />
+        </CardContent>
+      </Card>
+
       {/* Rendered only while NOT installed — the component hides itself in
           standalone mode. First thing after the profile because "is this an
           app?" was the most-asked question where these families come from. */}
@@ -167,7 +270,7 @@ export default function SettingsScreen({
       <Card className="settings-group reminder-settings">
         <CardHeader>
           <CardTitle asChild><h2>Care reminders</h2></CardTitle>
-          <CardDescription>Reminders only work while Numalog is open on this device. Don’t rely on them as an alarm.</CardDescription>
+          <CardDescription>These now arrive with the app closed. Still a nudge and not an alarm — follow your baby’s cues and your clinician’s care plan.</CardDescription>
         </CardHeader>
         <CardContent>
           <ItemGroup role="group" aria-label="Care reminder settings">
