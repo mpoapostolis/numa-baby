@@ -7,6 +7,7 @@
 
 import { BellRing } from "lucide-react";
 import { Button } from "./ui/button";
+import { t } from "../i18n";
 import type { ReminderNudge as Nudge } from "../domain/reminderNudge";
 import { REMINDER_COPY } from "./reminderCopy";
 
@@ -25,12 +26,12 @@ export function ReminderNudgeCard({
       <div className="backup-nudge tone-info" role="status">
         <span className="backup-nudge-icon" aria-hidden="true"><BellRing /></span>
         <div className="backup-nudge-copy">
-          <strong>{copy.headline}</strong>
-          <small>{copy.body}</small>
+          <strong>{t(copy.headline)}</strong>
+          <small>{t(copy.body)}</small>
         </div>
         <div className="backup-nudge-actions">
-          <Button onClick={onEnable}>Turn on reminders</Button>
-          <Button variant="ghost" onClick={onDismiss}>Not now</Button>
+          <Button onClick={onEnable}>{t("Turn on reminders")}</Button>
+          <Button variant="ghost" onClick={onDismiss}>{t("Not now")}</Button>
         </div>
       </div>
     </div>

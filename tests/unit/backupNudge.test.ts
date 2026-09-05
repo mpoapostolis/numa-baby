@@ -53,7 +53,9 @@ describe("when it speaks", () => {
   it("counts what is at stake for someone who has never backed up", () => {
     const nudge = backupNudge({ ...base, entries: 412 }, NOW);
     expect(nudge?.tone).toBe("info");
-    expect(nudge?.headline).toContain("412");
+    // The count travels beside the sentence so translation can place it.
+    expect(nudge?.headline).toContain("{n}");
+    expect(nudge?.vars?.n).toBe(412);
     expect(nudge?.body).toContain("no copy of them anywhere else");
   });
 

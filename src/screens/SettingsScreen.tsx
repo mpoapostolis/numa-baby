@@ -96,8 +96,8 @@ function RoutineEditor({
       // typed twice in different capitals — looks like nothing at all.
       setRefused(
         routines.some((routine) => routine.label.toLowerCase() === draft.trim().toLowerCase())
-          ? `${draft.trim()} is already on the list.`
-          : "That needs some words.",
+          ? t("{label} is already on the list.", { label: draft.trim() })
+          : t("That needs some words."),
       );
       return;
     }
@@ -117,7 +117,7 @@ function RoutineEditor({
               <Button
                 variant="ghost"
                 className="routine-remove"
-                aria-label={`Remove ${routine.label}`}
+                aria-label={t("Remove {label}", { label: routine.label })}
                 onClick={() => onChange(removeRoutine(routines, routine.id))}
               >
                 <X />
@@ -131,21 +131,21 @@ function RoutineEditor({
           value={draft}
           maxLength={LABEL_MAX}
           onChange={(event) => { setDraft(event.target.value); setRefused(""); }}
-          placeholder={full ? "That is as many as fit" : "Vitamin D"}
-          aria-label="Add something to do every day"
+          placeholder={full ? t("That is as many as fit") : t("Vitamin D")}
+          aria-label={t("Add something to do every day")}
           aria-describedby={refused ? "routine-refused" : undefined}
           disabled={full}
         />
         <Button type="submit" disabled={full || !draft.trim()}>
-          <Plus /> Add
+          <Plus /> {t("Add")}
         </Button>
       </form>
       {refused && <p className="routine-refused" id="routine-refused" role="alert">{refused}</p>}
       {routines.length === 0 && !refused && (
-        <p className="routine-hint">Nothing yet, so nothing appears on Today.</p>
+        <p className="routine-hint">{t("Nothing yet, so nothing appears on Today.")}</p>
       )}
       {full && !refused && (
-        <p className="routine-hint">Six is the limit — a list nobody finishes is a card that never goes away.</p>
+        <p className="routine-hint">{t("Six is the limit — a list nobody finishes is a card that never goes away.")}</p>
       )}
     </div>
   );
@@ -183,32 +183,32 @@ export default function SettingsScreen({
   useEffect(() => onConsentChange(setConsent), []);
   const [shareOpen, setShareOpen] = useState(false);
   const feedingModeLabel = {
-    breast: "Breastfeeding",
-    bottle: "Bottle feeding",
-    mixed: "Mixed feeding",
+    breast: t("Breastfeeding"),
+    bottle: t("Bottle feeding"),
+    mixed: t("Mixed feeding"),
   }[profile.feedingMode];
 
   return (
     <section className="screen more-screen" aria-labelledby="more-heading">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">Device & data</p>
-          <h1 id="more-heading">Settings</h1>
-          <p className="page-subtitle">Profile, privacy and backups in one place.</p>
+          <p className="eyebrow">{t("Device & data")}</p>
+          <h1 id="more-heading">{t("Settings")}</h1>
+          <p className="page-subtitle">{t("Profile, privacy and backups in one place.")}</p>
         </div>
       </div>
 
       <Card className="settings-group appearance-settings">
         <CardHeader>
-          <CardTitle asChild><h2>Appearance</h2></CardTitle>
-          <CardDescription>Choose the theme that is easiest on your eyes.</CardDescription>
+          <CardTitle asChild><h2>{t("Appearance")}</h2></CardTitle>
+          <CardDescription>{t("Choose the theme that is easiest on your eyes.")}</CardDescription>
         </CardHeader>
         <CardContent>
           <ToggleGroup
             type="single"
             value={themeChoice}
             className="appearance-options"
-            aria-label="Application appearance"
+            aria-label={t("Application appearance")}
             onValueChange={(value) => {
               if (value !== "light" && value !== "dark" && value !== "system") return;
               track("theme_changed", { theme: value });
@@ -226,11 +226,11 @@ export default function SettingsScreen({
             type="single"
             value={units}
             className="appearance-options units-options"
-            aria-label="Measurement units"
+            aria-label={t("Measurement units")}
             onValueChange={(value) => { if (!value) return; track("units_changed", { units: value }); setUnits(value as UnitSystem); }}
           >
-            <ToggleGroupItem value="metric"><Ruler /><span><strong>Metric</strong><small>ml · kg · cm</small></span></ToggleGroupItem>
-            <ToggleGroupItem value="us"><Ruler /><span><strong>US</strong><small>oz · lb · in</small></span></ToggleGroupItem>
+            <ToggleGroupItem value="metric"><Ruler /><span><strong>{t("Metric")}</strong><small>ml · kg · cm</small></span></ToggleGroupItem>
+            <ToggleGroupItem value="us"><Ruler /><span><strong>{t("US")}</strong><small>oz · lb · in</small></span></ToggleGroupItem>
           </ToggleGroup>
         </CardContent>
       </Card>
@@ -267,11 +267,11 @@ export default function SettingsScreen({
 
       <Card className="settings-group">
         <CardHeader>
-          <CardTitle asChild><h2>Baby profile</h2></CardTitle>
-          <CardDescription>The details used to personalise your tracker.</CardDescription>
+          <CardTitle asChild><h2>{t("Baby profile")}</h2></CardTitle>
+          <CardDescription>{t("The details used to personalise your tracker.")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <ItemGroup className="settings-action-list" role="group" aria-label="Baby profile settings">
+          <ItemGroup className="settings-action-list" role="group" aria-label={t("Baby profile settings")}>
             <SettingsAction title={profile.name} description={feedingModeLabel} icon={<Baby />} onClick={() => { track("profile_opened"); onOpenProfile(); }} />
           </ItemGroup>
         </CardContent>
@@ -279,12 +279,9 @@ export default function SettingsScreen({
 
       <Card className="settings-group">
         <CardHeader>
-          <CardTitle asChild><h2>Every day</h2></CardTitle>
+          <CardTitle asChild><h2>{t("Every day")}</h2></CardTitle>
           <CardDescription>
-            Vitamin drops, a medicine — the things whose difficulty is remembering whether
-            they were done. They wait on Today until every one is ticked, then the card is
-            gone until tomorrow. Ticks reach the other parent, so nobody has to guess
-            whether it was already given.
+            {t("Vitamin drops, a medicine — the things whose difficulty is remembering whether they were done. They wait on Today until every one is ticked, then the card is gone until tomorrow. Ticks reach the other parent, so nobody has to guess whether it was already given.")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -299,23 +296,23 @@ export default function SettingsScreen({
 
       <Card className="settings-group reminder-settings">
         <CardHeader>
-          <CardTitle asChild><h2>Care reminders</h2></CardTitle>
-          <CardDescription>These now arrive with the app closed. Still a nudge and not an alarm — follow your baby’s cues and your clinician’s care plan.</CardDescription>
+          <CardTitle asChild><h2>{t("Care reminders")}</h2></CardTitle>
+          <CardDescription>{t("These now arrive with the app closed. Still a nudge and not an alarm — follow your baby’s cues and your clinician’s care plan.")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <ItemGroup role="group" aria-label="Care reminder settings">
+          <ItemGroup role="group" aria-label={t("Care reminder settings")}>
             <Item size="sm" className="reminder-row">
               <ItemMedia variant="icon" className="glyph-bottle"><Bell /></ItemMedia>
               <ItemContent>
-                <ItemTitle>Feed reminder</ItemTitle>
+                <ItemTitle>{t("Feed reminder")}</ItemTitle>
                 <ItemDescription id="feed-reminder-status">
                   {notificationPermission === "unsupported"
-                    ? "This browser can’t show notifications"
+                    ? t("This browser can’t show notifications")
                     : notificationPermission === "denied"
-                      ? "Blocked in browser settings"
+                      ? t("Blocked in browser settings")
                       : reminders.feedEnabled && feedReminderTargetAt && feedReminderTargetAt > minuteClock
-                        ? `Around ${formatTime(new Date(feedReminderTargetAt).toISOString())}, if this app is still open`
-                        : "Prompt after the next feed you log"}
+                        ? t("Around {time}, if this app is still open", { time: formatTime(new Date(feedReminderTargetAt).toISOString()) })
+                        : t("Prompt after the next feed you log")}
                 </ItemDescription>
               </ItemContent>
               <ItemActions>
@@ -323,7 +320,7 @@ export default function SettingsScreen({
                   checked={reminders.feedEnabled}
                   disabled={notificationPermission === "unsupported" || notificationPermission === "denied"}
                   onCheckedChange={(checked) => { track("feed_reminders_toggled", { enabled: checked }); void onFeedRemindersChange(checked); }}
-                  aria-label="Use feed reminders"
+                  aria-label={t("Use feed reminders")}
                   aria-describedby="feed-reminder-status"
                 />
               </ItemActions>
@@ -332,19 +329,19 @@ export default function SettingsScreen({
               <>
                 <ItemSeparator />
                 <div className="reminder-options">
-                  <span className="field-label">Remind after</span>
+                  <span className="field-label">{t("Remind after")}</span>
                   <ToggleGroup
                     type="single"
                     value={String(reminders.feedIntervalMinutes)}
                     className="segmented three-way"
-                    aria-label="Feed reminder interval"
+                    aria-label={t("Feed reminder interval")}
                     onValueChange={(value) => value && onFeedIntervalChange(Number(value))}
                   >
-                    <ToggleGroupItem value="120">2 hours</ToggleGroupItem>
-                    <ToggleGroupItem value="180">3 hours</ToggleGroupItem>
-                    <ToggleGroupItem value="240">4 hours</ToggleGroupItem>
+                    <ToggleGroupItem value="120">{t("2 hours")}</ToggleGroupItem>
+                    <ToggleGroupItem value="180">{t("3 hours")}</ToggleGroupItem>
+                    <ToggleGroupItem value="240">{t("4 hours")}</ToggleGroupItem>
                   </ToggleGroup>
-                  <p>Follow your baby’s cues and clinician’s care plan.</p>
+                  <p>{t("Follow your baby’s cues and clinician’s care plan.")}</p>
                 </div>
               </>
             )}
@@ -357,15 +354,15 @@ export default function SettingsScreen({
             <Item size="sm" className="reminder-row">
               <ItemMedia variant="icon" className="glyph-diaper"><Bell /></ItemMedia>
               <ItemContent>
-                <ItemTitle>Diaper reminder</ItemTitle>
+                <ItemTitle>{t("Diaper reminder")}</ItemTitle>
                 <ItemDescription id="diaper-reminder-status">
                   {notificationPermission === "unsupported"
-                    ? "This browser can’t show notifications"
+                    ? t("This browser can’t show notifications")
                     : notificationPermission === "denied"
-                      ? "Blocked in browser settings"
+                      ? t("Blocked in browser settings")
                       : reminders.diaperEnabled && diaperReminderTargetAt && diaperReminderTargetAt > minuteClock
-                        ? `Around ${formatTime(new Date(diaperReminderTargetAt).toISOString())}, if this app is still open`
-                        : "Prompt after the next change you log"}
+                        ? t("Around {time}, if this app is still open", { time: formatTime(new Date(diaperReminderTargetAt).toISOString()) })
+                        : t("Prompt after the next change you log")}
                 </ItemDescription>
               </ItemContent>
               <ItemActions>
@@ -373,7 +370,7 @@ export default function SettingsScreen({
                   checked={Boolean(reminders.diaperEnabled)}
                   disabled={notificationPermission === "unsupported" || notificationPermission === "denied"}
                   onCheckedChange={(checked) => { track("diaper_reminders_toggled", { enabled: checked }); void onDiaperRemindersChange(checked); }}
-                  aria-label="Use diaper reminders"
+                  aria-label={t("Use diaper reminders")}
                   aria-describedby="diaper-reminder-status"
                 />
               </ItemActions>
@@ -382,19 +379,19 @@ export default function SettingsScreen({
               <>
                 <ItemSeparator />
                 <div className="reminder-options">
-                  <span className="field-label">Remind after</span>
+                  <span className="field-label">{t("Remind after")}</span>
                   <ToggleGroup
                     type="single"
                     value={String(reminders.diaperIntervalMinutes ?? 120)}
                     className="segmented three-way"
-                    aria-label="Diaper reminder interval"
+                    aria-label={t("Diaper reminder interval")}
                     onValueChange={(value) => value && onDiaperIntervalChange(Number(value))}
                   >
-                    <ToggleGroupItem value="90">90 min</ToggleGroupItem>
-                    <ToggleGroupItem value="120">2 hours</ToggleGroupItem>
-                    <ToggleGroupItem value="180">3 hours</ToggleGroupItem>
+                    <ToggleGroupItem value="90">{t("90 min")}</ToggleGroupItem>
+                    <ToggleGroupItem value="120">{t("2 hours")}</ToggleGroupItem>
+                    <ToggleGroupItem value="180">{t("3 hours")}</ToggleGroupItem>
                   </ToggleGroup>
-                  <p>A nudge, not a schedule — check whenever your baby seems uncomfortable.</p>
+                  <p>{t("A nudge, not a schedule — check whenever your baby seems uncomfortable.")}</p>
                 </div>
               </>
             )}
@@ -412,25 +409,25 @@ export default function SettingsScreen({
 
       <Card className="settings-group">
         <CardHeader>
-          <CardTitle asChild><h2>Your data</h2></CardTitle>
-          <CardDescription>Portable backups you own and control.</CardDescription>
+          <CardTitle asChild><h2>{t("Your data")}</h2></CardTitle>
+          <CardDescription>{t("Portable backups you own and control.")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <ItemGroup className="settings-action-list" role="group" aria-label="Backup actions">
+          <ItemGroup className="settings-action-list" role="group" aria-label={t("Backup actions")}>
             <AppNews />
             <ItemSeparator />
-            <SettingsAction title="Share with partner" description="Sends your whole log as a file — their app merges it, nothing gets replaced" icon={<Share2 />} onClick={() => { track("data_shared"); onShare(); }} />
+            <SettingsAction title={t("Share with partner")} description={t("Sends your whole log as a file — their app merges it, nothing gets replaced")} icon={<Share2 />} onClick={() => { track("data_shared"); onShare(); }} />
             <ItemSeparator />
-            <SettingsAction title="Download backup" description="Saves a file with all your entries — keep it in a synced folder to be safe" icon={<Download />} onClick={() => { track("backup_downloaded"); onExport(); }} />
+            <SettingsAction title={t("Download backup")} description={t("Saves a file with all your entries — keep it in a synced folder to be safe")} icon={<Download />} onClick={() => { track("backup_downloaded"); onExport(); }} />
             <ItemSeparator />
-            <SettingsAction title="Restore a backup" description="Merges a backup file from any device" icon={<Upload />} onClick={() => { track("backup_restore_opened"); importRef.current?.click(); }} />
+            <SettingsAction title={t("Restore a backup")} description={t("Merges a backup file from any device")} icon={<Upload />} onClick={() => { track("backup_restore_opened"); importRef.current?.click(); }} />
             <ItemSeparator />
             {/* Asked for by a Greek dev on Reddit who wanted to hand it to
                 his brother with a newborn and found no way to. The share
                 sheet where it exists; a small dialog everywhere else. */}
             <SettingsAction
-              title="Tell another parent"
-              description="Share Numalog — free, no sign-up, works on any phone"
+              title={t("Tell another parent")}
+              description={t("Share Numalog — free, no sign-up, works on any phone")}
               icon={<Gift />}
               onClick={() => {
                 track("app_share_opened", { from: "settings" });
@@ -443,8 +440,8 @@ export default function SettingsScreen({
               <>
                 <ItemSeparator />
                 <SettingsAction
-                  title={`Bring a log from ${originLabel(handoffFrom)}`}
-                  description="Copies your entries across from the app's other web address — nothing is uploaded"
+                  title={t("Bring a log from {origin}", { origin: originLabel(handoffFrom) })}
+                  description={t("Copies your entries across from the app's other web address — nothing is uploaded")}
                   icon={<ArrowLeftRight />}
                   onClick={() => {
                     track("handoff_started");
@@ -456,8 +453,8 @@ export default function SettingsScreen({
             <ItemSeparator />
             <SettingsAction
               className="settings-action-danger"
-              title="Erase everything and start over"
-              description="Deletes every entry on this device — download a backup first"
+              title={t("Erase everything and start over")}
+              description={t("Deletes every entry on this device — download a backup first")}
               icon={<Trash2 />}
               onClick={() => { track("erase_all_opened"); onEraseAll(); }}
             />
@@ -468,10 +465,9 @@ export default function SettingsScreen({
 
       <Card className="settings-group">
         <CardHeader>
-          <CardTitle asChild><h2>Usage statistics</h2></CardTitle>
+          <CardTitle asChild><h2>{t("Usage statistics")}</h2></CardTitle>
           <CardDescription>
-            Anonymous page counts, so I can see which parts of the app get used. Never your
-            baby’s entries. You can change this whenever you like.
+            {t("Anonymous page counts, so I can see which parts of the app get used. Never your baby’s entries. You can change this whenever you like.")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -479,7 +475,7 @@ export default function SettingsScreen({
             type="single"
             value={consent ?? "denied"}
             className="filter-row"
-            aria-label="Usage statistics"
+            aria-label={t("Usage statistics")}
             onValueChange={(value) => {
               if (!value) return;
               saveConsent(value as ConsentChoice);
@@ -487,8 +483,8 @@ export default function SettingsScreen({
               track("consent_changed", { choice: value });
             }}
           >
-            <ToggleGroupItem value="granted">Allowed</ToggleGroupItem>
-            <ToggleGroupItem value="denied">Off</ToggleGroupItem>
+            <ToggleGroupItem value="granted">{t("Allowed")}</ToggleGroupItem>
+            <ToggleGroupItem value="denied">{t("Off")}</ToggleGroupItem>
           </ToggleGroup>
         </CardContent>
       </Card>
@@ -498,18 +494,16 @@ export default function SettingsScreen({
       <Card className="privacy-card">
         <span><ShieldCheck size={18} /></span>
         {familySync.pairing ? (
-          <div><strong>Shared with your family</strong><p>Entries are stored in your family’s space in the cloud so both phones stay in step. Anonymous usage statistics help improve the app.</p></div>
+          <div><strong>{t("Shared with your family")}</strong><p>{t("Entries are stored in your family’s space in the cloud so both phones stay in step. Anonymous usage statistics help improve the app.")}</p></div>
         ) : (
-          <div><strong>On this device</strong><p>Your baby’s entries stay in this browser until you turn on Family Sync. Anonymous usage statistics help improve the app.</p></div>
+          <div><strong>{t("On this device")}</strong><p>{t("Your baby’s entries stay in this browser until you turn on Family Sync. Anonymous usage statistics help improve the app.")}</p></div>
         )}
       </Card>
 
       <p className="version-note">Numalog · build {__APP_VERSION__}</p>
       {/* The liability line, plainly: this app tracks and informs, full stop. */}
       <p className="version-note">
-        Numalog is a tracking tool and general information — not a medical
-        device, and nothing in it is medical advice. For anything about your
-        baby, your paediatrician, midwife or health visitor comes first.
+        {t("Numalog is a tracking tool and general information — not a medical device, and nothing in it is medical advice. For anything about your baby, your paediatrician, midwife or health visitor comes first.")}
       </p>
 
       {shareOpen && (

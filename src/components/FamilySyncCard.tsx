@@ -12,6 +12,7 @@ import { inviteLink } from "../domain/familyPairing";
 import { FamilyDevice, InviteResult } from "../domain/syncTransport";
 import { formatTime } from "../domain/time";
 import { Profile } from "../domain/types";
+import { currentLocale, t } from "../i18n";
 
 // The Family Sync card: one phone creates the family and reads a six-digit
 // code to the other; the other joins with it. Paired state shows sync health
@@ -31,7 +32,7 @@ type FamilySyncCardProps = {
 
 type View = "closed" | "code" | "join";
 
-const deviceDayFormat = new Intl.DateTimeFormat("en", { month: "short", day: "numeric" });
+const deviceDayFormat = () => new Intl.DateTimeFormat(currentLocale(), { month: "short", day: "numeric" });
 
 /** The worker clips ISO stamps to "2026-08-30T11:42" (UTC) for last-seen and
     a bare date for joined. Re-inflate them and speak LOCAL time — a raw UTC
@@ -41,7 +42,7 @@ function humanStamp(raw: string): string {
   const iso = raw.length === 16 ? `${raw}:00Z` : raw.length === 10 ? `${raw}T12:00:00Z` : raw;
   const ms = Date.parse(iso);
   if (!Number.isFinite(ms)) return raw;
-  const day = deviceDayFormat.format(new Date(ms));
+  const day = deviceDayFormat().format(new Date(ms));
   return raw.length === 10 ? day : `${day}, ${formatTime(new Date(ms).toISOString())}`;
 }
 
@@ -50,18 +51,20 @@ function partnerJoinedLive(deviceCount: number | null): boolean {
 }
 
 function statusLine(phase: string, lastSyncAt: string | null, entryCount: number): string {
-  if (phase === "syncing") return "Syncing…";
-  if (phase === "offline") return "Offline — will catch up on its own when you're back";
-  if (phase === "revoked") return "Reconnect needed — ask the other phone for a fresh code";
+  if (phase === "syncing") return t("Syncing…");
+  if (phase === "offline") return t("Offline — will catch up on its own when you're back");
+  if (phase === "revoked") return t("Reconnect needed — ask the other phone for a fresh code");
   // The sentence a parent actually needs. Not sync jargon — the promise,
   // with the number that makes it concrete. "Backing up" rather than "all
   // safe": the count is this phone's, and its newest minutes may still be
   // riding the next push — a promise the next sync makes true is honest,
   // a completed one it hasn't made yet is not.
   if (lastSyncAt) {
-    return `Backing up ${entryCount} ${entryCount === 1 ? "entry" : "entries"} to the cloud · synced ${formatTime(lastSyncAt)}`;
+    return entryCount === 1
+      ? t("Backing up 1 entry to the cloud · synced {time}", { time: formatTime(lastSyncAt) })
+      : t("Backing up {n} entries to the cloud · synced {time}", { n: entryCount, time: formatTime(lastSyncAt) });
   }
-  return "Waiting for the first sync";
+  return t("Waiting for the first sync");
 }
 
 export function FamilySyncCard({
@@ -81,7 +84,7 @@ export function FamilySyncCard({
   const [busy, setBusy] = useState(false);
 
   const babyName = profile.name.trim();
-  const deviceLabel = babyName ? `${babyName}’s tracker` : "This phone";
+  const deviceLabel = babyName ? t("{name}’s tracker", { name: babyName }) : t("This phone");
 
   // Fetched once per pairing, and refreshed after a revocation so the list
   // never shows a phone that no longer holds a key. The unpaired case needs
@@ -116,8 +119,8 @@ export function FamilySyncCard({
 
   async function removeDevice(target: { deviceId: string } | { all: true }) {
     const confirmed = "all" in target
-      ? window.confirm("Sign out every other phone? They will each need a fresh invite code to come back.")
-      : window.confirm("Remove this phone from the family? It keeps its own data but stops syncing.");
+      ? window.confirm(t("Sign out every other phone? They will each need a fresh invite code to come back."))
+      : window.confirm(t("Remove this phone from the family? It keeps its own data but stops syncing."));
     if (!confirmed) return;
     track("device_revoked", { scope: "all" in target ? "all_others" : "one" });
     if (await revokeDevice(target)) setDevices(await listDevices());
@@ -164,7 +167,7 @@ export function FamilySyncCard({
   }
 
   function handleLeave() {
-    if (!window.confirm("Leave Family Sync? This phone keeps its data but stops syncing.")) return;
+    if (!window.confirm(t("Leave Family Sync? This phone keeps its data but stops syncing."))) return;
     track("family_left");
     setView("closed");
     setInvite(null);
@@ -177,8 +180,8 @@ export function FamilySyncCard({
         <CardTitle asChild><h2>Family Sync</h2></CardTitle>
         <CardDescription>
           {paired
-            ? "Both phones see the same log, automatically."
-            : "Right now your log lives on this phone only. Sync it to keep it safe in the cloud and share it with a partner."}
+            ? t("Both phones see the same log, automatically.")
+            : t("Right now your log lives on this phone only. Sync it to keep it safe in the cloud and share it with a partner.")}
         </CardDescription>
       </CardHeader>
       <CardContent className="family-card-content">
@@ -187,25 +190,23 @@ export function FamilySyncCard({
             code and the app pretended nothing happened. */}
         {paired && incomingCode && (
           <p className="join-error" role="alert">
-            This phone is already in a family, so the scanned code was not
-            used. To join the other family instead, leave this one below
-            first, then scan the code again.
+            {t("This phone is already in a family, so the scanned code was not used. To join the other family instead, leave this one below first, then scan the code again.")}
           </p>
         )}
         {!paired && view !== "join" && (
           <div className="family-actions">
             <Button variant="outline" className="log-quiet" disabled={busy} onClick={() => void handleCreate()}>
-              Create family
+              {t("Create family")}
             </Button>
             <Button variant="outline" disabled={busy} onClick={() => setView("join")}>
-              Join with a code
+              {t("Join with a code")}
             </Button>
           </div>
         )}
 
         {!paired && view === "join" && (
           <div className="family-join">
-            <label className="t-label" htmlFor="family-join-code">Code from the other phone</label>
+            <label className="t-label" htmlFor="family-join-code">{t("Code from the other phone")}</label>
             <div className="family-join-row">
               <InputGroup>
                 <InputGroupInput
@@ -224,30 +225,30 @@ export function FamilySyncCard({
                 disabled={busy || joinValue.length !== 6}
                 onClick={() => void handleJoin()}
               >
-                Join
+                {t("Join")}
               </Button>
             </div>
-            <Button variant="ghost" className="family-back" onClick={() => setView("closed")}>Back</Button>
+            <Button variant="ghost" className="family-back" onClick={() => setView("closed")}>{t("Back")}</Button>
           </div>
         )}
 
         {paired && (view === "code" || !partnerJoined) && invite && (
           <div className="family-code-view" aria-live="polite">
-            <p className="t-label">Scan this with the other phone</p>
+            <p className="t-label">{t("Scan this with the other phone")}</p>
             <div className="family-qr">
               <QrCode
                 value={inviteLink(window.location.origin, invite.code)}
-                label={`QR code containing the invite code ${invite.code.split("").join(" ")}`}
+                label={t("QR code containing the invite code {code}", { code: invite.code.split("").join(" ") })}
               />
             </div>
             <p className="t-meta family-qr-hint">
-              Open the camera on the other phone and point it here. No app to install.
+              {t("Open the camera on the other phone and point it here. No app to install.")}
             </p>
-            <p className="family-code-label t-label">Or type this code</p>
+            <p className="family-code-label t-label">{t("Or type this code")}</p>
             <p className="family-code figure">{invite.code}</p>
-            <p className="t-meta">Valid for 15 minutes · single use</p>
+            <p className="t-meta">{t("Valid for 15 minutes · single use")}</p>
             <p className="t-meta family-waiting">
-              {partnerJoined ? "Paired! Both phones are syncing." : "Waiting for the other phone…"}
+              {partnerJoined ? t("Paired! Both phones are syncing.") : t("Waiting for the other phone…")}
             </p>
             <div className="family-actions">
               {/* The other parent is at work, not across the table: the same
@@ -257,26 +258,28 @@ export function FamilySyncCard({
                 disabled={busy}
                 onClick={() => {
                   const link = inviteLink(window.location.origin, invite.code);
-                  const text = `Join ${babyName ? `${babyName}’s` : "our baby’s"} log in Numalog — open this on your phone, it works for 15 minutes: ${link}`;
+                  const text = babyName
+                    ? t("Join {name}’s log in Numalog — open this on your phone, it works for 15 minutes: {link}", { name: babyName, link })
+                    : t("Join our baby’s log in Numalog — open this on your phone, it works for 15 minutes: {link}", { link });
                   const canShare = typeof navigator.share === "function";
                   track("invite_link_sent", { via: canShare ? "native" : "copy" });
                   if (canShare) {
-                    void navigator.share({ title: "Join our baby’s log", text }).catch(() => undefined);
+                    void navigator.share({ title: t("Join our baby’s log"), text }).catch(() => undefined);
                   } else {
                     void navigator.clipboard?.writeText(text).then(
-                      () => toast("Invite copied — send it to the other phone."),
-                      () => toast(`Send the other phone this code: ${invite.code}`),
+                      () => toast(t("Invite copied — send it to the other phone.")),
+                      () => toast(t("Send the other phone this code: {code}", { code: invite.code })),
                     );
                   }
                 }}
               >
-                <Send size={15} /> Send the link
+                <Send size={15} /> {t("Send the link")}
               </Button>
               <Button variant="outline" disabled={busy} onClick={() => void handleNewCode()}>
-                <Copy size={15} /> New code
+                <Copy size={15} /> {t("New code")}
               </Button>
               {partnerJoined && (
-                <Button variant="ghost" onClick={() => { setView("closed"); setInvite(null); }}>Done</Button>
+                <Button variant="ghost" onClick={() => { setView("closed"); setInvite(null); }}>{t("Done")}</Button>
               )}
             </div>
           </div>
@@ -287,9 +290,9 @@ export function FamilySyncCard({
             <span className="family-status-icon"><Users size={18} /></span>
             <div className="family-status-copy">
               <strong>
-                Family Sync on
+                {t("Family Sync on")}
                 {status.deviceCount
-                  ? ` · ${status.deviceCount === 1 ? "just this phone" : `${status.deviceCount} phones`}`
+                  ? ` · ${status.deviceCount === 1 ? t("just this phone") : t("{n} phones", { n: status.deviceCount })}`
                   : ""}
               </strong>
               <small>{statusLine(status.phase, status.lastSyncAt, entryCount)}</small>
@@ -307,15 +310,15 @@ export function FamilySyncCard({
                   void familySync.syncNow().then((ok) => {
                     setBusy(false);
                     toast(ok
-                      ? "In step with the cloud — everything sent and received."
-                      : "Could not finish a full sync — check the connection and try again.");
+                      ? t("In step with the cloud — everything sent and received.")
+                      : t("Could not finish a full sync — check the connection and try again."));
                   });
                 }}
               >
-                Sync now
+                {t("Sync now")}
               </Button>
-              <Button variant="outline" disabled={busy} onClick={() => void handleNewCode()}>Show invite code</Button>
-              <Button variant="ghost" className="family-leave" onClick={handleLeave}>Leave family</Button>
+              <Button variant="outline" disabled={busy} onClick={() => void handleNewCode()}>{t("Show invite code")}</Button>
+              <Button variant="ghost" className="family-leave" onClick={handleLeave}>{t("Leave family")}</Button>
             </div>
           </div>
         )}
@@ -325,18 +328,18 @@ export function FamilySyncCard({
             the phone doing the leaving. */}
         {paired && devices && devices.length > 0 && (
           <div className="family-devices">
-            <p className="t-label">Phones in this family</p>
+            <p className="t-label">{t("Phones in this family")}</p>
             <ul className="family-device-list">
               {devices.map((device) => (
                 <li key={device.id}>
                   <span className="family-device-name">
-                    {device.label || "A phone"}
-                    {device.isThisDevice && <span className="family-device-you"> · this one</span>}
+                    {device.label || t("A phone")}
+                    {device.isThisDevice && <span className="family-device-you"> · {t("this one")}</span>}
                   </span>
                   <span className="family-device-meta">
                     {device.last_seen
-                      ? `last synced ${humanStamp(device.last_seen)}`
-                      : `joined ${humanStamp(device.joined)}`}
+                      ? t("last synced {when}", { when: humanStamp(device.last_seen) })
+                      : t("joined {when}", { when: humanStamp(device.joined) })}
                   </span>
                   {!device.isThisDevice && device.revocable > 0 && (
                     <Button
@@ -344,7 +347,7 @@ export function FamilySyncCard({
                       className="family-device-remove"
                       onClick={() => void removeDevice({ deviceId: device.id })}
                     >
-                      Remove
+                      {t("Remove")}
                     </Button>
                   )}
                 </li>
@@ -356,7 +359,7 @@ export function FamilySyncCard({
                 className="family-revoke-all"
                 onClick={() => void removeDevice({ all: true })}
               >
-                Lost a phone? Sign out all the others
+                {t("Lost a phone? Sign out all the others")}
               </Button>
             )}
           </div>

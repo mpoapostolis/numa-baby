@@ -8,6 +8,7 @@
 import { ShieldCheck } from "lucide-react";
 import { Button } from "./ui/button";
 import { BackupNudge as Nudge } from "../domain/backupNudge";
+import { t } from "../i18n";
 
 export function BackupNudgeCard({
   nudge,
@@ -23,12 +24,12 @@ export function BackupNudgeCard({
       <div className={`backup-nudge tone-${nudge.tone}`} role="status">
         <span className="backup-nudge-icon" aria-hidden="true"><ShieldCheck /></span>
         <div className="backup-nudge-copy">
-          <strong>{nudge.headline}</strong>
-          <small>{nudge.body}</small>
+          <strong>{t(nudge.headline, nudge.vars)}</strong>
+          <small>{t(nudge.body)}</small>
         </div>
         <div className="backup-nudge-actions">
-          <Button onClick={onBackup}>{nudge.action}</Button>
-          <Button variant="ghost" onClick={onDismiss}>Not now</Button>
+          <Button onClick={onBackup}>{t(nudge.action)}</Button>
+          <Button variant="ghost" onClick={onDismiss}>{t("Not now")}</Button>
         </div>
       </div>
     </div>

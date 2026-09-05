@@ -7,23 +7,23 @@
 
 import { Users, X } from "lucide-react";
 import { Button } from "./ui/button";
+import { t } from "../i18n";
 
 export function NightHelp({ name, onInvite, onDismiss }: { name: string; onInvite: () => void; onDismiss: () => void }) {
-  const who = name.trim() || "your baby";
+  const who = name.trim() || t("your baby");
   return (
     <section className="night-help" aria-labelledby="night-help-heading">
       <span className="action-icon" aria-hidden="true"><Users size={18} /></span>
       <div className="night-help-copy">
-        <h2 id="night-help-heading">You have done a few of these alone</h2>
+        <h2 id="night-help-heading">{t("You have done a few of these alone")}</h2>
         <p>
-          The other parent’s phone can hold the same log — so whoever wakes up
-          next already knows when {who} last fed, without asking you.
+          {t("The other parent’s phone can hold the same log — so whoever wakes up next already knows when {who} last fed, without asking you.", { who })}
         </p>
       </div>
       <div className="night-help-actions">
-        <Button onClick={onInvite}>Add their phone</Button>
-        <Button variant="ghost" aria-label="Not now" onClick={onDismiss}>
-          <X size={16} aria-hidden="true" /> Not now
+        <Button onClick={onInvite}>{t("Add their phone")}</Button>
+        <Button variant="ghost" aria-label={t("Not now")} onClick={onDismiss}>
+          <X size={16} aria-hidden="true" /> {t("Not now")}
         </Button>
       </div>
     </section>

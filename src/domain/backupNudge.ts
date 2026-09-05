@@ -42,6 +42,8 @@ export type BackupNudge = {
   body: string;
   /** The label for the action that resolves it. */
   action: string;
+  /** Values for {n}-style holes in headline/body, filled at render. */
+  vars?: Record<string, string | number>;
 };
 
 /** Below this there is nothing worth interrupting a new parent for. */
@@ -84,7 +86,8 @@ export function backupNudge(input: BackupInput, now: number): BackupNudge | null
 
   return {
     tone: "info",
-    headline: `${input.entries} entries, on this phone only`,
+    headline: "{n} entries, on this phone only",
+    vars: { n: input.entries },
     body:
       sinceBackup === null
         ? "There is no copy of them anywhere else. If this phone breaks or the browser is cleared, they go with it."
