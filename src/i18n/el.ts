@@ -679,6 +679,200 @@ const el: Record<string, string> = {
   "Joining…": "Είσοδος…",
   "Join the family": "Είσοδος στην οικογένεια",
   "Set this phone up on its own": "Ρύθμιση αυτού του κινητού μόνου του",
+  // ——— In-app browser escape & news ———
+  "You’re in {name}’s built-in browser.": "Είστε στο ενσωματωμένο πρόγραμμα περιήγησης του {name}.",
+  "It can’t install the app, and it keeps your entries inside {name} — open this in Safari or Chrome so your baby’s log is safe. Tap":
+    "Δεν μπορεί να εγκαταστήσει την εφαρμογή, και κρατά τις καταχωρίσεις σας μέσα στο {name} — ανοίξτε το στο Safari ή στο Chrome για να είναι ασφαλές το ημερολόγιο του μωρού σας. Πατήστε",
+  ", or copy the link:": ", ή αντιγράψτε τον σύνδεσμο:",
+  "Continue here anyway": "Συνέχεια εδώ ούτως ή άλλως",
+  "News & updates": "Νέα και ενημερώσεις",
+  "Built by two parents, evenings, between feeds — here is everything that has changed and why.":
+    "Φτιαγμένο από δύο γονείς, τα βράδια, ανάμεσα στα ταΐσματα — εδώ είναι όλα όσα άλλαξαν και γιατί.",
+  "A thank-you, before the list": "Ένα ευχαριστώ, πριν από τη λίστα",
+  "I made this app for my own daughter. I never expected that something I built for us would end up in so many families’ hands — and I want to thank every one of you who wrote to me. I read everything you send. Your messages are literally the list below: almost every fix and feature started as someone’s feedback.":
+    "Έφτιαξα αυτή την εφαρμογή για τη δική μου κόρη. Δεν περίμενα ποτέ ότι κάτι που έφτιαξα για εμάς θα κατέληγε στα χέρια τόσων οικογενειών — και θέλω να ευχαριστήσω τον καθένα σας που μου έγραψε. Διαβάζω ό,τι στέλνετε. Τα μηνύματά σας είναι κυριολεκτικά η λίστα από κάτω: σχεδόν κάθε διόρθωση και λειτουργία ξεκίνησε από το σχόλιο κάποιου.",
+  "I write the code alone, mostly while the baby sleeps, so some things take an evening or two — but nothing you report is ignored. If something is broken, missing, or just annoying, tap the little message bubble and tell me. It comes straight to me.":
+    "Γράφω τον κώδικα μόνος, κυρίως όσο κοιμάται το μωρό, οπότε κάποια πράγματα παίρνουν ένα δυο βράδια — αλλά τίποτα από όσα αναφέρετε δεν αγνοείται. Αν κάτι είναι χαλασμένο, λείπει, ή απλώς ενοχλεί, πατήστε το μικρό συννεφάκι μηνύματος και πείτε μου. Έρχεται κατευθείαν σε μένα.",
+  "The code may be mine, but nothing else here happens alone — half of every night, and half of our own family’s log, is her mum’s. And one rule above all: an app can help, but your paediatrician always comes first. — Apostolis":
+    "Ο κώδικας μπορεί να είναι δικός μου, αλλά τίποτα άλλο εδώ δεν γίνεται μόνο του — η μισή κάθε νύχτα, και το μισό ημερολόγιο της δικής μας οικογένειας, είναι της μαμάς της. Και ένας κανόνας πάνω από όλα: μια εφαρμογή μπορεί να βοηθήσει, αλλά ο παιδίατρός σας έρχεται πάντα πρώτος. — Αποστόλης",
+  "Latest": "Νεότερο",
+  // ——— Timeline screen ———
+  "The full picture": "Η πλήρης εικόνα",
+  "1 entry": "1 καταχώριση",
+  "{n} entries": "{n} καταχωρίσεις",
+  "Filter timeline": "Φιλτράρισμα ιστορικού",
+  "All": "Όλα",
+  "Show {what} logs": "Εμφάνιση καταχωρίσεων: {what}",
+  "Latest first": "Πρώτα τα πιο πρόσφατα",
+  "Open any log to correct its details": "Ανοίξτε οποιαδήποτε καταχώριση για να διορθώσετε τα στοιχεία της",
+  "Nothing logged yet — your day builds here from the Today screen.":
+    "Τίποτα καταγεγραμμένο ακόμη — η μέρα σας χτίζεται εδώ από την οθόνη Σήμερα.",
+  "No {what} entries yet.": "Καμία καταχώριση «{what}» ακόμη.",
+  "Show all entries": "Εμφάνιση όλων των καταχωρίσεων",
+  "Show more entries": "Εμφάνιση περισσότερων",
+  // ——— Insights screen ———
+  "Worth a phone call": "Αξίζει ένα τηλεφώνημα",
+  "Something to try": "Κάτι να δοκιμάσετε",
+  "This looks ordinary": "Αυτό δείχνει συνηθισμένο",
+  "Last 7 days": "Τελευταίες 7 ημέρες",
+  "What the log is telling you": "Τι σας λέει το ημερολόγιο",
+  "Summary for the paediatrician": "Σύνοψη για τον παιδίατρο",
+  "Share this week": "Μοιραστείτε την εβδομάδα",
+  "{name}’s week · {link}": "Η εβδομάδα του μωρού {name} · {link}",
+  "Card saved to your device": "Η κάρτα αποθηκεύτηκε στη συσκευή σας",
+  "Could not make the card on this phone": "Η κάρτα δεν μπόρεσε να φτιαχτεί σε αυτό το κινητό",
+  "Milk against weight": "Γάλα σε σχέση με το βάρος",
+  "At {weight}, the usual guide is about {vol} a day at most.": "Στα {weight}, ο συνήθης οδηγός είναι το πολύ περίπου {vol} την ημέρα.",
+  "At {weight}, the usual guide is about {range} a day.": "Στα {weight}, ο συνήθης οδηγός είναι περίπου {range} την ημέρα.",
+  "{ref}. Your typical day is {vol}, {where} the band.": "{ref}. Η τυπική σας μέρα είναι {vol}, {where} ζώνη.",
+  "Reference ceiling {vol} a day": "Οροφή αναφοράς {vol} την ημέρα",
+  "Reference band {low} to {high} a day": "Ζώνη αναφοράς {low} έως {high} την ημέρα",
+  "which is within": "που είναι μέσα στη",
+  "which is below": "που είναι κάτω από τη",
+  "which is above": "που είναι πάνω από τη",
+  "is your typical day — {where}.": "είναι η τυπική σας μέρα — {where}.",
+  "inside that range": "μέσα σε αυτό το εύρος",
+  "below it": "κάτω από αυτό",
+  "above it": "πάνω από αυτό",
+  "Capped at the {vol} a day AAP gives as the usual maximum, whatever the weight suggests.":
+    "Περιορισμένο στα {vol} την ημέρα που η AAP δίνει ως συνηθισμένο μέγιστο, ό,τι κι αν δείχνει το βάρος.",
+  "This counts bottles only, so any nursing sits outside it. Babies feed to appetite and a range is not a target — bring the number to your paediatrician rather than to a calculator.":
+    "Μετράει μόνο μπιμπερό, οπότε ο θηλασμός μένει απ’ έξω. Τα μωρά τρώνε με την όρεξή τους και ένα εύρος δεν είναι στόχος — πηγαίνετε τον αριθμό στον παιδίατρό σας, όχι σε αριθμομηχανή.",
+  "What your entries suggest": "Τι δείχνουν οι καταχωρίσεις σας",
+  "No data yet": "Χωρίς δεδομένα ακόμη",
+  "Typical feed gap": "Τυπικό κενό ταΐσματος",
+  "Feeds / day": "Ταΐσματα / ημέρα",
+  "Bottle total today": "Σύνολο μπιμπερό σήμερα",
+  "Latest weight": "Τελευταίο βάρος",
+  "a few more feeds": "μερικά ακόμη ταΐσματα",
+  "a day or two": "μια-δυο μέρες",
+  "a bottle today": "ένα μπιμπερό σήμερα",
+  "a weight": "ένα βάρος",
+  "and": "και",
+  "The dashes fill in on their own — they are waiting on {list}.": "Οι παύλες γεμίζουν μόνες τους — περιμένουν {list}.",
+  "Fig. 1 · Bottle volume": "Σχ. 1 · Ποσότητα μπιμπερό",
+  "Most bottle days total about {vol}.": "Οι περισσότερες μέρες με μπιμπερό φτάνουν συνολικά περίπου {vol}.",
+  "Bottle volume for the last seven days. Most bottle days total about {vol}. {days}.":
+    "Ποσότητα μπιμπερό για τις τελευταίες επτά ημέρες. Οι περισσότερες μέρες φτάνουν περίπου {vol}. {days}.",
+  "From 1 logged bottle · on this device": "Από 1 καταγεγραμμένο μπιμπερό · σε αυτή τη συσκευή",
+  "From {n} logged bottles · on this device": "Από {n} καταγεγραμμένα μπιμπερό · σε αυτή τη συσκευή",
+  "Fig. {n} · Feeding rhythm": "Σχ. {n} · Ρυθμός ταΐσματος",
+  "Feeds usually arrive about {gap} apart.": "Τα ταΐσματα έρχονται συνήθως με διαφορά περίπου {gap}.",
+  "Each day’s feeds on a 24-hour line.": "Τα ταΐσματα κάθε μέρας σε μια γραμμή 24 ωρών.",
+  "No feeds logged yet — the week’s rhythm will draw itself here.":
+    "Κανένα τάισμα ακόμη — ο ρυθμός της εβδομάδας θα σχεδιαστεί εδώ μόνος του.",
+  "{day}: no feeds logged": "{day}: κανένα καταγεγραμμένο τάισμα",
+  "{what} at {time}": "{what} στις {time}",
+  "From 1 logged feed · on this device": "Από 1 καταγεγραμμένο τάισμα · σε αυτή τη συσκευή",
+  "From {n} logged feeds · on this device": "Από {n} καταγεγραμμένα ταΐσματα · σε αυτή τη συσκευή",
+  "Useful, not judgmental.": "Χρήσιμο, όχι επικριτικό.",
+  "Numalog summarizes what you logged. It never scores your parenting or replaces medical advice.":
+    "Το Numalog συνοψίζει ό,τι καταγράψατε. Δεν βαθμολογεί ποτέ το πώς μεγαλώνετε το παιδί σας και δεν αντικαθιστά ιατρική συμβουλή.",
+
+  // ——— Insight cards (rules engine) ———
+  "That temperature is worth a phone call": "Αυτή η θερμοκρασία αξίζει ένα τηλεφώνημα",
+  "You logged {temp} °C. AAP's call-the-doctor threshold changes with age and is {threshold} °C for yours.":
+    "Καταγράψατε {temp} °C. Το όριο της AAP για «πάρτε τον γιατρό» αλλάζει με την ηλικία και για τη δική σας είναι {threshold} °C.",
+  "Call your paediatrician now, even if your baby otherwise seems fine. NHS lists 38 °C or more in a baby under 3 months as a reason to seek urgent help.":
+    "Πάρτε τον παιδίατρό σας τώρα, ακόμη κι αν το μωρό δείχνει κατά τα άλλα καλά. Το NHS αναφέρει τους 38 °C ή περισσότερο σε μωρό κάτω των 3 μηνών ως λόγο για επείγουσα βοήθεια.",
+  "Call your paediatrician today and describe how your baby is behaving, not just the number.":
+    "Πάρτε τον παιδίατρό σας σήμερα και περιγράψτε πώς συμπεριφέρεται το μωρό, όχι μόνο τον αριθμό.",
+  "A low temperature matters as much as a fever": "Μια χαμηλή θερμοκρασία μετράει όσο και ο πυρετός",
+  "You logged {temp} °C. NHS lists a temperature of 36 °C or below in a young baby alongside 38 °C or above as a reason to get urgent help.":
+    "Καταγράψατε {temp} °C. Το NHS αναφέρει θερμοκρασία 36 °C ή κάτω σε μικρό μωρό, μαζί με 38 °C ή πάνω, ως λόγο για επείγουσα βοήθεια.",
+  "Get urgent advice now — especially if your baby also feels cold to the touch, is sleepier than usual, or is not feeding.":
+    "Ζητήστε επείγουσα συμβουλή τώρα — ειδικά αν το μωρό είναι και κρύο στην αφή, πιο νυσταγμένο από το συνηθισμένο, ή δεν τρώει.",
+  "Only 1 wet nappy logged yesterday": "Μόνο 1 βρεγμένη πάνα καταγράφηκε χθες",
+  "Only {n} wet nappies logged yesterday": "Μόνο {n} βρεγμένες πάνες καταγράφηκαν χθες",
+  "AAP lists weeing only once or twice a day among the signs of serious dehydration. This counts what was logged — if changes went unrecorded, the real number is higher.":
+    "Η AAP αναφέρει το τσίσα μόνο μία ή δύο φορές την ημέρα ανάμεσα στα σημάδια σοβαρής αφυδάτωσης. Μετράει ό,τι καταγράφηκε — αν κάποιες αλλαγές δεν σημειώθηκαν, ο πραγματικός αριθμός είναι μεγαλύτερος.",
+  "Look at your baby rather than at this screen: dry mouth, no tears when crying, a sunken soft spot, unusual sleepiness. Then call your paediatrician today.":
+    "Κοιτάξτε το μωρό σας, όχι αυτή την οθόνη: στεγνό στόμα, κλάμα χωρίς δάκρυα, βαθουλωμένη πηγή, ασυνήθιστη υπνηλία. Και μετά πάρτε τον παιδίατρό σας σήμερα.",
+  "{n} wet nappies logged yesterday, against a floor of 6": "{n} βρεγμένες πάνες καταγράφηκαν χθες, με ελάχιστο όριο τις 6",
+  "After the first week, both AAP and NHS put at least 6 heavy wet nappies a day as the mark of a baby getting enough milk.":
+    "Μετά την πρώτη εβδομάδα, τόσο η AAP όσο και το NHS βάζουν τουλάχιστον 6 βαριές βρεγμένες πάνες την ημέρα ως σημάδι ότι το μωρό παίρνει αρκετό γάλα.",
+  "Watch today's nappies as they come. If the count is still under 6, ring your midwife, health visitor or paediatrician today.":
+    "Παρακολουθήστε τις σημερινές πάνες όπως έρχονται. Αν ο αριθμός μείνει κάτω από 6, πάρτε τη μαία ή τον παιδίατρό σας σήμερα.",
+  "Still under the first weight you logged": "Ακόμη κάτω από το πρώτο βάρος που καταγράψατε",
+  "You logged {first} g first and {last} g most recently. NHS: most babies are at, or above, their birthweight by 3 weeks.":
+    "Καταγράψατε {first} γρ. στην αρχή και {last} γρ. πιο πρόσφατα. NHS: τα περισσότερα μωρά είναι στο βάρος γέννησης, ή πάνω από αυτό, ως τις 3 εβδομάδες.",
+  "Home scales drift. Ask your midwife, health visitor or paediatrician to weigh your baby on theirs — do not change how you feed on the strength of this alone.":
+    "Οι ζυγαριές του σπιτιού ξεφεύγουν. Ζητήστε από τη μαία ή τον παιδίατρό σας να ζυγίσει το μωρό στη δική τους — μην αλλάξετε το τάισμα μόνο με βάση αυτό.",
+  "Weight gain looks slower than the usual range": "Η αύξηση βάρους δείχνει πιο αργή από το συνηθισμένο εύρος",
+  "About {gain} g a week between your last two weights, {span} days apart. AAP treats a baby not gaining steadily as a reason to get weighed properly.":
+    "Περίπου {gain} γρ. την εβδομάδα ανάμεσα στα δύο τελευταία βάρη, με διαφορά {span} ημερών. Η AAP θεωρεί ένα μωρό που δεν παίρνει σταθερά βάρος λόγο για σωστό ζύγισμα.",
+  "Ask your health visitor or paediatrician for a weigh-in on their scales before you change anything.":
+    "Ζητήστε ζύγισμα στη ζυγαριά του παιδιάτρου σας πριν αλλάξετε οτιδήποτε.",
+  "Three logged days with no poo": "Τρεις καταγεγραμμένες μέρες χωρίς κακά",
+  "NHS: from about the fourth day expect at least 2 soft yellow poos a day for the first few weeks. Long gaps become normal after about 6 weeks — your baby is not there yet.":
+    "NHS: από την τέταρτη μέρα περίπου περιμένετε τουλάχιστον 2 μαλακά κίτρινα κακά την ημέρα τις πρώτες εβδομάδες. Τα μεγάλα κενά γίνονται φυσιολογικά μετά τις 6 εβδομάδες περίπου — το μωρό σας δεν είναι ακόμη εκεί.",
+  "Ring your midwife, health visitor or GP today and mention the gap, and how feeds are going.":
+    "Πάρτε τη μαία ή τον γιατρό σας σήμερα και αναφέρετε το κενό, και πώς πάνε τα ταΐσματα.",
+  "{h} hours since the last logged feed": "{h} ώρες από το τελευταίο καταγεγραμμένο τάισμα",
+  "AAP: if a newborn sleeps longer than 4 to 5 hours in the first weeks and starts missing feeds, wake them and offer one.":
+    "AAP: αν ένα νεογέννητο κοιμάται πάνω από 4 με 5 ώρες τις πρώτες εβδομάδες και αρχίζει να χάνει ταΐσματα, ξυπνήστε το και προσφέρετε ένα.",
+  "If you fed and did not log it, add it and this card goes away.":
+    "Αν ταΐσατε και δεν το καταγράψατε, προσθέστε το και αυτή η κάρτα φεύγει.",
+  "{d} days since the last logged poo": "{d} μέρες από τα τελευταία καταγεγραμμένα κακά",
+  "AAP: 5 to 7 days between poos is not necessarily a problem in a baby who has been pooing normally and is feeding and growing well. Past that is worth a mention.":
+    "AAP: 5 έως 7 μέρες ανάμεσα στα κακά δεν είναι απαραίτητα πρόβλημα σε μωρό που τα έκανε κανονικά και τρώει και μεγαλώνει καλά. Πέρα από αυτό αξίζει μια αναφορά.",
+  "Mention it at your next check, or ring sooner if your baby seems in pain, or the poo when it comes is hard or bloody.":
+    "Αναφέρετέ το στο επόμενο ραντεβού, ή τηλεφωνήστε νωρίτερα αν το μωρό δείχνει να πονά, ή τα κακά όταν έρθουν είναι σκληρά ή με αίμα.",
+  "Bottle totals are running above the usual daily guide": "Τα σύνολα του μπιμπερό τρέχουν πάνω από τον συνήθη ημερήσιο οδηγό",
+  "Your median bottle day is about {vol}. AAP: babies generally do not need more than about {max} of formula in 24 hours.":
+    "Η διάμεση μέρα μπιμπερό σας είναι περίπου {vol}. AAP: τα μωρά γενικά δεν χρειάζονται πάνω από περίπου {max} φόρμουλα σε 24 ώρες.",
+  "Mention the daily total at your next appointment. Keep following fullness cues — never push the last of a bottle to hit or avoid a number.":
+    "Αναφέρετε το ημερήσιο σύνολο στο επόμενο ραντεβού. Συνεχίστε να ακολουθείτε τα σημάδια χορτασμού — μην πιέζετε ποτέ το τέλος του μπιμπερό για να πιάσετε ή να αποφύγετε έναν αριθμό.",
+  "Worth a pause halfway through the bottle": "Αξίζει μια παύση στη μέση του μπιμπερό",
+  "Your typical bottle is about {vol}. AAP suggests burping about every {low} to {high} rather than once at the end.":
+    "Το τυπικό σας μπιμπερό είναι περίπου {vol}. Η AAP προτείνει ρέψιμο περίπου κάθε {low} έως {high} αντί για μία φορά στο τέλος.",
+  "Try one pause halfway through the next bottle, and rotate the holds: on your shoulder, sitting on your lap, or face-down across your lap.":
+    "Δοκιμάστε μία παύση στη μέση του επόμενου μπιμπερό, και εναλλάξτε τις στάσεις: στον ώμο σας, καθιστό στα πόδια σας, ή μπρούμυτα πάνω στα πόδια σας.",
+  "Two or three wet nappies is what today should look like": "Δύο ή τρεις βρεγμένες πάνες είναι το αναμενόμενο για σήμερα",
+  "NHS: in the first 48 hours your baby is likely to have only 2 or 3 wet nappies.":
+    "NHS: στις πρώτες 48 ώρες το μωρό σας πιθανότατα θα έχει μόνο 2 ή 3 βρεγμένες πάνες.",
+  "Keep logging each one. From day 5 the count climbs sharply, and that ramp is what matters.":
+    "Συνεχίστε να καταγράφετε καθεμία. Από τη μέρα 5 ο αριθμός ανεβαίνει απότομα, και αυτή η άνοδος είναι που μετράει.",
+  "The nappy count climbs from about day 5": "Ο αριθμός στις πάνες ανεβαίνει από τη μέρα 5 περίπου",
+  "NHS: from day 5 onwards expect at least 6 heavy wet nappies every 24 hours, with the wee almost colourless or pale yellow.":
+    "NHS: από τη μέρα 5 και μετά περιμένετε τουλάχιστον 6 βαριές βρεγμένες πάνες κάθε 24 ώρες, με το τσίσα σχεδόν άχρωμο ή αχνοκίτρινο.",
+  "Nothing to change. Keep logging every nappy so the ramp is visible when your midwife asks.":
+    "Τίποτα προς αλλαγή. Συνεχίστε να καταγράφετε κάθε πάνα ώστε η άνοδος να φαίνεται όταν ρωτήσει η μαία.",
+  "Yesterday looks like a cluster-feeding day": "Η χθεσινή μοιάζει με μέρα πυκνών ταϊσμάτων",
+  "{n} feeds, against your usual {usual}. NHS: cluster feeding is very normal in the first 3 to 4 months and often comes with a growth spurt.":
+    "{n} ταΐσματα, με συνηθισμένο το {usual}. NHS: τα πυκνά ταΐσματα είναι πολύ φυσιολογικά τους πρώτους 3 με 4 μήνες και συχνά συνοδεύουν ένα άλμα ανάπτυξης.",
+  "Nothing to fix. Eat, drink, get comfortable and let the feeds come — it passes.":
+    "Τίποτα προς διόρθωση. Φάτε, πιείτε, βολευτείτε και αφήστε τα ταΐσματα να έρθουν — περνάει.",
+  "{d} days without a poo — normal at this age": "{d} μέρες χωρίς κακά — φυσιολογικό σε αυτή την ηλικία",
+  "NHS: after about 6 weeks a breastfed baby can go several days without one, and AAP agrees 5 to 7 days is not necessarily a problem when feeding and growing are fine.":
+    "NHS: μετά τις 6 εβδομάδες περίπου ένα θηλάζον μωρό μπορεί να περάσει αρκετές μέρες χωρίς κακά, και η AAP συμφωνεί ότι 5 έως 7 μέρες δεν είναι απαραίτητα πρόβλημα όταν το τάισμα και η ανάπτυξη πάνε καλά.",
+  "Nothing to do. Ring your GP or health visitor if your baby seems in pain, the poo when it comes is very hard or bloody, or the wet nappies drop off.":
+    "Τίποτα να κάνετε. Πάρτε τον γιατρό σας αν το μωρό δείχνει να πονά, τα κακά όταν έρθουν είναι πολύ σκληρά ή με αίμα, ή οι βρεγμένες πάνες λιγοστέψουν.",
+  "Weight is climbing at the usual rate": "Το βάρος ανεβαίνει με τον συνηθισμένο ρυθμό",
+  "About {gain} g a week between your last two weights. The typical band at this age is {min}–{max} g a week.":
+    "Περίπου {gain} γρ. την εβδομάδα ανάμεσα στα δύο τελευταία βάρη. Η τυπική ζώνη σε αυτή την ηλικία είναι {min}–{max} γρ. την εβδομάδα.",
+  "Nothing to do. Under 6 months, one weight a month is enough for this to stay meaningful.":
+    "Τίποτα να κάνετε. Κάτω από τους 6 μήνες, ένα βάρος τον μήνα αρκεί για να μένει αυτό ουσιαστικό.",
+  "That is a lot of feeds. It is also the normal number.": "Είναι πολλά ταΐσματα. Είναι επίσης ο φυσιολογικός αριθμός.",
+  "Your median is {n} feeds a day. AAP: breastfed newborns usually nurse about every 2 hours, so 10 to 12 in 24 hours is the norm and 8 is the minimum.":
+    "Η διάμεσός σας είναι {n} ταΐσματα την ημέρα. AAP: τα θηλάζοντα νεογέννητα τρώνε συνήθως κάθε 2 ώρες περίπου, οπότε 10 με 12 στο 24ωρο είναι ο κανόνας και 8 το ελάχιστο.",
+  "Nothing to change. Keep following the early cues — rooting, hands to the mouth, lip smacking. Crying is the late one.":
+    "Τίποτα προς αλλαγή. Συνεχίστε να ακολουθείτε τα πρώιμα σημάδια — ψάξιμο, χεράκια στο στόμα, πλατάγισμα χειλιών. Το κλάμα είναι το αργοπορημένο.",
+  "Feeds have eased off this week": "Τα ταΐσματα έχουν αραιώσει αυτή την εβδομάδα",
+  "About {recent} a day recently, against {earlier} before. Appetite moves around, and a settled week can look like this.":
+    "Περίπου {recent} την ημέρα πρόσφατα, έναντι {earlier} πριν. Η όρεξη μετακινείται, και μια ήρεμη εβδομάδα μπορεί να μοιάζει έτσι.",
+  "Worth watching alongside nappies and weight rather than on its own. If wet nappies drop too, or your baby seems harder to rouse for a feed, ring your health visitor.":
+    "Αξίζει παρακολούθηση μαζί με τις πάνες και το βάρος, όχι μόνο του. Αν πέσουν και οι βρεγμένες πάνες, ή το μωρό ξυπνά πιο δύσκολα για τάισμα, πάρτε τον γιατρό σας.",
+  "Fewer wet nappies than last week": "Λιγότερες βρεγμένες πάνες από την περασμένη εβδομάδα",
+  "About {recent} a day, from {earlier}. Still inside the usual range, so this is a note rather than a worry.":
+    "Περίπου {recent} την ημέρα, από {earlier}. Ακόμη μέσα στο συνηθισμένο εύρος, οπότε είναι σημείωση, όχι ανησυχία.",
+  "Keep offering feeds on cue. If it keeps falling and lands below six heavy wet nappies a day, that is the point to call.":
+    "Συνεχίστε να προσφέρετε ταΐσματα στα σημάδια. Αν συνεχίσει να πέφτει και φτάσει κάτω από έξι βαριές βρεγμένες πάνες την ημέρα, εκεί είναι το σημείο να τηλεφωνήσετε.",
+  "The longest stretch is getting longer": "Το μεγαλύτερο συνεχόμενο διάστημα μεγαλώνει",
+  "Best stretch is averaging {recent}, up from {earlier} the week before.":
+    "Το καλύτερο διάστημα είναι κατά μέσο όρο {recent}, από {earlier} την προηγούμενη εβδομάδα.",
+  "Nothing to do. Nights move backwards as often as forwards at this age, so this is worth noticing rather than counting on.":
+    "Τίποτα να κάνετε. Οι νύχτες πάνε πίσω όσο συχνά πάνε και μπροστά σε αυτή την ηλικία, οπότε αξίζει να το προσέξετε, όχι να βασιστείτε πάνω του.",
 };
 
 export default el;

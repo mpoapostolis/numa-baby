@@ -21,6 +21,7 @@ import { Button } from "../components/ui/button";
 import { AAP_FORMULA_AMOUNT, NHS_ENOUGH_MILK } from "../domain/sources";
 import { Activity, FeedingMode, Profile } from "../domain/types";
 import { ActivityStats } from "../hooks/useActivityStats";
+import { t } from "../i18n";
 
 type InsightsScreenProps = {
   stats: ActivityStats;
@@ -51,10 +52,10 @@ function InsightCard({ insight }: { insight: Insight }) {
         {insight.tone === "seek-care" ? <PhoneCall size={16} /> : <Sparkles size={16} />}
       </span>
       <div className="insight-copy">
-        <span className="t-label insight-tone">{TONE_LABEL[insight.tone]}</span>
-        <h3 className="insight-title">{insight.title}</h3>
-        <p className="insight-body">{insight.body}</p>
-        <p className="insight-advice">{insight.advice}</p>
+        <span className="t-label insight-tone">{t(TONE_LABEL[insight.tone])}</span>
+        <h3 className="insight-title">{t(insight.title, insight.vars)}</h3>
+        <p className="insight-body">{t(insight.body, insight.vars)}</p>
+        <p className="insight-advice">{t(insight.advice, insight.vars)}</p>
         <p className="insight-sources">
           {insight.sources.map((source) => (
             <a key={source.url} className="fact-source" href={source.url} onClick={() => track("source_opened", { name: source.name })} target="_blank" rel="noopener noreferrer">
@@ -142,7 +143,7 @@ export default function InsightsScreen({
   // "a, b and c" — an Oxford-comma-free list, because this is a sentence a
   // person reads, not a data dump.
   const listOf = (items: string[]) =>
-    items.length <= 1 ? items[0] : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+    items.length <= 1 ? items[0] : `${items.slice(0, -1).join(", ")} ${t("and")} ${items[items.length - 1]}`;
   // Fresh install: with nothing in any tile, the strip would lead with four
   // dashes — skip it and let the rhythm card's EmptyState lead instead.
   const hasSummaryData = Boolean(
@@ -154,18 +155,18 @@ export default function InsightsScreen({
   // dashes beside one number reads as a broken screen rather than a young one,
   // so when any tile is waiting the strip says what it is waiting FOR.
   const waitingFor = [
-    typicalGap ? null : "a few more feeds",
-    averageFeeds ? null : "a day or two",
+    typicalGap ? null : t("a few more feeds"),
+    averageFeeds ? null : t("a day or two"),
     // A breastfeeding-only family will rightly never log a bottle — promising
     // that dash "fills in on its own" would be a promise broken daily.
-    bottleMlToday > 0 || feedingMode === "breast" ? null : "a bottle today",
-    latestGrowth?.weightGrams ? null : "a weight",
+    bottleMlToday > 0 || feedingMode === "breast" ? null : t("a bottle today"),
+    latestGrowth?.weightGrams ? null : t("a weight"),
   ].filter(Boolean) as string[];
 
   const emptyTile = (
     <strong className="t-numeral is-empty">
       <span aria-hidden="true">—</span>
-      <span className="sr-only">No data yet</span>
+      <span className="sr-only">{t("No data yet")}</span>
     </strong>
   );
 
@@ -173,8 +174,8 @@ export default function InsightsScreen({
     <section className="screen insights-screen" aria-labelledby="insights-heading">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">Last 7 days</p>
-          <h1 id="insights-heading">What the log is telling you</h1>
+          <p className="eyebrow">{t("Last 7 days")}</p>
+          <h1 id="insights-heading">{t("What the log is telling you")}</h1>
         </div>
       </div>
 
@@ -187,7 +188,7 @@ export default function InsightsScreen({
         <div className="insight-actions">
           <Button variant="outline" className="visit-open" onClick={() => setVisitOpen(true)}>
             <Stethoscope size={16} aria-hidden="true" />
-            Summary for the paediatrician
+            {t("Summary for the paediatrician")}
           </Button>
           {/* The week as a picture for the grandparents' group chat — the
               numbers a parent is quietly proud of, with the app's name on it. */}
@@ -198,13 +199,13 @@ export default function InsightsScreen({
               onClick={() => {
                 track("week_shared");
                 void renderCard(weekCard(profile.name, weekly, units))
-                  .then((blob) => shareImage(blob, "numalog-week.png", `${profile.name.trim() || "Baby"}’s week · ${shareLink("week")}`))
-                  .then((outcome) => { if (outcome === "saved") toast("Card saved to your device"); })
-                  .catch(() => toast("Could not make the card on this phone"));
+                  .then((blob) => shareImage(blob, "numalog-week.png", t("{name}’s week · {link}", { name: profile.name.trim() || t("Baby"), link: shareLink("week") })))
+                  .then((outcome) => { if (outcome === "saved") toast(t("Card saved to your device")); })
+                  .catch(() => toast(t("Could not make the card on this phone")));
               }}
             >
               <Share2 size={16} aria-hidden="true" />
-              Share this week
+              {t("Share this week")}
             </Button>
           )}
         </div>
@@ -222,16 +223,15 @@ export default function InsightsScreen({
       {intake && (
         <figure className="chart-card intake-card">
           <figcaption>
-            <p className="t-label">Milk against weight</p>
+            <p className="t-label">{t("Milk against weight")}</p>
             <h2>
               {/* Past ~6.4 kg both ends of the 150-200 ml/kg rule hit the
                   daily ceiling and the range IS a single number. "960-960 ml"
                   is a bug wearing the voice of guidance; "about 960 ml" is
                   what the source actually says there. */}
-              At {formatWeight(intake.weightKg * 1_000, units)}, the usual guide is about{" "}
               {intake.lowMl === intake.highMl
-                ? `${formatVolume(intake.highMl, units)} a day at most.`
-                : `${units === "metric" ? `${intake.lowMl}–${intake.highMl} ml` : `${volumeParts(intake.lowMl, units).value}–${formatVolume(intake.highMl, units)}`} a day.`}
+                ? t("At {weight}, the usual guide is about {vol} a day at most.", { weight: formatWeight(intake.weightKg * 1_000, units), vol: formatVolume(intake.highMl, units) })
+                : t("At {weight}, the usual guide is about {range} a day.", { weight: formatWeight(intake.weightKg * 1_000, units), range: units === "metric" ? `${intake.lowMl}–${intake.highMl} ml` : `${volumeParts(intake.lowMl, units).value}–${formatVolume(intake.highMl, units)}` })}
             </h2>
           </figcaption>
 
@@ -240,11 +240,13 @@ export default function InsightsScreen({
           <div
             className="intake-bar"
             role="img"
-            aria-label={`${
-              intake.lowMl === intake.highMl
-                ? `Reference ceiling ${formatVolume(intake.highMl, units)} a day`
-                : `Reference band ${formatVolume(intake.lowMl, units)} to ${formatVolume(intake.highMl, units)} a day`
-            }. Your typical day is ${formatVolume(intake.typicalMl, units)}, which is ${intake.position} the band.`}
+            aria-label={t("{ref}. Your typical day is {vol}, {where} the band.", {
+              ref: intake.lowMl === intake.highMl
+                ? t("Reference ceiling {vol} a day", { vol: formatVolume(intake.highMl, units) })
+                : t("Reference band {low} to {high} a day", { low: formatVolume(intake.lowMl, units), high: formatVolume(intake.highMl, units) }),
+              vol: formatVolume(intake.typicalMl, units),
+              where: intake.position === "within" ? t("which is within") : intake.position === "below" ? t("which is below") : t("which is above"),
+            })}
           >
             {(() => {
               const span = Math.max(intake.highMl * 1.35, intake.typicalMl * 1.15);
@@ -268,18 +270,16 @@ export default function InsightsScreen({
 
           <p className="intake-reading">
             <strong className="figure">{volumeParts(intake.typicalMl, units).value}<span className="unit">{volumeParts(intake.typicalMl, units).unit}</span></strong>
-            <span> is your typical day — {intake.position === "within"
-              ? "inside that range"
-              : intake.position === "below" ? "below it" : "above it"}.</span>
+            <span> {t("is your typical day — {where}.", { where: intake.position === "within"
+              ? t("inside that range")
+              : intake.position === "below" ? t("below it") : t("above it") })}</span>
           </p>
 
           <p className="intake-caveat">
             {intake.cappedByCeiling
-              ? `Capped at the ${formatVolume(960, units)} a day AAP gives as the usual maximum, whatever the weight suggests. `
+              ? `${t("Capped at the {vol} a day AAP gives as the usual maximum, whatever the weight suggests.", { vol: formatVolume(960, units) })} `
               : ""}
-            This counts bottles only, so any nursing sits outside it. Babies feed to appetite and
-            a range is not a target — bring the number to your paediatrician rather than to a
-            calculator.
+            {t("This counts bottles only, so any nursing sits outside it. Babies feed to appetite and a range is not a target — bring the number to your paediatrician rather than to a calculator.")}
           </p>
 
           <p className="figure-source">
@@ -296,7 +296,7 @@ export default function InsightsScreen({
       )}
 
       {insights.length > 0 && (
-        <ul className="insight-deck" aria-label="What your entries suggest">
+        <ul className="insight-deck" aria-label={t("What your entries suggest")}>
           {insights.map((insight) => <InsightCard key={insight.id} insight={insight} />)}
         </ul>
       )}
@@ -309,7 +309,7 @@ export default function InsightsScreen({
             ) : (
               emptyTile
             )}
-            <span className="t-label">Typical feed gap</span>
+            <span className="t-label">{t("Typical feed gap")}</span>
           </div>
           <div>
             {averageFeeds ? (
@@ -317,7 +317,7 @@ export default function InsightsScreen({
             ) : (
               emptyTile
             )}
-            <span className="t-label">Feeds / day</span>
+            <span className="t-label">{t("Feeds / day")}</span>
           </div>
           <div>
             {bottleMlToday > 0 ? (
@@ -325,7 +325,7 @@ export default function InsightsScreen({
             ) : (
               emptyTile
             )}
-            <span className="t-label">Bottle total today</span>
+            <span className="t-label">{t("Bottle total today")}</span>
           </div>
           <div>
             {latestGrowth?.weightGrams ? (
@@ -336,14 +336,14 @@ export default function InsightsScreen({
             ) : (
               emptyTile
             )}
-            <span className="t-label">Latest weight</span>
+            <span className="t-label">{t("Latest weight")}</span>
           </div>
         </div>
       )}
 
       {hasSummaryData && waitingFor.length > 0 && (
         <p className="insight-waiting">
-          The dashes fill in on their own — they are waiting on {listOf(waitingFor)}.
+          {t("The dashes fill in on their own — they are waiting on {list}.", { list: listOf(waitingFor) })}
         </p>
       )}
 
@@ -351,16 +351,17 @@ export default function InsightsScreen({
         <figure className="chart-card insight-figure">
           <figcaption>
             <div>
-              <p className="t-label">Fig. 1 · Bottle volume</p>
-              <h2>Most bottle days total about {formatVolume(medianMl, units)}.</h2>
+              <p className="t-label">{t("Fig. 1 · Bottle volume")}</p>
+              <h2>{t("Most bottle days total about {vol}.", { vol: formatVolume(medianMl, units) })}</h2>
             </div>
           </figcaption>
           <div
             className="bar-chart"
             role="img"
-            aria-label={`Bottle volume for the last seven days. Most bottle days total about ${formatVolume(medianMl, units)}. ${weekly
-              .map((day) => `${formatShortDay(day.date)}: ${formatVolume(day.ml, units)}`)
-              .join(", ")}.`}
+            aria-label={t("Bottle volume for the last seven days. Most bottle days total about {vol}. {days}.", {
+              vol: formatVolume(medianMl, units),
+              days: weekly.map((day) => `${formatShortDay(day.date)}: ${formatVolume(day.ml, units)}`).join(", "),
+            })}
           >
             <div className="bar-plot" aria-hidden="true">
               <div className="bar-median" style={{ bottom: `${(medianMl / maxMl) * 100}%` }} />
@@ -388,7 +389,7 @@ export default function InsightsScreen({
             </div>
           </div>
           <p className="figure-source">
-            From {weekBottles} logged {weekBottles === 1 ? "bottle" : "bottles"} · on this device
+            {weekBottles === 1 ? t("From 1 logged bottle · on this device") : t("From {n} logged bottles · on this device", { n: weekBottles })}
           </p>
         </figure>
       )}
@@ -396,18 +397,18 @@ export default function InsightsScreen({
       <figure className={`chart-card rhythm-card insight-figure${showBottles ? "" : " is-solo"}`}>
         <figcaption>
           <div>
-            <p className="t-label">Fig. {showBottles ? 2 : 1} · Feeding rhythm</p>
+            <p className="t-label">{t("Fig. {n} · Feeding rhythm", { n: showBottles ? 2 : 1 })}</p>
             <h2>
               {typicalGap
-                ? `Feeds usually arrive about ${humanDuration(typicalGap)} apart.`
-                : "Each day’s feeds on a 24-hour line."}
+                ? t("Feeds usually arrive about {gap} apart.", { gap: humanDuration(typicalGap) })
+                : t("Each day’s feeds on a 24-hour line.")}
             </h2>
           </div>
         </figcaption>
         {weekFeeds === 0 ? (
           <EmptyState
             illustration={<LittleBottle size={80} />}
-            text="No feeds logged yet — the week’s rhythm will draw itself here."
+            text={t("No feeds logged yet — the week’s rhythm will draw itself here.")}
           />
         ) : (
         <div className="rhythm-plot">
@@ -420,9 +421,9 @@ export default function InsightsScreen({
                 role="img"
                 aria-label={
                   day.feeds.length === 0
-                    ? `${formatShortDay(day.date)}: no feeds logged`
+                    ? t("{day}: no feeds logged", { day: formatShortDay(day.date) })
                     : `${formatShortDay(day.date)}: ${day.feeds
-                        .map((feed) => `${activityTitle(feed)} at ${formatTime(feed.startedAt)}`)
+                        .map((feed) => t("{what} at {time}", { what: activityTitle(feed), time: formatTime(feed.startedAt) }))
                         .join(", ")}`
                 }
               >
@@ -436,7 +437,7 @@ export default function InsightsScreen({
                         className={`feed-dot ${feed.type === "nursing" ? "nursing-dot" : ""}`}
                         key={feed.id}
                         style={{ left: `clamp(5px, ${(hour / 24) * 100}%, calc(100% - 5px))` }}
-                        title={`${activityTitle(feed)} at ${formatTime(feed.startedAt)}`}
+                        title={t("{what} at {time}", { what: activityTitle(feed), time: formatTime(feed.startedAt) })}
                       />
                     );
                   })}
@@ -447,11 +448,11 @@ export default function InsightsScreen({
         </div>
         )}
         {weekFeeds > 0 && (
-          <div className="chart-legend"><span><i /> Bottle</span><span><i className="nursing-key" /> Nursing</span></div>
+          <div className="chart-legend"><span><i /> {t("Bottle")}</span><span><i className="nursing-key" /> {t("Nursing")}</span></div>
         )}
         {weekFeeds > 0 && (
           <p className="figure-source">
-            From {weekFeeds} logged {weekFeeds === 1 ? "feed" : "feeds"} · on this device
+            {weekFeeds === 1 ? t("From 1 logged feed · on this device") : t("From {n} logged feeds · on this device", { n: weekFeeds })}
           </p>
         )}
       </figure>
@@ -466,7 +467,7 @@ export default function InsightsScreen({
 
       <div className="gentle-note">
         <ShieldCheck size={20} />
-        <p><strong>Useful, not judgmental.</strong> Numalog summarizes what you logged. It never scores your parenting or replaces medical advice.</p>
+        <p><strong>{t("Useful, not judgmental.")}</strong> {t("Numalog summarizes what you logged. It never scores your parenting or replaces medical advice.")}</p>
       </div>
     </section>
   );

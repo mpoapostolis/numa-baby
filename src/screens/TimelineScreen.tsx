@@ -12,6 +12,15 @@ import { EmptyState } from "../components/EmptyState";
 import { bucketByDay, dayKey, summarizeDay } from "../domain/daySummary";
 import { formatTimelineDay } from "../domain/time";
 import { Activity, ActivityType } from "../domain/types";
+import { t } from "../i18n";
+
+/** The visible name of a filter chip — also what the aria-labels and the
+    empty state quote, so they always agree with the chip. */
+function filterLabel(option: "all" | ActivityType): string {
+  if (option === "all") return t("All");
+  if (option === "solid") return t("Solids");
+  return t(option[0].toUpperCase() + option.slice(1));
+}
 
 type TimelineScreenProps = {
   activities: Activity[];
@@ -73,17 +82,17 @@ export default function TimelineScreen({
     <section className="screen timeline-screen" aria-labelledby="timeline-heading">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">The full picture</p>
-          <h1 id="timeline-heading">Timeline</h1>
+          <p className="eyebrow">{t("The full picture")}</p>
+          <h1 id="timeline-heading">{t("Timeline")}</h1>
         </div>
-        <Badge variant="outline" className="count-badge"><span aria-live="polite">{filteredTimeline.length} {filteredTimeline.length === 1 ? "entry" : "entries"}</span></Badge>
+        <Badge variant="outline" className="count-badge"><span aria-live="polite">{filteredTimeline.length === 1 ? t("1 entry") : t("{n} entries", { n: filteredTimeline.length })}</span></Badge>
       </div>
       <div className="timeline-controls">
         <ToggleGroup
           type="single"
           value={filter}
           className="filter-row"
-          aria-label="Filter timeline"
+          aria-label={t("Filter timeline")}
           onValueChange={(value) => {
             if (!value) return;
             onFilterChange(value as "all" | ActivityType);
@@ -93,14 +102,14 @@ export default function TimelineScreen({
             <ToggleGroupItem
               key={option}
               value={option}
-              aria-label={`Show ${option} logs`}
+              aria-label={t("Show {what} logs", { what: filterLabel(option) })}
             >
-              {option === "all" ? "All" : option === "solid" ? "Solids" : option[0].toUpperCase() + option.slice(1)}
+              {filterLabel(option)}
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
         {filteredTimeline.length > 0 && (
-          <div className="timeline-date"><span>Latest first</span><span>Open any log to correct its details</span></div>
+          <div className="timeline-date"><span>{t("Latest first")}</span><span>{t("Open any log to correct its details")}</span></div>
         )}
       </div>
       <div className="timeline-groups">
@@ -108,7 +117,7 @@ export default function TimelineScreen({
           <section className="timeline-day" key={new Date(group[0].startedAt).toDateString()}>
             <div className="timeline-day-heading">
               <h2>{formatTimelineDay(group[0].startedAt)}</h2>
-              <span>{group.length} {group.length === 1 ? "entry" : "entries"}</span>
+              <span>{group.length === 1 ? t("1 entry") : t("{n} entries", { n: group.length })}</span>
             </div>
             {/* The day's totals sit below the sticky heading, not inside it —
                 a two-line sticky bar clips under the app header. */}
@@ -131,12 +140,12 @@ export default function TimelineScreen({
           <Card size="sm" className="activity-list timeline-list">
             <CardContent className="activity-list-content">
               {activities.length === 0 ? (
-                <EmptyState text="Nothing logged yet — your day builds here from the Today screen." />
+                <EmptyState text={t("Nothing logged yet — your day builds here from the Today screen.")} />
               ) : (
                 <>
-                  <EmptyState text={`No ${filter} entries yet.`} />
+                  <EmptyState text={t("No {what} entries yet.", { what: filterLabel(filter) })} />
                   <Button variant="outline" className="timeline-clear-filter" onClick={() => onFilterChange("all")}>
-                    Show all entries
+                    {t("Show all entries")}
                   </Button>
                 </>
               )}
@@ -146,7 +155,7 @@ export default function TimelineScreen({
       </div>
       {filteredTimeline.length > limit && (
         <Button variant="outline" className="load-more" onClick={onShowMore}>
-          Show more entries
+          {t("Show more entries")}
         </Button>
       )}
     </section>

@@ -261,7 +261,8 @@ describe("rules that read change rather than thresholds", () => {
     const found = insights.find((i) => i.id === "feeds-fewer-than-they-were");
     expect(found).toBeDefined();
     expect(found?.tone).toBe("suggest");
-    expect(found?.body).toContain("8.7");
+    // The number travels beside the sentence so translation can place it.
+    expect(found?.vars?.recent).toBe("8.7");
   });
 
   it("stays quiet when the drop is small", () => {
