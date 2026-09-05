@@ -21,6 +21,7 @@ const FEEDBACK_BLURB =
   "Something broken, missing, or just annoying? It goes straight to the person who built " +
   "this — two tired parents, evenings, between feeds.";
 import { track } from "../domain/analytics";
+import { t } from "../i18n";
 
 export function FeedbackBubble({ hidden }: { hidden: boolean }) {
   const [open, setOpen] = useState(false);
@@ -32,7 +33,7 @@ export function FeedbackBubble({ hidden }: { hidden: boolean }) {
       <button
         type="button"
         className="feedback-bubble"
-        aria-label="Send feedback to the developer"
+        aria-label={t("Send feedback to the developer")}
         onClick={() => {
           track("feedback_opened", { from: "bubble" });
           setOpen(true);
@@ -43,8 +44,8 @@ export function FeedbackBubble({ hidden }: { hidden: boolean }) {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="feedback-dialog">
-          <DialogTitle>Need anything?</DialogTitle>
-          <DialogDescription>{FEEDBACK_BLURB}</DialogDescription>
+          <DialogTitle>{t("Need anything?")}</DialogTitle>
+          <DialogDescription>{t(FEEDBACK_BLURB)}</DialogDescription>
           {/* Closing on send would hide the thank-you, so the dialog stays
               open and its own X closes it once that has been read. */}
           <Suspense fallback={null}>

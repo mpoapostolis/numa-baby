@@ -11,6 +11,7 @@ import { MessageCircle } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { track } from "../domain/analytics";
+import { t } from "../i18n";
 
 type State = "idle" | "sending" | "sent" | "failed";
 
@@ -49,24 +50,22 @@ export function FeedbackForm({ onSent }: { onSent?: () => void } = {}) {
     <>
       {state === "sent" ? (
           <p className="feedback-thanks" role="status">
-            Sent — thank you. Genuinely. Most messages arrive without a way to
-            reply, so the answer comes as an update: keep an eye on News
-            (the 📰 up top) to see what happened with yours.
+            {t("Sent — thank you. Genuinely. Most messages arrive without a way to reply, so the answer comes as an update: keep an eye on News (the 📰 up top) to see what happened with yours.")}
           </p>
       ) : (
         <form className="feedback-form" onSubmit={(event) => void submit(event)}>
-            <label className="sr-only" htmlFor="feedback-message">Your message</label>
+            <label className="sr-only" htmlFor="feedback-message">{t("Your message")}</label>
             <textarea
               id="feedback-message"
               className="feedback-input"
               rows={4}
               maxLength={2000}
-              placeholder="What would make this better?"
+              placeholder={t("What would make this better?")}
               value={message}
               onChange={(event) => setMessage(event.target.value)}
             />
             <label className="t-label" htmlFor="feedback-contact">
-              Email <span className="feedback-optional">only if you want a reply</span>
+              Email <span className="feedback-optional">{t("only if you want a reply")}</span>
             </label>
             <input
               id="feedback-contact"
@@ -74,18 +73,18 @@ export function FeedbackForm({ onSent }: { onSent?: () => void } = {}) {
               type="text"
               maxLength={200}
               autoComplete="email"
-              placeholder="optional"
+              placeholder={t("optional")}
               value={contact}
               onChange={(event) => setContact(event.target.value)}
             />
             {state === "failed" && (
               <p className="feedback-error" role="alert">
-                That did not send — you may be offline. Your text is still here, try again.
+                {t("That did not send — you may be offline. Your text is still here, try again.")}
               </p>
             )}
             <Button type="submit" disabled={message.trim().length < 3 || state === "sending"}>
               <MessageCircle size={16} aria-hidden="true" />
-              {state === "sending" ? "Sending…" : "Send"}
+              {state === "sending" ? t("Sending…") : t("Send")}
             </Button>
         </form>
       )}
@@ -101,8 +100,8 @@ export function FeedbackCard() {
   return (
     <Card className="settings-group">
       <CardHeader>
-        <CardTitle asChild><h2>Need anything?</h2></CardTitle>
-        <CardDescription>{FEEDBACK_BLURB}</CardDescription>
+        <CardTitle asChild><h2>{t("Need anything?")}</h2></CardTitle>
+        <CardDescription>{t(FEEDBACK_BLURB)}</CardDescription>
       </CardHeader>
       <CardContent>
         <FeedbackForm />

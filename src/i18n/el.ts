@@ -560,6 +560,125 @@ const el: Record<string, string> = {
   "joined {when}": "μπήκε {when}",
   "Remove": "Αφαίρεση",
   "Lost a phone? Sign out all the others": "Χάσατε κινητό; Αποσυνδέστε όλα τα άλλα",
+  // ——— Install guide ———
+  "Install the app": "Εγκατάσταση της εφαρμογής",
+  "Install on this phone": "Εγκατάσταση σε αυτό το κινητό",
+  "Home-screen icon, full screen, works offline — and your log is safest there":
+    "Εικονίδιο στην αρχική οθόνη, πλήρης οθόνη, λειτουργεί εκτός σύνδεσης — και το ημερολόγιό σας είναι πιο ασφαλές εκεί",
+  "First, leave the {name} browser": "Πρώτα, βγείτε από το πρόγραμμα του {name}",
+  "Two taps away": "Δύο πατήματα δρόμος",
+  "You’re inside {name}’s built-in browser, which can’t install apps — and worse, it keeps your entries inside its own storage. Tap the":
+    "Είστε μέσα στο ενσωματωμένο πρόγραμμα περιήγησης του {name}, που δεν μπορεί να εγκαταστήσει εφαρμογές — και το χειρότερο, κρατά τις καταχωρίσεις σας στον δικό του χώρο. Πατήστε το μενού",
+  "menu in the corner and choose": "στη γωνία και επιλέξτε",
+  "Open in browser": "Άνοιγμα σε πρόγραμμα περιήγησης",
+  "(or copy the link below and paste it into Safari or Chrome), then install from there.":
+    "(ή αντιγράψτε τον σύνδεσμο παρακάτω και επικολλήστε τον στο Safari ή στο Chrome), και εγκαταστήστε από εκεί.",
+  "Below, tap the Share button": "Κάτω, πατήστε το κουμπί Κοινοποίηση",
+  ", then choose": ", και μετά επιλέξτε",
+  "Add to Home Screen": "Προσθήκη στην αρχική οθόνη",
+  "That’s the whole install — full screen, offline, and your log is safest there.":
+    "Αυτή είναι όλη η εγκατάσταση — πλήρης οθόνη, εκτός σύνδεσης, και το ημερολόγιό σας πιο ασφαλές εκεί.",
+  "On an iPhone or iPad the install lives in Safari: open numalog.app there and tap the Share button":
+    "Σε iPhone ή iPad η εγκατάσταση γίνεται από το Safari: ανοίξτε εκεί το numalog.app και πατήστε το κουμπί Κοινοποίηση",
+  ", then": ", και μετά",
+  "Open your browser’s menu and look for": "Ανοίξτε το μενού του προγράμματος περιήγησης και ψάξτε για",
+  "Install app": "Εγκατάσταση εφαρμογής",
+  "or": "ή",
+  "Once installed it opens full screen, works offline, and your log is safest there.":
+    "Μετά την εγκατάσταση ανοίγει σε πλήρη οθόνη, λειτουργεί εκτός σύνδεσης, και το ημερολόγιό σας είναι πιο ασφαλές εκεί.",
+  "Link copied — paste it in Safari or Chrome": "Ο σύνδεσμος αντιγράφηκε — επικολλήστε τον στο Safari ή στο Chrome",
+  "Copy the app’s link": "Αντιγραφή του συνδέσμου της εφαρμογής",
+
+  // ——— Feedback ———
+  "Need anything?": "Χρειάζεστε κάτι;",
+  "Something broken, missing, or just annoying? It goes straight to the person who built this — two tired parents, evenings, between feeds.":
+    "Κάτι χαλασμένο, κάτι που λείπει, ή απλώς κάτι ενοχλητικό; Πάει κατευθείαν στον άνθρωπο που το έφτιαξε — δύο κουρασμένοι γονείς, τα βράδια, ανάμεσα στα ταΐσματα.",
+  "Sent — thank you. Genuinely. Most messages arrive without a way to reply, so the answer comes as an update: keep an eye on News (the 📰 up top) to see what happened with yours.":
+    "Στάλθηκε — ευχαριστώ. Ειλικρινά. Τα περισσότερα μηνύματα φτάνουν χωρίς τρόπο απάντησης, οπότε η απάντηση έρχεται ως ενημέρωση: ρίχνετε μια ματιά στα Νέα (το 📰 πάνω) για να δείτε τι έγινε με το δικό σας.",
+  "Your message": "Το μήνυμά σας",
+  "What would make this better?": "Τι θα το έκανε καλύτερο;",
+  "only if you want a reply": "μόνο αν θέλετε απάντηση",
+  "optional": "προαιρετικό",
+  "That did not send — you may be offline. Your text is still here, try again.":
+    "Δεν στάλθηκε — ίσως είστε εκτός σύνδεσης. Το κείμενό σας είναι ακόμη εδώ, δοκιμάστε ξανά.",
+  "Sending…": "Αποστολή…",
+  "Send": "Αποστολή",
+  "Send feedback to the developer": "Στείλτε σχόλια στον δημιουργό",
+
+  // ——— Tell another parent ———
+  "A calm, free baby tracker — no account, no ads, works offline.":
+    "Ένα ήρεμο, δωρεάν ημερολόγιο μωρού — χωρίς λογαριασμό, χωρίς διαφημίσεις, λειτουργεί εκτός σύνδεσης.",
+  "A baby tracker you might like": "Ένα ημερολόγιο μωρού που ίσως σας αρέσει",
+  "Numalog is free, needs no account and works on any phone — send it to someone in the thick of it.":
+    "Το Numalog είναι δωρεάν, δεν χρειάζεται λογαριασμό και παίζει σε κάθε κινητό — στείλτε το σε κάποιον που είναι στα βαθιά.",
+  "Link copied — send it however you like.": "Ο σύνδεσμος αντιγράφηκε — στείλτε τον όπως θέλετε.",
+  "numalog.app — that's the whole link.": "numalog.app — αυτός είναι όλος ο σύνδεσμος.",
+  "Copy link": "Αντιγραφή συνδέσμου",
+  "More apps…": "Περισσότερες εφαρμογές…",
+  // ——— Protect & restore (Google / email) ———
+  "You’re offline — {what} needs the internet. Your entries are safe on this phone meanwhile; this will wake up by itself when you’re back.":
+    "Είστε εκτός σύνδεσης — {what} χρειάζεται ίντερνετ. Οι καταχωρίσεις σας είναι ασφαλείς σε αυτό το κινητό στο μεταξύ· θα ξυπνήσει μόνο του όταν επιστρέψετε.",
+  "protecting your log": "η προστασία του ημερολογίου σας",
+  "restoring": "η επαναφορά",
+  "Google’s sign-in could not load — an ad blocker or offline moment, probably. The email link below works regardless, and so does a backup file.":
+    "Η σύνδεση της Google δεν φόρτωσε — μάλλον ad blocker ή στιγμή εκτός σύνδεσης. Ο σύνδεσμος μέσω email παρακάτω δουλεύει έτσι κι αλλιώς, όπως και ένα αρχείο αντιγράφου.",
+  "Check your inbox — the link works once and expires in 15 minutes.":
+    "Δείτε τα εισερχόμενά σας — ο σύνδεσμος δουλεύει μία φορά και λήγει σε 15 λεπτά.",
+  "Email address": "Διεύθυνση email",
+  "Protected — a lost phone can be recovered with": "Προστατευμένο — ένα χαμένο κινητό μπορεί να ανακτηθεί με το",
+  "Last time you used": "Την τελευταία φορά χρησιμοποιήσατε το",
+  "…or with any email address:": "…ή με οποιαδήποτε διεύθυνση email:",
+  "Send link": "Αποστολή συνδέσμου",
+  "Protect my log": "Προστασία του ημερολογίου μου",
+  "One tap guards your whole log: a lost or wiped phone can get everything back. Works with Google or any email address — and nothing from your log is ever shared with anyone. The guard is optional and removable.":
+    "Ένα πάτημα προστατεύει όλο το ημερολόγιο: ένα χαμένο ή σβησμένο κινητό μπορεί να τα πάρει όλα πίσω. Δουλεύει με Google ή με οποιοδήποτε email — και τίποτα από το ημερολόγιό σας δεν κοινοποιείται ποτέ σε κανέναν. Η προστασία είναι προαιρετική και αφαιρείται.",
+  "This phone has 1 entry of its own": "Αυτό το κινητό έχει 1 δική του καταχώριση",
+  "This phone has {n} entries of its own": "Αυτό το κινητό έχει {n} δικές του καταχωρίσεις",
+  "Your account’s log lives in the cloud. Choose what happens to the entries on this phone — nothing in the cloud is deleted either way.":
+    "Το ημερολόγιο του λογαριασμού σας ζει στο cloud. Διαλέξτε τι θα γίνει με τις καταχωρίσεις αυτού του κινητού — τίποτα στο cloud δεν διαγράφεται έτσι κι αλλιώς.",
+  "Merge them into my cloud log": "Συγχώνευση με το ημερολόγιο στο cloud",
+  "Take the cloud log only — discard these": "Μόνο το ημερολόγιο του cloud — απόρριψη αυτών",
+  "No log is protected by that Google account — check which address you used, or restore a backup file instead.":
+    "Κανένα ημερολόγιο δεν προστατεύεται από αυτόν τον λογαριασμό Google — ελέγξτε ποια διεύθυνση χρησιμοποιήσατε, ή επαναφέρετε ένα αρχείο αντιγράφου.",
+  "Restore with Google or email": "Επαναφορά με Google ή email",
+  "Email me a link": "Στείλτε μου σύνδεσμο",
+  "If this address protects a log, the link is on its way — check your inbox. It works once and expires in 15 minutes.":
+    "Αν αυτή η διεύθυνση προστατεύει ένα ημερολόγιο, ο σύνδεσμος είναι καθ’ οδόν — δείτε τα εισερχόμενα. Δουλεύει μία φορά και λήγει σε 15 λεπτά.",
+  "Could not reach the server — check your connection and try again.":
+    "Δεν ήταν δυνατή η επικοινωνία με τον διακομιστή — ελέγξτε τη σύνδεση και δοκιμάστε ξανά.",
+  // ——— Protect intro, recovery link, join screen ———
+  "Keep the log safe from day one": "Κρατήστε το ημερολόγιο ασφαλές από την πρώτη μέρα",
+  "Your log can live in the cloud now": "Το ημερολόγιό σας μπορεί πλέον να ζει στο cloud",
+  "Everything you log stays on this phone. If you like, sign in once with Google or any email and a new phone can get it all back — optional, free, removable, and nothing from your log is ever shared with anyone.":
+    "Ό,τι καταγράφετε μένει σε αυτό το κινητό. Αν θέλετε, συνδεθείτε μία φορά με Google ή με οποιοδήποτε email και ένα νέο κινητό μπορεί να τα πάρει όλα πίσω — προαιρετικό, δωρεάν, αφαιρείται, και τίποτα από το ημερολόγιό σας δεν κοινοποιείται ποτέ σε κανέναν.",
+  "Until today, everything lived only on this phone — a lost or wiped phone meant a lost history. Now, if you want, your log can also be protected in the cloud: sign in once with Google or any email, and any future phone can get everything back. Optional, free, removable — and nothing from your log is ever shared with anyone.":
+    "Μέχρι σήμερα, όλα ζούσαν μόνο σε αυτό το κινητό — ένα χαμένο ή σβησμένο κινητό σήμαινε χαμένη ιστορία. Τώρα, αν θέλετε, το ημερολόγιό σας μπορεί να προστατεύεται και στο cloud: συνδεθείτε μία φορά με Google ή με οποιοδήποτε email, και κάθε μελλοντικό κινητό μπορεί να τα πάρει όλα πίσω. Προαιρετικό, δωρεάν, αφαιρείται — και τίποτα από το ημερολόγιό σας δεν κοινοποιείται ποτέ σε κανέναν.",
+  "Two phones, one log: add the other parent and neither of you has to ask when the last feed was.":
+    "Δύο κινητά, ένα ημερολόγιο: προσθέστε τον άλλο γονιό και κανείς σας δεν χρειάζεται να ρωτά πότε ήταν το τελευταίο τάισμα.",
+  "Add the other parent’s phone": "Προσθήκη του κινητού του άλλου γονιού",
+  "Maybe later — it lives in Settings": "Ίσως αργότερα — υπάρχει στις Ρυθμίσεις",
+  "Restore your log on this phone?": "Επαναφορά του ημερολογίου σας σε αυτό το κινητό;",
+  "Your recovery link brings your cloud log onto this phone. Nothing happens until you tap Restore — if this isn’t your phone, just close this.":
+    "Ο σύνδεσμος ανάκτησης φέρνει το ημερολόγιό σας από το cloud σε αυτό το κινητό. Τίποτα δεν γίνεται μέχρι να πατήσετε Επαναφορά — αν αυτό δεν είναι το κινητό σας, απλώς κλείστε το.",
+  "Restore my log here": "Επαναφορά του ημερολογίου μου εδώ",
+  "Cancel — the link stays unused": "Άκυρο — ο σύνδεσμος μένει αχρησιμοποίητος",
+  "Restore here? This phone has 1 entry of its own": "Επαναφορά εδώ; Αυτό το κινητό έχει 1 δική του καταχώριση",
+  "Restore here? This phone has {n} entries of its own": "Επαναφορά εδώ; Αυτό το κινητό έχει {n} δικές του καταχωρίσεις",
+  "Your recovery link brings your cloud log onto this phone. Choose what happens to the entries already here — nothing in the cloud is deleted either way.":
+    "Ο σύνδεσμος ανάκτησης φέρνει το ημερολόγιό σας από το cloud σε αυτό το κινητό. Διαλέξτε τι θα γίνει με τις καταχωρίσεις που είναι ήδη εδώ — τίποτα στο cloud δεν διαγράφεται έτσι κι αλλιώς.",
+  "Invite scanned": "Η πρόσκληση σαρώθηκε",
+  "Join your family log": "Μπείτε στο οικογενειακό σας ημερολόγιο",
+  "This phone will share one log with the phone that showed you the code — every feed, diaper and note, on both.":
+    "Αυτό το κινητό θα μοιράζεται ένα ημερολόγιο με το κινητό που σας έδειξε τον κωδικό — κάθε τάισμα, πάνα και σημείωση, και στα δύο.",
+  "The 1 entry already on this phone will be merged into the family log — nothing is deleted.":
+    "Η 1 καταχώριση που είναι ήδη σε αυτό το κινητό θα συγχωνευτεί στο οικογενειακό ημερολόγιο — τίποτα δεν διαγράφεται.",
+  "The {n} entries already on this phone will be merged into the family log — nothing is deleted.":
+    "Οι {n} καταχωρίσεις που είναι ήδη σε αυτό το κινητό θα συγχωνευτούν στο οικογενειακό ημερολόγιο — τίποτα δεν διαγράφεται.",
+  "The join did not go through — the code may have expired (codes from a partner’s phone last 15 minutes and work once), or this phone may be offline. Nothing changed; try again or ask for a fresh code.":
+    "Η είσοδος δεν ολοκληρώθηκε — ο κωδικός μπορεί να έληξε (οι κωδικοί από το κινητό του συντρόφου ισχύουν 15 λεπτά και δουλεύουν μία φορά), ή αυτό το κινητό μπορεί να είναι εκτός σύνδεσης. Τίποτα δεν άλλαξε· δοκιμάστε ξανά ή ζητήστε νέο κωδικό.",
+  "Joining…": "Είσοδος…",
+  "Join the family": "Είσοδος στην οικογένεια",
+  "Set this phone up on its own": "Ρύθμιση αυτού του κινητού μόνου του",
 };
 
 export default el;

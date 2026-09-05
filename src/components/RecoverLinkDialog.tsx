@@ -14,6 +14,7 @@ import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle } from "./ui/dialog";
 import { track } from "../domain/analytics";
 import { FamilySync } from "../hooks/useFamilySync";
+import { t } from "../i18n";
 
 export default function RecoverLinkDialog({
   token,
@@ -32,7 +33,7 @@ export default function RecoverLinkDialog({
 
   async function redeem(discardLocal: boolean) {
     setBusy(true);
-    const outcome = await familySync.emailRedeem(token, "This phone", { discardLocal });
+    const outcome = await familySync.emailRedeem(token, t("This phone"), { discardLocal });
     track(count === 0 ? "magic_link_redeemed" : "recover_link_on_data_phone", { outcome: outcome ?? "failed", discardLocal });
     setBusy(false);
     // Success or failure, the moment is over: success pulls the log in
@@ -52,17 +53,16 @@ export default function RecoverLinkDialog({
     return (
       <Dialog open onOpenChange={(next) => { if (!next && !busy) onClosed(); }}>
         <DialogContent className="merge-choice" onOpenAutoFocus={(event) => event.preventDefault()}>
-          <DialogTitle>Restore your log on this phone?</DialogTitle>
+          <DialogTitle>{t("Restore your log on this phone?")}</DialogTitle>
           <DialogDescription>
-            Your recovery link brings your cloud log onto this phone. Nothing
-            happens until you tap Restore — if this isn’t your phone, just close this.
+            {t("Your recovery link brings your cloud log onto this phone. Nothing happens until you tap Restore — if this isn’t your phone, just close this.")}
           </DialogDescription>
           <DialogFooter className="merge-choice-actions">
             <Button disabled={busy} onClick={() => void redeem(false)}>
-              Restore my log here
+              {t("Restore my log here")}
             </Button>
             <Button variant="ghost" disabled={busy} onClick={onClosed}>
-              Cancel — the link stays unused
+              {t("Cancel — the link stays unused")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -73,21 +73,19 @@ export default function RecoverLinkDialog({
   return (
     <Dialog open onOpenChange={(next) => { if (!next && !busy) onClosed(); }}>
       <DialogContent className="merge-choice" onOpenAutoFocus={(event) => event.preventDefault()}>
-        <DialogTitle>Restore here? This phone has {count} {count === 1 ? "entry" : "entries"} of its own</DialogTitle>
+        <DialogTitle>{count === 1 ? t("Restore here? This phone has 1 entry of its own") : t("Restore here? This phone has {n} entries of its own", { n: count })}</DialogTitle>
         <DialogDescription>
-          Your recovery link brings your cloud log onto this phone. Choose what
-          happens to the entries already here — nothing in the cloud is deleted
-          either way.
+          {t("Your recovery link brings your cloud log onto this phone. Choose what happens to the entries already here — nothing in the cloud is deleted either way.")}
         </DialogDescription>
         <DialogFooter className="merge-choice-actions">
           <Button disabled={busy} onClick={() => void redeem(false)}>
-            Merge them into my cloud log
+            {t("Merge them into my cloud log")}
           </Button>
           <Button variant="outline" disabled={busy} onClick={() => void redeem(true)}>
-            Take the cloud log only — discard these
+            {t("Take the cloud log only — discard these")}
           </Button>
           <Button variant="ghost" disabled={busy} onClick={onClosed}>
-            Cancel — the link stays unused
+            {t("Cancel — the link stays unused")}
           </Button>
         </DialogFooter>
       </DialogContent>

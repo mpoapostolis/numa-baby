@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dial
 import { ProtectWithGoogle } from "./GoogleRecovery";
 import { track } from "../domain/analytics";
 import { FamilySync } from "../hooks/useFamilySync";
+import { t } from "../i18n";
 
 const SEEN_KEY = "numalog-protect-intro-v1";
 
@@ -97,24 +98,11 @@ export function ProtectIntro({
           error before anyone has typed a thing. */}
       <DialogContent className="protect-intro" onOpenAutoFocus={(event) => event.preventDefault()}>
         <span className="protect-intro-icon" aria-hidden="true"><CloudUpload /></span>
-        <DialogTitle>{fresh ? "Keep the log safe from day one" : "Your log can live in the cloud now"}</DialogTitle>
+        <DialogTitle>{fresh ? t("Keep the log safe from day one") : t("Your log can live in the cloud now")}</DialogTitle>
         <DialogDescription>
-          {fresh ? (
-            <>
-              Everything you log stays on this phone. If you like, sign in once
-              with Google or any email and a new phone can get it all back —
-              optional, free, removable, and nothing from your log is ever
-              shared with anyone.
-            </>
-          ) : (
-            <>
-              Until today, everything lived only on this phone — a lost or wiped
-              phone meant a lost history. Now, if you want, your log can also be
-              protected in the cloud: sign in once with Google or any email, and
-              any future phone can get everything back. Optional, free, removable —
-              and nothing from your log is ever shared with anyone.
-            </>
-          )}
+          {fresh
+            ? t("Everything you log stays on this phone. If you like, sign in once with Google or any email and a new phone can get it all back — optional, free, removable, and nothing from your log is ever shared with anyone.")
+            : t("Until today, everything lived only on this phone — a lost or wiped phone meant a lost history. Now, if you want, your log can also be protected in the cloud: sign in once with Google or any email, and any future phone can get everything back. Optional, free, removable — and nothing from your log is ever shared with anyone.")}
         </DialogDescription>
         <ProtectWithGoogle familySync={familySync} immediate explainer={false} onProtected={() => setProtectedNow(true)} />
         {/* The other reason for a second copy, said plainly: the parent who
@@ -124,16 +112,15 @@ export function ProtectIntro({
         {onInvitePartner && (
           <>
             <p className="protect-intro-partner">
-              Two phones, one log: add the other parent and neither of you has to
-              ask when the last feed was.
+              {t("Two phones, one log: add the other parent and neither of you has to ask when the last feed was.")}
             </p>
             <Button variant="outline" onClick={() => { track("protect_intro_partner"); close(); onInvitePartner(); }}>
-              Add the other parent’s phone
+              {t("Add the other parent’s phone")}
             </Button>
           </>
         )}
         <Button variant="ghost" onClick={() => { if (!protectedNow) track("protect_intro_later"); close(); }}>
-          {protectedNow ? "Done" : "Maybe later — it lives in Settings"}
+          {protectedNow ? t("Done") : t("Maybe later — it lives in Settings")}
         </Button>
       </DialogContent>
     </Dialog>

@@ -15,6 +15,7 @@ import { emailRecoverRequest } from "../domain/syncTransport";
 import { mountGoogleButton } from "../domain/googleButton";
 import { track } from "../domain/analytics";
 import { FamilySync } from "../hooks/useFamilySync";
+import { t } from "../i18n";
 
 /** Offline is not an error, but neither door works without the network —
     say so plainly instead of loading a button that cannot succeed, and come
@@ -37,8 +38,7 @@ function useOnline(): boolean {
 function OfflineNote({ what }: { what: string }) {
   return (
     <p className="google-blocked" role="status">
-      You’re offline — {what} needs the internet. Your entries are safe on
-      this phone meanwhile; this will wake up by itself when you’re back.
+      {t("You’re offline — {what} needs the internet. Your entries are safe on this phone meanwhile; this will wake up by itself when you’re back.", { what })}
     </p>
   );
 }
@@ -65,9 +65,7 @@ function GoogleButtonHost({ onCredential }: { onCredential: (credential: string)
     // where no Settings exists yet.
     return (
       <p className="google-blocked" role="alert">
-        Google’s sign-in could not load — an ad blocker or offline moment,
-        probably. The email link below works regardless, and so does a backup
-        file.
+        {t("Google’s sign-in could not load — an ad blocker or offline moment, probably. The email link below works regardless, and so does a backup file.")}
       </p>
     );
   }
@@ -94,7 +92,7 @@ function EmailRow({
     return (
       <p className="google-sent" role="status">
         <Mail aria-hidden="true" /> {sentNote ??
-          "Check your inbox — the link works once and expires in 15 minutes."}
+          t("Check your inbox — the link works once and expires in 15 minutes.")}
       </p>
     );
   }
@@ -113,7 +111,7 @@ function EmailRow({
           type="email"
           value={email}
           placeholder="your@email.com"
-          aria-label="Email address"
+          aria-label={t("Email address")}
           autoComplete="email"
           onChange={(event) => setEmail(event.target.value)}
         />
@@ -172,7 +170,7 @@ export function ProtectWithGoogle({
   const [mergeChoice, setMergeChoice] = useState<{ credential: string; count: number } | null>(null);
 
   async function joinGuardedFamily(credential: string, discardLocal: boolean) {
-    const outcome = await familySync.googleContinue(credential, "This phone", { discardLocal });
+    const outcome = await familySync.googleContinue(credential, t("This phone"), { discardLocal });
     track("google_protect_probe", { outcome, discardLocal });
     if (outcome === "joined") {
       const guard = await familySync.recoveryEmail();
@@ -215,7 +213,7 @@ export function ProtectWithGoogle({
         setBusy(true);
       }
       // Genuinely the first device — create, then bind below.
-      if (!(await familySync.createFamily("This phone"))) {
+      if (!(await familySync.createFamily(t("This phone")))) {
         setBusy(false);
         return;
       }
@@ -240,7 +238,7 @@ export function ProtectWithGoogle({
   if (email) {
     return (
       <div className="google-protected">
-        <p><ShieldCheck aria-hidden="true" /> Protected — a lost phone can be recovered with <strong>{email}</strong>.</p>
+        <p><ShieldCheck aria-hidden="true" /> {t("Protected — a lost phone can be recovered with")} <strong>{email}</strong>.</p>
         <Button
           variant="ghost"
           size="sm"
@@ -254,7 +252,7 @@ export function ProtectWithGoogle({
             });
           }}
         >
-          Remove
+          {t("Remove")}
         </Button>
       </div>
     );
@@ -263,16 +261,16 @@ export function ProtectWithGoogle({
   return (
     <div className="google-protect">
       {!online ? (
-        <OfflineNote what="protecting your log" />
+        <OfflineNote what={t("protecting your log")} />
       ) : revealed ? (
         <>
           {hint?.method === "email" && hint.email && (
-            <p className="t-meta">Last time you used <strong>{hint.email}</strong>.</p>
+            <p className="t-meta">{t("Last time you used")} <strong>{hint.email}</strong>.</p>
           )}
           <GoogleButtonHost onCredential={(credential) => void handleCredential(credential)} />
-          <p className="t-meta">…or with any email address:</p>
+          <p className="t-meta">{t("…or with any email address:")}</p>
           <EmailRow
-            label="Send link"
+            label={t("Send link")}
             defaultEmail={hint?.method === "email" ? hint.email ?? "" : ""}
             onSend={async (address) => {
               // The one-tap promise holds here too: no pairing -> create it.
@@ -281,7 +279,7 @@ export function ProtectWithGoogle({
               // otherwise the device is left green-pilled on an unguarded
               // orphan family it never chose.
               const hadPairing = Boolean(familySync.pairing);
-              if (!hadPairing && !(await familySync.createFamily("This phone"))) return false;
+              if (!hadPairing && !(await familySync.createFamily(t("This phone")))) return false;
               const ok = await familySync.emailProtect(address);
               track("email_protect_requested", { ok });
               if (!ok && !hadPairing) familySync.leaveFamily();
@@ -291,25 +289,24 @@ export function ProtectWithGoogle({
         </>
       ) : (
         <Button variant="outline" onClick={() => { track("google_protect_opened"); setRevealed(true); }}>
-          <ShieldCheck /> Protect my log
+          <ShieldCheck /> {t("Protect my log")}
         </Button>
       )}
       {explainer && (
         <p className="t-meta">
-          One tap guards your whole log: a lost or wiped phone can get everything
-          back. Works with Google or any email address — and nothing from your log
-          is ever shared with anyone. The guard is optional and removable.
+          {t("One tap guards your whole log: a lost or wiped phone can get everything back. Works with Google or any email address — and nothing from your log is ever shared with anyone. The guard is optional and removable.")}
         </p>
       )}
 
       <Dialog open={mergeChoice !== null} onOpenChange={(next) => { if (!next) { setMergeChoice(null); setBusy(false); } }}>
         <DialogContent className="merge-choice">
           <DialogTitle>
-            This phone has {mergeChoice?.count} {mergeChoice?.count === 1 ? "entry" : "entries"} of its own
+            {mergeChoice?.count === 1
+              ? t("This phone has 1 entry of its own")
+              : t("This phone has {n} entries of its own", { n: mergeChoice?.count ?? 0 })}
           </DialogTitle>
           <DialogDescription>
-            Your account&rsquo;s log lives in the cloud. Choose what happens to the
-            entries on this phone — nothing in the cloud is deleted either way.
+            {t("Your account’s log lives in the cloud. Choose what happens to the entries on this phone — nothing in the cloud is deleted either way.")}
           </DialogDescription>
           <DialogFooter className="merge-choice-actions">
             <Button
@@ -319,7 +316,7 @@ export function ProtectWithGoogle({
                 if (held) void joinGuardedFamily(held.credential, false);
               }}
             >
-              Merge them into my cloud log
+              {t("Merge them into my cloud log")}
             </Button>
             <Button
               variant="outline"
@@ -329,10 +326,10 @@ export function ProtectWithGoogle({
                 if (held) void joinGuardedFamily(held.credential, true);
               }}
             >
-              Take the cloud log only — discard these
+              {t("Take the cloud log only — discard these")}
             </Button>
             <Button variant="ghost" onClick={() => { setMergeChoice(null); setBusy(false); }}>
-              Cancel
+              {t("Cancel")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -355,7 +352,7 @@ export function RestoreWithGoogle({
   const online = useOnline();
 
   async function handleCredential(credential: string) {
-    const outcome = await familySync.googleContinue(credential, "This phone");
+    const outcome = await familySync.googleContinue(credential, t("This phone"));
     track("google_recover_attempted", { outcome });
     if (outcome === "joined") onRestored();
     // "none" is the only case where THIS message is true. A network or
@@ -363,7 +360,7 @@ export function RestoreWithGoogle({
     // "no log is protected" over a Wi-Fi blip sent people doubting the
     // guard they had set up.
     else if (outcome === "none") {
-      setFailed("No log is protected by that Google account — check which address you used, or restore a backup file instead.");
+      setFailed(t("No log is protected by that Google account — check which address you used, or restore a backup file instead."));
     } else {
       setFailed(null);
     }
@@ -372,30 +369,30 @@ export function RestoreWithGoogle({
   if (!revealed) {
     return (
       <Button type="button" variant="ghost" onClick={() => { track("google_recover_opened"); setRevealed(true); }}>
-        <ShieldCheck /> Restore with Google or email
+        <ShieldCheck /> {t("Restore with Google or email")}
       </Button>
     );
   }
   if (!online) {
-    return <OfflineNote what="restoring" />;
+    return <OfflineNote what={t("restoring")} />;
   }
   return (
     <div className="google-protect">
       {hint?.method === "email" && hint.email && (
-        <p className="t-meta">Last time you used <strong>{hint.email}</strong>.</p>
+        <p className="t-meta">{t("Last time you used")} <strong>{hint.email}</strong>.</p>
       )}
       <GoogleButtonHost onCredential={(credential) => void handleCredential(credential)} />
       <EmailRow
-        label="Email me a link"
+        label={t("Email me a link")}
         defaultEmail={hint?.method === "email" ? hint.email ?? "" : ""}
-        sentNote="If this address protects a log, the link is on its way — check your inbox. It works once and expires in 15 minutes."
+        sentNote={t("If this address protects a log, the link is on its way — check your inbox. It works once and expires in 15 minutes.")}
         onSend={async (address) => {
           track("email_recover_requested");
           try {
             await emailRecoverRequest(address);
             return true;
           } catch {
-            toast("Could not reach the server — check your connection and try again.");
+            toast(t("Could not reach the server — check your connection and try again."));
             return false;
           }
         }}
