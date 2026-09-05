@@ -11,6 +11,7 @@
 
 import { Check } from "lucide-react";
 import type { Routine } from "../domain/routines";
+import { t } from "../i18n";
 
 export function DailyRoutines({
   pending,
@@ -25,10 +26,10 @@ export function DailyRoutines({
 }) {
   const done = total - pending.length;
   return (
-    <section className="routines" aria-label="Today's routine">
+    <section className="routines" aria-label={t("Today’s routine")}>
       <div className="routines-head">
-        <h2>Still to do today</h2>
-        {done > 0 && <span className="routines-count">{done} of {total} done</span>}
+        <h2>{t("Still to do today")}</h2>
+        {done > 0 && <span className="routines-count">{t("{done} of {total} done", { done, total })}</span>}
       </div>
       <div className="routines-row">
         {pending.map((routine) => (
@@ -37,7 +38,7 @@ export function DailyRoutines({
             type="button"
             className="routine-pill"
             onClick={() => onTick(routine)}
-            aria-label={`Mark ${routine.label} as done`}
+            aria-label={t("Mark {name} as done", { name: routine.label })}
           >
             <span className="routine-check" aria-hidden="true"><Check /></span>
             {routine.label}

@@ -1,3 +1,4 @@
+import { currentLocale, t } from "../i18n";
 // Pure date/duration helpers shared by the app and the unit suite. Everything
 // here is deterministic given its inputs — helpers that need "now" accept it.
 
@@ -6,19 +7,22 @@ type TimedSpan = {
   endedAt?: string;
 };
 
-const timeFormat = new Intl.DateTimeFormat("en", {
-  hour: "2-digit",
-  minute: "2-digit",
-  hour12: false,
-});
-
-const shortDayFormat = new Intl.DateTimeFormat("en", { weekday: "short" });
-
-const timelineDayFormat = new Intl.DateTimeFormat("en", {
-  weekday: "long",
-  month: "long",
-  day: "numeric",
-});
+// Lazy, not module-level: these need the locale, and module bodies evaluate
+// before initLocale() has resolved the dictionary — a const here would freeze
+// every date into English. First call happens at render, which is after.
+const formatters = new Map<string, Intl.DateTimeFormat>();
+function formatter(kind: string, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const key = `${currentLocale()}:${kind}`;
+  let found = formatters.get(key);
+  if (!found) {
+    found = new Intl.DateTimeFormat(currentLocale(), options);
+    formatters.set(key, found);
+  }
+  return found;
+}
+const timeFormat = () => formatter("time", { hour: "2-digit", minute: "2-digit", hour12: false });
+const shortDayFormat = () => formatter("short-day", { weekday: "short" });
+const timelineDayFormat = () => formatter("timeline-day", { weekday: "long", month: "long", day: "numeric" });
 
 export function localDateInput(date: Date) {
   const offset = date.getTimezoneOffset();
@@ -26,11 +30,11 @@ export function localDateInput(date: Date) {
 }
 
 export function formatTime(value: string) {
-  return timeFormat.format(new Date(value));
+  return timeFormat().format(new Date(value));
 }
 
 export function formatShortDay(date: Date) {
-  return shortDayFormat.format(date);
+  return shortDayFormat().format(date);
 }
 
 export function formatTimelineDay(value: string) {
@@ -38,17 +42,17 @@ export function formatTimelineDay(value: string) {
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
-  if (isSameDay(value, today)) return "Today";
-  if (isSameDay(value, yesterday)) return "Yesterday";
-  return timelineDayFormat.format(date);
+  if (isSameDay(value, today)) return t("Today");
+  if (isSameDay(value, yesterday)) return t("Yesterday");
+  return timelineDayFormat().format(date);
 }
 
 export function greeting() {
   const hour = new Date().getHours();
-  if (hour < 5) return "You’re up late";
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
+  if (hour < 5) return t("You’re up late");
+  if (hour < 12) return t("Good morning");
+  if (hour < 18) return t("Good afternoon");
+  return t("Good evening");
 }
 
 export function minutesBetween(start: string, end = new Date().toISOString()) {
@@ -56,10 +60,10 @@ export function minutesBetween(start: string, end = new Date().toISOString()) {
 }
 
 export function humanDuration(minutes: number) {
-  if (minutes < 60) return `${minutes}m`;
+  if (minutes < 60) return t("{m}m", { m: minutes });
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
-  return mins ? `${hours}h ${mins}m` : `${hours}h`;
+  return mins ? t("{h}h {m}m", { h: hours, m: mins }) : t("{h}h", { h: hours });
 }
 
 export function median(values: number[]) {
@@ -73,9 +77,9 @@ export function median(values: number[]) {
 
 export function forecastRelative(target: number, now: number) {
   const minutes = Math.round((target - now) / 60_000);
-  if (minutes < -30) return "Past the usual window";
-  if (minutes <= 15) return "Check cues now";
-  return `Likely in ${humanDuration(minutes)}`;
+  if (minutes < -30) return t("Past the usual window");
+  if (minutes <= 15) return t("Check cues now");
+  return t("Likely in {duration}", { duration: humanDuration(minutes) });
 }
 
 export function forecastRange(target: number, spreadMinutes: number) {
@@ -222,14 +226,14 @@ export function ageInMonths(birthDate: string, now: number = Date.now()) {
 }
 
 export function timeAgo(value?: string, now = Date.now()) {
-  if (!value) return "No entries yet";
+  if (!value) return t("No entries yet");
   const minutes = Math.max(0, Math.round((now - new Date(value).getTime()) / 60_000));
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 1) return t("just now");
+  if (minutes < 60) return t("{m}m ago", { m: minutes });
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
-  if (hours < 24) return `${hours}h ${mins}m ago`;
-  return `${Math.floor(hours / 24)}d ago`;
+  if (hours < 24) return t("{h}h {m}m ago", { h: hours, m: mins });
+  return t("{d}d ago", { d: Math.floor(hours / 24) });
 }
 
 export function isSameDay(value: string, day: Date) {

@@ -1,4 +1,5 @@
 import { BarChart3, ChevronRight, Clock, Home, Ruler, Settings } from "lucide-react";
+import { t } from "../i18n";
 import { BabyFace } from "./illustrations";
 import {
   Sidebar,
@@ -70,13 +71,13 @@ export function AppSidebar({
                 <SidebarMenuItem key={item.value}>
                   <SidebarMenuButton
                     size="lg"
-                    aria-label={item.label}
+                    aria-label={t(item.label)}
                     aria-current={activeTab === item.value ? "page" : undefined}
                     isActive={activeTab === item.value}
                     onClick={() => navigate(item.value)}
                   >
                     {item.icon}
-                    <span>{item.label}</span>
+                    <span>{t(item.label)}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}

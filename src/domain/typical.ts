@@ -1,4 +1,5 @@
 // "Is this normal?" — the question a parent actually types into a phone at
+import { t } from "../i18n";
 // 3am, answered from their own log against published ranges.
 //
 // Three rules hold this file together:
@@ -166,7 +167,7 @@ const inside = (value: number, band: TypicalBand) => value >= band.low && (band.
 const rangeLabel = (band: TypicalBand, asHours: boolean) => {
   // "0+" is not a range, it is a shrug. After six weeks there genuinely is
   // no expected number of poos, and saying so is the reassurance.
-  if (band.low === 0 && band.high === null) return "any";
+  if (band.low === 0 && band.high === null) return t("any");
   const low = asHours ? hours(band.low) : String(band.low);
   if (band.high === null) return `${low}+`;
   return `${asHours ? Math.round(band.low / 60) : band.low}–${asHours ? hours(band.high) : band.high}`;
@@ -212,9 +213,11 @@ export function typicalVerdict(day: DaySummary | undefined, ageDays: number | nu
 
 /** The headline over the verdict — the answer, before the evidence. */
 export function verdictHeadline(verdict: TypicalVerdict, name: string): string {
-  const who = name.trim() || "your baby";
-  if (verdict.ordinary) return `Yesterday looks ordinary for ${who}`;
+  const who = name.trim() || t("your baby");
+  if (verdict.ordinary) return t("Yesterday looks ordinary for {name}", { name: who });
   const outside = verdict.checks.filter((check) => !check.within);
-  if (outside.length === 1) return `Yesterday: ${outside[0].label.toLowerCase()} sat outside the usual range`;
-  return `Yesterday: ${outside.length} figures sat outside the usual range`;
+  if (outside.length === 1) {
+    return t("Yesterday: {what} sat outside the usual range", { what: t(outside[0].label).toLowerCase() });
+  }
+  return t("Yesterday: {n} figures sat outside the usual range", { n: outside.length });
 }

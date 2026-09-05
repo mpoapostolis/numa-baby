@@ -15,6 +15,7 @@
 
 import { Check, Info } from "lucide-react";
 import { TypicalVerdict, verdictHeadline } from "../domain/typical";
+import { t } from "../i18n";
 
 export function NormalCheck({ verdict, name }: { verdict: TypicalVerdict; name: string }) {
   if (verdict.checks.length === 0) return null;
@@ -27,10 +28,10 @@ export function NormalCheck({ verdict, name }: { verdict: TypicalVerdict; name: 
       <ul>
         {verdict.checks.map((check) => (
           <li key={check.id} className={check.within ? undefined : "is-outside"}>
-            <span className="normal-label">{check.label}</span>
+            <span className="normal-label">{t(check.label)}</span>
             <span className="normal-value">
               <strong className="t-numeral">{check.id === "sleep" ? `${Math.round(check.value / 60)}h` : check.value}</strong>
-              <small>usual {check.range}</small>
+              <small>{t("usual {range}", { range: check.range })}</small>
             </span>
           </li>
         ))}
@@ -41,7 +42,7 @@ export function NormalCheck({ verdict, name }: { verdict: TypicalVerdict; name: 
         const speaking = verdict.checks.find((check) => !check.within) ?? verdict.checks[0];
         return (
           <p className="normal-note">
-            {speaking.note}{" "}
+            {t(speaking.note)}{" "}
             <a href={speaking.source.url} target="_blank" rel="noopener noreferrer">{speaking.source.name}</a>
           </p>
         );

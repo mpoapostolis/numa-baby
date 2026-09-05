@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 // The track record of "what is probably next".
 //
 // A forecast nobody can check is a horoscope. This scores the app's own
@@ -87,15 +88,17 @@ export function stepsFromMoments(moments: number[]): RhythmStep[] {
 /** The sentence the card says. Null while there is not enough to say. */
 export function rhythmLine(record: RhythmRecord, name: string): string | null {
   if (record.checked < MIN_SCORED_CALLS) return null;
-  const who = name.trim() || "your baby";
+  const who = name.trim() || t("your baby");
   if (record.hits === record.checked) {
-    return `Right every one of the last ${record.checked} times.`;
+    return t("Right every one of the last {n} times.", { n: record.checked });
   }
   if (record.hits * 2 < record.checked) {
     // Honest about a bad run: the number is the point, not the boast.
-    return `Right ${record.hits} of the last ${record.checked} — ${who} is changing rhythm.`;
+    return t("Right {hits} of the last {n} — {name} is changing rhythm.", { hits: record.hits, n: record.checked, name: who });
   }
-  return `Right ${record.hits} of the last ${record.checked} times, ${record.typicalMiss === 0 ? "on the minute" : `within ${record.typicalMiss} minutes`}.`;
+  return record.typicalMiss === 0
+    ? t("Right {hits} of the last {n} times, on the minute.", { hits: record.hits, n: record.checked })
+    : t("Right {hits} of the last {n} times, within {miss} minutes.", { hits: record.hits, n: record.checked, miss: record.typicalMiss });
 }
 
 /** A run worth offering a share button on: earned, not flattering. */

@@ -38,6 +38,7 @@ import {
   readHandoffTarget,
   unpackHandoff,
 } from "./domain/handoff";
+import { t } from "./i18n";
 import { backupNudge } from "./domain/backupNudge";
 import { reminderNudge } from "./domain/reminderNudge";
 import { onConsentChange, readConsent } from "./domain/consent";
@@ -883,9 +884,9 @@ export default function HomePage() {
           <div className="topbar-start">
             <NavTrigger />
             <span className="topbar-page-title">
-              {activeTab === "more"
+              {t(activeTab === "more"
                 ? "Settings"
-                : activeTab[0].toUpperCase() + activeTab.slice(1)}
+                : activeTab[0].toUpperCase() + activeTab.slice(1))}
             </span>
           </div>
           <Button
@@ -1147,7 +1148,7 @@ export default function HomePage() {
               onClick={() => navigateTo(item.value)}
             >
               {item.icon}
-              <span>{item.label}</span>
+              <span>{t(item.label)}</span>
             </button>
           ))}
         </nav>

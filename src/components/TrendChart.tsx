@@ -4,6 +4,7 @@
 //
 // Deliberately not a judgement: no target line, no green/red, no "goal". The
 // only emphasised point is today, because that is where the parent is.
+import { t } from "../i18n";
 
 import { useState } from "react";
 import { track } from "../domain/analytics";
@@ -76,14 +77,14 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
   const trackedDays = loggedDays.length;
   const average = trackedDays > 0 ? Math.round(total / trackedDays) : 0;
 
-  const description = `${series.label} per day. ${days
+  const description = `${t(series.label)} per day. ${days
     .map((day) => day.isEmpty
       ? `${fullDayFormat.format(day.date)}: not logged`
       : `${fullDayFormat.format(day.date)}: ${fmt(series.value(day))}${unitLabel ? ` ${unitLabel}` : ""}`)
     .join(", ")}.`;
 
   return (
-    <section className="trend-card" aria-label={`${series.label} over the last ${days.length} days`}>
+    <section className="trend-card" aria-label={`${t(series.label)} over the last ${days.length} days`}>
       <header className="trend-head">
         <div className="trend-titles">
           <span className="t-label">Last {days.length} days</span>
@@ -94,7 +95,7 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
                 <span> a day on average</span>
               </>
             ) : (
-              <span>Nothing logged yet</span>
+              <span>{t("Nothing logged yet")}</span>
             )}
           </p>
         </div>
@@ -168,7 +169,7 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
 
       <div className="trend-axis" aria-hidden="true">
         <span>{dayFormat.format(days[0].date)}</span>
-        <span>Today</span>
+        <span>{t("Today")}</span>
       </div>
     </section>
   );

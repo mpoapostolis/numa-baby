@@ -1,6 +1,6 @@
 // Ships with this lazy chunk, not the app shell — the budget rule.
 import "../styles/screens/settings.css";
-import { ArrowLeftRight, Baby, Bell, CheckCheck, Download, Gift, Moon, Plus, Ruler, Share2, ShieldCheck, Sun, SunMoon, Trash2, Upload, X } from "lucide-react";
+import { ArrowLeftRight, Baby, Bell, CheckCheck, Download, Gift, Languages, Moon, Plus, Ruler, Share2, ShieldCheck, Sun, SunMoon, Trash2, Upload, X } from "lucide-react";
 import { ChangeEvent, FormEvent, Suspense, lazy, useEffect, useRef, useState } from "react";
 
 // Loads only on browsers without a native share sheet.
@@ -27,6 +27,7 @@ import {
 import { Switch } from "../components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "../components/ui/toggle-group";
 import { MAX_ROUTINES, LABEL_MAX, addRoutine, removeRoutine, type Routine } from "../domain/routines";
+import { languageChoice, setLanguageChoice, t } from "../i18n";
 import { FamilySyncCard } from "../components/FamilySyncCard";
 import { FeedbackCard } from "../components/FeedbackCard";
 import { AppNews } from "../components/AppNews";
@@ -214,9 +215,9 @@ export default function SettingsScreen({
               onThemeChange(value);
             }}
           >
-            <ToggleGroupItem value="system"><SunMoon /><span><strong>Phone</strong><small>Follows your phone</small></span></ToggleGroupItem>
-            <ToggleGroupItem value="light"><Sun /><span><strong>Light</strong><small>Bright and clear</small></span></ToggleGroupItem>
-            <ToggleGroupItem value="dark"><Moon /><span><strong>Night</strong><small>Warm and dim for 3am</small></span></ToggleGroupItem>
+            <ToggleGroupItem value="system"><SunMoon /><span><strong>{t("Phone")}</strong><small>{t("Follows your phone")}</small></span></ToggleGroupItem>
+            <ToggleGroupItem value="light"><Sun /><span><strong>{t("Light")}</strong><small>{t("Bright and clear")}</small></span></ToggleGroupItem>
+            <ToggleGroupItem value="dark"><Moon /><span><strong>{t("Night")}</strong><small>{t("Warm and dim for 3am")}</small></span></ToggleGroupItem>
           </ToggleGroup>
           {/* Per-device on purpose: one parent thinking in ounces must not
               flip the other parent's phone. Storage stays metric either way,
@@ -230,6 +231,36 @@ export default function SettingsScreen({
           >
             <ToggleGroupItem value="metric"><Ruler /><span><strong>Metric</strong><small>ml · kg · cm</small></span></ToggleGroupItem>
             <ToggleGroupItem value="us"><Ruler /><span><strong>US</strong><small>oz · lb · in</small></span></ToggleGroupItem>
+          </ToggleGroup>
+        </CardContent>
+      </Card>
+
+      <Card className="settings-group appearance-settings">
+        <CardHeader>
+          <CardTitle asChild><h2>{t("Language")}</h2></CardTitle>
+          <CardDescription>{t("The whole app, including reminders and the pictures you share.")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* Each language names itself IN itself, never translated: someone
+              stuck in a language they cannot read must still be able to find
+              their own on this list. */}
+          <ToggleGroup
+            type="single"
+            value={languageChoice()}
+            className="appearance-options"
+            aria-label="Language"
+            onValueChange={(value) => {
+              if (value !== "system" && value !== "en" && value !== "el") return;
+              track("language_changed", { language: value });
+              // Persists and reloads: the words live in every module, and one
+              // honest reload on a once-ever action beats pretending we can
+              // swap them all live.
+              setLanguageChoice(value);
+            }}
+          >
+            <ToggleGroupItem value="system"><Languages /><span><strong>{t("Phone")}</strong><small>{t("Follows your phone")}</small></span></ToggleGroupItem>
+            <ToggleGroupItem value="en"><Languages /><span><strong>English</strong></span></ToggleGroupItem>
+            <ToggleGroupItem value="el"><Languages /><span><strong>Ελληνικά</strong></span></ToggleGroupItem>
           </ToggleGroup>
         </CardContent>
       </Card>

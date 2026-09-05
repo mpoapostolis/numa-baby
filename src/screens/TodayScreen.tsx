@@ -39,6 +39,7 @@ import { shareLink } from "../domain/shareApp";
 import { isMorning, summarizeNight } from "../domain/nightSummary";
 import { typicalVerdict } from "../domain/typical";
 import { ROUTINE_TYPE, pendingRoutines, type Routine } from "../domain/routines";
+import { currentLocale, t, tAge, tName } from "../i18n";
 import { shareCardOnTap } from "../lib/shareOnTap";
 
 // A party is downloaded only on a day there is one.
@@ -66,22 +67,25 @@ const DailyRoutines = lazy(() =>
 import { ActivityStats } from "../hooks/useActivityStats";
 import { useSecondClock } from "../hooks/useMinuteClock";
 
-const statusDateFormat = new Intl.DateTimeFormat("en", {
+// A function, not a const: the locale is only known after initLocale(), and
+// module bodies run before it.
+let statusFormat: Intl.DateTimeFormat | null = null;
+const statusDateFormat = () => (statusFormat ??= new Intl.DateTimeFormat(currentLocale(), {
   weekday: "long",
   month: "long",
   day: "numeric",
-});
+}));
 
 // The Hearth meta line stays short: the last feed at a glance, not the full
 // timeline entry — ranges and edit affordances live in Recent and Timeline.
 function lastFeedSummary(feed: Activity, units: UnitSystem) {
   if (feed.type === "bottle") {
-    return `Bottle · ${formatVolume(feed.amount ?? 0, units)}`;
+    return t("Bottle · {amount}", { amount: formatVolume(feed.amount ?? 0, units) });
   }
   const side = feed.side === "left" ? "left" : "right";
   return feed.endedAt
-    ? `Nursing · ${side} · ${humanDuration(minutesBetween(feed.startedAt, feed.endedAt))}`
-    : `Nursing · ${side}`;
+    ? t("Nursing · {side} · {duration}", { side: t(side === "left" ? "left" : "right"), duration: humanDuration(minutesBetween(feed.startedAt, feed.endedAt)) })
+    : t("Nursing · {side}", { side: t(side === "left" ? "left" : "right") });
 }
 
 // Display figure with unit demotion: digits speak, units recede.
@@ -91,7 +95,7 @@ function DurationFigure({ minutes }: { minutes: number }) {
     return (
       <>
         {minutes}
-        <span className="unit">m</span>
+        <span className="unit">{t("m")}</span>
       </>
     );
   }
@@ -100,12 +104,12 @@ function DurationFigure({ minutes }: { minutes: number }) {
   return (
     <>
       {hours}
-      <span className="unit">h</span>
+      <span className="unit">{t("h")}</span>
       {mins > 0 && (
         <>
           {" "}
           {mins}
-          <span className="unit">m</span>
+          <span className="unit">{t("m")}</span>
         </>
       )}
     </>
@@ -115,19 +119,19 @@ function DurationFigure({ minutes }: { minutes: number }) {
 function GapFigure({ startedAt, now }: { startedAt?: string; now: number }) {
   if (!startedAt) return <span className="is-zero">—</span>;
   const minutes = minutesBetween(startedAt, new Date(now).toISOString());
-  if (minutes < 1) return <>just now</>;
+  if (minutes < 1) return <>{t("just now")}</>;
   const days = Math.floor(minutes / 1_440);
   if (days > 0) {
     const hours = Math.floor((minutes % 1_440) / 60);
     return (
       <>
         {days}
-        <span className="unit">d</span>
+        <span className="unit">{t("d")}</span>
         {hours > 0 && (
           <>
             {" "}
             {hours}
-            <span className="unit">h</span>
+            <span className="unit">{t("h")}</span>
           </>
         )}
       </>
@@ -146,7 +150,7 @@ function LiveClock({ startedAt }: { startedAt: string }) {
 
 /** "Both" is a real answer for a nursing session, not a missing one. */
 function sideLabel(side: Activity["side"]) {
-  return side === "both" ? "Both" : side === "left" ? "Left" : "Right";
+  return side === "both" ? t("Both") : side === "left" ? t("Left") : t("Right");
 }
 
 // A running timer stays in the tile that started it.
@@ -159,11 +163,11 @@ function TimerTile({ activity, onStop }: { activity: Activity; onStop: () => voi
   const isSleep = activity.type === "sleep";
   const isBurp = activity.type === "burp";
   const title = isSleep
-    ? "Sleeping"
+    ? t("Sleeping")
     : isBurp
-      ? "Burping"
-      : `Nursing · ${sideLabel(activity.side)}`;
-  const stopLabel = isSleep ? "Wake up" : isBurp ? "Done" : "Stop";
+      ? t("Burping")
+      : t("Nursing · {side}", { side: sideLabel(activity.side) });
+  const stopLabel = isSleep ? t("Wake up") : isBurp ? t("Done") : t("Stop");
   return (
     <div className={`quick-tile tile-${activity.type} is-running`}>
       <div className="tile-head">
@@ -175,7 +179,7 @@ function TimerTile({ activity, onStop }: { activity: Activity; onStop: () => voi
       {/* Seconds, because a stopwatch that only moves once a minute looks
           stopped — and looking stopped is how a parent taps it twice. */}
       <p className="tile-elapsed"><LiveClock startedAt={activity.startedAt} /></p>
-      <p className="tile-started">Started {formatTime(activity.startedAt)}</p>
+      <p className="tile-started">{t("Started {time}", { time: formatTime(activity.startedAt) })}</p>
       {/* The accessible name starts with the visible label, so "tap Wake up"
           works for voice control (WCAG label-in-name). */}
       <Button className="tile-stop" onClick={onStop} aria-label={`${stopLabel} — stop ${activity.type} timer`}>
@@ -200,11 +204,11 @@ function TimerRow({
   const isSleep = activity.type === "sleep";
   const isBurp = activity.type === "burp";
   const title = isSleep
-    ? "Sleeping now"
+    ? t("Sleeping now")
     : isBurp
-      ? "Burping"
-      : `Nursing · ${sideLabel(activity.side)}`;
-  const stopLabel = isSleep ? "Wake up" : isBurp ? "Done" : "Stop";
+      ? t("Burping")
+      : t("Nursing · {side}", { side: sideLabel(activity.side) });
+  const stopLabel = isSleep ? t("Wake up") : isBurp ? t("Done") : t("Stop");
   return (
     <div className="log-row timer-row">
       <span className={`activity-glyph glyph-${activity.type}`}>
@@ -213,7 +217,7 @@ function TimerRow({
       <div className="log-copy">
         <strong>{title}</strong>
         <small>
-          Started {formatTime(activity.startedAt)}
+          {t("Started {time}", { time: formatTime(activity.startedAt) })}
           {!isBurp && ` · ${humanDuration(minutesBetween(activity.startedAt, new Date(now).toISOString()))}`}
         </small>
       </div>
@@ -327,61 +331,61 @@ function TodayScreen({
   if (lastFeed && !activeNursing) {
     comingUp.push({
       type: profile.feedingMode === "breast" ? "nursing" : "bottle",
-      label: "Feed",
+      label: t("Feed"),
       forecast: forecasts.feed,
       waiting: {
-        headline: "Still learning the rhythm",
-        hint: "A few more feeds and the pattern appears.",
+        headline: t("Still learning the rhythm"),
+        hint: t("A few more feeds and the pattern appears."),
       },
       gone: {
-        headline: "Past the usual window",
+        headline: t("Past the usual window"),
         hint: gapOver > 0 && typicalGap > 0
-          ? `${humanDuration(gapOver)} past the usual ${humanDuration(typicalGap)} gap — follow the cues`
-          : "Follow the cues — whenever works",
+          ? t("{over} past the usual {gap} gap — follow the cues", { over: humanDuration(gapOver), gap: humanDuration(typicalGap) })
+          : t("Follow the cues — whenever works"),
       },
       action: {
-        label: "Log",
+        label: t("Log"),
         onClick: () => onOpenSheet(forecastFeedSheet),
-        ariaLabel: "Log a feed",
+        ariaLabel: t("Log a feed"),
       },
     });
   }
   if (!activeSleep && sortedActivities.some((activity) => activity.type === "sleep")) {
     comingUp.push({
       type: "sleep",
-      label: "Sleep",
+      label: t("Sleep"),
       forecast: forecasts.sleep,
       waiting: {
-        headline: "Still learning the rhythm",
-        hint: "A few more sleeps and the pattern appears.",
+        headline: t("Still learning the rhythm"),
+        hint: t("A few more sleeps and the pattern appears."),
       },
       gone: {
-        headline: "Past the usual window",
-        hint: "Follow the cues — whenever works",
+        headline: t("Past the usual window"),
+        hint: t("Follow the cues — whenever works"),
       },
       action: {
-        label: "Start",
+        label: t("Start"),
         onClick: toggleSleep,
-        ariaLabel: "Start sleep timer",
+        ariaLabel: t("Start sleep timer"),
       },
     });
   }
   if (sortedActivities.some((activity) => activity.type === "diaper")) {
     comingUp.push({
       type: "diaper",
-      label: "Diaper",
+      label: t("Diaper"),
       forecast: forecasts.diaper,
       // Nappies are the noisiest of the three and the forecast stays quiet
       // whenever the changes do not fall into a rhythm — so this line has to
       // be true both before there is data and when there is data that
       // disagrees with itself. It never promises the pattern will arrive.
       waiting: {
-        headline: "No steady pattern",
-        hint: "Diapers come when they come — check whenever something seems off.",
+        headline: t("No steady pattern"),
+        hint: t("Diapers come when they come — check whenever something seems off."),
       },
       gone: {
-        headline: "Past the usual window",
-        hint: "Worth a check.",
+        headline: t("Past the usual window"),
+        hint: t("Worth a check."),
       },
     });
   }
@@ -404,7 +408,7 @@ function TodayScreen({
     };
     // No confirmation: a mis-tap is caught by the same undo toast every other
     // log gets, and asking twice about a vitamin is how a card becomes a chore.
-    if (onAdd(entry, `${routine.label} done`)) track("routine_ticked");
+    if (onAdd(entry, t("{name} done", { name: routine.label }))) track("routine_ticked");
   }
 
   function quickLogBottle() {
@@ -419,7 +423,7 @@ function TodayScreen({
       amount: lastBottle.amount,
       milkType: lastBottle.milkType ?? "formula",
     };
-    if (onAdd(entry, `${formatVolume(lastBottle.amount ?? 0, units)} bottle saved`)) {
+    if (onAdd(entry, t("{amount} bottle saved", { amount: formatVolume(lastBottle.amount ?? 0, units) }))) {
       setReactionKey(entry.id);
       track("bottle_logged", { source: "quick_repeat", amount: mlBucket(lastBottle.amount) });
     }
@@ -433,7 +437,7 @@ function TodayScreen({
       startedAt: new Date().toISOString(),
       side,
     };
-    if (onAdd(entry, `Nursing started · ${side} side`)) track("nursing_started", { side });
+    if (onAdd(entry, t("Nursing started · {side} side", { side: t(side) }))) track("nursing_started", { side });
   }
 
   function stopNursing() {
@@ -450,7 +454,7 @@ function TodayScreen({
       startedAt: new Date().toISOString(),
     };
     if (
-      onAdd(entry, `${kind === "both" ? "Wet + dirty" : kind === "dirty" ? "Dirty" : "Wet"} diaper saved`)
+      onAdd(entry, kind === "both" ? t("Wet + dirty diaper saved") : kind === "dirty" ? t("Dirty diaper saved") : t("Wet diaper saved"))
     ) {
       setReactionKey(entry.id);
       track("diaper_logged", { kind });
@@ -470,7 +474,7 @@ function TodayScreen({
       type: "sleep",
       startedAt: new Date().toISOString(),
     };
-    if (onAdd(entry, "Sleep timer started")) track("sleep_started");
+    if (onAdd(entry, t("Sleep timer started"))) track("sleep_started");
   }
 
   function toggleBurp() {
@@ -484,7 +488,7 @@ function TodayScreen({
       type: "burp",
       startedAt: new Date().toISOString(),
     };
-    if (onAdd(entry, "Burping timer started")) track("burp_started");
+    if (onAdd(entry, t("Burping timer started"))) track("burp_started");
   }
 
   const selectedDay = new Date(minuteClock);
@@ -498,7 +502,7 @@ function TodayScreen({
     ? today
     : summarizeDay(sortedActivities, selectedDay, minuteClock);
   const recapTitle = dayOffset === 0
-    ? "Today so far"
+    ? t("Today so far")
     : formatTimelineDay(selectedDay.toISOString());
 
   const lastDiaper = sortedActivities.find((activity) => activity.type === "diaper");
@@ -529,11 +533,13 @@ function TodayScreen({
   // opposite of the last logged side. Both choices stay one tap.
   const lastNursingSide = sortedActivities.find((a) => a.type === "nursing")?.side;
   const nextSide = lastNursingSide === "left" ? "right" : lastNursingSide === "right" ? "left" : null;
+  // The sentence is translated WHOLE: Greek moves the words, adds an article
+  // in front of the name, and puts the age in the genitive (tName / tAge).
   const headline = !babyAge
-    ? `Welcome, ${displayName}`
+    ? t("Welcome, {name}", { name: displayName })
     : babyAge === "born today"
-      ? `${displayName} — welcome to the world`
-      : `${displayName} is ${babyAge} old`;
+      ? t("{name} — welcome to the world", { name: tName(displayName, profile.sex) })
+      : t("{name} is {age} old", { name: tName(displayName, profile.sex), age: tAge(babyAge) });
   // The companion mirrors the real baby from what is actually known: nursing
   // now → feeding; close to (or past) the usual feed gap → eyeing the bottle;
   // fed within the hour → content. Hunger outranks the hour, so a 3am cue
@@ -577,15 +583,15 @@ function TodayScreen({
               A state, not a nudge: small, constant, honest. Unprotected taps
               open the doors; a synced one opens the details. */}
           <button type="button" className={cloudState === "none" || cloudState === "revoked" ? "cloud-note" : "cloud-note is-good"} onClick={onOpenProtection}>
-            {cloudState === "none" && <><CloudOff size={12} aria-hidden="true" /> On this phone only</>}
-            {cloudState === "synced" && <><Cloud size={12} aria-hidden="true" /> Synced to the cloud</>}
-            {cloudState === "syncing" && <><Cloud size={12} aria-hidden="true" /> Syncing…</>}
-            {cloudState === "offline" && <><CloudOff size={12} aria-hidden="true" /> Offline — will catch up</>}
-            {cloudState === "revoked" && <><CloudOff size={12} aria-hidden="true" /> Sync disconnected — tap to fix</>}
+            {cloudState === "none" && <><CloudOff size={12} aria-hidden="true" /> {t("On this phone only")}</>}
+            {cloudState === "synced" && <><Cloud size={12} aria-hidden="true" /> {t("Synced to the cloud")}</>}
+            {cloudState === "syncing" && <><Cloud size={12} aria-hidden="true" /> {t("Syncing…")}</>}
+            {cloudState === "offline" && <><CloudOff size={12} aria-hidden="true" /> {t("Offline — will catch up")}</>}
+            {cloudState === "revoked" && <><CloudOff size={12} aria-hidden="true" /> {t("Sync disconnected — tap to fix")}</>}
           </button>
           <p className="welcome-date">
-            {statusDateFormat.format(new Date(minuteClock))}
-            {babyDays !== null && <span className="welcome-day-count">Day {babyDays + 1}</span>}
+            {statusDateFormat().format(new Date(minuteClock))}
+            {babyDays !== null && <span className="welcome-day-count">{t("Day {n}", { n: babyDays + 1 })}</span>}
           </p>
         </div>
       </header>
@@ -617,16 +623,16 @@ function TodayScreen({
               // welcome instead.
               <div className="hearth-clock hearth-empty">
                 <LittleBottle className="hearth-illustration" />
-                <p className="t-title-2">Ready when you are</p>
+                <p className="t-title-2">{t("Ready when you are")}</p>
                 {/* Name the tiles this family actually has: a bottle-only
                     home has no Nursing tile, and nursing is Left/Right, not
                     one tap. */}
                 <p className="t-meta">
                   {profile.feedingMode === "bottle"
-                    ? "Log the first feed when it happens — one tap on Bottle."
+                    ? t("Log the first feed when it happens — one tap on Bottle.")
                     : profile.feedingMode === "breast"
-                      ? "Log the first feed when it happens — tap Left or Right under Nursing."
-                      : "Log the first feed when it happens — one tap on Bottle or Nursing."}
+                      ? t("Log the first feed when it happens — tap Left or Right under Nursing.")
+                      : t("Log the first feed when it happens — one tap on Bottle or Nursing.")}
                 </p>
               </div>
             ) : (
@@ -636,7 +642,7 @@ function TodayScreen({
               // second line of text (the forecast row below carries words).
               <div className={`hearth-clock hearth-idle${gapOver > 0 ? " is-over" : ""}`}>
                 <div className="hearth-copy">
-                  <span className="t-label">Since last feed</span>
+                  <span className="t-label">{t("Since last feed")}</span>
                   <p className="figure hearth-figure t-display">
                     <GapFigure startedAt={lastFeed.startedAt} now={minuteClock} />
                   </p>
@@ -698,8 +704,8 @@ function TodayScreen({
 
           <div className="recent-section">
             <div className="mini-heading">
-              <h2>Recent</h2>
-              <Button variant="ghost" onClick={onSeeTimeline}>See all <ChevronRight size={16} aria-hidden="true" /></Button>
+              <h2>{t("Recent")}</h2>
+              <Button variant="ghost" onClick={onSeeTimeline}>{t("See all")} <ChevronRight size={16} aria-hidden="true" /></Button>
             </div>
             <Card size="sm" className="activity-list recent-list">
               <CardContent className="activity-list-content">
@@ -717,10 +723,10 @@ function TodayScreen({
                     text-only — one ambient illustration per screen. */}
                 {!sortedActivities.length &&
                   (lastFeed ? (
-                    <EmptyState text="Your day will appear here as you log it." />
+                    <EmptyState text={t("Your day will appear here as you log it.")} />
                   ) : (
                     <div className="empty-state">
-                      <p>Your day will appear here as you log it.</p>
+                      <p>{t("Your day will appear here as you log it.")}</p>
                     </div>
                   ))}
               </CardContent>
@@ -752,15 +758,15 @@ function TodayScreen({
                   className="tile-main"
                   onClick={quickLogBottle}
                   aria-label={lastBottle?.amount
-                    ? `Log ${lastBottle.amount} millilitres of ${lastBottle.milkType === "expressed" ? "breast milk" : "formula"} now`
-                    : "Log a bottle"}
+                    ? t("Log {amount} millilitres of {milk} now", { amount: lastBottle.amount, milk: lastBottle.milkType === "expressed" ? t("breast milk") : t("formula") })
+                    : t("Log a bottle")}
                 >
                   <span className="activity-glyph glyph-bottle" aria-hidden="true"><ActivityGlyph type="bottle" /></span>
-                  <span className="tile-title">Bottle</span>
+                  <span className="tile-title">{t("Bottle")}</span>
                   <span className="tile-sub">
                     {lastBottle?.amount
-                      ? `${formatVolume(lastBottle.amount, units)} · ${lastBottle.milkType === "expressed" ? "breast milk" : "formula"}`
-                      : "Log the first feed"}
+                      ? `${formatVolume(lastBottle.amount, units)} · ${lastBottle.milkType === "expressed" ? t("breast milk") : t("formula")}`
+                      : t("Log the first feed")}
                   </span>
                 </button>
                 {lastBottle?.amount && (
@@ -768,9 +774,9 @@ function TodayScreen({
                     variant="ghost"
                     className="tile-chip"
                     onClick={() => onOpenSheet("bottle")}
-                    aria-label="Change bottle amount"
+                    aria-label={t("Change bottle amount")}
                   >
-                    Change
+                    {t("Change")}
                   </Button>
                 )}
               </div>
@@ -784,7 +790,7 @@ function TodayScreen({
               <div className="quick-tile tile-nurse">
                 <div className="tile-head">
                   <span className="activity-glyph glyph-nursing" aria-hidden="true"><ActivityGlyph type="nursing" /></span>
-                  <span className="tile-title">Nursing</span>
+                  <span className="tile-title">{t("Nursing")}</span>
                 </div>
                 <div className="tile-split">
                   <Button
@@ -792,8 +798,8 @@ function TodayScreen({
                     className={nextSide === "left" ? "is-next-side" : undefined}
                     onClick={() => quickStartNursing("left")}
                     aria-label={nextSide === "left"
-                      ? "Start nursing timer on the left side — usually next"
-                      : "Start nursing timer on the left side"}
+                      ? t("Start nursing timer on the left side — usually next")
+                      : t("Start nursing timer on the left side")}
                   >
                     Left
                   </Button>
@@ -802,8 +808,8 @@ function TodayScreen({
                     className={nextSide === "right" ? "is-next-side" : undefined}
                     onClick={() => quickStartNursing("right")}
                     aria-label={nextSide === "right"
-                      ? "Start nursing timer on the right side — usually next"
-                      : "Start nursing timer on the right side"}
+                      ? t("Start nursing timer on the right side — usually next")
+                      : t("Start nursing timer on the right side")}
                   >
                     Right
                   </Button>
@@ -812,9 +818,9 @@ function TodayScreen({
                   variant="ghost"
                   className="tile-chip"
                   onClick={onManualNursing}
-                  aria-label="Add a completed nursing session manually"
+                  aria-label={t("Add a completed nursing session manually")}
                 >
-                  Past
+                  {t("Past")}
                 </Button>
               </div>
             )}
@@ -822,19 +828,19 @@ function TodayScreen({
             <div className="quick-tile tile-diaper">
               <div className="tile-head">
                 <span className="activity-glyph glyph-diaper" aria-hidden="true"><ActivityGlyph type="diaper" /></span>
-                <span className="tile-title">Diaper</span>
+                <span className="tile-title">{t("Diaper")}</span>
                 {/* Asked for by a user: the question at the changing mat is
                     never "how many today", it is "how long has it been". */}
                 {lastDiaper && (
                   <span className="tile-since">
-                    {humanDuration(minutesBetween(lastDiaper.startedAt, new Date(minuteClock).toISOString()))} ago
+                    {t("{duration} ago", { duration: humanDuration(minutesBetween(lastDiaper.startedAt, new Date(minuteClock).toISOString())) })}
                   </span>
                 )}
               </div>
               <div className="tile-split">
-                <Button variant="outline" onClick={() => quickLogDiaper("wet")} aria-label="Log wet diaper">Wet</Button>
-                <Button variant="outline" onClick={() => quickLogDiaper("dirty")} aria-label="Log dirty diaper">Dirty</Button>
-                <Button variant="outline" onClick={() => quickLogDiaper("both")} aria-label="Log wet and dirty diaper">Both</Button>
+                <Button variant="outline" onClick={() => quickLogDiaper("wet")} aria-label={t("Log wet diaper")}>{t("Wet")}</Button>
+                <Button variant="outline" onClick={() => quickLogDiaper("dirty")} aria-label={t("Log dirty diaper")}>{t("Dirty")}</Button>
+                <Button variant="outline" onClick={() => quickLogDiaper("both")} aria-label={t("Log wet and dirty diaper")}>{t("Both")}</Button>
               </div>
               {/* The diaper sheet — kind, time and a note — has existed since
                   the beginning with nothing anywhere that opened it. The three
@@ -844,9 +850,9 @@ function TodayScreen({
                 variant="ghost"
                 className="tile-chip"
                 onClick={() => onOpenSheet("diaper")}
-                aria-label="Log a diaper change at a different time"
+                aria-label={t("Log a diaper change at a different time")}
               >
-                Past
+                {t("Past")}
               </Button>
             </div>
 
@@ -858,11 +864,11 @@ function TodayScreen({
                   type="button"
                   className="tile-main"
                   onClick={toggleSleep}
-                  aria-label="Start sleep timer"
+                  aria-label={t("Start sleep timer")}
                 >
                   <span className="activity-glyph glyph-sleep" aria-hidden="true"><ActivityGlyph type="sleep" /></span>
-                  <span className="tile-title">Sleep</span>
-                  <span className="tile-sub">Start the timer</span>
+                  <span className="tile-title">{t("Sleep")}</span>
+                  <span className="tile-sub">{t("Start the timer")}</span>
                 </button>
                 {/* The night you meant to log at the time. Without this the
                     only way to record a sleep was to have pressed a button as
@@ -871,9 +877,9 @@ function TodayScreen({
                   variant="ghost"
                   className="tile-chip"
                   onClick={() => onOpenSheet("sleep")}
-                  aria-label="Add a sleep that has already finished"
+                  aria-label={t("Add a sleep that has already finished")}
                 >
-                  Past
+                  {t("Past")}
                 </Button>
               </div>
             )}
@@ -886,11 +892,11 @@ function TodayScreen({
                   type="button"
                   className="tile-main"
                   onClick={toggleBurp}
-                  aria-label="Start burping timer"
+                  aria-label={t("Start burping timer")}
                 >
                   <span className="activity-glyph glyph-burp" aria-hidden="true"><ActivityGlyph type="burp" /></span>
-                  <span className="tile-title">Burp</span>
-                  <span className="tile-sub">Start the timer</span>
+                  <span className="tile-title">{t("Burp")}</span>
+                  <span className="tile-sub">{t("Start the timer")}</span>
                 </button>
               </div>
             )}
@@ -915,8 +921,8 @@ function TodayScreen({
           >
             <span className="action-icon" aria-hidden="true"><Weight /></span>
             <span className="log-copy">
-              <strong>Growth</strong>
-              <small>Weight, length, head</small>
+              <strong>{t("Growth")}</strong>
+              <small>{t("Weight, length, head")}</small>
             </span>
             <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
           </Button>
@@ -933,8 +939,8 @@ function TodayScreen({
             >
               <span className="action-icon" aria-hidden="true"><Milk /></span>
               <span className="log-copy">
-                <strong>Bottle</strong>
-                <small>Expressed milk or formula</small>
+                <strong>{t("Bottle")}</strong>
+                <small>{t("Expressed milk or formula")}</small>
               </span>
               <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
             </Button>
@@ -953,8 +959,8 @@ function TodayScreen({
               >
                 <span className="action-icon" aria-hidden="true"><Utensils /></span>
                 <span className="log-copy">
-                  <strong>Solids</strong>
-                  <small>{lastSolid ? `${lastSolid.food?.trim() || "Last food"} · ${humanDuration(minutesBetween(lastSolid.startedAt, new Date(minuteClock).toISOString()))} ago` : "First tastes, purées, finger food"}</small>
+                  <strong>{t("Solids")}</strong>
+                  <small>{lastSolid ? t("{what} · {duration} ago", { what: lastSolid.food?.trim() || t("Last food"), duration: humanDuration(minutesBetween(lastSolid.startedAt, new Date(minuteClock).toISOString())) }) : t("First tastes, purées, finger food")}</small>
                 </span>
                 <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
               </Button>
@@ -972,8 +978,8 @@ function TodayScreen({
           >
             <span className="action-icon" aria-hidden="true"><Waves /></span>
             <span className="log-copy">
-              <strong>Sounds</strong>
-              <small>White noise and lullabies — back, and working</small>
+              <strong>{t("Sounds")}</strong>
+              <small>{t("White noise and lullabies — back, and working")}</small>
             </span>
             <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
           </Button>
@@ -987,11 +993,11 @@ function TodayScreen({
           >
             <span className="action-icon" aria-hidden="true"><Pill /></span>
             <span className="log-copy">
-              <strong>Medicine</strong>
+              <strong>{t("Medicine")}</strong>
               <small>
                 {lastMedicine
-                  ? `${lastMedicine.medicine?.trim() || "Last dose"} · ${humanDuration(minutesBetween(lastMedicine.startedAt, new Date(minuteClock).toISOString()))} ago`
-                  : "Vitamin D, paracetamol, drops"}
+                  ? t("{what} · {duration} ago", { what: lastMedicine.medicine?.trim() || t("Last dose"), duration: humanDuration(minutesBetween(lastMedicine.startedAt, new Date(minuteClock).toISOString())) })
+                  : t("Vitamin D, paracetamol, drops")}
               </small>
             </span>
             <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
@@ -1003,8 +1009,8 @@ function TodayScreen({
           >
             <span className="action-icon" aria-hidden="true"><Thermometer /></span>
             <span className="log-copy">
-              <strong>Health note</strong>
-              <small>Temperature or note</small>
+              <strong>{t("Health note")}</strong>
+              <small>{t("Temperature or note")}</small>
             </span>
             <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
           </Button>
@@ -1021,8 +1027,8 @@ function TodayScreen({
           >
             <span className="action-icon" aria-hidden="true"><Gift /></span>
             <span className="log-copy">
-              <strong>Tell another parent</strong>
-              <small>Numalog is free — pass it on</small>
+              <strong>{t("Tell another parent")}</strong>
+              <small>{t("Numalog is free — pass it on")}</small>
             </span>
             <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
           </Button>

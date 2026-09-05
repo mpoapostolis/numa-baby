@@ -1,4 +1,5 @@
 import { Droplet, Milk, Moon, Stethoscope, Wind } from "lucide-react";
+import { t } from "../i18n";
 import { formatTime, humanDuration, isSameDay, minutesOnDay } from "../domain/time";
 import { Activity } from "../domain/types";
 
@@ -139,7 +140,7 @@ export function DayBand({
     <div
       className={`day-band ${className}`.trim()}
       role="img"
-      aria-label={`${rolling ? "Last 24 hours" : "24-hour overview"}: ${parts.join(", ")}.`}
+      aria-label={`${rolling ? t("Last 24 hours") : t("24-hour overview")}: ${parts.join(", ")}.`}
       style={{ "--band-gutter": feedsOnly ? "0px" : "24px" } as React.CSSProperties}
     >
       <div className="day-band-lanes">
@@ -159,7 +160,7 @@ export function DayBand({
                 className={`${activity.type === "nursing" ? "band-dot is-nursing" : "band-dot is-bottle"}${
                   isFresh(activity.startedAt) ? " is-new" : ""
                 }`}
-                title={`${activity.type === "nursing" ? "Nursing" : "Bottle"} · ${formatTime(activity.startedAt)}`}
+                title={`${activity.type === "nursing" ? t("Nursing") : t("Bottle")} · ${formatTime(activity.startedAt)}`}
                 style={
                   {
                     left: `${pct(new Date(activity.startedAt).getTime())}%`,
@@ -179,7 +180,7 @@ export function DayBand({
                   <span
                     key={activity.id}
                     className={`band-square${isFresh(activity.startedAt) ? " is-new" : ""}`}
-                    title={`Diaper · ${formatTime(activity.startedAt)}`}
+                    title={`${t("Diaper")} · ${formatTime(activity.startedAt)}`}
                     style={{ left: `${pct(new Date(activity.startedAt).getTime())}%` }}
                   />
                 ))}
@@ -193,7 +194,7 @@ export function DayBand({
                     <span
                       key={activity.id}
                       className={`band-dot burp-dot${isFresh(activity.startedAt) ? " is-new" : ""}`}
-                      title={`Burp · ${formatTime(activity.startedAt)}`}
+                      title={`${t("Burp")} · ${formatTime(activity.startedAt)}`}
                       style={{ left: `${pct(new Date(activity.startedAt).getTime())}%` }}
                     />
                   ))}
@@ -238,7 +239,7 @@ export function DayBand({
                     <span
                       key={activity.id}
                       className={`band-mark${isFresh(activity.startedAt) ? " is-new" : ""}`}
-                      title={`${activity.type === "growth" ? "Growth" : "Health"} · ${formatTime(activity.startedAt)}`}
+                      title={`${activity.type === "growth" ? t("Growth") : t("Health")} · ${formatTime(activity.startedAt)}`}
                       style={{ left: `${pct(new Date(activity.startedAt).getTime())}%` }}
                     />
                   ))}

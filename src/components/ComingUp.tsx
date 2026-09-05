@@ -19,6 +19,7 @@
 import { ReactNode } from "react";
 import { Share2 } from "lucide-react";
 import { Forecast } from "../domain/forecast";
+import { t } from "../i18n";
 import { RhythmRecord, rhythmLine, worthSharing } from "../domain/rhythm";
 import { ActivityType } from "../domain/types";
 import { ActivityGlyph } from "./ActivityGlyph";
@@ -70,7 +71,7 @@ export function ComingUp({
 
   return (
     <section className="coming-up" aria-labelledby="coming-up-heading">
-      <h2 id="coming-up-heading" className="t-label">{who ? `${who}’s rhythm` : "Rhythm"}</h2>
+      <h2 id="coming-up-heading" className="t-label">{who ? t("{name}’s rhythm", { name: who }) : t("Rhythm")}</h2>
       <ul>
         {ordered.map((entry) => {
           const { at, spread, typicalGap, passed } = entry.forecast;
@@ -122,7 +123,7 @@ export function ComingUp({
           {/* Offered only on a run worth showing — the moment a parent
               actually wants to tell somebody the app called it. */}
           {onShareRecord && record && worthSharing(record) && (
-            <Button variant="ghost" size="sm" aria-label="Share this run as a picture" onClick={onShareRecord}>
+            <Button variant="ghost" size="sm" aria-label={t("Share this run as a picture")} onClick={onShareRecord}>
               <Share2 size={16} aria-hidden="true" />
             </Button>
           )}
