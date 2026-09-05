@@ -1,4 +1,5 @@
 import { ChangeEvent, useEffect, useRef, useState } from "react";
+import { t } from "../i18n";
 import { applyRemote, mergeStored, summarizeMerge } from "../domain/merge";
 import { activityUpdatedAt, liveActivities, parseStoredData } from "../domain/validate";
 import { Activity, BootState, Profile, ReminderSettings } from "../domain/types";
@@ -373,7 +374,7 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     const outcome = writeBlob(text, persistedStateRef.current.bootState === "ready");
     if (outcome === "failed") {
       setStorageWarning("This browser could not save the latest change. Your previous data is still intact.");
-      showToast("Could not save on this device. Nothing was changed.");
+      showToast(t("Could not save on this device. Nothing was changed."));
       return false;
     }
     persistedStateRef.current = nextPersisted;
@@ -392,7 +393,7 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     // that has grown to most of the browser's budget gets a standing
     // "download a backup" long before a tap fails.
     setStorageWarning(text.length > STORAGE_WATERMARK_CHARS ? LARGE_LOG_WARNING : null);
-    if (outcome === "freed") showToast("Storage was full — an older recovery copy was removed to make room.");
+    if (outcome === "freed") showToast(t("Storage was full — an older recovery copy was removed to make room."));
     setPersistVersion((version) => version + 1);
     return true;
   }
@@ -425,7 +426,7 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
       );
       if (!persistSnapshot(undone)) return;
       syncActivitiesFromRef();
-      showToast("Last change undone");
+      showToast(t("Last change undone"));
     });
     return true;
   }
@@ -449,7 +450,7 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     );
     if (!persistSnapshot(next)) return false;
     syncActivitiesFromRef();
-    showToast("Entry removed", () => {
+    showToast(t("Entry removed"), () => {
       // Undo revives the tombstone in place: the deleted flag comes off and the
       // revival is itself a fresh write (restamped updatedAt) so it wins a merge.
       const restored = persistedStateRef.current.activities.map((item) => {
@@ -460,7 +461,7 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
       });
       if (!persistSnapshot(restored)) return;
       syncActivitiesFromRef();
-      showToast("Entry restored");
+      showToast(t("Entry restored"));
     });
     return true;
   }
@@ -500,8 +501,8 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
       // an explicit Cancel discards — the previous mapping put a genuine
       // overnight sleep one habitual OK away from a tombstone.
       const savedIt = window.confirm(
-        `This ${TIMER_NOUN[target.type] ?? "timer"} has been running for ${humanDuration(ranForMinutes)}. ` +
-          `That is usually a timer left on by mistake.\n\nOK saves it as a ${humanDuration(ranForMinutes)} session. Cancel discards it.`,
+        t("This {what} has been running for {duration}. That is usually a timer left on by mistake.", { what: t(TIMER_NOUN[target.type] ?? "timer"), duration: humanDuration(ranForMinutes) }) +
+          "\n\n" + t("OK saves it as a {duration} session. Cancel discards it.", { duration: humanDuration(ranForMinutes) }),
       );
       if (!savedIt) {
         // Discarded, not deleted-and-forgotten: it becomes a tombstone like any
@@ -511,7 +512,7 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
         );
         if (!persistSnapshot(withoutIt)) return;
         syncActivitiesFromRef();
-        showToast("Timer discarded — nothing was added to the log");
+        showToast(t("Timer discarded — nothing was added to the log"));
         return;
       }
     }
@@ -529,14 +530,14 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     // and wrote it to the log — and the way back was a datetime field in the
     // edit sheet, not a one-handed 3am operation. Now it is the same Undo
     // every other tap has.
-    showToast(`${TIMER_LABEL[target.type] ?? "Session"} saved — ${humanDuration(ranForMinutes)}`, () => {
+    showToast(t("{what} saved — {duration}", { what: t(TIMER_LABEL[target.type] ?? "Session"), duration: humanDuration(ranForMinutes) }), () => {
       // Not while another timer of the same kind has started since: two open
       // sleeps is a mess the stop button cannot untangle.
       const anotherRunning = persistedStateRef.current.activities.some(
         (activity) => activity.id !== id && activity.type === target.type && !activity.endedAt && !activity.deleted,
       );
       if (anotherRunning) {
-        showToast(`Another ${TIMER_NOUN[target.type] ?? "timer"} is already running — stop that one first.`);
+        showToast(t("Another {what} is already running — stop that one first.", { what: t(TIMER_NOUN[target.type] ?? "timer") }));
         return;
       }
       const reopened = persistedStateRef.current.activities.map((activity) => {
@@ -547,7 +548,7 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
       });
       if (!persistSnapshot(reopened)) return;
       syncActivitiesFromRef();
-      showToast("Timer resumed");
+      showToast(t("Timer resumed"));
     });
   }
 
@@ -657,13 +658,13 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
       const next = { ...reminders, [key]: false };
       if (!persistSnapshot(persistedStateRef.current.activities, profile, nightMode, next)) return;
       setReminders(next);
-      showToast(`${label} reminders off`);
+      showToast(t("{what} reminders off", { what: t(label) }));
       return;
     }
 
     if (!("Notification" in window) || !("serviceWorker" in navigator)) {
       onNotificationPermission("unsupported");
-      showToast("Notifications are not supported in this browser");
+      showToast(t("Notifications are not supported in this browser"));
       return;
     }
 
@@ -672,7 +673,7 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
       : Notification.permission;
     onNotificationPermission(permission);
     if (permission !== "granted") {
-      showToast("Notifications were not enabled. You can allow them in browser settings.");
+      showToast(t("Notifications were not enabled. You can allow them in browser settings."));
       return;
     }
 
@@ -681,7 +682,7 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     const next = { ...persistedStateRef.current.reminders, [key]: true };
     if (!persistSnapshot(persistedStateRef.current.activities, undefined, undefined, next)) return;
     setReminders(next);
-    showToast(`${label} reminders on`);
+    showToast(t("{what} reminders on", { what: t(label) }));
   }
 
   function changeFeedReminders(enabled: boolean) {
@@ -841,7 +842,7 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
       anchor.click();
       URL.revokeObjectURL(url);
     } catch {
-      showToast("Recovery data is unavailable in this browser");
+      showToast(t("Recovery data is unavailable in this browser"));
     }
   }
 
@@ -862,9 +863,9 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
       }
       applyLoadedState({ activities: [], profile: EMPTY_PROFILE, bootState: "onboarding" });
       setStorageWarning(null);
-      showToast("Local copy reset. Start with a clean tracker.");
+      showToast(t("Local copy reset. Start with a clean tracker."));
     } catch {
-      showToast("This browser is still blocking local storage");
+      showToast(t("This browser is still blocking local storage"));
     }
   }
 
@@ -978,7 +979,7 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
           : counts);
         return true;
       } catch {
-        showToast("That backup could not be read");
+        showToast(t("That backup could not be read"));
         return false;
       }
   }
@@ -990,7 +991,7 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     // megabytes, so this is a hundred years of logging, and the earlier
     // 2 MB cap refused the app's own year-old backups.
     if (file.size > 25_000_000) {
-      showToast("That backup is too large to import safely");
+      showToast(t("That backup is too large to import safely"));
       event.target.value = "";
       return;
     }
@@ -1002,7 +1003,7 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
         "file",
       );
     };
-    reader.onerror = () => showToast("That backup could not be opened");
+    reader.onerror = () => showToast(t("That backup could not be opened"));
     reader.readAsText(file);
     event.target.value = "";
   }
@@ -1032,10 +1033,10 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
         bootState: "onboarding",
       });
       setStorageWarning(null);
-      showToast("Everything erased. Starting fresh.");
+      showToast(t("Everything erased. Starting fresh."));
       return true;
     } catch {
-      showToast("This browser blocked the erase. Nothing was changed.");
+      showToast(t("This browser blocked the erase. Nothing was changed."));
       return false;
     }
   }

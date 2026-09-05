@@ -1,27 +1,28 @@
 import { formatTime, humanDuration, minutesBetween, timeAgo } from "./time";
+import { t } from "../i18n";
 import { Activity } from "./types";
 import { UnitSystem, formatLength, formatTemperature, formatVolume, formatWeight } from "./units";
 
 export function activityTitle(activity: Activity) {
-  if (activity.type === "bottle") return "Bottle";
-  if (activity.type === "nursing") return "Nursing";
-  if (activity.type === "burp") return activity.endedAt ? "Burping" : "Burping now";
-  if (activity.type === "sleep") return activity.endedAt ? "Sleep" : "Sleeping now";
-  if (activity.type === "growth") return "Growth check";
-  if (activity.type === "health") return activity.temperatureC ? "Temperature" : "Health note";
-  if (activity.type === "medicine") return activity.medicine?.trim() || "Medicine";
-  if (activity.type === "solid") return activity.food?.trim() || "Solid food";
+  if (activity.type === "bottle") return t("Bottle");
+  if (activity.type === "nursing") return t("Nursing");
+  if (activity.type === "burp") return activity.endedAt ? t("Burping") : t("Burping now");
+  if (activity.type === "sleep") return activity.endedAt ? t("Sleep") : t("Sleeping now");
+  if (activity.type === "growth") return t("Growth check");
+  if (activity.type === "health") return activity.temperatureC ? t("Temperature") : t("Health note");
+  if (activity.type === "medicine") return activity.medicine?.trim() || t("Medicine");
+  if (activity.type === "solid") return activity.food?.trim() || t("Solid food");
   // The label is carried ON the tick rather than looked up in the profile, so
   // a log entry stays self-describing: deleting the routine later must not
   // rename "Vitamin D, 09:12" into something nobody can identify.
-  if (activity.type === "routine") return activity.note?.trim() || "Daily routine";
+  if (activity.type === "routine") return activity.note?.trim() || t("Daily routine");
   if (activity.type === "diaper") {
-    if (activity.diaperKind === "both") return "Wet + dirty diaper";
-    return activity.diaperKind === "dirty" ? "Dirty diaper" : "Wet diaper";
+    if (activity.diaperKind === "both") return t("Wet + dirty diaper");
+    return activity.diaperKind === "dirty" ? t("Dirty diaper") : t("Wet diaper");
   }
   // An activity type from a build newer than this one. Naming it honestly
   // beats mislabelling it as a nappy, which is what falling through did.
-  return "Entry";
+  return t("Entry");
 }
 
 function includeNote(detail: string, note?: string) {
@@ -31,12 +32,12 @@ function includeNote(detail: string, note?: string) {
 export function activityDetail(activity: Activity, units: UnitSystem = "metric") {
   if (activity.type === "bottle") {
     return includeNote(
-      `${formatVolume(activity.amount ?? 0, units)} · ${activity.milkType === "expressed" ? "breast milk" : "formula"}`,
+      `${formatVolume(activity.amount ?? 0, units)} · ${activity.milkType === "expressed" ? t("breast milk") : t("formula")}`,
       activity.note,
     );
   }
   if (activity.type === "nursing") {
-    const side = activity.side === "both" ? "Both sides" : activity.side === "left" ? "Left side" : "Right side";
+    const side = activity.side === "both" ? t("Both sides") : activity.side === "left" ? t("Left side") : t("Right side");
     const detail = activity.endedAt
       ? `${side} · ${formatTime(activity.startedAt)}–${formatTime(activity.endedAt)} · ${humanDuration(minutesBetween(activity.startedAt, activity.endedAt))}`
       : `${side} · started ${formatTime(activity.startedAt)}`;
@@ -72,13 +73,13 @@ export function activityDetail(activity: Activity, units: UnitSystem = "metric")
   if (activity.type === "growth") {
     const values = [
       activity.weightGrams ? formatWeight(activity.weightGrams, units) : null,
-      activity.lengthCm ? `${formatLength(activity.lengthCm, units)} long` : null,
-      activity.headCm ? `${formatLength(activity.headCm, units)} head` : null,
+      activity.lengthCm ? t("{value} long", { value: formatLength(activity.lengthCm, units) }) : null,
+      activity.headCm ? t("{value} head", { value: formatLength(activity.headCm, units) }) : null,
     ].filter(Boolean);
     return includeNote(values.join(" · "), activity.note);
   }
   if (activity.type === "health") {
-    const detail = activity.temperatureC ? formatTemperature(activity.temperatureC, units) : "Note";
+    const detail = activity.temperatureC ? formatTemperature(activity.temperatureC, units) : t("Note");
     return includeNote(detail, activity.note);
   }
   return activity.note?.trim() ?? "";

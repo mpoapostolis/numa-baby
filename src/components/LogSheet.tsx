@@ -1,4 +1,5 @@
 import { Baby, Check, Droplet, Heart, Milk, Minus, Moon, Pill, Plus, Thermometer, Trash2, Utensils, Weight } from "lucide-react";
+import { t } from "../i18n";
 import { useId, useRef, useState } from "react";
 import { Button } from "./ui/button";
 import { ButtonGroup, ButtonGroupText } from "./ui/button-group";
@@ -327,7 +328,7 @@ export function LogSheet({
       note: outcome.value.note,
     };
     const sideLabel =
-      draft.nursingSide === "both" ? "Both sides" : draft.nursingSide === "left" ? "Left" : "Right";
+      draft.nursingSide === "both" ? t("Both sides") : draft.nursingSide === "left" ? t("Left") : t("Right");
     const message = draft.nursingEntryMode === "manual" ? `${sideLabel} nursing saved` : `${sideLabel} timer started`;
     if (onAdd(entry, message)) onClose();
   }
@@ -352,7 +353,7 @@ export function LogSheet({
       endedAt: outcome.value.endedAt,
       note: outcome.value.note,
     };
-    if (onAdd(entry, "Sleep saved")) onClose();
+    if (onAdd(entry, t("Sleep saved"))) onClose();
   }
 
   // What was given, and when. Nothing here checks a dose or suggests one:
@@ -384,7 +385,7 @@ export function LogSheet({
   function saveMedicine() {
     const name = draft.medicineName.trim();
     if (!name) {
-      showFormError({ message: "Which medicine was it?", field: "start" });
+      showFormError({ message: t("Which medicine was it?"), field: "start" });
       return;
     }
     const outcome = validateDraft({ type: "medicine", start: draft.logTime, note: draft.note });
@@ -400,13 +401,13 @@ export function LogSheet({
       dose: draft.doseText.trim().slice(0, NOTE_MAX_LENGTH) || undefined,
       note: outcome.value.note,
     };
-    if (onAdd(entry, `${name} logged`)) onClose();
+    if (onAdd(entry, t("{what} logged", { what: name }))) onClose();
   }
 
   function saveSolid() {
     const food = draft.foodText.trim();
     if (!food) {
-      showFormError({ message: "What did they eat?", field: "start" });
+      showFormError({ message: t("What did they eat?"), field: "start" });
       return;
     }
     const outcome = validateDraft({ type: "solid", start: draft.logTime, note: draft.note });
@@ -421,7 +422,7 @@ export function LogSheet({
       food: food.slice(0, NOTE_MAX_LENGTH),
       note: outcome.value.note,
     };
-    if (onAdd(entry, `${food} logged`)) onClose();
+    if (onAdd(entry, t("{what} logged", { what: food }))) onClose();
   }
 
   function saveDiaper(kind: DiaperKind) {
@@ -434,7 +435,7 @@ export function LogSheet({
       startedAt: outcome.value.startedAt,
       note: outcome.value.note,
     };
-    if (onAdd(entry, `${kind === "both" ? "Wet + dirty" : kind === "dirty" ? "Dirty" : "Wet"} diaper saved`)) onClose();
+    if (onAdd(entry, kind === "both" ? t("Wet + dirty diaper saved") : kind === "dirty" ? t("Dirty diaper saved") : t("Wet diaper saved"))) onClose();
   }
 
   function saveGrowth() {
@@ -476,7 +477,7 @@ export function LogSheet({
       temperatureC: outcome.value.temperatureC,
       note: outcome.value.note,
     };
-    if (onAdd(entry, outcome.value.temperatureC === undefined ? "Health note saved" : "Temperature saved")) onClose();
+    if (onAdd(entry, outcome.value.temperatureC === undefined ? t("Health note saved") : t("Temperature saved"))) onClose();
   }
 
   function saveEditedActivity() {
@@ -533,7 +534,7 @@ export function LogSheet({
     if (next.type === "solid") {
       const food = draft.foodText.trim();
       if (!food) {
-        showFormError({ message: "What did they eat?", field: "start" });
+        showFormError({ message: t("What did they eat?"), field: "start" });
         return;
       }
       next.food = food.slice(0, NOTE_MAX_LENGTH);
@@ -548,9 +549,9 @@ export function LogSheet({
     <>
       {sheet === "bottle" && (
         <SheetForm onSubmit={saveBottle}>
-          <LogDialogHeader icon={<Milk />} eyebrow="Quick log" title="Bottle" description="Record the amount now; adjust details only if needed." />
+          <LogDialogHeader icon={<Milk />} eyebrow={t("Quick log")} title={t("Bottle")} description={t("Record the amount now; adjust details only if needed.")} />
           <Field className="amount-field">
-            <FieldLabel>Amount</FieldLabel>
+            <FieldLabel>{t("Amount")}</FieldLabel>
             <ButtonGroup className="amount-control" aria-label="Bottle amount">
               <Button type="button" variant="outline" aria-label="Decrease amount" disabled={Number(draft.bottleAmount) <= stepper.min} onClick={() => setDraft((current) => ({ ...current, bottleAmount: stepDraft((Number(current.bottleAmount) || stepper.min) - stepper.step) }))}><Minus /></Button>
               <ButtonGroupText role="status" aria-live="polite" aria-atomic="true"><strong>{draft.bottleAmount}</strong><span>{stepper.unit}</span></ButtonGroupText>
@@ -564,23 +565,23 @@ export function LogSheet({
             </ToggleGroup>
           </Field>
           <Field className="choice-field">
-            <FieldLabel>Milk</FieldLabel>
+            <FieldLabel>{t("Milk")}</FieldLabel>
             <ToggleGroup type="single" value={draft.milkType} className="segmented" aria-label="Milk type" onValueChange={(value) => value && patch({ milkType: value as "formula" | "expressed" })}>
-              <ToggleGroupItem value="formula">Formula<Check className="choice-check" /></ToggleGroupItem>
-              <ToggleGroupItem value="expressed">Breast milk<Check className="choice-check" /></ToggleGroupItem>
+              <ToggleGroupItem value="formula">{t("Formula")}<Check className="choice-check" /></ToggleGroupItem>
+              <ToggleGroupItem value="expressed">{t("Breast milk")}<Check className="choice-check" /></ToggleGroupItem>
             </ToggleGroup>
           </Field>
           <TimeField quick value={draft.logTime} onChange={(value) => patch({ logTime: value })} />
           <NoteField value={draft.note} onChange={(value) => patch({ note: value })} />
-          <SheetFooter><Button type="submit" className="primary-button sheet-primary">Save {draft.bottleAmount} {stepper.unit}</Button></SheetFooter>
+          <SheetFooter><Button type="submit" className="primary-button sheet-primary">{t("Save {amount} {unit}", { amount: draft.bottleAmount, unit: stepper.unit })}</Button></SheetFooter>
         </SheetForm>
       )}
 
       {sheet === "nursing" && (
         <SheetForm onSubmit={saveNursing}>
-          <LogDialogHeader icon={<Heart />} eyebrow="Nursing" title="Log a nursing session" description="Start a live timer or add a completed session." />
+          <LogDialogHeader icon={<Heart />} eyebrow={t("Nursing")} title={t("Log a nursing session")} description={t("Start a live timer or add a completed session.")} />
           <Field className="choice-field">
-            <FieldLabel>Entry method</FieldLabel>
+            <FieldLabel>{t("Entry method")}</FieldLabel>
             <ToggleGroup
               type="single"
               value={draft.nursingEntryMode}
@@ -593,15 +594,15 @@ export function LogSheet({
             </ToggleGroup>
           </Field>
           <Field className="nursing-side-field">
-            <FieldLabel>Side</FieldLabel>
+            <FieldLabel>{t("Side")}</FieldLabel>
             <ToggleGroup type="single" value={draft.nursingSide} className="side-grid" aria-label="Nursing side" onValueChange={(value) => value && patch({ nursingSide: value as "left" | "right" | "both" })}>
-              <ToggleGroupItem value="left"><span className="side-letter">L</span><span className="choice-copy"><strong>Left</strong></span><Check className="choice-check" /></ToggleGroupItem>
-              <ToggleGroupItem value="right"><span className="side-letter">R</span><span className="choice-copy"><strong>Right</strong></span><Check className="choice-check" /></ToggleGroupItem>
+              <ToggleGroupItem value="left"><span className="side-letter">L</span><span className="choice-copy"><strong>{t("Left")}</strong></span><Check className="choice-check" /></ToggleGroupItem>
+              <ToggleGroupItem value="right"><span className="side-letter">R</span><span className="choice-copy"><strong>{t("Right")}</strong></span><Check className="choice-check" /></ToggleGroupItem>
               {/* Only for a session that has already finished. A live timer
                   starts on one side by definition; a feed that used both is
                   something you know afterwards, and it is one feed, not two. */}
               {draft.nursingEntryMode === "manual" && (
-                <ToggleGroupItem value="both"><span className="side-letter">LR</span><span className="choice-copy"><strong>Both</strong></span><Check className="choice-check" /></ToggleGroupItem>
+                <ToggleGroupItem value="both"><span className="side-letter">LR</span><span className="choice-copy"><strong>{t("Both")}</strong></span><Check className="choice-check" /></ToggleGroupItem>
               )}
             </ToggleGroup>
           </Field>
@@ -621,7 +622,7 @@ export function LogSheet({
               {draft.nursingEntryMode === "timer"
                 ? `Start ${draft.nursingSide} timer`
                 : draft.nursingSide === "both"
-                  ? "Save session"
+                  ? t("Save session")
                   : `Save ${draft.nursingSide} session`}
             </Button>
           </SheetFooter>
@@ -632,21 +633,21 @@ export function LogSheet({
         <SheetForm onSubmit={saveSleep}>
           <LogDialogHeader
             icon={<Moon />}
-            eyebrow="Past sleep"
-            title="Add a sleep"
+            eyebrow={t("Past sleep")}
+            title={t("Add a sleep")}
             description="A stretch that has already finished — the night you meant to log at the time."
           />
           <div className="measurement-row nursing-time-row">
             <TimeField
               value={draft.logTime}
-              label="Fell asleep"
+              label={t("Fell asleep")}
               inputRef={startRef}
               error={formError?.field === "start"}
               onChange={(value) => { patch({ logTime: value }); setFormError(null); }}
             />
             <TimeField
               value={draft.endTime}
-              label="Woke up"
+              label={t("Woke up")}
               inputRef={endRef}
               error={formError?.field === "end"}
               onChange={(value) => { patch({ endTime: value }); setFormError(null); }}
@@ -656,7 +657,7 @@ export function LogSheet({
           <FormError message={formError?.message ?? null} />
           <SheetFooter>
             <p className="sheet-footer-note">A stretch that crosses midnight is counted whole, on the evening it began.</p>
-            <Button type="submit" className="primary-button sheet-primary">Save sleep</Button>
+            <Button type="submit" className="primary-button sheet-primary">{t("Save sleep")}</Button>
           </SheetFooter>
         </SheetForm>
       )}
@@ -665,9 +666,9 @@ export function LogSheet({
         <SheetForm onSubmit={saveMedicine}>
           <LogDialogHeader
             icon={<Pill />}
-            eyebrow="Medicine"
-            title="Log a dose"
-            description="So the next person knows it has already been given."
+            eyebrow={t("Medicine")}
+            title={t("Log a dose")}
+            description={t("So the next person knows it has already been given.")}
           />
           {/* Asked for from the feedback box, by a parent of a baby with
               special needs: PICK the medicine, don't retype it — a mistyped
@@ -694,7 +695,7 @@ export function LogSheet({
             </div>
           )}
           <Field className="medicine-field">
-            <FieldLabel htmlFor="medicine-name">{savedMedicines.length > 0 ? "Or type a new one" : "What was given"}</FieldLabel>
+            <FieldLabel htmlFor="medicine-name">{savedMedicines.length > 0 ? t("Or type a new one") : t("What was given")}</FieldLabel>
             <InputGroup>
               {/* Focus lands on the first preset when there are any — the
                   text field only when there is nothing to pick. Focusing the
@@ -707,7 +708,7 @@ export function LogSheet({
                 data-initial-focus={savedMedicines.length === 0 ? "" : undefined}
                 value={draft.medicineName}
                 maxLength={NOTE_MAX_LENGTH}
-                placeholder="Vitamin D drops, paracetamol…"
+                placeholder={t("Vitamin D drops, paracetamol…")}
                 onChange={(event) => { patch({ medicineName: event.target.value }); setFormError(null); }}
               />
             </InputGroup>
@@ -731,7 +732,7 @@ export function LogSheet({
           <TimeField quick value={draft.logTime} inputRef={startRef} error={formError?.field === "start"} onChange={(value) => { patch({ logTime: value }); setFormError(null); }} />
           <NoteField value={draft.note} onChange={(value) => patch({ note: value })} />
           <FormError message={formError?.message ?? null} />
-          <SheetFooter><Button type="submit" className="primary-button sheet-primary">Save dose</Button></SheetFooter>
+          <SheetFooter><Button type="submit" className="primary-button sheet-primary">{t("Save dose")}</Button></SheetFooter>
         </SheetForm>
       )}
 
@@ -739,12 +740,12 @@ export function LogSheet({
         <SheetForm onSubmit={saveSolid}>
           <LogDialogHeader
             icon={<Utensils />}
-            eyebrow="Solids"
-            title="Log a food"
-            description="What went in, and roughly when — tastes count."
+            eyebrow={t("Solids")}
+            title={t("Log a food")}
+            description={t("What went in, and roughly when — tastes count.")}
           />
           <Field className="medicine-field">
-            <FieldLabel htmlFor="solid-food">What did they eat?</FieldLabel>
+            <FieldLabel htmlFor="solid-food">{t("What did they eat?")}</FieldLabel>
             <InputGroup>
               <InputGroupInput
                 id="solid-food"
@@ -752,7 +753,7 @@ export function LogSheet({
                 data-initial-focus
                 value={draft.foodText}
                 maxLength={NOTE_MAX_LENGTH}
-                placeholder="Banana, carrot purée, rice cereal…"
+                placeholder={t("Banana, carrot purée, rice cereal…")}
                 onChange={(event) => { patch({ foodText: event.target.value }); setFormError(null); }}
               />
             </InputGroup>
@@ -762,32 +763,32 @@ export function LogSheet({
             </FieldDescription>
           </Field>
           <TimeField quick value={draft.logTime} inputRef={startRef} error={formError?.field === "start"} onChange={(value) => { patch({ logTime: value }); setFormError(null); }} />
-          <NoteField value={draft.note} onChange={(value) => patch({ note: value })} placeholder="How it went — loved it, spat it out, small rash…" />
+          <NoteField value={draft.note} onChange={(value) => patch({ note: value })} placeholder={t("How it went — loved it, spat it out, small rash…")} />
           <FormError message={formError?.message ?? null} />
-          <SheetFooter><Button type="submit" className="primary-button sheet-primary">Save food</Button></SheetFooter>
+          <SheetFooter><Button type="submit" className="primary-button sheet-primary">{t("Save food")}</Button></SheetFooter>
         </SheetForm>
       )}
 
       {sheet === "diaper" && (
         <SheetForm onSubmit={() => saveDiaper(draft.diaperKind)}>
-          <LogDialogHeader icon={<Droplet />} eyebrow="Quick log" title="Diaper" description="Choose the closest match and save." />
+          <LogDialogHeader icon={<Droplet />} eyebrow={t("Quick log")} title={t("Diaper")} description={t("Choose the closest match and save.")} />
           <Field className="choice-field">
-            <FieldLabel>Diaper type</FieldLabel>
+            <FieldLabel>{t("Diaper type")}</FieldLabel>
             <ToggleGroup type="single" value={draft.diaperKind} className="diaper-grid" aria-label="Diaper type" onValueChange={(value) => value && patch({ diaperKind: value as DiaperKind })}>
-              <ToggleGroupItem autoFocus data-initial-focus value="wet"><Droplet size={22} /><strong>Wet</strong><Check className="choice-check" /></ToggleGroupItem>
-              <ToggleGroupItem value="dirty"><span className="dot-icon" aria-hidden="true">●</span><strong>Dirty</strong><Check className="choice-check" /></ToggleGroupItem>
-              <ToggleGroupItem value="both"><span className="both-icon" aria-hidden="true"><Droplet size={18} />●</span><strong>Both</strong><Check className="choice-check" /></ToggleGroupItem>
+              <ToggleGroupItem autoFocus data-initial-focus value="wet"><Droplet size={22} /><strong>{t("Wet")}</strong><Check className="choice-check" /></ToggleGroupItem>
+              <ToggleGroupItem value="dirty"><span className="dot-icon" aria-hidden="true">●</span><strong>{t("Dirty")}</strong><Check className="choice-check" /></ToggleGroupItem>
+              <ToggleGroupItem value="both"><span className="both-icon" aria-hidden="true"><Droplet size={18} />●</span><strong>{t("Both")}</strong><Check className="choice-check" /></ToggleGroupItem>
             </ToggleGroup>
           </Field>
           <TimeField quick value={draft.logTime} onChange={(value) => patch({ logTime: value })} />
           <NoteField value={draft.note} onChange={(value) => patch({ note: value })} />
-          <SheetFooter><Button type="submit" className="primary-button sheet-primary">Save {draft.diaperKind === "both" ? "wet + dirty" : draft.diaperKind} diaper</Button></SheetFooter>
+          <SheetFooter><Button type="submit" className="primary-button sheet-primary">{draft.diaperKind === "both" ? t("Save wet + dirty diaper") : draft.diaperKind === "dirty" ? t("Save dirty diaper") : t("Save wet diaper")}</Button></SheetFooter>
         </SheetForm>
       )}
 
       {sheet === "growth" && (
         <SheetForm onSubmit={saveGrowth}>
-          <LogDialogHeader icon={<Weight />} eyebrow="Growth check" title="Add measurement" description="Weight now, length and head if you have them." />
+          <LogDialogHeader icon={<Weight />} eyebrow={t("Growth check")} title={t("Add measurement")} description={t("Weight now, length and head if you have them.")} />
           <FieldGroup className="measurement-fields">
             <UnitField {...measureProps("weightGrams")} value={draft.weightGrams} inputRef={weightRef} autoFocus invalid={formError?.field === "weightGrams"} onChange={(value) => { patch({ weightGrams: value }); setFormError(null); }} placeholder={measurementPlaceholder("weightGrams", units)} className="measurement-primary" />
             <div className="measurement-row">
@@ -796,22 +797,22 @@ export function LogSheet({
             </div>
           </FieldGroup>
           <TimeField quick value={draft.logTime} onChange={(value) => patch({ logTime: value })} />
-          <NoteField value={draft.note} onChange={(value) => patch({ note: value })} placeholder="Clinic, home scale, or anything useful" />
+          <NoteField value={draft.note} onChange={(value) => patch({ note: value })} placeholder={t("Clinic, home scale, or anything useful")} />
           <p className="sheet-advice">Measure consistently and use the trend as context for your paediatrician.</p>
           <FormError message={formError?.message ?? null} />
-          <SheetFooter><Button type="submit" className="primary-button sheet-primary">Save growth check</Button></SheetFooter>
+          <SheetFooter><Button type="submit" className="primary-button sheet-primary">{t("Save growth check")}</Button></SheetFooter>
         </SheetForm>
       )}
 
       {sheet === "health" && (
         <SheetForm onSubmit={saveHealthNote}>
-          <LogDialogHeader icon={<Thermometer />} eyebrow="Health log" title="Temperature or note" description="Keep a time-stamped note you can refer back to." />
+          <LogDialogHeader icon={<Thermometer />} eyebrow={t("Health log")} title={t("Temperature or note")} description={t("Keep a time-stamped note you can refer back to.")} />
           <UnitField {...measureProps("temperatureC")} optional value={draft.temperatureC} inputRef={temperatureRef} autoFocus invalid={formError?.field === "temperatureC"} onChange={(value) => { patch({ temperatureC: value }); setFormError(null); }} placeholder={measurementPlaceholder("temperatureC", units)} />
           <TemperatureAdvice value={metricMeasurement("temperatureC")} ageMonths={babyAgeMonths} />
           <TimeField value={draft.logTime} onChange={(value) => patch({ logTime: value })} />
-          <NoteField value={draft.note} onChange={(value) => { patch({ note: value }); setFormError(null); }} placeholder="Medicine, spit-up, rash, question for the doctor…" />
+          <NoteField value={draft.note} onChange={(value) => { patch({ note: value }); setFormError(null); }} placeholder={t("Medicine, spit-up, rash, question for the doctor…")} />
           <FormError message={formError?.message ?? null} />
-          <SheetFooter><Button type="submit" className="primary-button sheet-primary">Save health log</Button></SheetFooter>
+          <SheetFooter><Button type="submit" className="primary-button sheet-primary">{t("Save health log")}</Button></SheetFooter>
         </SheetForm>
       )}
 
@@ -819,7 +820,7 @@ export function LogSheet({
         <SheetForm onSubmit={saveEditedActivity}>
           <LogDialogHeader
             icon={<ActivityGlyph type={editing.type} />}
-            eyebrow="Edit log"
+            eyebrow={t("Edit log")}
             title={activityTitle(editing)}
             description={`${formatTimelineDay(editing.startedAt)} at ${formatTime(editing.startedAt)}`}
             tone={`glyph-${editing.type}`}
@@ -829,7 +830,7 @@ export function LogSheet({
             <>
               <Field className="amount-field">
                 <UnitField
-                  label="Amount"
+                  label={t("Amount")}
                   unit={stepper.unit}
                   min={stepper.min}
                   max={stepper.max}
@@ -846,10 +847,10 @@ export function LogSheet({
                 </ToggleGroup>
               </Field>
               <Field className="choice-field">
-                <FieldLabel>Milk</FieldLabel>
+                <FieldLabel>{t("Milk")}</FieldLabel>
                 <ToggleGroup type="single" value={draft.milkType} className="segmented" aria-label="Milk type" onValueChange={(value) => value && patch({ milkType: value as "formula" | "expressed" })}>
-                  <ToggleGroupItem value="formula">Formula<Check className="choice-check" /></ToggleGroupItem>
-                  <ToggleGroupItem value="expressed">Breast milk<Check className="choice-check" /></ToggleGroupItem>
+                  <ToggleGroupItem value="formula">{t("Formula")}<Check className="choice-check" /></ToggleGroupItem>
+                  <ToggleGroupItem value="expressed">{t("Breast milk")}<Check className="choice-check" /></ToggleGroupItem>
                 </ToggleGroup>
               </Field>
             </>
@@ -857,32 +858,32 @@ export function LogSheet({
 
           {editing.type === "nursing" && (
             <Field className="nursing-side-field">
-              <FieldLabel>Side</FieldLabel>
+              <FieldLabel>{t("Side")}</FieldLabel>
               <ToggleGroup type="single" value={draft.nursingSide} className="side-grid" aria-label="Nursing side" onValueChange={(value) => value && patch({ nursingSide: value as "left" | "right" | "both" })}>
-                <ToggleGroupItem autoFocus data-initial-focus value="left"><span className="side-letter">L</span><span className="choice-copy"><strong>Left</strong></span><Check className="choice-check" /></ToggleGroupItem>
-                <ToggleGroupItem value="right"><span className="side-letter">R</span><span className="choice-copy"><strong>Right</strong></span><Check className="choice-check" /></ToggleGroupItem>
+                <ToggleGroupItem autoFocus data-initial-focus value="left"><span className="side-letter">L</span><span className="choice-copy"><strong>{t("Left")}</strong></span><Check className="choice-check" /></ToggleGroupItem>
+                <ToggleGroupItem value="right"><span className="side-letter">R</span><span className="choice-copy"><strong>{t("Right")}</strong></span><Check className="choice-check" /></ToggleGroupItem>
                 {/* Sessions saved as Both exist (the manual sheet offers it);
                     without this item, editing one showed no side selected and
                     Both could never be kept or restored. */}
-                <ToggleGroupItem value="both"><span className="side-letter">LR</span><span className="choice-copy"><strong>Both</strong></span><Check className="choice-check" /></ToggleGroupItem>
+                <ToggleGroupItem value="both"><span className="side-letter">LR</span><span className="choice-copy"><strong>{t("Both")}</strong></span><Check className="choice-check" /></ToggleGroupItem>
               </ToggleGroup>
             </Field>
           )}
 
           {editing.type === "diaper" && (
             <Field className="choice-field">
-              <FieldLabel>Diaper type</FieldLabel>
+              <FieldLabel>{t("Diaper type")}</FieldLabel>
               <ToggleGroup type="single" value={draft.diaperKind} className="diaper-grid" aria-label="Diaper type" onValueChange={(value) => value && patch({ diaperKind: value as DiaperKind })}>
-                <ToggleGroupItem autoFocus data-initial-focus value="wet"><Droplet size={22} /><strong>Wet</strong><Check className="choice-check" /></ToggleGroupItem>
-                <ToggleGroupItem value="dirty"><span className="dot-icon" aria-hidden="true">●</span><strong>Dirty</strong><Check className="choice-check" /></ToggleGroupItem>
-                <ToggleGroupItem value="both"><span className="both-icon" aria-hidden="true"><Droplet size={18} />●</span><strong>Both</strong><Check className="choice-check" /></ToggleGroupItem>
+                <ToggleGroupItem autoFocus data-initial-focus value="wet"><Droplet size={22} /><strong>{t("Wet")}</strong><Check className="choice-check" /></ToggleGroupItem>
+                <ToggleGroupItem value="dirty"><span className="dot-icon" aria-hidden="true">●</span><strong>{t("Dirty")}</strong><Check className="choice-check" /></ToggleGroupItem>
+                <ToggleGroupItem value="both"><span className="both-icon" aria-hidden="true"><Droplet size={18} />●</span><strong>{t("Both")}</strong><Check className="choice-check" /></ToggleGroupItem>
               </ToggleGroup>
             </Field>
           )}
 
           {editing.type === "solid" && (
             <Field className="medicine-field">
-              <FieldLabel htmlFor="edit-solid-food">What did they eat?</FieldLabel>
+              <FieldLabel htmlFor="edit-solid-food">{t("What did they eat?")}</FieldLabel>
               <InputGroup>
                 <InputGroupInput
                   id="edit-solid-food"
@@ -929,7 +930,7 @@ export function LogSheet({
             </Button>
           </div>
 
-          <SheetFooter><Button type="submit" className="primary-button sheet-primary">Save changes</Button></SheetFooter>
+          <SheetFooter><Button type="submit" className="primary-button sheet-primary">{t("Save changes")}</Button></SheetFooter>
         </SheetForm>
       )}
 
@@ -950,36 +951,36 @@ function ProfileForm({ profile, onChange, onDone }: { profile: Profile; onChange
   const birthDateId = useId();
   return (
     <SheetForm onSubmit={() => {
-      if (onChange({ ...draft, name: draft.name.trim() || "Baby" })) onDone();
+      if (onChange({ ...draft, name: draft.name.trim() || t("Baby") })) onDone();
     }}>
-      <LogDialogHeader icon={<Baby />} eyebrow="Keep it personal" title="Baby profile" description="Personalises your tracker — shared only with the phones in your Family Sync." />
+      <LogDialogHeader icon={<Baby />} eyebrow={t("Keep it personal")} title={t("Baby profile")} description={t("Personalises your tracker — shared only with the phones in your Family Sync.")} />
       <FieldGroup>
         <Field>
-          <FieldLabel htmlFor={nameId}>Name</FieldLabel>
-          <InputGroup><InputGroupInput id={nameId} autoFocus data-initial-focus maxLength={80} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Baby’s name" /></InputGroup>
+          <FieldLabel htmlFor={nameId}>{t("Name")}</FieldLabel>
+          <InputGroup><InputGroupInput id={nameId} autoFocus data-initial-focus maxLength={80} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder={t("Baby’s name")} /></InputGroup>
         </Field>
         <Field>
-          <FieldLabel htmlFor={birthDateId}>Date of birth</FieldLabel>
+          <FieldLabel htmlFor={birthDateId}>{t("Date of birth")}</FieldLabel>
           <InputGroup><InputGroupInput id={birthDateId} type="date" value={draft.birthDate} max={localDateInput(new Date()).slice(0, 10)} onChange={(event) => setDraft({ ...draft, birthDate: event.target.value })} /></InputGroup>
         </Field>
         <Field>
-          <FieldLabel>Girl or boy</FieldLabel>
+          <FieldLabel>{t("Girl or boy")}</FieldLabel>
           <ToggleGroup type="single" value={draft.sex ?? "skip"} className="segmented three-way" aria-label="Girl or boy" onValueChange={(value) => value && setDraft({ ...draft, sex: value === "girl" || value === "boy" ? value : undefined })}>
-            <ToggleGroupItem value="girl">Girl<Check className="choice-check" /></ToggleGroupItem>
-            <ToggleGroupItem value="boy">Boy<Check className="choice-check" /></ToggleGroupItem>
-            <ToggleGroupItem value="skip">Skip<Check className="choice-check" /></ToggleGroupItem>
+            <ToggleGroupItem value="girl">{t("Girl")}<Check className="choice-check" /></ToggleGroupItem>
+            <ToggleGroupItem value="boy">{t("Boy")}<Check className="choice-check" /></ToggleGroupItem>
+            <ToggleGroupItem value="skip">{t("Skip")}<Check className="choice-check" /></ToggleGroupItem>
           </ToggleGroup>
-          <FieldDescription>Used only for the growth guide’s reference ranges.</FieldDescription>
+          <FieldDescription>{t("Used only for the growth guide’s reference ranges.")}</FieldDescription>
         </Field>
         <Field>
-          <FieldLabel>How are you feeding?</FieldLabel>
+          <FieldLabel>{t("How are you feeding?")}</FieldLabel>
           <ToggleGroup type="single" value={draft.feedingMode} className="segmented three-way" aria-label="Feeding method" onValueChange={(value) => value && setDraft({ ...draft, feedingMode: value as FeedingMode })}>
             {(["breast", "bottle", "mixed"] as FeedingMode[]).map((mode) => <ToggleGroupItem key={mode} value={mode}>{mode[0].toUpperCase() + mode.slice(1)}<Check className="choice-check" /></ToggleGroupItem>)}
           </ToggleGroup>
-          <FieldDescription>This changes which quick actions are shown.</FieldDescription>
+          <FieldDescription>{t("This changes which quick actions are shown.")}</FieldDescription>
         </Field>
       </FieldGroup>
-      <SheetFooter><Button type="submit" className="primary-button sheet-primary">Save profile</Button></SheetFooter>
+      <SheetFooter><Button type="submit" className="primary-button sheet-primary">{t("Save profile")}</Button></SheetFooter>
     </SheetForm>
   );
 }

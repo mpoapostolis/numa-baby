@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { t } from "../../i18n";
 import { Button } from "../ui/button";
 import {
   DialogClose,
@@ -58,7 +59,7 @@ const QUICK_OFFSETS = [
 export function TimeField({
   value,
   onChange,
-  label = "When",
+  label = t("When"),
   description,
   inputRef,
   error = false,
@@ -92,7 +93,7 @@ export function TimeField({
         <ToggleGroup
           type="single"
           className="preset-row quick-time"
-          aria-label="How long ago"
+          aria-label={t("How long ago")}
           value={preset}
           onValueChange={(next) => {
             if (!next) return;
@@ -122,7 +123,7 @@ export function SheetFooter({ children }: { children: React.ReactNode }) {
   return (
     <DialogFooter>
       <DialogClose asChild>
-        <Button type="button" variant="ghost" className="sheet-cancel">Cancel</Button>
+        <Button type="button" variant="ghost" className="sheet-cancel">{t("Cancel")}</Button>
       </DialogClose>
       {children}
     </DialogFooter>
@@ -132,7 +133,7 @@ export function SheetFooter({ children }: { children: React.ReactNode }) {
 export function NoteField({
   value,
   onChange,
-  placeholder = "Anything worth remembering",
+  placeholder = t("Anything worth remembering"),
 }: {
   value: string;
   onChange: (value: string) => void;
