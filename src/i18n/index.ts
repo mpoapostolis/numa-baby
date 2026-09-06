@@ -27,7 +27,12 @@
 // fails loudly on entries whose keys no longer appear anywhere in src/.
 
 export type Locale = "en" | "el";
-export type LanguageChoice = "system" | Locale;
+/** What a person can pick. English is the default for EVERY phone — the
+    owner's call: it is the copy every user has seen, and Greek is offered
+    rather than assumed (a banner on Greek phones, a picker on the first
+    screen, the Settings card). A phone's own language decides who gets the
+    offer, never the answer. */
+export type LanguageChoice = Locale;
 
 const KEY = "numalog-lang-v1";
 
@@ -48,22 +53,26 @@ export function currentLocale(): Locale {
   return locale;
 }
 
-/** What the person chose, as distinct from what they got: "system" until
-    they touch the setting. */
+/** What the person chose; English until they touch the setting. (An older
+    build stored "system" — that reads as English too, which is what
+    "system" now means for everyone.) */
 export function languageChoice(): LanguageChoice {
   try {
-    const stored = window.localStorage.getItem(KEY);
-    return stored === "en" || stored === "el" ? stored : "system";
+    return window.localStorage.getItem(KEY) === "el" ? "el" : "en";
   } catch {
-    return "system";
+    return "en";
   }
 }
 
-function wantedLocale(): Locale {
-  const choice = languageChoice();
-  if (choice !== "system") return choice;
+/** Whether this phone reports Greek as one of its languages. Decides who is
+    OFFERED Greek — the banner on Today — not who gets it. */
+export function phoneSpeaksGreek(): boolean {
   const spoken = (navigator.languages ?? [navigator.language ?? ""]).map((l) => l.toLowerCase());
-  return spoken.some((l) => l.startsWith("el")) ? "el" : "en";
+  return spoken.some((l) => l.startsWith("el"));
+}
+
+function wantedLocale(): Locale {
+  return languageChoice();
 }
 
 /**
@@ -154,7 +163,7 @@ export function tUpper(text: string): string {
     threading a context through the entire tree to avoid it. */
 export function setLanguageChoice(choice: LanguageChoice): void {
   try {
-    if (choice === "system") window.localStorage.removeItem(KEY);
+    if (choice === "en") window.localStorage.removeItem(KEY);
     else window.localStorage.setItem(KEY, choice);
   } catch {
     // Storage blocked: the reload will fall back to the phone's language.

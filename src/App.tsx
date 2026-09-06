@@ -41,6 +41,8 @@ import {
 import { t } from "./i18n";
 import { backupNudge } from "./domain/backupNudge";
 import { reminderNudge } from "./domain/reminderNudge";
+import { languageNudge } from "./domain/languageNudge";
+import { currentLocale, phoneSpeaksGreek } from "./i18n";
 import { onConsentChange, readConsent } from "./domain/consent";
 import { ageInDays } from "./domain/time";
 import { dayKey } from "./domain/daySummary";
@@ -73,6 +75,7 @@ const HandoffScreen = lazy(() => import("./screens/HandoffScreen").then((m) => (
 // a parent downloads at 3am.
 const BackupNudgeCard = lazy(() => import("./components/BackupNudge").then((m) => ({ default: m.BackupNudgeCard })));
 const ReminderNudgeCard = lazy(() => import("./components/ReminderNudge").then((m) => ({ default: m.ReminderNudgeCard })));
+const LanguageNudgeCard = lazy(() => import("./components/LanguageNudge").then((m) => ({ default: m.LanguageNudgeCard })));
 // The one-time cloud-protection announcement for families that predate it.
 const NightHelp = lazy(() => import("./components/NightHelp").then((m) => ({ default: m.NightHelp })));
 const ProtectIntro = lazy(() => import("./components/ProtectIntro").then((m) => ({ default: m.ProtectIntro })));
@@ -129,6 +132,7 @@ const SEEN_RELEASE_KEY = "numa-baby-seen-release-v1";
 const BACKUP_DISMISSED_KEY = "numa-baby-backup-nudge-v1";
 /** "Not now" on the reminders announcement. */
 const REMINDER_NUDGE_KEY = "numalog-reminder-nudge-v1";
+const LANGUAGE_NUDGE_KEY = "numalog-language-nudge-v1";
 /** A fact about this browser, not a piece of state: it cannot change while
     the page is open, and asking it in an effect would only be a render. */
 const PUSH_CAPABLE = "serviceWorker" in navigator && "PushManager" in window;
@@ -266,6 +270,15 @@ export default function HomePage() {
 
   const [backupDismissedAt, setBackupDismissedAt] = useState(() => readStamp(BACKUP_DISMISSED_KEY));
   const [reminderDismissedAt, setReminderDismissedAt] = useState(() => readStamp(REMINDER_NUDGE_KEY));
+  const [languageNudgeDismissed, setLanguageNudgeDismissed] = useState(() => readStamp(LANGUAGE_NUDGE_KEY) !== null);
+  // A Greek phone reading an English app is offered the switch — once, at
+  // the top of Today, ahead of everything else on the page. Everything else
+  // on the page is in a language they may not read. See domain/languageNudge.
+  const pendingLanguageNudge = languageNudge({
+    phoneSpeaksGreek: phoneSpeaksGreek(),
+    inEnglish: currentLocale() === "en",
+    dismissed: languageNudgeDismissed,
+  });
   // Null until asked. The announcement promises reminders that survive a
   // closed app, so it must not appear where the deployment cannot deliver
   // one — and that is only knowable by asking for the signing key.
@@ -960,6 +973,18 @@ export default function HomePage() {
         {/* Gated on releases EXISTING, not on the tab-dependent showWhatsNew
             flag — otherwise the nudge shows on Timeline and vanishes the
             moment the person returns to Today, which reads as a glitch. */}
+        {pendingLanguageNudge && activeTab === "today" && (
+          <Suspense fallback={null}>
+            <LanguageNudgeCard
+              onDismiss={() => {
+                track("language_nudge_dismissed");
+                try { window.localStorage.setItem(LANGUAGE_NUDGE_KEY, new Date().toISOString()); } catch { /* storage blocked */ }
+                setLanguageNudgeDismissed(true);
+              }}
+            />
+          </Suspense>
+        )}
+
         {nightHelp && activeTab === "today" && !milestoneToday && !protectMoment && (
           <Suspense fallback={null}>
             <NightHelp
@@ -970,7 +995,7 @@ export default function HomePage() {
           </Suspense>
         )}
 
-        {pendingBackupNudge && !pendingReminderNudge && !nightHelp && !milestoneToday && !protectMoment && releasesToShow.length === 0 && !familySync.pairing && (
+        {pendingBackupNudge && !pendingLanguageNudge && !pendingReminderNudge && !nightHelp && !milestoneToday && !protectMoment && releasesToShow.length === 0 && !familySync.pairing && (
           <Suspense fallback={null}>
           <BackupNudgeCard
             nudge={pendingBackupNudge}
@@ -996,7 +1021,7 @@ export default function HomePage() {
             lives further down the page, so waiting for it to be gone was
             waiting on something that was never in the way. Only the moments
             that own the whole screen still come first. */}
-        {pendingReminderNudge && !nightHelp && !milestoneToday && !protectMoment && activeTab === "today" && (
+        {pendingReminderNudge && !pendingLanguageNudge && !nightHelp && !milestoneToday && !protectMoment && activeTab === "today" && (
           <Suspense fallback={null}>
             <ReminderNudgeCard
               nudge={pendingReminderNudge}

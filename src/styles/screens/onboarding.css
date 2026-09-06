@@ -70,6 +70,57 @@
   cursor: pointer;
 }
 
+.onboarding-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* Two chips, each in its own language, dressed like the night-mode toggle
+   beside them so the header reads as one row of small controls. */
+.onboarding-language {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 6px 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--background);
+  color: var(--ink-3);
+}
+
+.onboarding-language button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: calc(var(--radius-md) - 4px);
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.onboarding-language button:hover {
+  color: var(--ink);
+}
+
+.onboarding-language button.is-chosen {
+  /* The same quiet signal wash the Settings toggles use for "this one". */
+  background: var(--signal-quiet);
+  color: var(--accent-foreground);
+  cursor: default;
+}
+
+.onboarding-language button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
 .onboarding-layout {
   width: min(100%, 1140px);
   margin: auto;

@@ -248,17 +248,16 @@ export default function SettingsScreen({
             type="single"
             value={languageChoice()}
             className="appearance-options"
-            aria-label="Language"
+            aria-label={t("Language")}
             onValueChange={(value) => {
-              if (value !== "system" && value !== "en" && value !== "el") return;
-              track("language_changed", { language: value });
+              if (value !== "en" && value !== "el") return;
+              track("language_changed", { language: value, from: "settings" });
               // Persists and reloads: the words live in every module, and one
               // honest reload on a once-ever action beats pretending we can
               // swap them all live.
               setLanguageChoice(value);
             }}
           >
-            <ToggleGroupItem value="system"><Languages /><span><strong>{t("Phone")}</strong><small>{t("Follows your phone")}</small></span></ToggleGroupItem>
             <ToggleGroupItem value="en"><Languages /><span><strong>English</strong></span></ToggleGroupItem>
             <ToggleGroupItem value="el"><Languages /><span><strong>Ελληνικά</strong></span></ToggleGroupItem>
           </ToggleGroup>

@@ -8,6 +8,7 @@ import {
   Clock,
   Download,
   Gift,
+  Languages,
   Milk,
   Moon,
   ShieldCheck,
@@ -52,7 +53,31 @@ import { handoffPeers, handoffSendUrl, moveTarget, originLabel } from "../domain
 import { inAppBrowser } from "../domain/install";
 import { FeedingMode, Profile } from "../domain/types";
 import { FamilySync } from "../hooks/useFamilySync";
-import { t } from "../i18n";
+import { LanguageChoice, currentLocale, setLanguageChoice, t } from "../i18n";
+
+// Switching language reloads (see setLanguageChoice), and a reload in the
+// middle of onboarding would throw away a half-typed name and a birth date
+// somebody just went and looked up. So the draft is parked for the length of
+// the reload and picked up on the way back. Session storage, not local: a
+// draft that outlives the tab is a draft nobody asked to keep.
+const DRAFT_KEY = "numalog-onboarding-draft";
+
+function parkedDraft(): Profile | null {
+  try {
+    const raw = window.sessionStorage.getItem(DRAFT_KEY);
+    window.sessionStorage.removeItem(DRAFT_KEY);
+    return raw ? (JSON.parse(raw) as Profile) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Each language names itself IN itself, never translated: someone who has
+    landed in a language they cannot read must still find their own. */
+const LANGUAGES: { choice: LanguageChoice; label: string }[] = [
+  { choice: "en", label: "English" },
+  { choice: "el", label: "Ελληνικά" },
+];
 
 // Spelled out rather than capitalised from the mode name: a word built by
 // string surgery is one no translator and no test can find.
@@ -91,7 +116,7 @@ export default function OnboardingScreen({
   onDownloadRecovery: () => void;
   onResetRecovery: () => void;
 }) {
-  const [draft, setDraft] = useState(profile);
+  const [draft, setDraft] = useState(() => parkedDraft() ?? profile);
   const nameId = useId();
   const birthDateId = useId();
   const nightModeId = useId();
@@ -129,11 +154,39 @@ export default function OnboardingScreen({
           <span className="wordmark-mark"><BabyFace /></span>
           <span><strong>Numalog</strong><small>{t("Private family log")}</small></span>
         </div>
-        <label className="onboarding-theme" htmlFor={nightModeId}>
-          {nightMode ? <Moon size={17} /> : <Sun size={17} />}
-          <span>{t("Night mode")}</span>
-          <Switch id={nightModeId} checked={nightMode} onCheckedChange={onNightModeChange} aria-label={t("Use night mode")} />
-        </label>
+        <div className="onboarding-header-controls">
+          {/* Before the form, not after it: the first thing a parent needs is
+              to be reading the app in their own language. It starts on
+              whatever the phone said, so most people never touch it. */}
+          <div className="onboarding-language" role="group" aria-label={t("Language")}>
+            <Languages size={15} aria-hidden="true" />
+            {LANGUAGES.map(({ choice, label }) => (
+              <button
+                key={choice}
+                type="button"
+                aria-pressed={currentLocale() === choice}
+                className={currentLocale() === choice ? "is-chosen" : undefined}
+                onClick={() => {
+                  if (currentLocale() === choice) return;
+                  track("language_changed", { language: choice, from: "onboarding" });
+                  try {
+                    window.sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+                  } catch {
+                    // Storage blocked: the reload costs them a retyped name.
+                  }
+                  setLanguageChoice(choice);
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <label className="onboarding-theme" htmlFor={nightModeId}>
+            {nightMode ? <Moon size={17} /> : <Sun size={17} />}
+            <span>{t("Night mode")}</span>
+            <Switch id={nightModeId} checked={nightMode} onCheckedChange={onNightModeChange} aria-label={t("Use night mode")} />
+          </label>
+        </div>
       </header>
 
       <InAppEscape />
