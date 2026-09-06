@@ -347,7 +347,6 @@ const el: Record<string, string> = {
   "Log a food": "Κατάγραψε φαγητό",
   "What went in, and roughly when — tastes count.": "Τι μπήκε, και περίπου πότε — και οι γεύσεις μετράνε.",
   "Choose the closest match and save.": "Διάλεξε το κοντινότερο και αποθήκευσε.",
-  "Add measurement": "Πρόσθεσε μέτρηση",
   "Weight now, length and head if you have them.": "Βάρος τώρα· μήκος και κεφάλι αν τα έχεις.",
   "Health log": "Καταγραφή υγείας",
   "Keep a time-stamped note you can refer back to.": "Κράτα σημείωση με ώρα, να τη βρίσκεις μετά.",
@@ -873,6 +872,72 @@ const el: Record<string, string> = {
     "Το καλύτερο διάστημα είναι κατά μέσο όρο {recent}, από {earlier} την προηγούμενη εβδομάδα.",
   "Nothing to do. Nights move backwards as often as forwards at this age, so this is worth noticing rather than counting on.":
     "Τίποτα να κάνετε. Οι νύχτες πάνε πίσω όσο συχνά πάνε και μπροστά σε αυτή την ηλικία, οπότε αξίζει να το προσέξετε, όχι να βασιστείτε πάνω του.",
+  // ——— Paediatrician summary (sheet, PDF, picture) ———
+  "For the paediatrician": "Για τον παιδίατρο",
+  "{name}, {age} old": "{name}, {age}",
+  "{n} days": "{n} ημέρες",
+  "printed {date}": "εκτυπώθηκε {date}",
+  "{logged} of {total} days have entries. 1 day was not logged, so the daily figures are medians over the logged days only.":
+    "{logged} από {total} ημέρες έχουν καταχωρίσεις. 1 ημέρα δεν καταγράφηκε, οπότε τα ημερήσια νούμερα είναι διάμεσοι μόνο των καταγεγραμμένων ημερών.",
+  "{logged} of {total} days have entries. {blank} days were not logged, so the daily figures are medians over the logged days only.":
+    "{logged} από {total} ημέρες έχουν καταχωρίσεις. {blank} ημέρες δεν καταγράφηκαν, οπότε τα ημερήσια νούμερα είναι διάμεσοι μόνο των καταγεγραμμένων ημερών.",
+  "{logged} of {total} days have entries — every day logged.": "{logged} από {total} ημέρες έχουν καταχωρίσεις — καταγράφηκε κάθε μέρα.",
+  "Feeding": "Τάισμα",
+  "feeds a day": "ταΐσματα την ημέρα",
+  "milk a day": "γάλα την ημέρα",
+  "nursing a day": "θηλασμός την ημέρα",
+  "{feeds} feeds and {vol} across the window. Bottle volumes are bottles only.":
+    "{feeds} ταΐσματα και {vol} σε όλο το διάστημα. Οι ποσότητες αφορούν μόνο μπιμπερό.",
+  "Nappies": "Πάνες",
+  "wet a day": "τσίσα την ημέρα",
+  "dirty a day": "κακά την ημέρα",
+  "{wet} wet and {dirty} dirty across the window. A change recorded as both counts in each.":
+    "{wet} τσίσα και {dirty} κακά σε όλο το διάστημα. Μια αλλαγή που καταγράφηκε και ως τα δύο μετράει και στα δύο.",
+  "latest weight": "τελευταίο βάρος",
+  "gained a week": "αύξηση την εβδομάδα",
+  "WHO reference at this age: {low}–{high} (P3–P97), midpoint {mid}.":
+    "Αναφορά ΠΟΥ σε αυτή την ηλικία: {low}–{high} (P3–P97), μέσο {mid}.",
+  "No age on file, so no WHO reference is shown.": "Δεν υπάρχει ηλικία στο προφίλ, οπότε δεν εμφανίζεται αναφορά ΠΟΥ.",
+  "Typical gain {min}–{max} g a week.": "Τυπική αύξηση {min}–{max} γρ. την εβδομάδα.",
+  "Recorded at home by a parent, not a clinical measurement. WHO Child Growth Standards; typical weekly gain per AAP.":
+    "Καταγράφηκε στο σπίτι από γονιό, δεν είναι κλινική μέτρηση. Πρότυπα ανάπτυξης ΠΟΥ· τυπική εβδομαδιαία αύξηση κατά AAP.",
+  "not logged": "δεν καταγράφηκε",
+  "Day by day": "Μέρα με τη μέρα",
+  "Day": "Ημέρα",
+  "{name} · summary for the paediatrician · {link}": "{name} · σύνοψη για τον παιδίατρο · {link}",
+  "PDF saved to your device": "Το PDF αποθηκεύτηκε στη συσκευή σας",
+  "Could not make the PDF on this phone": "Το PDF δεν μπόρεσε να φτιαχτεί σε αυτό το κινητό",
+  "Share PDF": "Κοινοποίηση PDF",
+  "Download PDF": "Λήψη PDF",
+  "Picture saved to your device": "Η εικόνα αποθηκεύτηκε στη συσκευή σας",
+  "Could not make the picture on this phone": "Η εικόνα δεν μπόρεσε να φτιαχτεί σε αυτό το κινητό",
+  "Share as a picture": "Κοινοποίηση ως εικόνα",
+
+  // ——— Growth chart ———
+  "Measurements over time": "Μετρήσεις στον χρόνο",
+  "{weight} at the first check.": "{weight} στην πρώτη μέτρηση.",
+  "Up {n} g since the last check.": "Πάνω {n} γρ. από την τελευταία μέτρηση.",
+  "Down {n} g since the last check.": "Κάτω {n} γρ. από την τελευταία μέτρηση.",
+  "Steady since the last check.": "Σταθερό από την τελευταία μέτρηση.",
+  "Fig. {n} · Growth": "Σχ. {n} · Ανάπτυξη",
+  "Add measurement": "Προσθήκη μέτρησης",
+  "Your baby’s weight trend will appear after the first measurement.":
+    "Η πορεία του βάρους θα εμφανιστεί μετά την πρώτη μέτρηση.",
+  "Since last check": "Από την τελευταία μέτρηση",
+  "First check": "Πρώτη μέτρηση",
+  "Length / head": "Μήκος / κεφάλι",
+  "Recent weight measurements": "Πρόσφατες μετρήσεις βάρους",
+  "A date-proportional line from {low} to {high} {unit}.": "Μια γραμμή ανάλογη των ημερομηνιών από {low} έως {high} {unit}.",
+  "Date": "Ημερομηνία",
+  "Weight": "Βάρος",
+  "Length": "Μήκος",
+  "Head": "Κεφάλι",
+  "Not logged": "Δεν καταγράφηκε",
+  "From 1 logged measurement · on this device": "Από 1 καταγεγραμμένη μέτρηση · σε αυτή τη συσκευή",
+  "From {n} logged measurements · on this device": "Από {n} καταγεγραμμένες μετρήσεις · σε αυτή τη συσκευή",
+  "Trends are useful context for your paediatrician. A single measurement is not a diagnosis.":
+    "Οι τάσεις είναι χρήσιμο πλαίσιο για τον παιδίατρό σας. Μία μέτρηση δεν είναι διάγνωση.",
+  "What’s typical at this age?": "Τι είναι τυπικό σε αυτή την ηλικία;",
 };
 
 export default el;

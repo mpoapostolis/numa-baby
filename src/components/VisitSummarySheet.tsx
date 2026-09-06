@@ -24,6 +24,7 @@ import { expectedWeightRange, typicalWeeklyGain } from "../domain/growthReferenc
 import { formatBabyAge } from "../domain/time";
 import { Profile } from "../domain/types";
 import { useUnits } from "../domain/units";
+import { t } from "../i18n";
 
 /** The face from the share card, so the sheet reads as the same object. */
 function Face() {
@@ -55,7 +56,7 @@ function Row({ day }: { day: VisitDay }) {
     <tr className={day.blank ? "is-blank" : undefined}>
       <td>{day.label}</td>
       {day.blank ? (
-        <td colSpan={4} className="visit-blank">not logged</td>
+        <td colSpan={4} className="visit-blank">{t("not logged")}</td>
       ) : (
         <>
           <td>{day.feeds}</td>
@@ -79,7 +80,7 @@ type Props = {
 
 export function VisitSummarySheet({ open, onOpenChange, summary, profile, ageMonths, now }: Props) {
   const units = useUnits();
-  const name = profile.name.trim() || "Baby";
+  const name = profile.name.trim() || t("Baby");
   const age = formatBabyAge(profile.birthDate, now);
   const band = ageMonths === null ? null : expectedWeightRange(ageMonths, profile.sex);
   const gainBand = ageMonths === null ? null : typicalWeeklyGain(ageMonths);
@@ -116,10 +117,10 @@ export function VisitSummarySheet({ open, onOpenChange, summary, profile, ageMon
 
           {/* Per-day table: the doctor who wants the raw days gets them. */}
           <section className="visit-block">
-            <h3>Day by day</h3>
+            <h3>{t("Day by day")}</h3>
             <table className="visit-table">
               <thead>
-                <tr><th>Day</th><th>Feeds</th><th>{doc.volumeUnit}</th><th>Wet</th><th>Dirty</th></tr>
+                <tr><th>{t("Day")}</th><th>{t("Feeds")}</th><th>{doc.volumeUnit}</th><th>{t("Wet")}</th><th>{t("Dirty")}</th></tr>
               </thead>
               <tbody>
                 {doc.days.map((day) => <Row day={day} key={day.label} />)}
@@ -144,12 +145,12 @@ export function VisitSummarySheet({ open, onOpenChange, summary, profile, ageMon
             onClick={() => {
               track("visit_summary_pdf");
               void visitPdf(doc)
-                .then((blob) => shareFile(blob, `numalog-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "baby"}-summary.pdf`, `${name} · summary for the paediatrician · ${shareLink("visit")}`))
-                .then((outcome) => { if (outcome === "saved") toast("PDF saved to your device"); })
-                .catch(() => toast("Could not make the PDF on this phone"));
+                .then((blob) => shareFile(blob, `numalog-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "baby"}-summary.pdf`, t("{name} · summary for the paediatrician · {link}", { name, link: shareLink("visit") })))
+                .then((outcome) => { if (outcome === "saved") toast(t("PDF saved to your device")); })
+                .catch(() => toast(t("Could not make the PDF on this phone")));
             }}
           >
-            <FileDown size={16} aria-hidden="true" /> {canShareFiles ? "Share PDF" : "Download PDF"}
+            <FileDown size={16} aria-hidden="true" /> {canShareFiles ? t("Share PDF") : t("Download PDF")}
           </Button>
           {/* The same figures as one picture — what actually gets shown
               across the desk, or sent ahead to the clinic on WhatsApp. */}
@@ -158,12 +159,12 @@ export function VisitSummarySheet({ open, onOpenChange, summary, profile, ageMon
             onClick={() => {
               track("visit_summary_shared");
               void renderCard(visitCard(summary, name, age, units))
-                .then((blob) => shareFile(blob, "numalog-visit-summary.png", `${name} · summary for the paediatrician · ${shareLink("visit")}`))
-                .then((outcome) => { if (outcome === "saved") toast("Picture saved to your device"); })
-                .catch(() => toast("Could not make the picture on this phone"));
+                .then((blob) => shareFile(blob, "numalog-visit-summary.png", t("{name} · summary for the paediatrician · {link}", { name, link: shareLink("visit") })))
+                .then((outcome) => { if (outcome === "saved") toast(t("Picture saved to your device")); })
+                .catch(() => toast(t("Could not make the picture on this phone")));
             }}
           >
-            <Share2 size={16} aria-hidden="true" /> Share as a picture
+            <Share2 size={16} aria-hidden="true" /> {t("Share as a picture")}
           </Button>
         </div>
       </DialogContent>
