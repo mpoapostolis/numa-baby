@@ -17,6 +17,14 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-09-07",
+    title: "Now in Greek — choose your language in Settings",
+    items: [
+      "The whole app can now read in Greek: every screen, the reminders, the pictures you share and the paediatrician summary. English stays the default for everyone — pick Ελληνικά under Settings → Language, and change back whenever you like.",
+      "The first screen asks too, so a new phone can choose before typing anything.",
+    ],
+  },
+  {
     id: "2026-09-06",
     title: "Faster at 3am, and the theme follows your phone",
     items: [

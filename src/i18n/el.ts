@@ -1728,6 +1728,12 @@ const el: Record<string, string> = {
   "Play ideas and learning-to-talk guidance behind the early Play & development cards.":
     "Ιδέες παιχνιδιού και οδηγίες για την εκμάθηση της ομιλίας, πίσω από τις πρώιμες κάρτες Παιχνιδιού και ανάπτυξης.",
   "a calm, private baby tracker · free, no ads": "ήρεμο, ιδιωτικό ημερολόγιο μωρού · δωρεάν",
+  // ——— The release that announces Greek (domain/changelog.ts) ———
+  "Now in Greek — choose your language in Settings": "Πλέον και στα ελληνικά — διαλέξτε γλώσσα στις Ρυθμίσεις",
+  "The whole app can now read in Greek: every screen, the reminders, the pictures you share and the paediatrician summary. English stays the default for everyone — pick Ελληνικά under Settings → Language, and change back whenever you like.":
+    "Όλη η εφαρμογή διαβάζεται πλέον στα ελληνικά: κάθε οθόνη, οι υπενθυμίσεις, οι εικόνες που μοιράζεστε και η σύνοψη για τον παιδίατρο. Τα αγγλικά μένουν η προεπιλογή για όλους — διαλέξτε Ελληνικά στις Ρυθμίσεις → Γλώσσα, και αλλάξτε ξανά όποτε θέλετε.",
+  "The first screen asks too, so a new phone can choose before typing anything.":
+    "Η πρώτη οθόνη ρωτά κι αυτή, ώστε ένα νέο κινητό να διαλέξει πριν γράψει οτιδήποτε.",
 };
 
 export default el;

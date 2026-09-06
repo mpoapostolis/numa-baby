@@ -48,7 +48,7 @@ export function WhatsNew({ releases, onDismiss }: WhatsNewProps) {
             onClick={() => setOpen((wasOpen) => !wasOpen)}
           >
             <span className="whats-new-tag">{t("New")}</span>
-            <span className="whats-new-headline">{releases[0].title}</span>
+            <span className="whats-new-headline">{t(releases[0].title)}</span>
             <ChevronDown
               size={14}
               className={open ? "whats-new-chevron is-open" : "whats-new-chevron"}
@@ -58,7 +58,7 @@ export function WhatsNew({ releases, onDismiss }: WhatsNewProps) {
         </h2>
         {open && (
           <ul className="whats-new-list">
-            {items.map((item) => <li key={item}>{item}</li>)}
+            {items.map((item) => <li key={item}>{t(item)}</li>)}
           </ul>
         )}
       </div>
