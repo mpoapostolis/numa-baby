@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { ExternalLink, Play, Square } from "lucide-react";
 import { track } from "../domain/analytics";
 import { PLAY_AREA_LABEL, PlayBracket, PlayIdea } from "../domain/playIdeas";
+import { t, tName } from "../i18n";
 
 const TIMER_MINUTES = [2, 5];
 
@@ -48,19 +49,19 @@ function PlayCard({
   return (
     <li className="play-card">
       <div className="play-card-head">
-        <strong>{idea.title}</strong>
-        <span className={`play-area-chip play-area-${idea.area}`}>{PLAY_AREA_LABEL[idea.area]}</span>
+        <strong>{t(idea.title)}</strong>
+        <span className={`play-area-chip play-area-${idea.area}`}>{t(PLAY_AREA_LABEL[idea.area])}</span>
       </div>
-      <p className="play-why">{idea.why}</p>
+      <p className="play-why">{t(idea.why)}</p>
       <ol className="play-steps">
-        {idea.steps.map((step) => <li key={step}>{step}</li>)}
+        {idea.steps.map((step) => <li key={step}>{t(step)}</li>)}
       </ol>
       <p className="play-meta">
-        {idea.howLong}
-        {idea.safety && <> · <em>{idea.safety}</em></>}
+        {t(idea.howLong)}
+        {idea.safety && <> · <em>{t(idea.safety)}</em></>}
       </p>
       <div className="play-foot">
-        <div className="play-timer" role="group" aria-label={`Timer for ${idea.title}`}>
+        <div className="play-timer" role="group" aria-label={t("Timer for {what}", { what: t(idea.title) })}>
           {running ? (
             <button type="button" className="play-timer-btn is-running" onClick={onStop}>
               <Square size={12} aria-hidden="true" /> {formatLeft(Math.max(0, Math.ceil((timerEndsAt - now) / 1000)))}
@@ -76,7 +77,7 @@ function PlayCard({
                   onStart(minutes);
                 }}
               >
-                <Play size={12} aria-hidden="true" /> {minutes} min
+                <Play size={12} aria-hidden="true" /> {t("{n} min", { n: minutes })}
               </button>
             ))
           )}
@@ -102,16 +103,12 @@ export function PlaySection({ bracket, name }: { bracket: PlayBracket; name: str
 
   return (
     <section className="surface-card guide-section play-section" aria-labelledby="play-heading">
-      <h2 id="play-heading" className="t-title-2">Play &amp; development</h2>
+      <h2 id="play-heading" className="t-title-2">{t("Play & development")}</h2>
       <p className="t-meta">
-        Everyday play for {name} right now — {bracket.stage}. No grades, no
-        milestones to pass: stop whenever either of you has had enough. Every
-        card links to the page it came from.
+        {t("Everyday play for {name} right now — {stage}. No grades, no milestones to pass: stop whenever either of you has had enough. Every card links to the page it came from.", { name: tName(name), stage: t(bracket.stage) })}
       </p>
       <p className="t-meta play-disclaimer">
-        These are general play ideas, not medical or developmental advice —
-        every baby moves at their own pace. For anything about {name}&rsquo;s
-        own development, your paediatrician or health visitor is the answer.
+        {t("These are general play ideas, not medical or developmental advice — every baby moves at their own pace. For anything about {name}’s own development, your paediatrician or health visitor is the answer.", { name })}
       </p>
       <ul className="play-list">
         {bracket.ideas.map((idea) => (

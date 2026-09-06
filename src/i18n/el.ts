@@ -938,6 +938,120 @@ const el: Record<string, string> = {
   "Trends are useful context for your paediatrician. A single measurement is not a diagnosis.":
     "Οι τάσεις είναι χρήσιμο πλαίσιο για τον παιδίατρό σας. Μία μέτρηση δεν είναι διάγνωση.",
   "What’s typical at this age?": "Τι είναι τυπικό σε αυτή την ηλικία;",
+  // ——— Guide screen (chrome; card libraries follow in a later batch) ———
+  "kilograms": "κιλά",
+  "pounds": "λίβρες",
+  "In the first week": "Την πρώτη εβδομάδα",
+  "At 1 week": "Στη 1 εβδομάδα",
+  "At {n} weeks": "Στις {n} εβδομάδες",
+  "At 1 month": "Στον 1 μήνα",
+  "At {n} months": "Στους {n} μήνες",
+  "Reference band from {low} to {high} {unit}, middle of the range {mid} {unit}.":
+    "Ζώνη αναφοράς από {low} έως {high} {unit}, μέσο του εύρους {mid} {unit}.",
+  "Reference band from {low} to {high} {unit}, middle of the range {mid} {unit}. Latest logged weight {latest} {unit}.":
+    "Ζώνη αναφοράς από {low} έως {high} {unit}, μέσο του εύρους {mid} {unit}. Τελευταίο καταγεγραμμένο βάρος {latest} {unit}.",
+  "Back to Insights": "Πίσω στην Εικόνα",
+  "Care guide": "Οδηγός φροντίδας",
+  "What to do today": "Τι να κάνετε σήμερα",
+  "What is expected for {name} right now, and what to do about it. Every line links to the page it came from.":
+    "Τι αναμένεται για {name} αυτή τη στιγμή, και τι να κάνετε γι’ αυτό. Κάθε γραμμή οδηγεί στη σελίδα από όπου προήλθε.",
+  "When to call someone": "Πότε να πάρετε κάποιον τηλέφωνο",
+  "This app never decides any of these — you do. Trust your instincts and ring your paediatrician, midwife or health visitor.":
+    "Η εφαρμογή δεν αποφασίζει ποτέ κανένα από αυτά — εσείς αποφασίζετε. Εμπιστευτείτε το ένστικτό σας και πάρτε τον παιδίατρο ή τη μαία σας.",
+  "Context, not a diagnosis": "Πλαίσιο, όχι διάγνωση",
+  "Everything in this guide — ranges, care notes and play ideas — is general information from the sources listed below, not medical advice, and this app is not a medical device. Babies grow in their own rhythm; your paediatrician’s assessment always comes first.":
+    "Όλα σε αυτόν τον οδηγό — εύρη, σημειώσεις φροντίδας και ιδέες παιχνιδιού — είναι γενικές πληροφορίες από τις πηγές που αναφέρονται παρακάτω, όχι ιατρική συμβουλή, και η εφαρμογή δεν είναι ιατρική συσκευή. Τα μωρά μεγαλώνουν με τον δικό τους ρυθμό· η εκτίμηση του παιδιάτρου σας έρχεται πάντα πρώτη.",
+  "Typical weight range at this age (WHO P3–P97)": "Τυπικό εύρος βάρους σε αυτή την ηλικία (ΠΟΥ P3–P97)",
+  "The WHO table covers the first 24 months, shown here at 24 months.":
+    "Ο πίνακας του ΠΟΥ καλύπτει τους πρώτους 24 μήνες, εδώ εμφανίζεται στους 24 μήνες.",
+  "{name}’s latest:": "Η τελευταία μέτρηση για {name}:",
+  "Range shown covers girls and boys.": "Το εύρος που φαίνεται καλύπτει κορίτσια και αγόρια.",
+  "By age, 0–24 months": "Ανά ηλικία, 0–24 μηνών",
+  "Reference weights across the first two years.": "Βάρη αναφοράς στα δύο πρώτα χρόνια.",
+  "Age": "Ηλικία",
+  "{n} mo": "{n} μ.",
+  "Add a birth date in Settings to see the range for {name}’s exact age.":
+    "Προσθέστε ημερομηνία γέννησης στις Ρυθμίσεις για να δείτε το εύρος για την ακριβή ηλικία του μωρού {name}.",
+  "Typical pattern": "Τυπικό μοτίβο",
+  "Many newborns lose some weight in the first days, then regain it — most are back to birth weight by two weeks, nearly all by three.":
+    "Πολλά νεογέννητα χάνουν λίγο βάρος τις πρώτες μέρες και μετά το ξαναπαίρνουν — τα περισσότερα είναι πίσω στο βάρος γέννησης ως τις δύο εβδομάδες, σχεδόν όλα ως τις τρεις.",
+  "In the first month, roughly {min}–{max} g a week is common.":
+    "Τον πρώτο μήνα, περίπου {min}–{max} γρ. την εβδομάδα είναι συνηθισμένο.",
+  "From {from} to {to} months, roughly {min}–{max} g a week is common.":
+    "Από {from} έως {to} μηνών, περίπου {min}–{max} γρ. την εβδομάδα είναι συνηθισμένο.",
+  "Many babies double their birth weight around six months and triple it around one year. After eight months, gains slow — following their own curve matters more than any weekly number.":
+    "Πολλά μωρά διπλασιάζουν το βάρος γέννησης γύρω στους έξι μήνες και το τριπλασιάζουν γύρω στον χρόνο. Μετά τους οκτώ μήνες η αύξηση επιβραδύνεται — το να ακολουθούν τη δική τους καμπύλη μετράει πιο πολύ από κάθε εβδομαδιαίο νούμερο.",
+  "Growth is usually fastest in the first six months, then gradually slows. A short illness can flatten gain for a couple of weeks — that usually settles on its own.":
+    "Η ανάπτυξη είναι συνήθως ταχύτερη τους πρώτους έξι μήνες και μετά σταδιακά επιβραδύνεται. Μια σύντομη αρρώστια μπορεί να «παγώσει» την αύξηση για κάνα δυο εβδομάδες — συνήθως φτιάχνει μόνο του.",
+  "These are population averages, not targets. A baby growing along a lower line on the chart gains less than one on a higher line — steadiness is the point.":
+    "Αυτοί είναι μέσοι όροι πληθυσμού, όχι στόχοι. Ένα μωρό που μεγαλώνει σε χαμηλότερη γραμμή της καμπύλης παίρνει λιγότερο από ένα σε ψηλότερη — η σταθερότητα είναι το ζητούμενο.",
+  "When to ask your paediatrician": "Πότε να ρωτήσετε τον παιδίατρό σας",
+  "Trust your instincts — reach out whenever you’re unsure. These are the moments the guidance names for a check-in:":
+    "Εμπιστευτείτε το ένστικτό σας — απευθυνθείτε όποτε δεν είστε σίγουροι. Αυτές είναι οι στιγμές που οι οδηγίες ορίζουν για έναν έλεγχο:",
+  "At two weeks, still under birth weight or gaining less than about 150 g a week.":
+    "Στις δύο εβδομάδες, ακόμη κάτω από το βάρος γέννησης ή με αύξηση κάτω από περίπου 150 γρ. την εβδομάδα.",
+  "Not back to birth weight by three weeks of age.": "Δεν έχει επιστρέψει στο βάρος γέννησης ως τις τρεις εβδομάδες.",
+  "After the first week, fewer than six wet diapers a day, or urine that is dark or has reddish-orange marks in it.":
+    "Μετά την πρώτη εβδομάδα, λιγότερες από έξι βρεγμένες πάνες την ημέρα, ή τσίσα σκούρα ή με κοκκινοπορτοκαλί σημάδια.",
+  "Weight drifting across more than one line on their growth chart, in either direction.":
+    "Βάρος που διασχίζει πάνω από μία γραμμή στην καμπύλη ανάπτυξης, προς οποιαδήποτε κατεύθυνση.",
+  "Noticeably fewer wet diapers alongside irritability, unusual sleepiness or reduced feeding — seek care the same day.":
+    "Αισθητά λιγότερες βρεγμένες πάνες μαζί με ευερεθιστότητα, ασυνήθιστη υπνηλία ή μειωμένο τάισμα — ζητήστε φροντίδα την ίδια μέρα.",
+  "Sources": "Πηγές",
+  "WHO Child Growth Standards · shown for context, not diagnosis · on this device":
+    "Πρότυπα ανάπτυξης ΠΟΥ · για πλαίσιο, όχι διάγνωση · σε αυτή τη συσκευή",
+
+  // ——— When to call someone (signs) ———
+  "Under 3 months: a rectal temperature of 38.0 °C (100.4 °F) or higher — call the same day, even with no other symptoms.":
+    "Κάτω των 3 μηνών: θερμοκρασία 38,0 °C (100,4 °F) ή υψηλότερη από το ορθό — τηλεφωνήστε την ίδια μέρα, ακόμη και χωρίς άλλα συμπτώματα.",
+  "Fewer wet nappies than usual, a dry mouth, no tears when crying, or unusual sleepiness.":
+    "Λιγότερες βρεγμένες πάνες από το συνηθισμένο, στεγνό στόμα, κλάμα χωρίς δάκρυα, ή ασυνήθιστη υπνηλία.",
+  "Yellowing of the skin or eyes that appears in the first 24 hours, is getting worse rather than better, or is still there after two weeks.":
+    "Κιτρίνισμα του δέρματος ή των ματιών που εμφανίζεται στις πρώτες 24 ώρες, χειροτερεύει αντί να βελτιώνεται, ή επιμένει μετά από δύο εβδομάδες.",
+  "Yellow-green or green vomit, or vomit with blood in it or that looks like ground coffee.":
+    "Κιτρινοπράσινος ή πράσινος εμετός, ή εμετός με αίμα ή που μοιάζει με αλεσμένο καφέ.",
+  "A baby who is difficult to wake, will not wake up, or has gone floppy.":
+    "Μωρό που ξυπνά δύσκολα, δεν ξυπνά καθόλου, ή έχει «μαλακώσει» και δεν κρατιέται.",
+  "Not back to birthweight by three weeks, or losing weight after the first week.":
+    "Δεν έχει επιστρέψει στο βάρος γέννησης ως τις τρεις εβδομάδες, ή χάνει βάρος μετά την πρώτη εβδομάδα.",
+
+  // ——— Care stages (eyebrows) ———
+  "The first days": "Οι πρώτες μέρες",
+  "Milk in, weight climbing": "Το γάλα ήρθε, το βάρος ανεβαίνει",
+  "Finding the rhythm": "Βρίσκοντας τον ρυθμό",
+  "Six weeks to three months": "Έξι εβδομάδες έως τρεις μήνες",
+  "Three to six months": "Τρεις έως έξι μήνες",
+  "Six to twelve months": "Έξι έως δώδεκα μήνες",
+  "After the first year": "Μετά τον πρώτο χρόνο",
+
+  // ——— Going out checklist ———
+  "Going out": "Έξοδος",
+  "Tick as you pack. Reset before the next outing.": "Τσεκάρετε όσο ετοιμάζετε την τσάντα. Μηδενίστε πριν την επόμενη έξοδο.",
+  "Reset": "Μηδενισμός",
+  "Diapers — one per hour out, plus one": "Πάνες — μία για κάθε ώρα έξω, συν μία",
+  "Wipes and diaper bags": "Μωρομάντηλα και σακουλάκια για πάνες",
+  "Changing mat (a muslin works)": "Στρωματάκι αλλαγής (και μια μουσελίνα κάνει)",
+  "Full change of clothes — vest AND outfit": "Πλήρης αλλαξιά — ζιπουνάκι ΚΑΙ φορμάκι",
+  "A muslin or burp cloth": "Μια μουσελίνα ή πανάκι για ρέψιμο",
+  "One more feed than you think you need": "Ένα τάισμα παραπάνω από όσα νομίζετε ότι χρειάζεστε",
+  "Hat for the season": "Σκουφάκι ανάλογα με την εποχή",
+  "Blanket or extra layer": "Κουβερτούλα ή ένα ρούχο παραπάνω",
+  "Pacifier + clip, if used": "Πιπίλα + κλιπ, αν χρησιμοποιείται",
+  "Hand sanitiser": "Αντισηπτικό χεριών",
+  "Your own phone, keys, water": "Το κινητό σας, κλειδιά, νερό",
+
+  // ——— Play & development (chrome) ———
+  "Play & development": "Παιχνίδι και ανάπτυξη",
+  "Everyday play for {name} right now — {stage}. No grades, no milestones to pass: stop whenever either of you has had enough. Every card links to the page it came from.":
+    "Καθημερινό παιχνίδι για {name} αυτή τη στιγμή — {stage}. Χωρίς βαθμούς, χωρίς ορόσημα για να «περάσετε»: σταματήστε όποτε κάποιος από τους δυο σας κουραστεί. Κάθε κάρτα οδηγεί στη σελίδα από όπου προήλθε.",
+  "These are general play ideas, not medical or developmental advice — every baby moves at their own pace. For anything about {name}’s own development, your paediatrician or health visitor is the answer.":
+    "Αυτές είναι γενικές ιδέες παιχνιδιού, όχι ιατρική ή αναπτυξιακή συμβουλή — κάθε μωρό προχωρά με τον ρυθμό του. Για οτιδήποτε αφορά την ανάπτυξη του μωρού {name}, ο παιδίατρός σας είναι η απάντηση.",
+  "Movement": "Κίνηση",
+  "Seeing": "Όραση",
+  "Talking": "Ομιλία",
+  "Together": "Μαζί",
+  "Timer for {what}": "Χρονόμετρο για {what}",
+  "{n} min": "{n} λεπτά",
 };
 
 export default el;
