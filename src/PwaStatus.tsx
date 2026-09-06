@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { registerSW } from "virtual:pwa-register";
 import { Button } from "./components/ui/button";
+import { t } from "./i18n";
 
 // Getting a fix to the person who asked for it.
 //
@@ -114,13 +115,13 @@ export function PwaStatus() {
 
   return (
     <aside className="pwa-toast" role="status" aria-live="polite">
-      <span>{needsRefresh ? "A newer version is ready." : "Ready to use offline."}</span>
+      <span>{needsRefresh ? t("A newer version is ready.") : t("Ready to use offline.")}</span>
       <div>
-        {needsRefresh && <Button onClick={() => updateApp.current()}>Update now</Button>}
+        {needsRefresh && <Button onClick={() => updateApp.current()}>{t("Update now")}</Button>}
         {/* Dismiss hides the notice, not the update: it still lands the next
             time the app is put down. Nobody should have to remember to
             update a baby tracker. */}
-        <Button onClick={() => { setOfflineReady(false); setNeedsRefresh(false); }}>Later</Button>
+        <Button onClick={() => { setOfflineReady(false); setNeedsRefresh(false); }}>{t("Later")}</Button>
       </div>
     </aside>
   );

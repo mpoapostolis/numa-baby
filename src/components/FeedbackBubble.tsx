@@ -18,8 +18,7 @@ const FeedbackForm = lazy(() =>
   import("./FeedbackCard").then((m) => ({ default: m.FeedbackForm })),
 );
 const FEEDBACK_BLURB =
-  "Something broken, missing, or just annoying? It goes straight to the person who built " +
-  "this — two tired parents, evenings, between feeds.";
+  "Something broken, missing, or just annoying? It goes straight to the person who built this — two tired parents, evenings, between feeds.";
 import { track } from "../domain/analytics";
 import { t } from "../i18n";
 

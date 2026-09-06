@@ -233,7 +233,7 @@ export function DayBand({
             )}
             {marks.length > 0 && (
               <div className="band-lane lane-mark">
-                <span className="band-lane-icon" title="Measurements and notes"><Stethoscope size={14} /></span>
+                <span className="band-lane-icon" title={t("Measurements and notes")}><Stethoscope size={14} /></span>
                 <div className="band-track">
                   {marks.map((activity) => (
                     <span

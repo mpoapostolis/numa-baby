@@ -698,7 +698,7 @@ function TodayScreen({
 
           <div className="next-up">
             <div className="care-notes">
-              <p><ShieldCheck size={14} aria-hidden="true" /> Safe sleep: back, firm flat surface, clear sleep space.</p>
+              <p><ShieldCheck size={14} aria-hidden="true" /> {t("Safe sleep: back, firm flat surface, clear sleep space.")}</p>
             </div>
           </div>
 
@@ -734,7 +734,7 @@ function TodayScreen({
           </div>
         </div>
 
-        <section className="log-column" aria-label="One-tap baby care logging">
+        <section className="log-column" aria-label={t("One-tap baby care logging")}>
           {/* First in the column, above the tiles: it is the one thing here
               with a deadline, and it is gone the moment it is satisfied.
               Inside the column rather than beside it because CSS pulls this

@@ -552,12 +552,12 @@ export function LogSheet({
           <LogDialogHeader icon={<Milk />} eyebrow={t("Quick log")} title={t("Bottle")} description={t("Record the amount now; adjust details only if needed.")} />
           <Field className="amount-field">
             <FieldLabel>{t("Amount")}</FieldLabel>
-            <ButtonGroup className="amount-control" aria-label="Bottle amount">
-              <Button type="button" variant="outline" aria-label="Decrease amount" disabled={Number(draft.bottleAmount) <= stepper.min} onClick={() => setDraft((current) => ({ ...current, bottleAmount: stepDraft((Number(current.bottleAmount) || stepper.min) - stepper.step) }))}><Minus /></Button>
+            <ButtonGroup className="amount-control" aria-label={t("Bottle amount")}>
+              <Button type="button" variant="outline" aria-label={t("Decrease amount")} disabled={Number(draft.bottleAmount) <= stepper.min} onClick={() => setDraft((current) => ({ ...current, bottleAmount: stepDraft((Number(current.bottleAmount) || stepper.min) - stepper.step) }))}><Minus /></Button>
               <ButtonGroupText role="status" aria-live="polite" aria-atomic="true"><strong>{draft.bottleAmount}</strong><span>{stepper.unit}</span></ButtonGroupText>
-              <Button type="button" variant="outline" aria-label="Increase amount" disabled={Number(draft.bottleAmount) >= stepper.max} onClick={() => setDraft((current) => ({ ...current, bottleAmount: stepDraft((Number(current.bottleAmount) || 0) + stepper.step) }))}><Plus /></Button>
+              <Button type="button" variant="outline" aria-label={t("Increase amount")} disabled={Number(draft.bottleAmount) >= stepper.max} onClick={() => setDraft((current) => ({ ...current, bottleAmount: stepDraft((Number(current.bottleAmount) || 0) + stepper.step) }))}><Plus /></Button>
             </ButtonGroup>
-            <ToggleGroup type="single" value={draft.bottleAmount} className="preset-row" aria-label="Preset amounts" onValueChange={(value) => value && patch({ bottleAmount: value })}>
+            <ToggleGroup type="single" value={draft.bottleAmount} className="preset-row" aria-label={t("Preset amounts")} onValueChange={(value) => value && patch({ bottleAmount: value })}>
               {presets.map((amount, index) => {
                 const focused = amount === Number(draft.bottleAmount) || (index === 0 && !presets.includes(Number(draft.bottleAmount)));
                 return <ToggleGroupItem autoFocus={focused} data-initial-focus={focused ? "" : undefined} value={String(amount)} aria-label={`${amount} ${stepper.unit}`} key={amount}>{amount}</ToggleGroupItem>;
@@ -566,7 +566,7 @@ export function LogSheet({
           </Field>
           <Field className="choice-field">
             <FieldLabel>{t("Milk")}</FieldLabel>
-            <ToggleGroup type="single" value={draft.milkType} className="segmented" aria-label="Milk type" onValueChange={(value) => value && patch({ milkType: value as "formula" | "expressed" })}>
+            <ToggleGroup type="single" value={draft.milkType} className="segmented" aria-label={t("Milk type")} onValueChange={(value) => value && patch({ milkType: value as "formula" | "expressed" })}>
               <ToggleGroupItem value="formula">{t("Formula")}<Check className="choice-check" /></ToggleGroupItem>
               <ToggleGroupItem value="expressed">{t("Breast milk")}<Check className="choice-check" /></ToggleGroupItem>
             </ToggleGroup>
@@ -586,16 +586,16 @@ export function LogSheet({
               type="single"
               value={draft.nursingEntryMode}
               className="segmented"
-              aria-label="Nursing entry method"
+              aria-label={t("Nursing entry method")}
               onValueChange={(value) => value && changeNursingEntryMode(value as "timer" | "manual")}
             >
               <ToggleGroupItem autoFocus={draft.nursingEntryMode === "timer"} data-initial-focus={draft.nursingEntryMode === "timer" ? "" : undefined} value="timer">Timer<Check className="choice-check" /></ToggleGroupItem>
-              <ToggleGroupItem autoFocus={draft.nursingEntryMode === "manual"} data-initial-focus={draft.nursingEntryMode === "manual" ? "" : undefined} value="manual">Past session<Check className="choice-check" /></ToggleGroupItem>
+              <ToggleGroupItem autoFocus={draft.nursingEntryMode === "manual"} data-initial-focus={draft.nursingEntryMode === "manual" ? "" : undefined} value="manual">{t("Past session")}<Check className="choice-check" /></ToggleGroupItem>
             </ToggleGroup>
           </Field>
           <Field className="nursing-side-field">
             <FieldLabel>{t("Side")}</FieldLabel>
-            <ToggleGroup type="single" value={draft.nursingSide} className="side-grid" aria-label="Nursing side" onValueChange={(value) => value && patch({ nursingSide: value as "left" | "right" | "both" })}>
+            <ToggleGroup type="single" value={draft.nursingSide} className="side-grid" aria-label={t("Nursing side")} onValueChange={(value) => value && patch({ nursingSide: value as "left" | "right" | "both" })}>
               <ToggleGroupItem value="left"><span className="side-letter">L</span><span className="choice-copy"><strong>{t("Left")}</strong></span><Check className="choice-check" /></ToggleGroupItem>
               <ToggleGroupItem value="right"><span className="side-letter">R</span><span className="choice-copy"><strong>{t("Right")}</strong></span><Check className="choice-check" /></ToggleGroupItem>
               {/* Only for a session that has already finished. A live timer
@@ -635,7 +635,7 @@ export function LogSheet({
             icon={<Moon />}
             eyebrow={t("Past sleep")}
             title={t("Add a sleep")}
-            description="A stretch that has already finished — the night you meant to log at the time."
+            description={t("A stretch that has already finished — the night you meant to log at the time.")}
           />
           <div className="measurement-row nursing-time-row">
             <TimeField
@@ -656,7 +656,7 @@ export function LogSheet({
           <NoteField value={draft.note} onChange={(value) => patch({ note: value })} />
           <FormError message={formError?.message ?? null} />
           <SheetFooter>
-            <p className="sheet-footer-note">A stretch that crosses midnight is counted whole, on the evening it began.</p>
+            <p className="sheet-footer-note">{t("A stretch that crosses midnight is counted whole, on the evening it began.")}</p>
             <Button type="submit" className="primary-button sheet-primary">{t("Save sleep")}</Button>
           </SheetFooter>
         </SheetForm>
@@ -676,7 +676,7 @@ export function LogSheet({
               every medicine already logged, newest first, wearing the dose
               exactly as it was last written. */}
           {savedMedicines.length > 0 && (
-            <div className="medicine-presets" role="group" aria-label="Medicines given before">
+            <div className="medicine-presets" role="group" aria-label={t("Medicines given before")}>
               {savedMedicines.map((m, index) => (
                 <button
                   key={m.name}
@@ -714,13 +714,13 @@ export function LogSheet({
             </InputGroup>
           </Field>
           <Field className="medicine-field">
-            <FieldLabel htmlFor="medicine-dose">How much <span className="optional-label">Optional</span></FieldLabel>
+            <FieldLabel htmlFor="medicine-dose">{t("How much")} <span className="optional-label">{t("Optional")}</span></FieldLabel>
             <InputGroup>
               <InputGroupInput
                 id="medicine-dose"
                 value={draft.doseText}
                 maxLength={NOTE_MAX_LENGTH}
-                placeholder="2.5 ml, one drop…"
+                placeholder={t("2.5 ml, one drop…")}
                 onChange={(event) => patch({ doseText: event.target.value })}
               />
             </InputGroup>
@@ -774,7 +774,7 @@ export function LogSheet({
           <LogDialogHeader icon={<Droplet />} eyebrow={t("Quick log")} title={t("Diaper")} description={t("Choose the closest match and save.")} />
           <Field className="choice-field">
             <FieldLabel>{t("Diaper type")}</FieldLabel>
-            <ToggleGroup type="single" value={draft.diaperKind} className="diaper-grid" aria-label="Diaper type" onValueChange={(value) => value && patch({ diaperKind: value as DiaperKind })}>
+            <ToggleGroup type="single" value={draft.diaperKind} className="diaper-grid" aria-label={t("Diaper type")} onValueChange={(value) => value && patch({ diaperKind: value as DiaperKind })}>
               <ToggleGroupItem autoFocus data-initial-focus value="wet"><Droplet size={22} /><strong>{t("Wet")}</strong><Check className="choice-check" /></ToggleGroupItem>
               <ToggleGroupItem value="dirty"><span className="dot-icon" aria-hidden="true">●</span><strong>{t("Dirty")}</strong><Check className="choice-check" /></ToggleGroupItem>
               <ToggleGroupItem value="both"><span className="both-icon" aria-hidden="true"><Droplet size={18} />●</span><strong>{t("Both")}</strong><Check className="choice-check" /></ToggleGroupItem>
@@ -798,7 +798,7 @@ export function LogSheet({
           </FieldGroup>
           <TimeField quick value={draft.logTime} onChange={(value) => patch({ logTime: value })} />
           <NoteField value={draft.note} onChange={(value) => patch({ note: value })} placeholder={t("Clinic, home scale, or anything useful")} />
-          <p className="sheet-advice">Measure consistently and use the trend as context for your paediatrician.</p>
+          <p className="sheet-advice">{t("Measure consistently and use the trend as context for your paediatrician.")}</p>
           <FormError message={formError?.message ?? null} />
           <SheetFooter><Button type="submit" className="primary-button sheet-primary">{t("Save growth check")}</Button></SheetFooter>
         </SheetForm>
@@ -842,13 +842,13 @@ export function LogSheet({
                   onChange={(value) => { patch({ bottleAmount: value }); setFormError(null); }}
                   className="measurement-primary"
                 />
-                <ToggleGroup type="single" value={draft.bottleAmount} className="preset-row" aria-label="Preset amounts" onValueChange={(value) => { if (value) patch({ bottleAmount: value }); setFormError(null); }}>
+                <ToggleGroup type="single" value={draft.bottleAmount} className="preset-row" aria-label={t("Preset amounts")} onValueChange={(value) => { if (value) patch({ bottleAmount: value }); setFormError(null); }}>
                   {presets.map((amount) => <ToggleGroupItem value={String(amount)} aria-label={`${amount} ${stepper.unit}`} key={amount}>{amount}</ToggleGroupItem>)}
                 </ToggleGroup>
               </Field>
               <Field className="choice-field">
                 <FieldLabel>{t("Milk")}</FieldLabel>
-                <ToggleGroup type="single" value={draft.milkType} className="segmented" aria-label="Milk type" onValueChange={(value) => value && patch({ milkType: value as "formula" | "expressed" })}>
+                <ToggleGroup type="single" value={draft.milkType} className="segmented" aria-label={t("Milk type")} onValueChange={(value) => value && patch({ milkType: value as "formula" | "expressed" })}>
                   <ToggleGroupItem value="formula">{t("Formula")}<Check className="choice-check" /></ToggleGroupItem>
                   <ToggleGroupItem value="expressed">{t("Breast milk")}<Check className="choice-check" /></ToggleGroupItem>
                 </ToggleGroup>
@@ -859,7 +859,7 @@ export function LogSheet({
           {editing.type === "nursing" && (
             <Field className="nursing-side-field">
               <FieldLabel>{t("Side")}</FieldLabel>
-              <ToggleGroup type="single" value={draft.nursingSide} className="side-grid" aria-label="Nursing side" onValueChange={(value) => value && patch({ nursingSide: value as "left" | "right" | "both" })}>
+              <ToggleGroup type="single" value={draft.nursingSide} className="side-grid" aria-label={t("Nursing side")} onValueChange={(value) => value && patch({ nursingSide: value as "left" | "right" | "both" })}>
                 <ToggleGroupItem autoFocus data-initial-focus value="left"><span className="side-letter">L</span><span className="choice-copy"><strong>{t("Left")}</strong></span><Check className="choice-check" /></ToggleGroupItem>
                 <ToggleGroupItem value="right"><span className="side-letter">R</span><span className="choice-copy"><strong>{t("Right")}</strong></span><Check className="choice-check" /></ToggleGroupItem>
                 {/* Sessions saved as Both exist (the manual sheet offers it);
@@ -873,7 +873,7 @@ export function LogSheet({
           {editing.type === "diaper" && (
             <Field className="choice-field">
               <FieldLabel>{t("Diaper type")}</FieldLabel>
-              <ToggleGroup type="single" value={draft.diaperKind} className="diaper-grid" aria-label="Diaper type" onValueChange={(value) => value && patch({ diaperKind: value as DiaperKind })}>
+              <ToggleGroup type="single" value={draft.diaperKind} className="diaper-grid" aria-label={t("Diaper type")} onValueChange={(value) => value && patch({ diaperKind: value as DiaperKind })}>
                 <ToggleGroupItem autoFocus data-initial-focus value="wet"><Droplet size={22} /><strong>{t("Wet")}</strong><Check className="choice-check" /></ToggleGroupItem>
                 <ToggleGroupItem value="dirty"><span className="dot-icon" aria-hidden="true">●</span><strong>{t("Dirty")}</strong><Check className="choice-check" /></ToggleGroupItem>
                 <ToggleGroupItem value="both"><span className="both-icon" aria-hidden="true"><Droplet size={18} />●</span><strong>{t("Both")}</strong><Check className="choice-check" /></ToggleGroupItem>
@@ -914,7 +914,7 @@ export function LogSheet({
 
           <div className={isTimed ? "measurement-row edit-time-row" : ""}>
             <TimeField value={draft.logTime} label={isTimed ? "Started" : "When"} autoFocus={editing.type === "sleep"} inputRef={startRef} error={formError?.field === "start"} onChange={(value) => { patch({ logTime: value }); setFormError(null); }} />
-            {isTimed && <TimeField value={draft.endTime} label="Ended" description="Leave empty if still going." inputRef={endRef} error={formError?.field === "end"} onChange={(value) => { patch({ endTime: value }); setFormError(null); }} />}
+            {isTimed && <TimeField value={draft.endTime} label="Ended" description={t("Leave empty if still going.")} inputRef={endRef} error={formError?.field === "end"} onChange={(value) => { patch({ endTime: value }); setFormError(null); }} />}
           </div>
           <NoteField value={draft.note} onChange={(value) => { patch({ note: value }); setFormError(null); }} />
           <FormError message={formError?.message ?? null} />
@@ -965,7 +965,7 @@ function ProfileForm({ profile, onChange, onDone }: { profile: Profile; onChange
         </Field>
         <Field>
           <FieldLabel>{t("Girl or boy")}</FieldLabel>
-          <ToggleGroup type="single" value={draft.sex ?? "skip"} className="segmented three-way" aria-label="Girl or boy" onValueChange={(value) => value && setDraft({ ...draft, sex: value === "girl" || value === "boy" ? value : undefined })}>
+          <ToggleGroup type="single" value={draft.sex ?? "skip"} className="segmented three-way" aria-label={t("Girl or boy")} onValueChange={(value) => value && setDraft({ ...draft, sex: value === "girl" || value === "boy" ? value : undefined })}>
             <ToggleGroupItem value="girl">{t("Girl")}<Check className="choice-check" /></ToggleGroupItem>
             <ToggleGroupItem value="boy">{t("Boy")}<Check className="choice-check" /></ToggleGroupItem>
             <ToggleGroupItem value="skip">{t("Skip")}<Check className="choice-check" /></ToggleGroupItem>
@@ -974,7 +974,7 @@ function ProfileForm({ profile, onChange, onDone }: { profile: Profile; onChange
         </Field>
         <Field>
           <FieldLabel>{t("How are you feeding?")}</FieldLabel>
-          <ToggleGroup type="single" value={draft.feedingMode} className="segmented three-way" aria-label="Feeding method" onValueChange={(value) => value && setDraft({ ...draft, feedingMode: value as FeedingMode })}>
+          <ToggleGroup type="single" value={draft.feedingMode} className="segmented three-way" aria-label={t("Feeding method")} onValueChange={(value) => value && setDraft({ ...draft, feedingMode: value as FeedingMode })}>
             {(["breast", "bottle", "mixed"] as FeedingMode[]).map((mode) => <ToggleGroupItem key={mode} value={mode}>{mode[0].toUpperCase() + mode.slice(1)}<Check className="choice-check" /></ToggleGroupItem>)}
           </ToggleGroup>
           <FieldDescription>{t("This changes which quick actions are shown.")}</FieldDescription>

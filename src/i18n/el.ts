@@ -21,7 +21,6 @@ const el: Record<string, string> = {
 
   // --- Common ---
   "Cancel": "Άκυρο",
-  "Save": "Αποθήκευση",
   "Undo": "Αναίρεση",
   "Not now": "Όχι τώρα",
   "Close": "Κλείσιμο",
@@ -30,7 +29,6 @@ const el: Record<string, string> = {
   "Stop": "Στοπ",
   "Done": "Τέλος",
   "Edit": "Επεξεργασία",
-  "Delete": "Διαγραφή",
   "Loading": "Φορτώνει",
 
   // --- Settings: appearance & language ---
@@ -99,7 +97,6 @@ const el: Record<string, string> = {
   "Start the timer": "Ξεκίνα το χρονόμετρο",
   "Started {time}": "Ξεκίνησε {time}",
   "Nursing · {side}": "Θηλασμός · {side}",
-  "Nursing · {side} side": "Θηλασμός · {side}",
   "Nursing · {side} · {duration}": "Θηλασμός · {side} · {duration}",
   "Bottle · {amount}": "Μπιμπερό · {amount}",
   "Log a bottle": "Κατάγραψε μπιμπερό",
@@ -292,7 +289,6 @@ const el: Record<string, string> = {
   "Wet diaper": "Πάνα με τσίσα",
   "Dirty diaper": "Πάνα με κακά",
   "Wet + dirty diaper": "Πάνα — τσίσα και κακά",
-  "Wet + dirty": "Τσίσα + κακά",
   "Entry": "Καταχώριση",
   "Both sides": "Και οι δύο πλευρές",
   "Left side": "Αριστερή πλευρά",
@@ -1184,6 +1180,108 @@ const el: Record<string, string> = {
   "Say anything": "Πείτε ό,τι θέλετε",
   "A bug, a wish, a hello — it all lands with the same person.":
     "Ένα σφάλμα, μια ευχή, ένα γεια — όλα φτάνουν στον ίδιο άνθρωπο.",
+  // ——— Soothing sounds ———
+  "Keeps playing with the screen off. Set a timer — at 3am “I’ll turn it off in a minute” means it runs until morning.":
+    "Συνεχίζει να παίζει με την οθόνη κλειστή. Βάλτε χρονόμετρο — στις 3 τα ξημερώματα το «θα το κλείσω σε ένα λεπτό» σημαίνει ότι παίζει μέχρι το πρωί.",
+  "Kind of sound": "Είδος ήχου",
+  "White noise": "Λευκός θόρυβος",
+  "Lullaby": "Νανούρισμα",
+  "Lullabies": "Νανουρίσματα",
+  "Sound": "Ήχος",
+  "Rumble": "Βουητό",
+  "Deepest and softest — closest to the womb": "Το πιο βαθύ και απαλό — πιο κοντά στη μήτρα",
+  "Rain": "Βροχή",
+  "Balanced, like steady rainfall": "Ισορροπημένο, σαν σταθερή βροχή",
+  "Hush": "Σσσς",
+  "Brightest — the classic shhh": "Το πιο φωτεινό — το κλασικό σσσς",
+  "Wiegenlied, 1868 — the one everyone knows": "Wiegenlied, 1868 — αυτό που ξέρουν όλοι",
+  "Twinkle": "Twinkle",
+  "Traditional, slow and simple": "Παραδοσιακό, αργό και απλό",
+  "Rock-a-bye": "Rock-a-bye",
+  "Traditional, gentle three-time": "Παραδοσιακό, απαλό τρίσημο",
+  "Volume": "Ένταση",
+  "Stop after": "Διακοπή μετά από",
+  "Keep going": "Συνέχεια",
+  "Stop · {left} left": "Στοπ · απομένουν {left}",
+  "Play": "Έναρξη",
+  "Your phone would not start the sound. Turn the silent switch off, check the volume, and try once more — some browsers also block audio until you have interacted with the page.":
+    "Το κινητό σας δεν ξεκίνησε τον ήχο. Κλείστε τον διακόπτη σίγασης, ελέγξτε την ένταση, και δοκιμάστε άλλη μία φορά — κάποια προγράμματα μπλοκάρουν τον ήχο μέχρι να αλληλεπιδράσετε με τη σελίδα.",
+  "No sound? Turn up the volume, and on an iPhone check the switch on the side — it silences apps even when they are playing.":
+    "Δεν ακούγεται; Ανεβάστε την ένταση, και σε iPhone ελέγξτε τον διακόπτη στο πλάι — σιγάζει τις εφαρμογές ακόμη κι όταν παίζουν.",
+  "Rendered by the app, not a recording — traditional tunes, nothing to license.":
+    "Παράγεται από την εφαρμογή, δεν είναι ηχογράφηση — παραδοσιακοί σκοποί, χωρίς δικαιώματα.",
+  "Keep it quiet and across the room rather than beside the cot. The AAP has raised concerns about sound levels from infant sleep machines and suggests talking to your paediatrician about safe use.":
+    "Κρατήστε τον χαμηλά και απέναντι στο δωμάτιο, όχι δίπλα στην κούνια. Η AAP έχει εκφράσει ανησυχίες για τα επίπεδα ήχου από συσκευές ύπνου βρεφών και προτείνει να μιλήσετε με τον παιδίατρό σας για την ασφαλή χρήση.",
+
+  // ——— Handoff (moving a log between addresses) ———
+  "Move this log to {origin}?": "Μεταφορά αυτού του ημερολογίου στο {origin};",
+  "{name}’s log — {entries} — would be copied to the same app at its other address.":
+    "Το ημερολόγιο του μωρού {name} — {entries} — θα αντιγραφεί στην ίδια εφαρμογή, στην άλλη της διεύθυνση.",
+  "This log — {entries} — would be copied to the same app at its other address.":
+    "Αυτό το ημερολόγιο — {entries} — θα αντιγραφεί στην ίδια εφαρμογή, στην άλλη της διεύθυνση.",
+  "This browser’s copy is empty, so there is nothing to send from here. If you have been using the installed app from your home screen, your log lives inside it — open the installed app, go to Settings →":
+    "Το αντίγραφο αυτού του προγράμματος είναι άδειο, οπότε δεν υπάρχει τίποτα να σταλεί από εδώ. Αν χρησιμοποιούσατε την εγκατεστημένη εφαρμογή από την αρχική οθόνη, το ημερολόγιό σας ζει μέσα της — ανοίξτε την εγκατεστημένη εφαρμογή, πηγαίνετε στις Ρυθμίσεις →",
+  ", then choose “Restore a backup” at the new address. Everything comes across.":
+    ", και μετά επιλέξτε «Επαναφορά αντιγράφου» στη νέα διεύθυνση. Όλα περνούν απέναντι.",
+  "Nothing is uploaded. The entries travel inside the link, which no browser sends to a server.":
+    "Τίποτα δεν ανεβαίνει. Οι καταχωρίσεις ταξιδεύουν μέσα στον σύνδεσμο, τον οποίο κανένα πρόγραμμα δεν στέλνει σε διακομιστή.",
+  "This copy stays here too. Nothing is deleted from this address — and keep any installed icon until the new address shows your entries: deleting an installed app deletes its storage with it.":
+    "Αυτό το αντίγραφο μένει κι εδώ. Τίποτα δεν διαγράφεται από αυτή τη διεύθυνση — και κρατήστε το εγκατεστημένο εικονίδιο μέχρι η νέα διεύθυνση να δείξει τις καταχωρίσεις σας: η διαγραφή μιας εγκατεστημένης εφαρμογής διαγράφει μαζί και τον χώρο της.",
+  "You will be asked to confirm again on the other side before anything is merged.":
+    "Θα σας ζητηθεί να επιβεβαιώσετε ξανά στην άλλη πλευρά πριν συγχωνευτεί οτιδήποτε.",
+  "This log is too big to travel inside a link. Download a backup here and open it there instead — that route has no size limit.":
+    "Αυτό το ημερολόγιο είναι πολύ μεγάλο για να ταξιδέψει μέσα σε σύνδεσμο. Κατεβάστε ένα αντίγραφο εδώ και ανοίξτε το εκεί — αυτός ο δρόμος δεν έχει όριο μεγέθους.",
+  "Something went wrong packing the log. Nothing was sent, and nothing here has changed.":
+    "Κάτι πήγε στραβά στο πακετάρισμα του ημερολογίου. Τίποτα δεν στάλθηκε, και τίποτα εδώ δεν άλλαξε.",
+  "Send the log": "Αποστολή του ημερολογίου",
+  "If you did not ask for this, tap “Not now”. A link alone should never move your baby’s records anywhere.":
+    "Αν δεν το ζητήσατε εσείς, πατήστε «Όχι τώρα». Ένας σύνδεσμος από μόνος του δεν πρέπει ποτέ να μετακινεί τα αρχεία του μωρού σας πουθενά.",
+  // ——— App shell, error screen, update toast ———
+  "Toggle navigation": "Εναλλαγή πλοήγησης",
+  "Primary navigation": "Κύρια πλοήγηση",
+  "Loading Numalog": "Φόρτωση Numalog",
+  "Debug preview": "Προεπισκόπηση εντοπισμού",
+  "Fake data only · your saved tracker is untouched": "Μόνο ψεύτικα δεδομένα · το αποθηκευμένο σας ημερολόγιο δεν αγγίζεται",
+  "Exit preview": "Έξοδος από την προεπισκόπηση",
+  "Back up your entries.": "Κρατήστε αντίγραφο των καταχωρίσεών σας.",
+  "Some entries were skipped": "Κάποιες καταχωρίσεις παραλείφθηκαν",
+  "OK": "Εντάξει",
+  "Something didn’t load.": "Κάτι δεν φόρτωσε.",
+  "The app stopped before continuing. Reload to try again; if this repeats, restore your latest backup.":
+    "Η εφαρμογή σταμάτησε πριν συνεχίσει. Ανανεώστε για να ξαναδοκιμάσετε· αν επαναληφθεί, επαναφέρετε το τελευταίο σας αντίγραφο.",
+  "Try again": "Δοκιμάστε ξανά",
+  "A newer version is ready.": "Μια νεότερη έκδοση είναι έτοιμη.",
+  "Ready to use offline.": "Έτοιμο για χρήση εκτός σύνδεσης.",
+  "Update now": "Ενημέρωση τώρα",
+  "Later": "Αργότερα",
+  "Measurements and notes": "Μετρήσεις και σημειώσεις",
+  "Choose what to chart": "Διαλέξτε τι θα απεικονιστεί",
+  "One-tap baby care logging": "Καταγραφή φροντίδας με ένα πάτημα",
+  "Safe sleep: back, firm flat surface, clear sleep space.":
+    "Ασφαλής ύπνος: ανάσκελα, σταθερή επίπεδη επιφάνεια, καθαρός χώρος ύπνου.",
+  "Bring my log from {origin}": "Φέρτε το ημερολόγιό μου από {origin}",
+  "Burping now": "Ρέψιμο τώρα",
+
+  // ——— Log sheet: labels the screen reader speaks ———
+  "Bottle amount": "Ποσότητα μπιμπερό",
+  "Decrease amount": "Μείωση ποσότητας",
+  "Increase amount": "Αύξηση ποσότητας",
+  "Preset amounts": "Έτοιμες ποσότητες",
+  "Milk type": "Είδος γάλακτος",
+  "Nursing entry method": "Τρόπος καταχώρισης θηλασμού",
+  "Nursing side": "Πλευρά θηλασμού",
+  "Past session": "Περασμένη συνεδρία",
+  "Medicines given before": "Φάρμακα που δόθηκαν στο παρελθόν",
+  "Feeding method": "Τρόπος ταΐσματος",
+  "How much": "Πόσο",
+  "2.5 ml, one drop…": "2,5 ml, μία σταγόνα…",
+  "A stretch that has already finished — the night you meant to log at the time.":
+    "Ένα διάστημα που έχει ήδη τελειώσει — η νύχτα που σκοπεύατε να καταγράψετε την ώρα της.",
+  "A stretch that crosses midnight is counted whole, on the evening it began.":
+    "Ένα διάστημα που περνά τα μεσάνυχτα μετράει ολόκληρο, στο βράδυ που ξεκίνησε.",
+  "Leave empty if still going.": "Αφήστε το κενό αν συνεχίζεται.",
+  "Measure consistently and use the trend as context for your paediatrician.":
+    "Μετράτε με τον ίδιο τρόπο και χρησιμοποιήστε την τάση ως πλαίσιο για τον παιδίατρό σας.",
 };
 
 export default el;

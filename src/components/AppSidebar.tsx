@@ -56,7 +56,7 @@ export function AppSidebar({
               <span className="wordmark-mark"><BabyFace /></span>
               <span className="app-sidebar-brand-copy">
                 <strong>Numalog</strong>
-                <small>Private family log</small>
+                <small>{t("Private family log")}</small>
               </span>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -88,11 +88,11 @@ export function AppSidebar({
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" className="sidebar-profile-button" aria-label="Baby profile" onClick={onProfile}>
+            <SidebarMenuButton size="lg" className="sidebar-profile-button" aria-label={t("Baby profile")} onClick={onProfile}>
               <span className="baby-avatar"><BabyFace /></span>
               <span className="sidebar-profile-copy">
                 <strong>{profile.name}</strong>
-                <small>Baby profile</small>
+                <small>{t("Baby profile")}</small>
               </span>
               <ChevronRight />
             </SidebarMenuButton>

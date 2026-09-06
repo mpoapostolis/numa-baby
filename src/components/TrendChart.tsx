@@ -108,7 +108,7 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
 
       {/* Plain toggle buttons, not the ARIA tabs pattern: tabs promise
           arrow-key navigation and panels this chart does not have. */}
-      <div className="trend-tabs" role="group" aria-label="Choose what to chart">
+      <div className="trend-tabs" role="group" aria-label={t("Choose what to chart")}>
         {SERIES.map((option) => (
           <button
             key={option.key}

@@ -92,9 +92,10 @@ export function FeedbackForm({ onSent }: { onSent?: () => void } = {}) {
   );
 }
 
+// One literal, deliberately: this string is a dictionary key, and a key
+// assembled from halves is one no tool can match against the translations.
 export const FEEDBACK_BLURB =
-  "Something broken, missing, or just annoying? It goes straight to the person who built " +
-  "this — two tired parents, evenings, between feeds.";
+  "Something broken, missing, or just annoying? It goes straight to the person who built this — two tired parents, evenings, between feeds.";
 
 export function FeedbackCard() {
   return (
