@@ -129,6 +129,26 @@ export function tName(name: string, sex?: "girl" | "boy"): string {
   return name;
 }
 
+/**
+ * Uppercase for a heading, the way the language writes it.
+ *
+ * Greek capitals drop their accents — «αυτή η εβδομάδα» sets as ΑΥΤΗ Η
+ * ΕΒΔΟΜΑΔΑ, never ΑΥΤΉ Η ΕΒΔΟΜΆΔΑ. CSS text-transform already knows this
+ * (it reads the document's lang), but a string put through toUpperCase()
+ * for a CANVAS does not, and the share picture is drawn on a canvas. The
+ * dialytika survives, because it marks a vowel split rather than a stress:
+ * ΚΑΪΜΑΚΙ keeps its two dots.
+ */
+export function tUpper(text: string): string {
+  const upper = text.toUpperCase();
+  if (locale !== "el") return upper;
+  return upper
+    .replace(/[ΆΈΉΊΌΎΏ]/g, (c) => "ΑΕΗΙΟΥΩ"["ΆΈΉΊΌΎΏ".indexOf(c)])
+    // Ϊ́/Ϋ́ — an accented vowel that also carries the dialytika keeps the dots.
+    .replace(/ΐ/gi, "Ϊ")
+    .replace(/ΰ/gi, "Ϋ");
+}
+
 /** Store the choice and reload. A reload, deliberately: the language reaches
     into every module, and one honest reload on a once-ever action beats
     threading a context through the entire tree to avoid it. */

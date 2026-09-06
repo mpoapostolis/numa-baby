@@ -1727,6 +1727,7 @@ const el: Record<string, string> = {
     "Οι σελίδες οροσήμων πίσω από αρκετές κάρτες Παιχνιδιού και ανάπτυξης — κάθε κάρτα οδηγεί και στη δική της σελίδα.",
   "Play ideas and learning-to-talk guidance behind the early Play & development cards.":
     "Ιδέες παιχνιδιού και οδηγίες για την εκμάθηση της ομιλίας, πίσω από τις πρώιμες κάρτες Παιχνιδιού και ανάπτυξης.",
+  "a calm, private baby tracker · free, no ads": "ήρεμο, ιδιωτικό ημερολόγιο μωρού · δωρεάν",
 };
 
 export default el;

@@ -7,6 +7,7 @@
 // WhatsApp.
 
 import { VisitDocument, VisitFigure, VisitSection } from "../domain/visitDocument";
+import { t, tUpper } from "../i18n";
 import { FONT, PALETTE, drawFace, loadFonts, roundedRect, wrap } from "./shareCard";
 import { PdfPage, imagesToPdf } from "./pdf";
 
@@ -43,7 +44,7 @@ function caps(ctx: CanvasRenderingContext2D, text: string, x: number, y: number,
   ctx.fillStyle = color;
   ctx.font = `600 ${size}px ${FONT}`;
   ctx.letterSpacing = `${size * 0.08}px`;
-  ctx.fillText(text.toUpperCase(), x, y);
+  ctx.fillText(tUpper(text), x, y);
   ctx.letterSpacing = "0px";
 }
 
@@ -115,7 +116,7 @@ function table(ctx: CanvasRenderingContext2D, doc: VisitDocument, y: number, wid
   ctx.fillStyle = INK_2;
   let x = MARGIN;
   for (const column of columns) {
-    cell(column.label.toUpperCase(), column, x, y + 10);
+    cell(tUpper(column.label), column, x, y + 10);
     x += column.width;
   }
   ctx.letterSpacing = "0px";
@@ -187,7 +188,7 @@ function drawPage(ctx: CanvasRenderingContext2D, doc: VisitDocument) {
 
   for (const block of doc.sections) y = section(ctx, block, y, width);
 
-  caps(ctx, "Day by day", MARGIN, y, 8, INK_2);
+  caps(ctx, t("Day by day"), MARGIN, y, 8, INK_2);
   y = table(ctx, doc, y + 6, width);
 
   // Footer, pinned to the page bottom.

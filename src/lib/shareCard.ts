@@ -20,6 +20,8 @@ export const PALETTE = {
   ROSE: "#a3496f",
   ROSE_SOFT: "#f5e1e8",
 } as const;
+import { t, tUpper } from "../i18n";
+
 export const FONT = '"Geist Variable", "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 const { INK, INK_2, BG, CARD, BORDER, ROSE, ROSE_SOFT } = PALETTE;
 
@@ -139,7 +141,7 @@ export async function renderCard(spec: CardSpec): Promise<Blob> {
 
   ctx.fillStyle = ROSE;
   ctx.font = `600 32px ${FONT}`;
-  ctx.fillText(spec.eyebrow.toUpperCase(), MARGIN, y);
+  ctx.fillText(tUpper(spec.eyebrow), MARGIN, y);
   y += 88;
 
   ctx.fillStyle = INK;
@@ -200,10 +202,25 @@ export async function renderCard(spec: CardSpec): Promise<Blob> {
   ctx.fillStyle = ROSE;
   ctx.font = `600 36px ${FONT}`;
   ctx.fillText("numalog.app", MARGIN, H - 72);
+  const brandEnd = MARGIN + ctx.measureText("numalog.app").width;
+
+  // The tagline is right-aligned against a brand that is not, so the room it
+  // has depends on what it says — and the Greek says it in a third more
+  // characters, which walked straight over "numalog.app". It shrinks to fit,
+  // and gives up rather than overlap: the brand is the part that has to be
+  // legible in somebody's group chat.
   ctx.fillStyle = INK_2;
-  ctx.font = `500 30px ${FONT}`;
-  const tagline = "a calm, private baby tracker · free, no ads";
-  ctx.fillText(tagline, W - MARGIN - ctx.measureText(tagline).width, H - 72);
+  const tagline = t("a calm, private baby tracker · free, no ads");
+  const room = W - MARGIN - brandEnd - 32;
+  let size = 30;
+  ctx.font = `500 ${size}px ${FONT}`;
+  while (ctx.measureText(tagline).width > room && size > 22) {
+    size -= 1;
+    ctx.font = `500 ${size}px ${FONT}`;
+  }
+  if (ctx.measureText(tagline).width <= room) {
+    ctx.fillText(tagline, W - MARGIN - ctx.measureText(tagline).width, H - 72);
+  }
 
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Could not draw the card"))), "image/png");
