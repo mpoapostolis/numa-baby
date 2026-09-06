@@ -801,7 +801,7 @@ function TodayScreen({
                       ? t("Start nursing timer on the left side — usually next")
                       : t("Start nursing timer on the left side")}
                   >
-                    Left
+                    {t("Left")}
                   </Button>
                   <Button
                     variant="outline"
@@ -811,7 +811,7 @@ function TodayScreen({
                       ? t("Start nursing timer on the right side — usually next")
                       : t("Start nursing timer on the right side")}
                   >
-                    Right
+                    {t("Right")}
                   </Button>
                 </div>
                 <Button

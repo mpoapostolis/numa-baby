@@ -7,7 +7,7 @@ import { ExternalLink } from "lucide-react";
 import { TinyStars } from "./illustrations";
 import { track } from "../domain/analytics";
 import { bracketOfAge, factOfTheDay } from "../domain/babyFacts";
-import { t, tAge, tName } from "../i18n";
+import { t, tAge } from "../i18n";
 
 type FactOfTheDayProps = {
   babyDays: number;
@@ -37,7 +37,7 @@ export default function FactOfTheDay({ babyDays, babyAge, displayName }: FactOfT
               ? tAge(babyAge)
               : t("At {age}", { age: tAge(babyAge) })}
         </span>
-        <p className="fact-doing-lead">{t("Right now, {name} may be:", { name: tName(displayName) })}</p>
+        <p className="fact-doing-lead">{t("Right now, {name} may be:", { name: displayName })}</p>
         <ul className="fact-doing">
           {stage.doing.map((item) => (
             <li key={item.text}>{t(item.text)}</li>

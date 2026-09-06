@@ -19,7 +19,7 @@ import {
   expectedWeightRange,
 } from "../domain/growthReference";
 import { Activity, Profile } from "../domain/types";
-import { currentLocale, t, tName } from "../i18n";
+import { currentLocale, t } from "../i18n";
 
 // The guide never grades the baby: the range bar shows where the WHO band
 // sits and places the latest logged weight as a neutral dot — no percentile
@@ -198,7 +198,7 @@ export default function GrowthGuideScreen({
           <div className="care-heading">
             <h2 id="care-today-heading" className="t-title-2">{t(care.stage)}</h2>
             <p className="t-meta">
-              {t("What is expected for {name} right now, and what to do about it. Every line links to the page it came from.", { name: tName(name, profile.sex) })}
+              {t("What is expected for {name} right now, and what to do about it. Every line links to the page it came from.", { name })}
             </p>
           </div>
           <ul className="care-list">

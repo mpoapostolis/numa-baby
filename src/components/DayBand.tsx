@@ -174,7 +174,7 @@ export function DayBand({
         {!feedsOnly && (
           <>
             <div className="band-lane lane-diaper">
-              <span className="band-lane-icon" title="Diapers"><Droplet size={14} /></span>
+              <span className="band-lane-icon" title={t("Diapers")}><Droplet size={14} /></span>
               <div className="band-track">
                 {diapers.map((activity) => (
                   <span
@@ -205,7 +205,7 @@ export function DayBand({
                 change still draw their lane so old days read correctly. */}
             {sleeps.length > 0 && (
             <div className="band-lane lane-sleep">
-              <span className="band-lane-icon" title="Sleep"><Moon size={14} /></span>
+              <span className="band-lane-icon" title={t("Sleep")}><Moon size={14} /></span>
               <div className="band-track">
                 {sleeps.map((activity) => {
                   const from = Math.max(new Date(activity.startedAt).getTime(), startMs);
@@ -221,8 +221,8 @@ export function DayBand({
                           ? `band-span${isFresh(activity.endedAt) ? " is-just-closed" : ""}`
                           : "band-span is-open"
                       }
-                      title={`Sleep · ${formatTime(activity.startedAt)}–${
-                        activity.endedAt ? formatTime(activity.endedAt) : "now"
+                      title={`${t("Sleep")} · ${formatTime(activity.startedAt)}–${
+                        activity.endedAt ? formatTime(activity.endedAt) : t("now")
                       }`}
                       style={{ left: `${pct(from)}%`, width: `${Math.max(0.8, pct(to) - pct(from))}%` }}
                     />
@@ -278,11 +278,11 @@ export function DayBand({
       )}
       {!feedsOnly && (
         <p className="day-band-legend">
-          {hasBottle && <span><i className="key-swatch key-bottle" /> Bottle</span>}
-          {hasNursing && <span><i className="key-swatch key-nursing" /> Nursing</span>}
-          {diapers.length > 0 && <span><i className="key-swatch key-diaper" /> Diaper</span>}
-          {burps.length > 0 && <span><i className="key-swatch key-burp" /> Burp</span>}
-          {sleeps.length > 0 && <span><i className="key-swatch key-sleep" /> Sleep</span>}
+          {hasBottle && <span><i className="key-swatch key-bottle" /> {t("Bottle")}</span>}
+          {hasNursing && <span><i className="key-swatch key-nursing" /> {t("Nursing")}</span>}
+          {diapers.length > 0 && <span><i className="key-swatch key-diaper" /> {t("Diaper")}</span>}
+          {burps.length > 0 && <span><i className="key-swatch key-burp" /> {t("Burp")}</span>}
+          {sleeps.length > 0 && <span><i className="key-swatch key-sleep" /> {t("Sleep")}</span>}
         </p>
       )}
     </div>

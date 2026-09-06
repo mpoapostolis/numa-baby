@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 import { ExternalLink, Play, Square } from "lucide-react";
 import { track } from "../domain/analytics";
 import { PLAY_AREA_LABEL, PlayBracket, PlayIdea } from "../domain/playIdeas";
-import { t, tName } from "../i18n";
+import { t } from "../i18n";
 
 const TIMER_MINUTES = [2, 5];
 
@@ -105,7 +105,7 @@ export function PlaySection({ bracket, name }: { bracket: PlayBracket; name: str
     <section className="surface-card guide-section play-section" aria-labelledby="play-heading">
       <h2 id="play-heading" className="t-title-2">{t("Play & development")}</h2>
       <p className="t-meta">
-        {t("Everyday play for {name} right now — {stage}. No grades, no milestones to pass: stop whenever either of you has had enough. Every card links to the page it came from.", { name: tName(name), stage: t(bracket.stage) })}
+        {t("Everyday play for {name} right now — {stage}. No grades, no milestones to pass: stop whenever either of you has had enough. Every card links to the page it came from.", { name, stage: t(bracket.stage) })}
       </p>
       <p className="t-meta play-disclaimer">
         {t("These are general play ideas, not medical or developmental advice — every baby moves at their own pace. For anything about {name}’s own development, your paediatrician or health visitor is the answer.", { name })}

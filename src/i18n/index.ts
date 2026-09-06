@@ -113,9 +113,14 @@ export function tAge(age: string): string {
 }
 
 /**
- * A name as the subject of a sentence. Greek puts the article in front —
+ * A name as the SUBJECT of a sentence. Greek puts the article in front —
  * «Η Σεραφίνα είναι…» — and the article has a gender, which the profile
  * sometimes knows. When it does not, the bare name is the least wrong thing.
+ *
+ * Only ever the subject. After a preposition Greek wants the accusative —
+ * «για τη Σεραφίνα», «για τον Νίκο» — which declines the NAME as well as the
+ * article, and no lookup table can do that for a name it has never seen. So
+ * sentences that would need it are written to put the name in front instead.
  */
 export function tName(name: string, sex?: "girl" | "boy"): string {
   if (locale !== "el" || !name) return name;

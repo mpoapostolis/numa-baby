@@ -88,7 +88,7 @@ export function ComingUp({
                         {/* "usually" is already carried by "Likely in 39m"
                             above; repeating it here cost a second line on a
                             phone, which is where this card is read. */}
-                        {typicalGap > 0 && <> · every {humanDuration(typicalGap)}</>}
+                        {typicalGap > 0 && <> · {t("every {duration}", { duration: humanDuration(typicalGap) })}</>}
                       </>
                     ),
                   };

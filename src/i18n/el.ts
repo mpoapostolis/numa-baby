@@ -38,14 +38,14 @@ const el: Record<string, string> = {
   "Light": "Φωτεινό",
   "Bright and clear": "Φωτεινό και καθαρό",
   "Night": "Νύχτα",
-  "Warm and dim for 3am": "Ζεστό και χαμηλό για τις 3 τα ξημερώματα",
+  "Warm and dim for 3am": "Ζεστό και χαμηλό για τη νύχτα",
   "Language": "Γλώσσα",
   "The whole app, including reminders and the pictures you share.":
     "Όλη η εφαρμογή, μαζί με τις υπενθυμίσεις και τις εικόνες που μοιράζεσαι.",
 
   // --- Time & durations ---
   "Yesterday": "Χθες",
-  "You’re up late": "Ξενύχτι, ε;",
+  "You’re up late": "Ξενυχτάτε",
   "Good morning": "Καλημέρα",
   "Good afternoon": "Καλό απόγευμα",
   "Good evening": "Καλησπέρα",
@@ -128,7 +128,7 @@ const el: Record<string, string> = {
   "Vitamin D, paracetamol, drops": "Βιταμίνη D, παρακεταμόλη, σταγόνες",
   "Temperature or note": "Θερμοκρασία ή σημείωση",
   "Tell another parent": "Πείτε το σε άλλον γονιό",
-  "Numalog is free — pass it on": "Το Numalog είναι δωρεάν — δώσ’ το παρακάτω",
+  "Numalog is free — pass it on": "Το Numalog είναι δωρεάν — δώστε το παρακάτω",
   "Last food": "Τελευταίο φαγητό",
   "Last dose": "Τελευταία δόση",
   "{what} · {duration} ago": "{what} · πριν {duration}",
@@ -954,7 +954,7 @@ const el: Record<string, string> = {
   "Care guide": "Οδηγός φροντίδας",
   "What to do today": "Τι να κάνετε σήμερα",
   "What is expected for {name} right now, and what to do about it. Every line links to the page it came from.":
-    "Τι αναμένεται για {name} αυτή τη στιγμή, και τι να κάνετε γι’ αυτό. Κάθε γραμμή οδηγεί στη σελίδα από όπου προήλθε.",
+    "{name} — τι αναμένεται αυτή τη στιγμή, και τι να κάνετε γι’ αυτό. Κάθε γραμμή οδηγεί στη σελίδα από όπου προήλθε.",
   "When to call someone": "Πότε να πάρετε κάποιον τηλέφωνο",
   "This app never decides any of these — you do. Trust your instincts and ring your paediatrician, midwife or health visitor.":
     "Η εφαρμογή δεν αποφασίζει ποτέ κανένα από αυτά — εσείς αποφασίζετε. Εμπιστευτείτε το ένστικτό σας και πάρτε τον παιδίατρο ή τη μαία σας.",
@@ -1043,7 +1043,7 @@ const el: Record<string, string> = {
   // ——— Play & development (chrome) ———
   "Play & development": "Παιχνίδι και ανάπτυξη",
   "Everyday play for {name} right now — {stage}. No grades, no milestones to pass: stop whenever either of you has had enough. Every card links to the page it came from.":
-    "Καθημερινό παιχνίδι για {name} αυτή τη στιγμή — {stage}. Χωρίς βαθμούς, χωρίς ορόσημα για να «περάσετε»: σταματήστε όποτε κάποιος από τους δυο σας κουραστεί. Κάθε κάρτα οδηγεί στη σελίδα από όπου προήλθε.",
+    "{name} — καθημερινό παιχνίδι για αυτή τη στιγμή, {stage}. Χωρίς βαθμούς, χωρίς ορόσημα για να «περάσετε»: σταματήστε όποτε κάποιος από τους δυο σας κουραστεί. Κάθε κάρτα οδηγεί στη σελίδα από όπου προήλθε.",
   "These are general play ideas, not medical or developmental advice — every baby moves at their own pace. For anything about {name}’s own development, your paediatrician or health visitor is the answer.":
     "Αυτές είναι γενικές ιδέες παιχνιδιού, όχι ιατρική ή αναπτυξιακή συμβουλή — κάθε μωρό προχωρά με τον ρυθμό του. Για οτιδήποτε αφορά την ανάπτυξη του μωρού {name}, ο παιδίατρός σας είναι η απάντηση.",
   "Movement": "Κίνηση",
@@ -1113,7 +1113,7 @@ const el: Record<string, string> = {
   "What your baby is doing at this age": "Τι κάνει το μωρό σας σε αυτή την ηλικία",
   "From day one": "Από την πρώτη μέρα",
   "At {age}": "Στα {age}",
-  "Right now, {name} may be:": "Αυτή τη στιγμή, {name} μπορεί να:",
+  "Right now, {name} may be:": "{name} — αυτή τη στιγμή μπορεί να:",
   "Did you know?": "Το ξέρατε;",
   "Every baby has their own pace.": "Κάθε μωρό έχει τον δικό του ρυθμό.",
 
@@ -1711,6 +1711,22 @@ const el: Record<string, string> = {
     "Τα νήπια 1–2 ετών είναι καλύτερα με 11–14 ώρες ύπνου στο 24ωρο, μαζί με τους υπνάκους.",
   "In the second year, breastmilk can still provide up to a third of a child's nutritional needs.":
     "Τον δεύτερο χρόνο, το μητρικό γάλα μπορεί ακόμη να καλύπτει ως και το ένα τρίτο των διατροφικών αναγκών ενός παιδιού.",
+  // ——— Day band, forecast, and the guide's source notes ———
+  "Diapers": "Πάνες",
+  "now": "τώρα",
+  "every {duration}": "κάθε {duration}",
+  "The percentile tables behind the reference band (retrieved 7 Aug 2026).":
+    "Οι πίνακες εκατοστημορίων πίσω από τη ζώνη αναφοράς (ανακτήθηκαν 7 Αυγ. 2026).",
+  "Independent republication used to cross-check every value.":
+    "Ανεξάρτητη αναδημοσίευση, που χρησιμοποιήθηκε για διασταύρωση κάθε τιμής.",
+  "Typical newborn weight loss, regain and gain patterns.":
+    "Τυπικά μοτίβα απώλειας, ανάκτησης και αύξησης βάρους στα νεογέννητα.",
+  "Weighing guidance and when to talk to a professional.":
+    "Οδηγίες ζυγίσματος και πότε να απευθυνθείτε σε επαγγελματία.",
+  "Milestone pages behind several Play & development cards — each card also links its exact page.":
+    "Οι σελίδες οροσήμων πίσω από αρκετές κάρτες Παιχνιδιού και ανάπτυξης — κάθε κάρτα οδηγεί και στη δική της σελίδα.",
+  "Play ideas and learning-to-talk guidance behind the early Play & development cards.":
+    "Ιδέες παιχνιδιού και οδηγίες για την εκμάθηση της ομιλίας, πίσω από τις πρώιμες κάρτες Παιχνιδιού και ανάπτυξης.",
 };
 
 export default el;
