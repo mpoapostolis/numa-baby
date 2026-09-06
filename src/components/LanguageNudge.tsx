@@ -19,13 +19,17 @@ export function LanguageNudgeCard({ onDismiss }: { onDismiss: () => void }) {
         <span className="backup-nudge-icon" aria-hidden="true"><Languages /></span>
         <div className="backup-nudge-copy">
           <strong>Το Numalog μιλάει πλέον ελληνικά</strong>
-          <small>Όλη η εφαρμογή, μαζί με τις υπενθυμίσεις και τις εικόνες που μοιράζεστε. Αλλάζει και από τις Ρυθμίσεις όποτε θέλετε.</small>
+          <small>Όλη η εφαρμογή, με ένα πάτημα — και από τις Ρυθμίσεις όποτε θέλετε.</small>
+          {/* One line of English, for the person this reached by mistake —
+              a Greek phone in an English speaker's hand. Nothing changes
+              unless they tap the Greek button. */}
+          <small lang="en">Numalog now speaks Greek. Tap Ελληνικά to switch — otherwise it stays in English.</small>
         </div>
         <div className="backup-nudge-actions">
           <Button onClick={() => { track("language_changed", { language: "el", from: "banner" }); setLanguageChoice("el"); }}>
             Ελληνικά
           </Button>
-          <Button variant="ghost" onClick={onDismiss}>Όχι τώρα</Button>
+          <Button variant="ghost" onClick={onDismiss}>Όχι τώρα · Not now</Button>
         </div>
       </div>
     </div>

@@ -64,11 +64,14 @@ export function languageChoice(): LanguageChoice {
   }
 }
 
-/** Whether this phone reports Greek as one of its languages. Decides who is
-    OFFERED Greek — the banner on Today — not who gets it. */
+/** Whether this phone's FIRST language is Greek. Decides who is OFFERED
+    Greek — the banner on Today — never who gets it. First language only:
+    an English speaker living in Greece can easily have Greek somewhere
+    down their list, and a Greek banner is the last thing to hand them on
+    their first day. */
 export function phoneSpeaksGreek(): boolean {
-  const spoken = (navigator.languages ?? [navigator.language ?? ""]).map((l) => l.toLowerCase());
-  return spoken.some((l) => l.startsWith("el"));
+  const first = (navigator.languages?.[0] ?? navigator.language ?? "").toLowerCase();
+  return first.startsWith("el");
 }
 
 function wantedLocale(): Locale {

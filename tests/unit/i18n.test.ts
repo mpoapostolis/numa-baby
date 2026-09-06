@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { t, tAge, tName, tUpper } from "@/i18n";
+import { phoneSpeaksGreek, t, tAge, tName, tUpper } from "@/i18n";
 import el from "@/i18n/el";
 
 // The dictionary's failure mode is silence: change an English sentence in a
@@ -51,6 +51,18 @@ describe("the Greek dictionary", () => {
     // Under English this is plain toUpperCase; the Greek rule is exercised by
     // the dictionary test below, since the locale here is always "en".
     expect(tUpper("this week")).toBe("THIS WEEK");
+  });
+
+  it("offers Greek only to a phone whose FIRST language is Greek", () => {
+    const withLanguages = (languages: string[]) => {
+      Object.defineProperty(globalThis.navigator, "languages", { value: languages, configurable: true });
+      return phoneSpeaksGreek();
+    };
+    expect(withLanguages(["el-GR", "en"])).toBe(true);
+    // An English speaker in Greece: Greek is on the list, but not first —
+    // no banner in a script they cannot read.
+    expect(withLanguages(["en-GB", "el"])).toBe(false);
+    expect(withLanguages(["en-PH", "fil"])).toBe(false);
   });
 
   it("fills every hole it is given, and leaves an unknown sentence alone", () => {
