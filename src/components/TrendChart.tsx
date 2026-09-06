@@ -4,7 +4,7 @@
 //
 // Deliberately not a judgement: no target line, no green/red, no "goal". The
 // only emphasised point is today, because that is where the parent is.
-import { t } from "../i18n";
+import { currentLocale, t } from "../i18n";
 
 import { useState } from "react";
 import { track } from "../domain/analytics";
@@ -31,8 +31,10 @@ const SERIES: Series[] = [
   { key: "sleep", label: "Sleep", glyph: "sleep", hue: "var(--glyph-sleep)", unit: "m", value: (d) => d.sleepMinutes },
 ];
 
-const dayFormat = new Intl.DateTimeFormat("en", { weekday: "short" });
-const fullDayFormat = new Intl.DateTimeFormat("en", { month: "short", day: "numeric" });
+// Lazy, like every formatter in this app: the locale is settled before the
+// first render, but not before this module's body runs.
+const dayFormat = () => new Intl.DateTimeFormat(currentLocale(), { weekday: "short" });
+const fullDayFormat = () => new Intl.DateTimeFormat(currentLocale(), { month: "short", day: "numeric" });
 
 // Geometry in percentages, laid out with CSS rather than a stretched viewBox.
 // The old chart used preserveAspectRatio="none", which distorted every slope
@@ -77,22 +79,22 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
   const trackedDays = loggedDays.length;
   const average = trackedDays > 0 ? Math.round(total / trackedDays) : 0;
 
-  const description = `${t(series.label)} per day. ${days
+  const description = `${t("{what} per day.", { what: t(series.label) })} ${days
     .map((day) => day.isEmpty
-      ? `${fullDayFormat.format(day.date)}: not logged`
-      : `${fullDayFormat.format(day.date)}: ${fmt(series.value(day))}${unitLabel ? ` ${unitLabel}` : ""}`)
+      ? t("{day}: not logged", { day: fullDayFormat().format(day.date) })
+      : `${fullDayFormat().format(day.date)}: ${fmt(series.value(day))}${unitLabel ? ` ${unitLabel}` : ""}`)
     .join(", ")}.`;
 
   return (
-    <section className="trend-card" aria-label={`${t(series.label)} over the last ${days.length} days`}>
+    <section className="trend-card" aria-label={t("{what} over the last {n} days", { what: t(series.label), n: days.length })}>
       <header className="trend-head">
         <div className="trend-titles">
-          <span className="t-label">Last {days.length} days</span>
+          <span className="t-label">{t("Last {n} days", { n: days.length })}</span>
           <p className="trend-average">
             {trackedDays > 0 ? (
               <>
                 <strong className="figure">{fmt(average)}{unitLabel && <span className="unit">{unitLabel}</span>}</strong>
-                <span> a day on average</span>
+                <span> {t("a day on average")}</span>
               </>
             ) : (
               <span>{t("Nothing logged yet")}</span>
@@ -101,7 +103,7 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
         </div>
         {trackedDays > 0 && (
           <span className="trend-peak">
-            peak {fmt(peak)}{unitLabel && <span className="unit">{unitLabel}</span>}
+            {t("peak")} {fmt(peak)}{unitLabel && <span className="unit">{unitLabel}</span>}
           </span>
         )}
       </header>
@@ -118,7 +120,7 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
             style={{ "--trend-hue": option.hue } as React.CSSProperties}
             onClick={() => { track("trend_series_changed", { series: option.key }); setActiveKey(option.key); }}
           >
-            {option.label}
+            {t(option.label)}
           </button>
         ))}
       </div>
@@ -135,8 +137,8 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
               className={index === todayIndex ? "trend-bar is-today" : "trend-bar"}
               key={days[index].date.toISOString()}
               title={days[index].isEmpty
-                ? `${fullDayFormat.format(days[index].date)}: not logged`
-                : `${fullDayFormat.format(days[index].date)}: ${fmt(value)}${unitLabel ? ` ${unitLabel}` : ""}`}
+                ? t("{day}: not logged", { day: fullDayFormat().format(days[index].date) })
+                : `${fullDayFormat().format(days[index].date)}: ${fmt(value)}${unitLabel ? ` ${unitLabel}` : ""}`}
             >
               {/* Three distinct states, because a day nobody logged is not a
                   day with none: a bar, a hairline for a logged zero, and
@@ -168,7 +170,7 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
       </div>
 
       <div className="trend-axis" aria-hidden="true">
-        <span>{dayFormat.format(days[0].date)}</span>
+        <span>{dayFormat().format(days[0].date)}</span>
         <span>{t("Today")}</span>
       </div>
     </section>

@@ -73,6 +73,10 @@ const el: Record<string, string> = {
   // --- Today: tiles & quick logging ---
   "Bottle": "Μπιμπερό",
   "Nursing": "Θηλασμός",
+  // The onboarding feeding toggle builds these from the mode name, so no
+  // literal t("Breast") exists for the extractor to find.
+  "Breast": "Θηλασμός",
+  "Mixed": "Μικτό",
   "Diaper": "Πάνα",
   "Sleep": "Ύπνος",
   "Burp": "Ρέψιμο",
@@ -1282,6 +1286,431 @@ const el: Record<string, string> = {
   "Leave empty if still going.": "Αφήστε το κενό αν συνεχίζεται.",
   "Measure consistently and use the trend as context for your paediatrician.":
     "Μετράτε με τον ίδιο τρόπο και χρησιμοποιήστε την τάση ως πλαίσιο για τον παιδίατρό σας.",
+  // ——— Trend chart & day recap line ———
+  "{what} per day.": "{what} ανά ημέρα.",
+  "{day}: not logged": "{day}: δεν καταγράφηκε",
+  "{what} over the last {n} days": "{what} τις τελευταίες {n} ημέρες",
+  "Last {n} days": "Τελευταίες {n} ημέρες",
+  "a day on average": "την ημέρα κατά μέσο όρο",
+  "peak": "κορυφή",
+  "1 feed": "1 τάισμα",
+  "{n} feeds": "{n} ταΐσματα",
+  "{n} wet": "{n} τσίσα",
+  "{n} dirty": "{n} κακά",
+  "{duration} sleep": "{duration} ύπνος",
+  "1 solid": "1 στερεά τροφή",
+  "{n} solids": "{n} στερεές τροφές",
+  // ——— Care guide cards (domain/careGuidance.ts) ———
+  //
+  // Medical-adjacent copy, so the Greek stays inside what the English says
+  // and inside what the cited page says — no rounder numbers, no softer
+  // hedges, no advice the source did not give.
+  "Follow the cues, not the clock": "Ακολουθήστε τα σημάδια, όχι το ρολόι",
+  "Rooting, hands to the mouth and lip smacking are the early signs. Crying is a late one.":
+    "Το ψάξιμο, τα χεράκια στο στόμα και το πλατάγισμα των χειλιών είναι τα πρώιμα σημάδια. Το κλάμα είναι αργοπορημένο.",
+  "Offer a feed at the first cue rather than waiting for the cry.":
+    "Προσφέρετε τάισμα στο πρώτο σημάδι, χωρίς να περιμένετε το κλάμα.",
+  "Burp through the feed, not just at the end": "Ρέψιμο μέσα στο τάισμα, όχι μόνο στο τέλος",
+  "With a bottle, pausing about every 60–90 ml works better than one burp at the end; when nursing, switching sides is the natural moment.":
+    "Με μπιμπερό, μια παύση περίπου κάθε 60–90 ml δουλεύει καλύτερα από ένα ρέψιμο στο τέλος· στον θηλασμό, η αλλαγή πλευράς είναι η φυσική στιγμή.",
+  "Rotate the three holds: on your shoulder, sitting on your lap, or face-down across your lap with the head above the chest.":
+    "Εναλλάξτε τις τρεις στάσεις: στον ώμο σας, καθιστό στα πόδια σας, ή μπρούμυτα πάνω στα πόδια σας με το κεφάλι πιο ψηλά από το στήθος.",
+  "Feed often — at least 8 to 12 times in 24 hours": "Ταΐστε συχνά — τουλάχιστον 8 με 12 φορές στο 24ωρο",
+  "In the first days it can be as often as every hour. That is the milk supply being built, not a problem.":
+    "Τις πρώτες μέρες μπορεί να είναι και κάθε ώρα. Έτσι χτίζεται η παραγωγή γάλακτος, δεν είναι πρόβλημα.",
+  "Offer the breast or bottle whenever the cues appear, day and night.":
+    "Προσφέρετε στήθος ή μπιμπερό όποτε εμφανίζονται τα σημάδια, μέρα και νύχτα.",
+  "Only 2 or 3 wet nappies is expected right now": "Μόνο 2 ή 3 βρεγμένες πάνες είναι το αναμενόμενο τώρα",
+  "In the first 48 hours the count is genuinely low. It climbs sharply once the milk comes in.":
+    "Στις πρώτες 48 ώρες ο αριθμός είναι πραγματικά χαμηλός. Ανεβαίνει απότομα μόλις κατέβει το γάλα.",
+  "Note each nappy as it happens — the ramp over the next days is what matters, not today's number.":
+    "Σημειώνετε κάθε πάνα όπως έρχεται — αυτό που μετράει είναι η άνοδος των επόμενων ημερών, όχι ο σημερινός αριθμός.",
+  "From today, look for 6 or more heavy wet nappies a day": "Από σήμερα, περιμένετε 6 ή περισσότερες βαριές βρεγμένες πάνες την ημέρα",
+  "The wee should be almost colourless or pale yellow. Alongside them, at least 2 soft yellow stools a day.":
+    "Το τσίσα πρέπει να είναι σχεδόν άχρωμο ή αχνοκίτρινο. Μαζί τους, τουλάχιστον 2 μαλακά κίτρινα κακά την ημέρα.",
+  "If the wet count sits below 6 for a day, ring your midwife or health visitor.":
+    "Αν οι βρεγμένες πάνες μείνουν κάτω από 6 για μια μέρα, πάρτε τη μαία ή τον γιατρό σας.",
+  "Weight gain restarts around day 5": "Η αύξηση βάρους ξαναρχίζει γύρω στη μέρα 5",
+  "Birthweight is usually back by about 2 weeks, and almost all babies have regained it by 3 weeks.":
+    "Το βάρος γέννησης επιστρέφει συνήθως ως τις 2 εβδομάδες, και σχεδόν όλα τα μωρά το έχουν ξαναπάρει ως τις 3.",
+  "Log a weight when you have one — the trend across weeks is the useful part.":
+    "Καταγράψτε ένα βάρος όποτε έχετε — το χρήσιμο είναι η τάση μέσα στις εβδομάδες.",
+  "Tummy time: 3 to 5 minutes, 2 or 3 times a day": "Χρόνος μπρούμυτα: 3 με 5 λεπτά, 2 ή 3 φορές την ημέρα",
+  "Always awake and watched. After a nappy change or a nap is an easy moment to remember.":
+    "Πάντα ξύπνιο και υπό επίβλεψη. Μετά από αλλαγή πάνας ή ύπνο είναι μια εύκολη στιγμή να το θυμάστε.",
+  "Build toward 15–30 minutes a day by around 7 weeks.": "Χτίστε προς τα 15–30 λεπτά την ημέρα ως τις 7 εβδομάδες περίπου.",
+  "Cluster feeding is normal, and it is not a supply problem": "Τα πυκνά ταΐσματα είναι φυσιολογικά, και δεν σημαίνουν πρόβλημα παραγωγής",
+  "Feeds bunched close together are common in the first three to four months, and often come with a growth spurt.":
+    "Τα ταΐσματα που μαζεύονται κοντά-κοντά είναι συνηθισμένα τους πρώτους τρεις με τέσσερις μήνες, και συχνά συνοδεύουν ένα άλμα ανάπτυξης.",
+  "Ride it out and keep offering. It passes.": "Αντέξτε το και συνεχίστε να προσφέρετε. Περνάει.",
+  "Spit-up is not a problem to fix": "Οι αναγωγές δεν είναι πρόβλημα προς διόρθωση",
+  "All babies spit up, and it usually comes with no crying or discomfort. It settles on its own as the muscles mature — generally by their first birthday.":
+    "Όλα τα μωρά κάνουν αναγωγές, και συνήθως χωρίς κλάμα ή ενόχληση. Υποχωρεί μόνο του καθώς ωριμάζουν οι μύες — γενικά ως τα πρώτα γενέθλια.",
+  "If it is frequent, smaller and more frequent feeds help more than bigger, spaced-out ones — and hold upright for about 20 minutes after.":
+    "Αν είναι συχνές, τα μικρότερα και πιο συχνά ταΐσματα βοηθούν περισσότερο από τα μεγάλα και αραιά — και κρατήστε το όρθιο για περίπου 20 λεπτά μετά.",
+  "Long gaps between poos become normal now": "Τα μεγάλα κενά ανάμεσα στα κακά γίνονται φυσιολογικά τώρα",
+  "After about 6 weeks a breastfed baby can go several days without one. That alone is not constipation.":
+    "Μετά τις 6 εβδομάδες περίπου, ένα θηλάζον μωρό μπορεί να περάσει αρκετές μέρες χωρίς κακά. Αυτό από μόνο του δεν είναι δυσκοιλιότητα.",
+  "Keep an eye on comfort rather than counting — and ask your paediatrician about anything painful.":
+    "Προσέχετε την άνεσή του αντί να μετράτε — και ρωτήστε τον παιδίατρό σας για οτιδήποτε φαίνεται επώδυνο.",
+  "Tummy time is now 15 to 30 minutes a day": "Ο χρόνος μπρούμυτα είναι πλέον 15 με 30 λεπτά την ημέρα",
+  "Spread over short sessions, always awake and watched.": "Μοιρασμένος σε σύντομες φορές, πάντα ξύπνιο και υπό επίβλεψη.",
+  "Get down at their eye level — your face is still the favourite thing to look at.":
+    "Κατεβείτε στο ύψος των ματιών του — το πρόσωπό σας είναι ακόμη το αγαπημένο του θέαμα.",
+  "Formula climbs to roughly 90–120 ml a feed": "Η φόρμουλα ανεβαίνει σε περίπου 90–120 ml ανά τάισμα",
+  "About every 3 to 4 hours by the end of the first month. Most babies stay under about 960 ml in 24 hours.":
+    "Περίπου κάθε 3 με 4 ώρες ως το τέλος του πρώτου μήνα. Τα περισσότερα μωρά μένουν κάτω από 960 ml περίπου στο 24ωρο.",
+  "Follow fullness cues and never push the last of a bottle.":
+    "Ακολουθήστε τα σημάδια χορτασμού και μην πιέζετε ποτέ για το τελευταίο του μπιμπερό.",
+  "Milk is still the whole meal until about 6 months": "Το γάλα είναι ακόμη ολόκληρο το γεύμα ως τους 6 μήνες περίπου",
+  "WHO recommends exclusive breastfeeding for the first 6 months — no other food or drink, not even water.":
+    "Ο ΠΟΥ συνιστά αποκλειστικό θηλασμό τους πρώτους 6 μήνες — καμία άλλη τροφή ή ποτό, ούτε καν νερό.",
+  "Keep feeding responsively, as often as your baby wants.":
+    "Συνεχίστε να ταΐζετε ανταποκρινόμενοι, όσο συχνά θέλει το μωρό σας.",
+  "Floor time earns the rolls": "Ο χρόνος στο πάτωμα φέρνει τις τούμπες",
+  "By around 7 months most babies roll both ways, and sitting without leaning on their arms follows.":
+    "Ως τους 7 μήνες περίπου τα περισσότερα μωρά γυρίζουν και προς τις δύο πλευρές, και ακολουθεί το κάθισμα χωρίς στήριξη στα χέρια.",
+  "Clear a safe patch of floor and let them work — supervised, on a firm flat surface.":
+    "Ελευθερώστε ένα ασφαλές κομμάτι πατώματος και αφήστε το να δουλέψει — υπό επίβλεψη, σε σταθερή επίπεδη επιφάνεια.",
+  "Reflux fades from here": "Η παλινδρόμηση υποχωρεί από εδώ και πέρα",
+  "It usually starts before 8 weeks and settles on its own by the first birthday.":
+    "Συνήθως ξεκινά πριν τις 8 εβδομάδες και υποχωρεί μόνη της ως τα πρώτα γενέθλια.",
+  "Keep feeds smaller and more frequent if spit-up is heavy, and keep sleep flat on the back.":
+    "Κρατήστε τα ταΐσματα μικρότερα και πιο συχνά αν οι αναγωγές είναι έντονες, και τον ύπνο ανάσκελα σε επίπεδη επιφάνεια.",
+  "First foods start now — alongside milk, not instead of it": "Οι πρώτες τροφές ξεκινούν τώρα — μαζί με το γάλα, όχι στη θέση του",
+  "From 6 months, safe and adequate complementary foods begin while breastfeeding continues.":
+    "Από τους 6 μήνες ξεκινούν ασφαλείς και επαρκείς συμπληρωματικές τροφές, ενώ ο θηλασμός συνεχίζεται.",
+  "Introduce foods one at a time and keep the milk feeds going.":
+    "Εισάγετε τις τροφές μία-μία και συνεχίστε τα γάλατα.",
+  "Play peekaboo — it is doing real work": "Παίξτε κου-κου — κάνει πραγματική δουλειά",
+  "Your baby is learning that things still exist when they cannot see them.":
+    "Το μωρό σας μαθαίνει ότι τα πράγματα εξακολουθούν να υπάρχουν όταν δεν τα βλέπει.",
+  "Vary the game: hide behind a cloth, behind furniture, or take turns covering your heads.":
+    "Αλλάξτε το παιχνίδι: κρυφτείτε πίσω από ένα πανί, πίσω από έπιπλα, ή σκεπάστε εναλλάξ τα κεφάλια σας.",
+  "Stools change with food, and that is expected": "Τα κακά αλλάζουν με το φαγητό, και αυτό είναι αναμενόμενο",
+  "Colour and consistency shift once solids begin.": "Το χρώμα και η σύσταση αλλάζουν μόλις ξεκινήσουν οι στερεές τροφές.",
+  "Family foods, with milk still welcome": "Οικογενειακό φαγητό, με το γάλα ακόμη ευπρόσδεκτο",
+  "WHO supports continued breastfeeding up to 2 years or beyond alongside family meals.":
+    "Ο ΠΟΥ στηρίζει τη συνέχιση του θηλασμού ως τα 2 χρόνια ή και παραπάνω, μαζί με τα οικογενειακά γεύματα.",
+  "Offer variety and let your child decide how much.": "Προσφέρετε ποικιλία και αφήστε το παιδί σας να αποφασίσει πόσο.",
+  "Hiding games stay favourites": "Τα παιχνίδια με κρυφτό παραμένουν αγαπημένα",
+  "Object permanence games keep their pull well past the first birthday.":
+    "Τα παιχνίδια μονιμότητας του αντικειμένου κρατούν το ενδιαφέρον πολύ μετά τα πρώτα γενέθλια.",
+  "Hide a toy under a cloth and let them find it.": "Κρύψτε ένα παιχνίδι κάτω από ένα πανί και αφήστε το να το βρει.",
+  "Follow fullness, always": "Ακολουθείτε πάντα τον χορτασμό",
+  "Pushing more food or milk than a child wants teaches them to ignore their own signals.":
+    "Το να πιέζετε για περισσότερο φαγητό ή γάλα απ’ όσο θέλει ένα παιδί το μαθαίνει να αγνοεί τα δικά του σήματα.",
+  "Serve, then let them stop when they stop.": "Σερβίρετε, και μετά αφήστε το να σταματήσει όταν σταματήσει.",
+  "Watch how your baby is feeding and growing rather than counting the days.":
+    "Κοιτάξτε πώς τρώει και πώς μεγαλώνει το μωρό σας, αντί να μετράτε τις μέρες.",
+  // ——— Play & development cards (domain/playIdeas.ts) ———
+  "Tummy time": "Χρόνος μπρούμυτα",
+  "Awake time on the tummy builds the muscles your baby will use for lifting their head, sliding on their belly and crawling.":
+    "Ο χρόνος μπρούμυτα σε ξύπνιο μωρό χτίζει τους μυς που θα χρησιμοποιήσει για να σηκώνει το κεφάλι, να σέρνεται στην κοιλιά και να μπουσουλάει.",
+  "While your baby is awake, lie on your back and place them on your chest — they'll lift their head and use their arms to try to see your face.":
+    "Όσο το μωρό είναι ξύπνιο, ξαπλώστε ανάσκελα και βάλτε το στο στήθος σας — θα σηκώσει το κεφάλι και θα χρησιμοποιήσει τα χέρια του για να δει το πρόσωπό σας.",
+  "Place yourself or a toy just out of reach so they try to reach for you or the toy.":
+    "Βάλτε τον εαυτό σας ή ένα παιχνίδι λίγο πιο πέρα από όσο φτάνει, ώστε να προσπαθήσει να απλώσει το χέρι.",
+  "Or place a few toys in a circle around your baby — reaching toward different spots builds the muscles they'll use to roll over, scoot on their belly and crawl.":
+    "Ή βάλτε μερικά παιχνίδια σε κύκλο γύρω του — το άπλωμα προς διαφορετικά σημεία χτίζει τους μυς για την τούμπα, το σύρσιμο και το μπουσούλημα.",
+  "Keep it short at first — a few minutes is plenty, then try again later in the day.":
+    "Κρατήστε το σύντομο στην αρχή — λίγα λεπτά αρκούν, και ξαναδοκιμάστε αργότερα μέσα στη μέρα.",
+  "2 to 3 times a day for 3 to 5 minutes to start, working up to 15 to 30 minutes a day by 7 weeks":
+    "2 με 3 φορές την ημέρα από 3 με 5 λεπτά στην αρχή, φτάνοντας στα 15 με 30 λεπτά την ημέρα ως τις 7 εβδομάδες",
+  "Tummy time is only for babies who are awake and being watched — sleep is always on the back.":
+    "Ο χρόνος μπρούμυτα είναι μόνο για μωρά ξύπνια και υπό επίβλεψη — ο ύπνος γίνεται πάντα ανάσκελα.",
+
+  "Watch and follow": "Κοιτάζει και ακολουθεί",
+  "In these months your baby is learning to focus on faces and close objects and to follow something moving with their eyes.":
+    "Αυτούς τους μήνες το μωρό σας μαθαίνει να εστιάζει σε πρόσωπα και κοντινά αντικείμενα και να ακολουθεί με τα μάτια κάτι που κινείται.",
+  "Hold your baby so your face is about 8 to 12 inches (20 to 30 cm) from theirs — that's the distance a newborn sees best.":
+    "Κρατήστε το μωρό ώστε το πρόσωπό σας να απέχει περίπου 20 με 30 εκατοστά από το δικό του — σε αυτή την απόσταση βλέπει καλύτερα ένα νεογέννητο.",
+  "Let them settle on your face and just look; talk softly while they study you.":
+    "Αφήστε το να καρφώσει το βλέμμα στο πρόσωπό σας και απλώς να κοιτάζει· μιλήστε του απαλά όσο σας μελετά.",
+  "Slowly move your face, or a small toy held at that same close distance, and let their eyes follow it.":
+    "Μετακινήστε αργά το πρόσωπό σας, ή ένα μικρό παιχνίδι στην ίδια κοντινή απόσταση, και αφήστε τα μάτια του να το ακολουθήσουν.",
+  "Pause whenever they need a break and try again another time.":
+    "Κάντε παύση όποτε χρειάζεται διάλειμμα και ξαναδοκιμάστε άλλη ώρα.",
+  "A few minutes, as long as it stays fun": "Λίγα λεπτά, όσο παραμένει διασκεδαστικό",
+  "Your face is the show — babies this age don't need screens or media.":
+    "Το πρόσωπό σας είναι το θέαμα — τα μωρά σε αυτή την ηλικία δεν χρειάζονται οθόνες.",
+
+  "Talk and sing": "Μιλήστε και τραγουδήστε",
+  "Hearing your voice up close helps your baby tune in to the rhythm of language and learn the back-and-forth of conversation.":
+    "Ακούγοντας τη φωνή σας από κοντά, το μωρό συντονίζεται με τον ρυθμό της γλώσσας και μαθαίνει το πήγαινε-έλα της συζήτησης.",
+  "Hold your baby close and look at them as you talk — babies love faces and will watch you and respond.":
+    "Κρατήστε το μωρό κοντά και κοιτάξτε το καθώς του μιλάτε — τα μωρά λατρεύουν τα πρόσωπα και θα σας κοιτούν και θα απαντούν.",
+  "Chat about whatever you're doing as you feed, change and bathe them.":
+    "Λέτε του τι κάνετε καθώς το ταΐζετε, το αλλάζετε και το κάνετε μπάνιο.",
+  "Sing to them, or talk in a sing-song voice — it helps keep their attention.":
+    "Τραγουδήστε του, ή μιλήστε με τραγουδιστή φωνή — βοηθά να κρατηθεί η προσοχή του.",
+  "When they make a sound, repeat it back to them; that's their first turn in a conversation.":
+    "Όταν βγάζει έναν ήχο, επαναλάβετέ τον· αυτή είναι η πρώτη του σειρά σε μια συζήτηση.",
+  "A few minutes, as long as it stays fun — it fits easily into feeds and nappy changes":
+    "Λίγα λεπτά, όσο παραμένει διασκεδαστικό — χωράει εύκολα στα ταΐσματα και στις αλλαγές πάνας",
+
+  "Toys within reach": "Παιχνίδια σε απόσταση χεριού",
+  "Putting a toy just within reach invites your baby to stretch out, swipe and grab — an easy play idea the NHS suggests from 4 months.":
+    "Ένα παιχνίδι ακριβώς εκεί που φτάνει καλεί το μωρό να απλωθεί, να το χτυπήσει και να το πιάσει — μια εύκολη ιδέα που το NHS προτείνει από τους 4 μήνες.",
+  "Put a toy near your baby, just within reach.": "Βάλτε ένα παιχνίδι κοντά του, ακριβώς εκεί που φτάνει.",
+  "Let them stretch, swipe and grab it in their own time.": "Αφήστε το να απλωθεί, να το χτυπήσει και να το πιάσει με τον δικό του ρυθμό.",
+  "Talk and sing to them cheerfully while you play.": "Μιλήστε και τραγουδήστε του χαρούμενα όσο παίζετε.",
+  "Swap in a different toy when they lose interest.": "Αλλάξτε παιχνίδι όταν χάσει το ενδιαφέρον του.",
+  "Awake time only — and clear away anything small they could choke on.":
+    "Μόνο σε ξύπνιο μωρό — και μαζέψτε ό,τι μικρό θα μπορούσε να πνιγεί.",
+
+  "Rolling floor time": "Χρόνος στο πάτωμα για τούμπες",
+  "Rolling both ways usually develops across this stretch — and the timing varies from baby to baby. Awake time on the tummy with a toy to look at gives yours room to practise.":
+    "Η τούμπα και προς τις δύο πλευρές αναπτύσσεται συνήθως σε αυτό το διάστημα — και ο χρόνος διαφέρει από μωρό σε μωρό. Ο χρόνος μπρούμυτα με ένα παιχνίδι να κοιτάζει του δίνει χώρο να εξασκηθεί.",
+  "During awake time, lay your baby on their tummy on the floor with their arms forward.":
+    "Σε ξύπνιο χρόνο, ξαπλώστε το μπρούμυτα στο πάτωμα με τα χέρια μπροστά.",
+  "Get their attention with a toy they like, held where they can see it.":
+    "Τραβήξτε την προσοχή του με ένα παιχνίδι που του αρέσει, κρατημένο εκεί που το βλέπει.",
+  "Use it to encourage them to lift their head and chest.": "Χρησιμοποιήστε το για να το ενθαρρύνετε να σηκώσει κεφάλι και στήθος.",
+  "Whichever way they roll first is fine — tummy-to-back usually comes first, and the reverse is normal too.":
+    "Όποια κατεύθυνση κι αν γυρίσει πρώτα είναι μια χαρά — συνήθως έρχεται πρώτα από μπρούμυτα σε ανάσκελα, αλλά και το αντίστροφο είναι φυσιολογικό.",
+  "A few minutes at a time, as long as it stays fun.": "Λίγα λεπτά κάθε φορά, όσο παραμένει διασκεδαστικό.",
+
+  "Smiles and mirrors": "Χαμόγελα και καθρέφτες",
+  "Looking at your face, trading smiles and copying sounds is how babies this age love to play — and closer to 6 months, a mirror joins the game.":
+    "Το να κοιτάζει το πρόσωπό σας, να ανταλλάσσετε χαμόγελα και να μιμείστε ήχους είναι το αγαπημένο παιχνίδι σε αυτή την ηλικία — και κοντά στους 6 μήνες, μπαίνει και ο καθρέφτης.",
+  "Get face to face — hold your baby or lie beside them so they can study you.":
+    "Ελάτε πρόσωπο με πρόσωπο — κρατήστε το ή ξαπλώστε δίπλα του ώστε να μπορεί να σας μελετά.",
+  "Smile and chat, and copy the new sounds they make back to them.":
+    "Χαμογελάστε και μιλήστε, και επαναλάβετέ του τους νέους ήχους που βγάζει.",
+  "Give them a pause to answer, then laugh along together.": "Δώστε του μια παύση για να απαντήσει, και μετά γελάστε μαζί.",
+  "Closer to 6 months, look into a baby-safe mirror together.": "Κοντά στους 6 μήνες, κοιταχτείτε μαζί σε έναν καθρέφτη ασφαλή για μωρά.",
+  "As long as it stays fun — follow your baby's lead.": "Όσο παραμένει διασκεδαστικό — ακολουθήστε το μωρό σας.",
+
+  "Sitting play": "Παιχνίδι σε καθιστή θέση",
+  "As the muscles in their trunk strengthen, babies this age sit more steadily and start leaning over to reach for things — relaxed floor time gives them room to work on it.":
+    "Καθώς δυναμώνουν οι μύες του κορμού, τα μωρά αυτής της ηλικίας κάθονται πιο σταθερά και αρχίζουν να γέρνουν για να φτάσουν πράγματα — ο χαλαρός χρόνος στο πάτωμα τους δίνει χώρο να το δουλέψουν.",
+  "Sit your baby on the floor and stay close — a topple now and then is normal, and they will usually catch themselves with their arms.":
+    "Καθίστε το μωρό στο πάτωμα και μείνετε κοντά — μια τούμπα πού και πού είναι φυσιολογική, και συνήθως συγκρατείται με τα χέρια του.",
+  "Put a toy just to the side so they can lean over and reach for it.":
+    "Βάλτε ένα παιχνίδι λίγο στο πλάι ώστε να γείρει και να το φτάσει.",
+  "Give them relaxed floor time to work out rolling onto their tummy and getting back up to sitting on their own.":
+    "Δώστε του χαλαρό χρόνο στο πάτωμα για να βρει μόνο του πώς γυρίζει μπρούμυτα και πώς ξανακάθεται.",
+  "If they are not sitting by themselves by nine months, ask your paediatrician.":
+    "Αν δεν κάθεται μόνο του ως τους εννέα μήνες, ρωτήστε τον παιδίατρό σας.",
+
+  "Pass and bang": "Δώσε-πάρε και χτυπήματα",
+  "Passing a toy back and forth and playing with blocks uses the hand skills most babies show by 9 months — banging two things together and moving things from one hand to the other.":
+    "Το να δίνετε και να παίρνετε ένα παιχνίδι και το παιχνίδι με τουβλάκια χρησιμοποιεί τις δεξιότητες των χεριών που τα περισσότερα μωρά δείχνουν ως τους 9 μήνες — να χτυπούν δύο πράγματα μεταξύ τους και να τα περνούν από το ένα χέρι στο άλλο.",
+  "Sit together with a couple of safe blocks or cups.": "Καθίστε μαζί με δυο ασφαλή τουβλάκια ή κυπελάκια.",
+  "Pass one toy back and forth — my turn, your turn.": "Δώστε και πάρτε ένα παιχνίδι — η σειρά μου, η σειρά σου.",
+  "Let your baby bang two things together; it is part of how they explore at this age.":
+    "Αφήστε το να χτυπά δύο πράγματα μεταξύ τους· έτσι εξερευνά σε αυτή την ηλικία.",
+  "Dump blocks out of a container and put them back in together.":
+    "Αδειάστε τουβλάκια από ένα δοχείο και ξαναβάλτε τα μαζί.",
+
+  "Peek-a-boo": "Κου-κου",
+  "Peekaboo helps your baby learn object permanence — that people and things still exist when they are out of sight.":
+    "Το κου-κου βοηθά το μωρό να μάθει τη μονιμότητα του αντικειμένου — ότι άνθρωποι και πράγματα εξακολουθούν να υπάρχουν όταν δεν φαίνονται.",
+  "Lay a soft cloth over your baby's head and ask, \"Where's the baby?\" — once they know the game, they will pull it off and pop up grinning.":
+    "Ρίξτε ένα απαλό πανί πάνω από το κεφάλι του και ρωτήστε «πού είναι το μωρό;» — μόλις μάθει το παιχνίδι, θα το τραβήξει και θα ξεπροβάλει χαμογελαστό.",
+  "Hide behind a door or a piece of furniture, leaving a foot or arm showing as a clue for them to find you.":
+    "Κρυφτείτε πίσω από μια πόρτα ή ένα έπιπλο, αφήνοντας ένα πόδι ή ένα χέρι να φαίνεται για να σας βρει.",
+  "Take turns \"hiding\" your head under a large towel and letting them pull it off.":
+    "Εναλλάξ «κρύψτε» το κεφάλι σας κάτω από μια μεγάλη πετσέτα και αφήστε το να την τραβήξει.",
+  "Switch between variations to keep the game interesting.": "Αλλάζετε παραλλαγές για να μένει ενδιαφέρον το παιχνίδι.",
+
+  "Cushion crawl course": "Διαδρομή με μαξιλάρια",
+  "Crawling toward things they want, over and around soft obstacles, gives your baby lots of practice moving on their own.":
+    "Το μπουσούλημα προς πράγματα που θέλει, πάνω και γύρω από μαλακά εμπόδια, του δίνει πολλή εξάσκηση στο να κινείται μόνο του.",
+  "Sit on the floor and place a toy your baby likes just beyond their reach.":
+    "Καθίστε στο πάτωμα και βάλτε ένα παιχνίδι που του αρέσει λίγο πιο πέρα από όσο φτάνει.",
+  "Build a little course from pillows, boxes and sofa cushions for them to crawl over and around.":
+    "Φτιάξτε μια μικρή διαδρομή από μαξιλάρια, κουτιά και μαξιλάρια καναπέ, για να μπουσουλήσει πάνω και γύρω τους.",
+  "Hide behind one of the obstacles and pop out with a \"peekaboo!\"":
+    "Κρυφτείτε πίσω από ένα εμπόδιο και ξεπροβάλτε με ένα «κου-κου!»",
+  "Stay right beside them the whole time.": "Μείνετε ακριβώς δίπλα του όλη την ώρα.",
+  "Never leave your baby unsupervised on the course — if they slip between pillows or under a box, they might not be able to get out.":
+    "Μην αφήνετε ποτέ το μωρό χωρίς επίβλεψη στη διαδρομή — αν γλιστρήσει ανάμεσα στα μαξιλάρια ή κάτω από ένα κουτί, μπορεί να μην μπορεί να βγει.",
+
+  "Pull up and cruise": "Σηκώνεται και περπατά κρατημένο",
+  "Pulling up to stand and stepping sideways along furniture is how babies build up to walking, one hold at a time.":
+    "Το να τραβιέται όρθιο και να κάνει πλάγια βήματα κρατημένο από τα έπιπλα είναι ο τρόπος που τα μωρά χτίζουν το περπάτημα, ένα κράτημα τη φορά.",
+  "Let your baby pull up on a sturdy piece of furniture whenever the mood strikes.":
+    "Αφήστε το να τραβιέται όρθιο σε ένα σταθερό έπιπλο όποτε του έρθει.",
+  "If they get stuck standing and cry for help, gently show them how to bend their knees to lower themselves back down.":
+    "Αν κολλήσει όρθιο και κλαίει για βοήθεια, δείξτε του απαλά πώς να λυγίσει τα γόνατα για να κατέβει.",
+  "Once they feel steady, offer your hands so they can try small steps while holding on.":
+    "Μόλις νιώσει σταθερό, δώστε του τα χέρια σας για να δοκιμάσει μικρά βήματα κρατημένο.",
+  "When your hands are busy, let them cruise sideways along the furniture at their own pace.":
+    "Όταν τα χέρια σας είναι πιασμένα, αφήστε το να προχωρά πλάγια κατά μήκος των επίπλων με τον δικό του ρυθμό.",
+  "Make sure whatever your baby uses for support has no sharp edges and is properly weighted or attached to the floor.":
+    "Βεβαιωθείτε ότι ό,τι χρησιμοποιεί για στήριξη δεν έχει αιχμηρές γωνίες και είναι σταθερό ή στερεωμένο στο πάτωμα.",
+
+  "Name it, read it": "Ονόμασέ το, διάβασέ το",
+  "Chatting about what your baby can see and looking at simple picture books together helps them connect words to the things around them.":
+    "Το να μιλάτε για ό,τι βλέπει και να κοιτάτε μαζί απλά εικονογραφημένα βιβλία το βοηθά να συνδέσει τις λέξεις με τα πράγματα γύρω του.",
+  "Point out things around you as you go: \"Look at the car.\"":
+    "Δείχνετε πράγματα γύρω σας καθώς προχωράτε: «κοίτα το αυτοκίνητο».",
+  "Sit together with a very simple picture book and describe the pictures to your baby.":
+    "Καθίστε μαζί με ένα πολύ απλό εικονογραφημένο βιβλίο και περιγράψτε του τις εικόνες.",
+  "Try books with textures your baby can feel as you talk about each page.":
+    "Δοκιμάστε βιβλία με υφές που μπορεί να αγγίξει όσο μιλάτε για κάθε σελίδα.",
+  "If your baby starts to copy you, encourage them and repeat what they say.":
+    "Αν αρχίσει να σας μιμείται, ενθαρρύνετέ το και επαναλάβετε ό,τι λέει.",
+
+  "birth to 3 months": "γέννηση έως 3 μηνών",
+  "3 to 6 months": "3 έως 6 μηνών",
+  "6 to 9 months": "6 έως 9 μηνών",
+  "9 to 12 months": "9 έως 12 μηνών",
+  // ——— Fact of the day and the age brackets (domain/babyFacts.ts) ———
+  //
+  // Both halves of the card: the "right now she may be…" bullets, which are
+  // fragments the card lists, and the "did you know" sentences.
+  "seeing you best from 20–30 cm — feeding distance": "σας βλέπει καλύτερα από 20–30 εκ. — απόσταση ταΐσματος",
+  "recognising your voice; hearing is fully mature": "αναγνωρίζει τη φωνή σας· η ακοή είναι πλήρως ώριμη",
+  "knowing the scent of their own mother's milk": "ξεχωρίζει τη μυρωδιά του γάλακτος της μαμάς του",
+  "preferring your face over any pattern": "προτιμά το πρόσωπό σας από κάθε σχέδιο",
+  "Your baby sees you best from 20–30 cm away — almost exactly the distance to your face during a feed.":
+    "Το μωρό σας σάς βλέπει καλύτερα από 20–30 εκατοστά — σχεδόν ακριβώς η απόσταση από το πρόσωπό σας στο τάισμα.",
+  "Hearing is fully mature at birth — your baby may already turn toward familiar voices.":
+    "Η ακοή είναι πλήρως ώριμη από τη γέννηση — το μωρό σας μπορεί ήδη να γυρίζει προς γνώριμες φωνές.",
+  "Your baby can recognise the scent of their own mother's milk — smell is working from day one.":
+    "Το μωρό σας αναγνωρίζει τη μυρωδιά του γάλακτος της μαμάς του — η όσφρηση δουλεύει από την πρώτη μέρα.",
+  "Losing a little weight in the first days is normal — most babies are back at birthweight by 3 weeks.":
+    "Το να χάσει λίγο βάρος τις πρώτες μέρες είναι φυσιολογικό — τα περισσότερα μωρά επιστρέφουν στο βάρος γέννησης ως τις 3 εβδομάδες.",
+  "Faces are your baby's favourite thing to look at — preferred over any other pattern.":
+    "Τα πρόσωπα είναι το αγαπημένο θέαμα του μωρού σας — τα προτιμά από κάθε άλλο σχέδιο.",
+  "Those fleeting newborn smiles are practice runs — the real social smile arrives by the end of month two.":
+    "Εκείνα τα φευγαλέα χαμόγελα του νεογέννητου είναι πρόβες — το αληθινό κοινωνικό χαμόγελο έρχεται ως το τέλος του δεύτερου μήνα.",
+  "Your baby prefers sweet smells and turns away from bitter ones — taste and smell arrived ready.":
+    "Το μωρό σας προτιμά τις γλυκές μυρωδιές και απομακρύνεται από τις πικρές — γεύση και όσφρηση ήρθαν έτοιμες.",
+  "Talk softly and watch the tiny lip movements — that's your baby holding their side of the conversation.":
+    "Μιλήστε απαλά και προσέξτε τις μικροσκοπικές κινήσεις των χειλιών — έτσι κρατά το μωρό σας τη δική του πλευρά στη συζήτηση.",
+
+  "starting tummy time — a few supervised minutes at a time": "ξεκινά τον χρόνο μπρούμυτα — λίγα λεπτά κάθε φορά, υπό επίβλεψη",
+  "loving bold, high-contrast patterns": "λατρεύει έντονα σχέδια με μεγάλη αντίθεση",
+  "warming up for the first real smile (by ~2 months)": "προθερμαίνεται για το πρώτο αληθινό χαμόγελο (ως τους ~2 μήνες)",
+  "still seeing best up close, 20–30 cm": "βλέπει ακόμη καλύτερα από κοντά, 20–30 εκ.",
+  "Tummy time can start small: 3–5 supervised minutes, 2–3 times a day, while your baby is awake.":
+    "Ο χρόνος μπρούμυτα μπορεί να ξεκινήσει μικρός: 3–5 λεπτά υπό επίβλεψη, 2–3 φορές την ημέρα, με το μωρό ξύπνιο.",
+  "A real social smile is on its way — it usually appears by the end of the second month.":
+    "Ένα αληθινό κοινωνικό χαμόγελο είναι καθ’ οδόν — εμφανίζεται συνήθως ως το τέλος του δεύτερου μήνα.",
+  "High-contrast patterns fascinate your baby right now — bold shapes are easiest for new eyes.":
+    "Τα σχέδια με μεγάλη αντίθεση μαγεύουν το μωρό σας αυτή την περίοδο — τα έντονα σχήματα είναι τα πιο εύκολα για νέα μάτια.",
+  "Your baby still sees best at 20–30 cm — keep your face close and chat away.":
+    "Το μωρό σας βλέπει ακόμη καλύτερα στα 20–30 εκατοστά — κρατήστε το πρόσωπό σας κοντά και μιλάτε του.",
+  "Newborn eyes sometimes wander or cross — completely normal now, and it settles by 2–3 months.":
+    "Τα μάτια του νεογέννητου καμιά φορά «φεύγουν» ή αλληθωρίζουν — απολύτως φυσιολογικό τώρα, και διορθώνεται ως τους 2–3 μήνες.",
+  "Keep narrating your day — by around 3 months your chat starts getting answered with smiles.":
+    "Συνεχίστε να αφηγείστε τη μέρα σας — γύρω στους 3 μήνες η κουβέντα σας αρχίζει να απαντιέται με χαμόγελα.",
+
+  "smiling back when you talk — the real social smile": "χαμογελά όταν του μιλάτε — το αληθινό κοινωνικό χαμόγελο",
+  "learning to follow moving things with their eyes": "μαθαίνει να ακολουθεί με τα μάτια ό,τι κινείται",
+  "settling the newborn eye-wander as both eyes team up": "σταθεροποιεί το βλέμμα καθώς τα δύο μάτια συντονίζονται",
+  "building toward 15–30 minutes of tummy time a day": "χτίζει προς τα 15–30 λεπτά μπρούμυτα την ημέρα",
+  "That smile is real: a baby's first social smile usually appears by the end of the second month.":
+    "Αυτό το χαμόγελο είναι αληθινό: το πρώτο κοινωνικό χαμόγελο εμφανίζεται συνήθως ως το τέλος του δεύτερου μήνα.",
+  "Around 2–3 months the newborn eye-wander settles — your baby's eyes are learning to work as a team.":
+    "Γύρω στους 2–3 μήνες το «φευγάτο» βλέμμα του νεογέννητου σταθεροποιείται — τα μάτια του μαθαίνουν να δουλεύουν μαζί.",
+  "By 3 months your baby can follow a moving object with their eyes — try a slow toy sweep.":
+    "Ως τους 3 μήνες το μωρό σας ακολουθεί με τα μάτια ένα αντικείμενο που κινείται — δοκιμάστε ένα αργό πέρασμα με παιχνίδι.",
+  "Tummy time can build toward 15–30 minutes a day around 7 weeks — short sessions still count.":
+    "Ο χρόνος μπρούμυτα μπορεί να φτάσει τα 15–30 λεπτά την ημέρα γύρω στις 7 εβδομάδες — και οι σύντομες φορές μετράνε.",
+  "Your voice alone can now raise a smile — babies this age smile when you talk to them.":
+    "Μόνο η φωνή σας φέρνει πλέον χαμόγελο — τα μωρά αυτής της ηλικίας χαμογελούν όταν τους μιλάτε.",
+  "A few calm minutes of solo play builds self-soothing — the skill that later helps with settling to sleep.":
+    "Λίγα ήρεμα λεπτά μόνο του παιχνιδιού χτίζουν την αυτοκαταπράυνση — τη δεξιότητα που αργότερα βοηθά στο να κοιμηθεί.",
+
+  "seeing colours — and their shades — much better": "βλέπει πολύ καλύτερα τα χρώματα — και τις αποχρώσεις τους",
+  "babbling chains of sounds: ba-ba-ba, ma-ma-ma": "βγάζει αλυσίδες ήχων: μπα-μπα-μπα, μα-μα-μα",
+  "starting to respond to their own name": "αρχίζει να ανταποκρίνεται στο όνομά του",
+  "grabbing whole-hand and practising rolling": "πιάνει με όλη την παλάμη και εξασκείται στις τούμπες",
+  "By 4 months your baby is much better at seeing colours — and the shades between them.":
+    "Ως τους 4 μήνες το μωρό σας βλέπει πολύ καλύτερα τα χρώματα — και τις αποχρώσεις ανάμεσά τους.",
+  "Babies of 4–12 months do best on 12–16 hours of sleep in 24, naps included.":
+    "Τα μωρά 4–12 μηνών είναι καλύτερα με 12–16 ώρες ύπνου στο 24ωρο, μαζί με τους υπνάκους.",
+  "Grabbing starts whole-hand, like a mitten — the neat finger-and-thumb grip arrives around 9 months.":
+    "Το πιάσιμο ξεκινά με όλη την παλάμη, σαν γάντι — η λαβή με δείκτη και αντίχειρα έρχεται γύρω στους 9 μήνες.",
+  "Rolling practice is underway — by around 7 months most babies can roll both directions.":
+    "Η εξάσκηση στις τούμπες είναι σε εξέλιξη — ως τους 7 μήνες περίπου τα περισσότερα μωρά γυρίζουν και προς τις δύο κατευθύνσεις.",
+  "Between 4 and 7 months some of the most important changes happen quietly — senses and movement start working as a team.":
+    "Ανάμεσα στους 4 και τους 7 μήνες κάποιες από τις σημαντικότερες αλλαγές γίνονται αθόρυβα — αισθήσεις και κίνηση αρχίζουν να δουλεύουν μαζί.",
+  "Babbled chains — ba-ba-ba, ma-ma-ma — are real language practice. Answer back!":
+    "Οι αλυσίδες ήχων — μπα-μπα-μπα, μα-μα-μα — είναι πραγματική εξάσκηση στη γλώσσα. Απαντήστε του!",
+  "Your baby is learning their own name — watch for the head turn when you say it.":
+    "Το μωρό σας μαθαίνει το όνομά του — προσέξτε το γύρισμα του κεφαλιού όταν το λέτε.",
+  "Your tone speaks before your words — babies this age tell emotions apart by how you sound.":
+    "Ο τόνος σας μιλά πριν από τις λέξεις σας — τα μωρά αυτής της ηλικίας ξεχωρίζουν συναισθήματα από το πώς ακούγεστε.",
+  "Following moving things keeps sharpening — a slowly rolling ball is prime entertainment.":
+    "Το να ακολουθεί κινούμενα πράγματα βελτιώνεται συνεχώς — μια μπάλα που κυλά αργά είναι κορυφαία διασκέδαση.",
+
+  "spotting you across the room — depth perception is in": "σας εντοπίζει από την άλλη άκρη του δωματίου — ήρθε η αντίληψη βάθους",
+  "getting ready for first foods around 6 months": "ετοιμάζεται για τις πρώτες τροφές γύρω στους 6 μήνες",
+  "learning to sit without leaning on their arms": "μαθαίνει να κάθεται χωρίς να στηρίζεται στα χέρια",
+  "rolling both ways": "γυρίζει και προς τις δύο πλευρές",
+  "Around 5 months depth perception arrives — your baby can now spot you across the room.":
+    "Γύρω στους 5 μήνες έρχεται η αντίληψη βάθους — το μωρό σας μπορεί πλέον να σας εντοπίσει από την άλλη άκρη του δωματίου.",
+  "Around 6 months babies are ready to start exploring first foods alongside their milk.":
+    "Γύρω στους 6 μήνες τα μωρά είναι έτοιμα να αρχίσουν να εξερευνούν τις πρώτες τροφές μαζί με το γάλα τους.",
+  "Between 6 and 8 months most babies learn to sit upright without leaning on their arms.":
+    "Ανάμεσα στους 6 και τους 8 μήνες τα περισσότερα μωρά μαθαίνουν να κάθονται όρθια χωρίς να στηρίζονται στα χέρια.",
+  "By around 7 months most babies roll both ways — clear floor, big adventures.":
+    "Ως τους 7 μήνες περίπου τα περισσότερα μωρά γυρίζουν και προς τις δύο πλευρές — καθαρό πάτωμα, μεγάλες περιπέτειες.",
+  "Hide a toy half under a blanket — finding partly hidden things is a brand-new skill this season.":
+    "Κρύψτε ένα παιχνίδι μισό κάτω από μια κουβέρτα — το να βρίσκει μισοκρυμμένα πράγματα είναι ολοκαίνουργια δεξιότητα αυτή την περίοδο.",
+  "Your baby reads the room now — responding to other people's emotions, and often simply joyful.":
+    "Το μωρό σας «διαβάζει» τώρα την ατμόσφαιρα — ανταποκρίνεται στα συναισθήματα των άλλων, και συχνά είναι απλώς χαρούμενο.",
+  "From 6 to 12 months, breastmilk can still provide half or more of a baby's nutritional needs.":
+    "Από τους 6 ως τους 12 μήνες, το μητρικό γάλα μπορεί ακόμη να καλύπτει τις μισές ή και περισσότερες από τις διατροφικές ανάγκες ενός μωρού.",
+
+  "playing peekaboo like it's science — object permanence": "παίζει κου-κου σαν επιστήμονας — μονιμότητα του αντικειμένου",
+  "working on the finger-and-thumb pincer grasp": "δουλεύει τη λαβή με δείκτη και αντίχειρα",
+  "judging distances well — crawling season": "κρίνει καλά τις αποστάσεις — εποχή μπουσουλήματος",
+  "sitting steadily, hands free for toys": "κάθεται σταθερά, με τα χέρια ελεύθερα για παιχνίδια",
+  "Peekaboo is brain-building: your baby is learning that things still exist when out of sight.":
+    "Το κου-κου χτίζει εγκέφαλο: το μωρό σας μαθαίνει ότι τα πράγματα υπάρχουν ακόμη κι όταν δεν φαίνονται.",
+  "The pincer grasp — finger and thumb — usually clicks in around 9 months. Tiny objects, big skill.":
+    "Η λαβή με δείκτη και αντίχειρα «κουμπώνει» συνήθως γύρω στους 9 μήνες. Μικροσκοπικά αντικείμενα, μεγάλη δεξιότητα.",
+  "By around 9 months babies judge distance well — handy for the crawling adventures ahead.":
+    "Ως τους 9 μήνες περίπου τα μωρά κρίνουν καλά τις αποστάσεις — χρήσιμο για τις περιπέτειες του μπουσουλήματος που έρχονται.",
+  "Sitting steadily without support usually lands in this stretch — hands finally free for toys.":
+    "Το σταθερό κάθισμα χωρίς στήριξη έρχεται συνήθως σε αυτό το διάστημα — επιτέλους ελεύθερα χέρια για παιχνίδια.",
+  "Your baby understands far more words than they can say — name a favourite toy and watch their eyes find it.":
+    "Το μωρό σας καταλαβαίνει πολύ περισσότερες λέξεις απ’ όσες λέει — ονομάστε ένα αγαπημένο παιχνίδι και δείτε τα μάτια του να το βρίσκουν.",
+  "Pointing and gesturing counts as talking — it's the bridge your baby crosses on the way to words.":
+    "Το δείξιμο και οι χειρονομίες μετράνε ως ομιλία — είναι η γέφυρα που περνά το μωρό σας προς τις λέξεις.",
+
+  "pulling up to stand and cruising the furniture": "τραβιέται όρθιο και προχωρά κρατημένο από τα έπιπλα",
+  "understanding far more words than they can say": "καταλαβαίνει πολύ περισσότερες λέξεις απ’ όσες λέει",
+  "pointing and gesturing to talk to you": "δείχνει και κάνει χειρονομίες για να σας μιλήσει",
+  "maybe trying first steps around the first birthday": "ίσως δοκιμάσει τα πρώτα βήματα γύρω στα πρώτα γενέθλια",
+  "Pulling up to stand, then cruising along the furniture — the pre-walking curriculum is in session.":
+    "Τραβιέται όρθιο, και μετά προχωρά κρατημένο από τα έπιπλα — το μάθημα πριν το περπάτημα έχει αρχίσει.",
+  "Many first steps arrive around the first birthday — earlier or later is completely normal.":
+    "Πολλά πρώτα βήματα έρχονται γύρω στα πρώτα γενέθλια — νωρίτερα ή αργότερα είναι απολύτως φυσιολογικό.",
+  "Keep switching up peekaboo — the game teaches your baby that hidden things still exist.":
+    "Συνεχίστε να αλλάζετε το κου-κου — το παιχνίδι μαθαίνει στο μωρό σας ότι τα κρυμμένα πράγματα εξακολουθούν να υπάρχουν.",
+  "That thumb-and-finger pickup of every crumb is the pincer grasp — right on schedule from about 9 months.":
+    "Εκείνο το μάζεμα κάθε ψίχουλου με αντίχειρα και δείκτη είναι η λαβή τσιμπίδας — ακριβώς στην ώρα της, από τους 9 μήνες περίπου.",
+  "'Mama' often first slips out by accident — then your baby notices the attention it wins and says it on purpose.":
+    "Το «μαμά» πρώτη φορά ξεφεύγει συνήθως κατά λάθος — και μετά το μωρό σας προσέχει την προσοχή που κερδίζει και το λέει επίτηδες.",
+  "Your baby is copying the gestures you make while you talk — you are the curriculum.":
+    "Το μωρό σας αντιγράφει τις χειρονομίες που κάνετε όσο μιλάτε — εσείς είστε το μάθημα.",
+  "Understanding runs ahead of speech — your baby comprehends more than you suspect.":
+    "Η κατανόηση τρέχει μπροστά από την ομιλία — το μωρό σας καταλαβαίνει περισσότερα απ’ όσα υποψιάζεστε.",
+
+  "walking wide-legged and wobbly — on purpose": "περπατά με ανοιχτά πόδια και τρεκλίζοντας — επίτηδες",
+  "turning first steps into confident walking fast": "μετατρέπει γρήγορα τα πρώτα βήματα σε σίγουρο περπάτημα",
+  "still loving hide-and-find games": "λατρεύει ακόμη τα παιχνίδια κρυφτού",
+  "understanding much more than they can say": "καταλαβαίνει πολύ περισσότερα απ’ όσα μπορεί να πει",
+  "From first steps to confident walking often takes just days — and starting later is normal too.":
+    "Από τα πρώτα βήματα ως το σίγουρο περπάτημα συχνά περνούν λίγες μόνο μέρες — και το να ξεκινήσει αργότερα είναι επίσης φυσιολογικό.",
+  "New walkers go wide-legged and wobbly on purpose — feet apart is how they balance.":
+    "Οι νέοι περιπατητές ανοίγουν τα πόδια και τρεκλίζουν επίτηδες — έτσι ισορροπούν.",
+  "WHO supports continued breastfeeding up to 2 years or beyond, alongside family foods.":
+    "Ο ΠΟΥ στηρίζει τη συνέχιση του θηλασμού ως τα 2 χρόνια ή και παραπάνω, μαζί με το οικογενειακό φαγητό.",
+  "Peekaboo, hide-the-toy, where-did-it-go — object permanence games stay favourites well past the first year.":
+    "Κου-κου, κρύψε-το-παιχνίδι, πού-πήγε — τα παιχνίδια μονιμότητας του αντικειμένου μένουν αγαπημένα πολύ μετά τον πρώτο χρόνο.",
+  "Toddlers of 1–2 years do best on 11–14 hours of sleep in 24, naps included.":
+    "Τα νήπια 1–2 ετών είναι καλύτερα με 11–14 ώρες ύπνου στο 24ωρο, μαζί με τους υπνάκους.",
+  "In the second year, breastmilk can still provide up to a third of a child's nutritional needs.":
+    "Τον δεύτερο χρόνο, το μητρικό γάλα μπορεί ακόμη να καλύπτει ως και το ένα τρίτο των διατροφικών αναγκών ενός παιδιού.",
 };
 
 export default el;

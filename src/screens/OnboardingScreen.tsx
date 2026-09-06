@@ -54,6 +54,14 @@ import { FeedingMode, Profile } from "../domain/types";
 import { FamilySync } from "../hooks/useFamilySync";
 import { t } from "../i18n";
 
+// Spelled out rather than capitalised from the mode name: a word built by
+// string surgery is one no translator and no test can find.
+const FEEDING_LABEL: Record<FeedingMode, string> = {
+  breast: "Breast",
+  bottle: "Bottle",
+  mixed: "Mixed",
+};
+
 const RestoreWithGoogle = lazy(() =>
   import("../components/GoogleRecovery").then((m) => ({ default: m.RestoreWithGoogle })),
 );
@@ -288,7 +296,7 @@ export default function OnboardingScreen({
                     >
                       {(["breast", "bottle", "mixed"] as FeedingMode[]).map((feedingMode) => (
                         <ToggleGroupItem key={feedingMode} value={feedingMode}>
-                          {t(feedingMode[0].toUpperCase() + feedingMode.slice(1))}
+                          {t(FEEDING_LABEL[feedingMode])}
                           <Check className="choice-check" />
                         </ToggleGroupItem>
                       ))}

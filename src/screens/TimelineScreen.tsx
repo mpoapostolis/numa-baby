@@ -14,12 +14,29 @@ import { formatTimelineDay } from "../domain/time";
 import { Activity, ActivityType } from "../domain/types";
 import { t } from "../i18n";
 
+// Spelled out rather than capitalised from the type name, for the same
+// reason as the feeding modes: a word assembled at runtime is a word the
+// dictionary cannot be checked against.
+const FILTER_LABEL: Record<"all" | ActivityType, string> = {
+  all: "All",
+  bottle: "Bottle",
+  nursing: "Nursing",
+  diaper: "Diaper",
+  burp: "Burp",
+  sleep: "Sleep",
+  solid: "Solids",
+  medicine: "Medicine",
+  growth: "Growth",
+  health: "Health",
+  // Not a chip today — the filter row does not offer it — but the map is
+  // total so adding one later cannot forget its word.
+  routine: "Daily routine",
+};
+
 /** The visible name of a filter chip — also what the aria-labels and the
     empty state quote, so they always agree with the chip. */
 function filterLabel(option: "all" | ActivityType): string {
-  if (option === "all") return t("All");
-  if (option === "solid") return t("Solids");
-  return t(option[0].toUpperCase() + option.slice(1));
+  return t(FILTER_LABEL[option]);
 }
 
 type TimelineScreenProps = {
