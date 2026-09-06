@@ -13,11 +13,16 @@
 // clamped for short months so a baby born on the 31st still gets a party
 // on the 30th (or Feb 28th) instead of skipping the month.
 
+import { t } from "../i18n";
+
 export type Milestone = {
   /** Stable id, used to remember that this party has been shown. */
   id: string;
   title: string;
   sub: string;
+  /** The name and number the title needs, filled at render so the whole
+      sentence can be translated rather than glued together. */
+  vars?: Record<string, string | number>;
 };
 
 function daysInMonth(year: number, month: number): number {
@@ -35,16 +40,16 @@ export function milestoneFor(
   // day seven, not at whatever hour the birth string happens to parse to).
   const birth = new Date(`${birthDate.slice(0, 10)}T12:00:00`);
   if (!Number.isFinite(birth.getTime()) || birth.getTime() - 12 * 3600_000 > now) return null;
-  const who = name.trim() || "Your baby";
+  const who = name.trim() || t("Your baby");
   const midnight = new Date(birth);
   midnight.setHours(0, 0, 0, 0);
   const days = Math.floor((now - midnight.getTime()) / 86_400_000);
 
   if (days === 7) {
-    return { id: "d7", title: `${who} is 1 week old today`, sub: "Seven days of getting to know each other." };
+    return { id: "d7", title: "{who} is 1 week old today", sub: "Seven days of getting to know each other.", vars: { who } };
   }
   if (days === 100) {
-    return { id: "d100", title: `100 days of ${who}`, sub: "A hundred days — that deserves its own little party." };
+    return { id: "d100", title: "100 days of {who}", sub: "A hundred days — that deserves its own little party.", vars: { who } };
   }
 
   const at = new Date(now);
@@ -58,8 +63,9 @@ export function milestoneFor(
     const years = monthsElapsed / 12;
     return {
       id: `m${monthsElapsed}`,
-      title: years === 1 ? `${who} is 1 year old today!` : `${who} is ${years} years old today!`,
+      title: years === 1 ? "{who} is 1 year old today!" : "{who} is {years} years old today!",
       sub: years === 1 ? "One whole year. Happy birthday, little one." : "Happy birthday, little one.",
+      vars: { who, years },
     };
   }
   // Monthly through the second year; after that, only birthdays — a
@@ -67,8 +73,9 @@ export function milestoneFor(
   if (monthsElapsed > 23) return null;
   return {
     id: `m${monthsElapsed}`,
-    title: monthsElapsed === 1 ? `${who} is 1 month old today` : `${who} is ${monthsElapsed} months old today`,
+    title: monthsElapsed === 1 ? "{who} is 1 month old today" : "{who} is {months} months old today",
     sub: monthsElapsed === 1 ? "The first of many month-birthdays." : "Happy month-birthday.",
+    vars: { who, months: monthsElapsed },
   };
 }
 

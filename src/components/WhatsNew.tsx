@@ -16,6 +16,7 @@ import { useState } from "react";
 import { ChevronDown, Sparkles, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { Release } from "../domain/changelog";
+import { t } from "../i18n";
 
 type WhatsNewProps = {
   releases: Release[];
@@ -46,7 +47,7 @@ export function WhatsNew({ releases, onDismiss }: WhatsNewProps) {
             aria-expanded={open}
             onClick={() => setOpen((wasOpen) => !wasOpen)}
           >
-            <span className="whats-new-tag">New</span>
+            <span className="whats-new-tag">{t("New")}</span>
             <span className="whats-new-headline">{releases[0].title}</span>
             <ChevronDown
               size={14}
@@ -64,7 +65,7 @@ export function WhatsNew({ releases, onDismiss }: WhatsNewProps) {
       <Button
         variant="ghost"
         className="whats-new-dismiss"
-        aria-label="Dismiss what's new"
+        aria-label={t("Dismiss what's new")}
         onClick={onDismiss}
       >
         <X size={14} aria-hidden="true" />

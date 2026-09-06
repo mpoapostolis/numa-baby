@@ -7,6 +7,7 @@ import { ExternalLink } from "lucide-react";
 import { TinyStars } from "./illustrations";
 import { track } from "../domain/analytics";
 import { bracketOfAge, factOfTheDay } from "../domain/babyFacts";
+import { t, tAge, tName } from "../i18n";
 
 type FactOfTheDayProps = {
   babyDays: number;
@@ -26,27 +27,27 @@ export default function FactOfTheDay({ babyDays, babyAge, displayName }: FactOfT
   ).values()];
 
   return (
-    <aside className="fact-card" aria-label="What your baby is doing at this age">
+    <aside className="fact-card" aria-label={t("What your baby is doing at this age")}>
       <span className="fact-spark" aria-hidden="true"><TinyStars size={20} /></span>
       <div className="fact-copy">
         <span className="t-label">
           {babyAge === "born today"
-            ? "From day one"
+            ? t("From day one")
             : babyAge.startsWith("almost")
-              ? babyAge
-              : `At ${babyAge}`}
+              ? tAge(babyAge)
+              : t("At {age}", { age: tAge(babyAge) })}
         </span>
-        <p className="fact-doing-lead">Right now, {displayName} may be:</p>
+        <p className="fact-doing-lead">{t("Right now, {name} may be:", { name: tName(displayName) })}</p>
         <ul className="fact-doing">
           {stage.doing.map((item) => (
-            <li key={item.text}>{item.text}</li>
+            <li key={item.text}>{t(item.text)}</li>
           ))}
         </ul>
         <p className="fact-text t-body">
-          <strong className="fact-kicker">Did you know?</strong> {fact.text}
+          <strong className="fact-kicker">{t("Did you know?")}</strong> {t(fact.text)}
         </p>
         <p className="fact-foot">
-          <span className="fact-pace">Every baby has their own pace.</span>
+          <span className="fact-pace">{t("Every baby has their own pace.")}</span>
           {stageSources.map((source) => (
             <a
               key={source.url}

@@ -1052,6 +1052,138 @@ const el: Record<string, string> = {
   "Together": "Μαζί",
   "Timer for {what}": "Χρονόμετρο για {what}",
   "{n} min": "{n} λεπτά",
+  // ——— Onboarding ———
+  "Private family log": "Ιδιωτικό οικογενειακό ημερολόγιο",
+  "Night mode": "Νυχτερινή λειτουργία",
+  "Use night mode": "Χρήση νυχτερινής λειτουργίας",
+  "Your local log needs attention": "Το τοπικό ημερολόγιό σας χρειάζεται προσοχή",
+  "The saved copy could not be read, so Numalog left it untouched. Download it before starting over, or restore a valid backup.":
+    "Το αποθηκευμένο αντίγραφο δεν διαβάστηκε, οπότε το Numalog το άφησε ανέγγιχτο. Κατεβάστε το πριν ξεκινήσετε από την αρχή, ή επαναφέρετε ένα έγκυρο αντίγραφο.",
+  "Download the saved copy": "Λήψη του αποθηκευμένου αντιγράφου",
+  "Reset and start clean": "Μηδενισμός και καθαρή αρχή",
+  "Protected your log with Google or email? After downloading the saved copy, you can bring everything back from the cloud:":
+    "Προστατέψατε το ημερολόγιό σας με Google ή email; Αφού κατεβάσετε το αποθηκευμένο αντίγραφο, μπορείτε να τα φέρετε όλα πίσω από το cloud:",
+  "Private by default": "Ιδιωτικό εξ ορισμού",
+  "The whole day,": "Όλη η μέρα,",
+  "without the mental load.": "χωρίς το βάρος στο μυαλό.",
+  "Log feeds, diapers, burping and growth in seconds. No account needed — your entries stay on this device until you choose to share them.":
+    "Καταγράψτε ταΐσματα, πάνες, ρεψίματα και ανάπτυξη σε δευτερόλεπτα. Χωρίς λογαριασμό — οι καταχωρίσεις σας μένουν σε αυτή τη συσκευή μέχρι να επιλέξετε να τις μοιραστείτε.",
+  "Welcome back": "Καλώς ήρθατε πάλι",
+  "This device has used Numalog before — continue, and your log comes straight down from the cloud.":
+    "Αυτή η συσκευή έχει ξαναχρησιμοποιήσει το Numalog — συνεχίστε, και το ημερολόγιό σας κατεβαίνει κατευθείαν από το cloud.",
+  "Set up a new baby instead": "Ρύθμιση νέου μωρού αντ’ αυτού",
+  "Set up your baby": "Ρυθμίστε το μωρό σας",
+  "Everything is optional. You can change it later.": "Όλα είναι προαιρετικά. Μπορείτε να τα αλλάξετε αργότερα.",
+  "Powers the day counter and matches the guidance to this exact week. You can skip it.":
+    "Τροφοδοτεί τον μετρητή ημερών και ταιριάζει τις οδηγίες σε αυτή ακριβώς την εβδομάδα. Μπορείτε να το παραλείψετε.",
+  "Optional": "Προαιρετικό",
+  "This only changes the quick actions you see.": "Αλλάζει μόνο τις γρήγορες ενέργειες που βλέπετε.",
+  "Start tracking": "Ξεκινήστε την καταγραφή",
+  "I already have data — bring it back": "Έχω ήδη δεδομένα — φέρτε τα πίσω",
+  "One-tap logging": "Καταγραφή με ένα πάτημα",
+  "Details only when you need them.": "Λεπτομέρειες μόνο όταν τις χρειάζεστε.",
+  "Live timers and patterns": "Ζωντανά χρονόμετρα και μοτίβα",
+  "See what happened and what may be next.": "Δείτε τι έγινε και τι μπορεί να ακολουθήσει.",
+  "Yours by default": "Δικά σας εξ ορισμού",
+  "Entries stay on this device. Family Sync is opt-in.": "Οι καταχωρίσεις μένουν σε αυτή τη συσκευή. Το Family Sync είναι επιλογή σας.",
+  "Built by two parents, for our own daughter — we use it every day ourselves. It grows from what parents ask for: if anything is broken, missing or annoying, tap the message bubble inside and tell us. We read everything. And one rule above all: an app can help, but your paediatrician always comes first.":
+    "Φτιαγμένο από δύο γονείς, για τη δική μας κόρη — το χρησιμοποιούμε κι εμείς κάθε μέρα. Μεγαλώνει από όσα ζητούν οι γονείς: αν κάτι είναι χαλασμένο, λείπει ή ενοχλεί, πατήστε το συννεφάκι μηνύματος μέσα στην εφαρμογή και πείτε μας. Τα διαβάζουμε όλα. Και ένας κανόνας πάνω από όλα: μια εφαρμογή μπορεί να βοηθήσει, αλλά ο παιδίατρός σας έρχεται πάντα πρώτος.",
+  "Know another tired parent? Share Numalog": "Ξέρετε άλλον κουρασμένο γονιό; Μοιραστείτε το Numalog",
+  "Bring your log back": "Φέρτε πίσω το ημερολόγιό σας",
+  "However you kept it, there is a way home. Nothing here deletes anything, anywhere.":
+    "Όπως κι αν το κρατήσατε, υπάρχει δρόμος επιστροφής. Τίποτα εδώ δεν διαγράφει τίποτα, πουθενά.",
+  "or from this phone": "ή από αυτό το κινητό",
+  "Restore a backup file": "Επαναφορά αρχείου αντιγράφου",
+  "Entries inside an installed home-screen app can’t travel by link — for those, use a backup file or the cloud restore.":
+    "Οι καταχωρίσεις μέσα σε εγκατεστημένη εφαρμογή της αρχικής οθόνης δεν ταξιδεύουν με σύνδεσμο — γι’ αυτές, χρησιμοποιήστε αρχείο αντιγράφου ή επαναφορά από το cloud.",
+  // ——— Small components ———
+  "38 °C or higher": "38 °C ή υψηλότερη",
+  "(measured rectally) in a baby under 3 months needs urgent medical advice.":
+    "(από το ορθό) σε μωρό κάτω των 3 μηνών χρειάζεται επείγουσα ιατρική συμβουλή.",
+  "Add a birth date in Settings to tailor this advice.":
+    "Προσθέστε ημερομηνία γέννησης στις Ρυθμίσεις για να προσαρμοστεί αυτή η συμβουλή.",
+  "Temperature recorded.": "Η θερμοκρασία καταγράφηκε.",
+  "If your baby seems unwell or you are concerned, seek medical advice.":
+    "Αν το μωρό δείχνει αδιάθετο ή ανησυχείτε, ζητήστε ιατρική συμβουλή.",
+  "Below 36 °C": "Κάτω από 36 °C",
+  "can matter as much as a fever in a young baby. If it repeats or your baby seems unwell, seek medical advice.":
+    "μπορεί να μετράει όσο και ο πυρετός σε μικρό μωρό. Αν επαναληφθεί ή το μωρό δείχνει αδιάθετο, ζητήστε ιατρική συμβουλή.",
+  "New": "Νέο",
+  "Dismiss what's new": "Απόρριψη των νέων",
+  "What your baby is doing at this age": "Τι κάνει το μωρό σας σε αυτή την ηλικία",
+  "From day one": "Από την πρώτη μέρα",
+  "At {age}": "Στα {age}",
+  "Right now, {name} may be:": "Αυτή τη στιγμή, {name} μπορεί να:",
+  "Did you know?": "Το ξέρατε;",
+  "Every baby has their own pace.": "Κάθε μωρό έχει τον δικό του ρυθμό.",
+
+  // ——— Milestones ———
+  "Your baby": "Το μωρό σας",
+  "{who} is 1 week old today": "{who} έγινε 1 εβδομάδας σήμερα",
+  "Seven days of getting to know each other.": "Επτά μέρες γνωριμίας.",
+  "100 days of {who}": "100 μέρες με {who}",
+  "A hundred days — that deserves its own little party.": "Εκατό μέρες — αυτό αξίζει το δικό του πάρτι.",
+  "{who} is 1 year old today!": "{who} έγινε 1 χρονών σήμερα!",
+  "{who} is {years} years old today!": "{who} έγινε {years} χρονών σήμερα!",
+  "One whole year. Happy birthday, little one.": "Ένας ολόκληρος χρόνος. Χρόνια πολλά, μικρέ μου.",
+  "Happy birthday, little one.": "Χρόνια πολλά, μικρέ μου.",
+  "{who} is 1 month old today": "{who} έγινε 1 μηνός σήμερα",
+  "{who} is {months} months old today": "{who} έγινε {months} μηνών σήμερα",
+  "The first of many month-birthdays.": "Τα πρώτα από πολλά μηνιαία γενέθλια.",
+  "Happy month-birthday.": "Χρόνια πολλά για τα μηνιαία γενέθλια.",
+  "Share this milestone as a picture": "Κοινοποίηση του ορόσημου ως εικόνα",
+  "Dismiss the celebration": "Απόρριψη της γιορτής",
+
+  // ——— Share cards ———
+  "nappy": "πάνα",
+  "nappies": "πάνες",
+  "asleep": "ύπνος",
+  "of milk": "γάλα",
+  "nursed": "θηλασμός",
+  "wet": "τσίσα",
+  "dirty": "κακά",
+  "longest sleep": "μεγαλύτερος ύπνος",
+  "waking": "ξύπνημα",
+  "wakings": "ξυπνήματα",
+  "night feed": "νυχτερινό τάισμα",
+  "night feeds": "νυχτερινά ταΐσματα",
+  "All of it since day one, logged by hand — usually at 3am.":
+    "Όλα αυτά από την πρώτη μέρα, καταγραμμένα στο χέρι — συνήθως στις 3 τα ξημερώματα.",
+  "Feeds from {first} to {last}.": "Ταΐσματα από {first} έως {last}.",
+  "Today so far · {date}": "Σήμερα μέχρι τώρα · {date}",
+  "{who} {weekday}": "{weekday} — {who}",
+  "This week · {from} – {to}": "Αυτή η εβδομάδα · {from} – {to}",
+  "This week": "Αυτή η εβδομάδα",
+  "{who} week": "Η εβδομάδα — {who}",
+  "Every day logged.": "Καταγράφηκε κάθε μέρα.",
+  "{logged} of {total} days logged.": "{logged} από {total} ημέρες καταγράφηκαν.",
+  "{from} – {to} · {logged} of {total} days logged": "{from} – {to} · {logged} από {total} ημέρες καταγράφηκαν",
+  "Recorded at home by a parent, not a clinical measurement.":
+    "Καταγράφηκε στο σπίτι από γονιό, δεν είναι κλινική μέτρηση.",
+  "Last night · {date}": "Χθες το βράδυ · {date}",
+  "{who} night": "Η νύχτα — {who}",
+  "First feed at {time}.": "Πρώτο τάισμα στις {time}.",
+  "our baby": "το μωρό μας",
+  "calls right": "σωστές προβλέψεις",
+  "spot on": "ακριβώς",
+  "typical miss": "τυπική απόκλιση",
+  "It knew when the next sleep was coming": "Ήξερε πότε ερχόταν ο επόμενος ύπνος",
+  "It knew when the next feed was coming": "Ήξερε πότε ερχόταν το επόμενο τάισμα",
+  "Numalog called {who}’s last {n} sleeps": "Το Numalog βρήκε τους τελευταίους {n} ύπνους — {who}",
+  "Numalog called {who}’s last {n} feeds": "Το Numalog βρήκε τα τελευταία {n} ταΐσματα — {who}",
+  "Learned from our own log — no account, nothing sent anywhere.":
+    "Το έμαθε από το δικό μας ημερολόγιο — χωρίς λογαριασμό, τίποτα δεν στέλνεται πουθενά.",
+  "It works out the rhythm from what you have already logged.":
+    "Βγάζει τον ρυθμό από όσα έχετε ήδη καταγράψει.",
+
+  // ——— Thank-you card ———
+  "Thank you for being here": "Ευχαριστώ που είστε εδώ",
+  "Numalog started as two parents’ app for their own daughter, built in the evenings between feeds. I honestly never expected other families to find it — seeing it help with your baby means more than you’d guess. If anything is broken, missing, or just annoying, don’t hesitate to say so. It comes straight to me.":
+    "Το Numalog ξεκίνησε ως η εφαρμογή δύο γονιών για τη δική τους κόρη, φτιαγμένη τα βράδια ανάμεσα στα ταΐσματα. Ειλικρινά δεν περίμενα ποτέ ότι θα το έβρισκαν άλλες οικογένειες — το να βλέπω ότι βοηθά με το δικό σας μωρό σημαίνει περισσότερα απ’ όσα φαντάζεστε. Αν κάτι είναι χαλασμένο, λείπει, ή απλώς ενοχλεί, μη διστάσετε να το πείτε. Έρχεται κατευθείαν σε μένα.",
+  "Write to me": "Γράψτε μου",
+  "Say anything": "Πείτε ό,τι θέλετε",
+  "A bug, a wish, a hello — it all lands with the same person.":
+    "Ένα σφάλμα, μια ευχή, ένα γεια — όλα φτάνουν στον ίδιο άνθρωπο.",
 };
 
 export default el;

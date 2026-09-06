@@ -14,6 +14,7 @@ import { UnitSystem, formatVolume, weightParts } from "./units";
 import { VisitSummary } from "./visitSummary";
 import { LifetimeTotals } from "./lifetime";
 import { Activity } from "./types";
+import { currentLocale, t, tAge } from "../i18n";
 
 export type { LifetimeTotals };
 
@@ -39,11 +40,18 @@ export type WeekDay = {
   sleep: number;
 };
 
-const dayFormat = new Intl.DateTimeFormat("en", { day: "numeric", month: "short" });
-const longFormat = new Intl.DateTimeFormat("en", { weekday: "long", day: "numeric", month: "long" });
+// Lazy, per-locale: a card is built when it is shared, long after the
+// dictionary has loaded, and the picture must date itself in the language of
+// the person sending it.
+const dayFormat = () => new Intl.DateTimeFormat(currentLocale(), { day: "numeric", month: "short" });
+const longFormat = () => new Intl.DateTimeFormat(currentLocale(), { weekday: "long", day: "numeric", month: "long" });
 
+/** "Mia’s" — and in a language that does not mark possession this way, just
+    "Mia". The headline sentences below put the name where their own grammar
+    wants it, so this only has to hand back the right FORM of the name. */
 function possessive(name: string): string {
-  const who = name.trim() || "Baby";
+  const who = name.trim() || t("Baby");
+  if (currentLocale() !== "en") return who;
   return who.endsWith("s") ? `${who}’` : `${who}’s`;
 }
 
@@ -66,50 +74,50 @@ function bigVolume(ml: number, units: UnitSystem): string {
 export function milestoneCard(milestone: Milestone, now: number, totals: LifetimeTotals | null = null, units: UnitSystem = "metric"): CardSpec {
   const stats: CardStat[] = [];
   if (totals) {
-    if (totals.feeds > 0) stats.push({ value: String(totals.feeds), label: totals.feeds === 1 ? "feed" : "feeds" });
-    if (totals.nappies > 0) stats.push({ value: String(totals.nappies), label: totals.nappies === 1 ? "nappy" : "nappies" });
-    if (totals.sleepMinutes >= 60) stats.push({ value: hours(totals.sleepMinutes), label: "asleep" });
-    if (totals.ml > 0) stats.push({ value: bigVolume(totals.ml, units), label: "of milk" });
+    if (totals.feeds > 0) stats.push({ value: String(totals.feeds), label: totals.feeds === 1 ? t("feed") : t("feeds") });
+    if (totals.nappies > 0) stats.push({ value: String(totals.nappies), label: totals.nappies === 1 ? t("nappy") : t("nappies") });
+    if (totals.sleepMinutes >= 60) stats.push({ value: hours(totals.sleepMinutes), label: t("asleep") });
+    if (totals.ml > 0) stats.push({ value: bigVolume(totals.ml, units), label: t("of milk") });
   }
   return {
-    eyebrow: longFormat.format(new Date(now)),
-    headline: milestone.title,
-    sub: milestone.sub,
+    eyebrow: longFormat().format(new Date(now)),
+    headline: t(milestone.title, milestone.vars),
+    sub: t(milestone.sub),
     stats: stats.length ? stats : undefined,
-    footnote: stats.length ? "All of it since day one, logged by hand — usually at 3am." : undefined,
+    footnote: stats.length ? t("All of it since day one, logged by hand — usually at 3am.") : undefined,
   };
 }
 
-const weekdayFormat = new Intl.DateTimeFormat("en", { weekday: "long" });
+const weekdayFormat = () => new Intl.DateTimeFormat(currentLocale(), { weekday: "long" });
 
 /**
  * One day as a picture — "how did Tuesday go" for the parent who was at
  * work, or the grandmother who asks every evening.
  */
 export function dayCard(name: string, summary: DaySummary, units: UnitSystem): CardSpec {
-  const weekday = weekdayFormat.format(summary.date);
+  const weekday = weekdayFormat().format(summary.date);
   const stats: CardStat[] = [];
-  if (summary.feeds > 0) stats.push({ value: String(summary.feeds), label: summary.feeds === 1 ? "feed" : "feeds" });
+  if (summary.feeds > 0) stats.push({ value: String(summary.feeds), label: summary.feeds === 1 ? t("feed") : t("feeds") });
   if (summary.bottles === 0 && summary.nursingMinutes > 0) {
-    stats.push({ value: humanDuration(summary.nursingMinutes), label: "nursed" });
+    stats.push({ value: humanDuration(summary.nursingMinutes), label: t("nursed") });
   } else if (summary.ml > 0) {
-    stats.push({ value: formatVolume(summary.ml, units), label: "of milk" });
+    stats.push({ value: formatVolume(summary.ml, units), label: t("of milk") });
   }
   if (summary.diapers > 0) {
-    stats.push({ value: String(summary.wet), label: "wet" });
-    stats.push({ value: String(summary.dirty), label: "dirty" });
+    stats.push({ value: String(summary.wet), label: t("wet") });
+    stats.push({ value: String(summary.dirty), label: t("dirty") });
   }
-  if (summary.sleepMinutes > 0) stats.push({ value: humanDuration(summary.sleepMinutes), label: "asleep" });
+  if (summary.sleepMinutes > 0) stats.push({ value: humanDuration(summary.sleepMinutes), label: t("asleep") });
   if (summary.naps > 1 && summary.longestSleepMinutes > 0) {
-    stats.push({ value: humanDuration(summary.longestSleepMinutes), label: "longest sleep" });
+    stats.push({ value: humanDuration(summary.longestSleepMinutes), label: t("longest sleep") });
   }
   const bracket =
     summary.firstFeedAt && summary.lastFeedAt && summary.firstFeedAt !== summary.lastFeedAt
-      ? `Feeds from ${formatTime(summary.firstFeedAt)} to ${formatTime(summary.lastFeedAt)}.`
+      ? t("Feeds from {first} to {last}.", { first: formatTime(summary.firstFeedAt), last: formatTime(summary.lastFeedAt) })
       : undefined;
   return {
-    eyebrow: summary.isToday ? `Today so far · ${longFormat.format(summary.date)}` : longFormat.format(summary.date),
-    headline: `${possessive(name)} ${weekday}`,
+    eyebrow: summary.isToday ? t("Today so far · {date}", { date: longFormat().format(summary.date) }) : longFormat().format(summary.date),
+    headline: t("{who} {weekday}", { who: possessive(name), weekday }),
     sub: bracket,
     stats: stats.slice(0, 6),
   };
@@ -124,15 +132,15 @@ export function weekCard(name: string, weekly: WeekDay[], units: UnitSystem): Ca
   const first = weekly[0]?.date;
   const last = weekly[weekly.length - 1]?.date;
   const stats: CardStat[] = [
-    { value: String(feeds), label: feeds === 1 ? "feed" : "feeds" },
-    { value: String(diapers), label: diapers === 1 ? "nappy" : "nappies" },
+    { value: String(feeds), label: feeds === 1 ? t("feed") : t("feeds") },
+    { value: String(diapers), label: diapers === 1 ? t("nappy") : t("nappies") },
   ];
-  if (sleepMinutes > 0) stats.push({ value: hours(sleepMinutes), label: "asleep" });
-  if (ml > 0) stats.push({ value: formatVolume(ml, units), label: "of milk" });
+  if (sleepMinutes > 0) stats.push({ value: hours(sleepMinutes), label: t("asleep") });
+  if (ml > 0) stats.push({ value: formatVolume(ml, units), label: t("of milk") });
   return {
-    eyebrow: first && last ? `This week · ${dayFormat.format(first)} – ${dayFormat.format(last)}` : "This week",
-    headline: `${possessive(name)} week`,
-    sub: logged === weekly.length ? "Every day logged." : `${logged} of ${weekly.length} days logged.`,
+    eyebrow: first && last ? t("This week · {from} – {to}", { from: dayFormat().format(first), to: dayFormat().format(last) }) : t("This week"),
+    headline: t("{who} week", { who: possessive(name) }),
+    sub: logged === weekly.length ? t("Every day logged.") : t("{logged} of {total} days logged.", { logged, total: weekly.length }),
     stats,
   };
 }
@@ -140,26 +148,28 @@ export function weekCard(name: string, weekly: WeekDay[], units: UnitSystem): Ca
 const show = (value: number | null, digits = 0) => (value === null ? "—" : value.toFixed(digits));
 
 export function visitCard(summary: VisitSummary, name: string, age: string | null, units: UnitSystem): CardSpec {
-  const who = name.trim() || "Baby";
+  const who = name.trim() || t("Baby");
   const first = summary.days[0]?.date;
   const last = summary.days[summary.days.length - 1]?.date;
   const stats: CardStat[] = [
-    { value: show(summary.feedsPerDay), label: "feeds a day" },
-    { value: summary.mlPerDay === null ? "—" : formatVolume(summary.mlPerDay, units), label: "milk a day" },
-    { value: show(summary.wetPerDay), label: "wet a day" },
-    { value: show(summary.dirtyPerDay), label: "dirty a day" },
+    { value: show(summary.feedsPerDay), label: t("feeds a day") },
+    { value: summary.mlPerDay === null ? "—" : formatVolume(summary.mlPerDay, units), label: t("milk a day") },
+    { value: show(summary.wetPerDay), label: t("wet a day") },
+    { value: show(summary.dirtyPerDay), label: t("dirty a day") },
   ];
   if (summary.latestWeightGrams) {
     const weight = weightParts(summary.latestWeightGrams, units);
-    stats.push({ value: `${weight.value} ${weight.unit}`, label: "latest weight" });
+    stats.push({ value: `${weight.value} ${weight.unit}`, label: t("latest weight") });
   }
-  if (summary.gramsPerWeek !== null) stats.push({ value: `${summary.gramsPerWeek} g`, label: "gained a week" });
+  if (summary.gramsPerWeek !== null) stats.push({ value: `${summary.gramsPerWeek} g`, label: t("gained a week") });
   return {
-    eyebrow: "For the paediatrician",
-    headline: age ? `${who}, ${age} old` : who,
-    sub: first && last ? `${dayFormat.format(first)} – ${dayFormat.format(last)} · ${summary.loggedDays} of ${summary.days.length} days logged` : undefined,
+    eyebrow: t("For the paediatrician"),
+    headline: age ? t("{name}, {age} old", { name: who, age: tAge(age) }) : who,
+    sub: first && last
+      ? t("{from} – {to} · {logged} of {total} days logged", { from: dayFormat().format(first), to: dayFormat().format(last), logged: summary.loggedDays, total: summary.days.length })
+      : undefined,
     stats: stats.slice(0, 6),
-    footnote: "Recorded at home by a parent, not a clinical measurement.",
+    footnote: t("Recorded at home by a parent, not a clinical measurement."),
   };
 }
 
@@ -170,15 +180,15 @@ export function visitCard(summary: VisitSummary, name: string, age: string | nul
 export function nightCard(name: string, night: NightSummary): CardSpec {
   const stats: CardStat[] = [];
   if (night.sleepMinutes > 0) {
-    stats.push({ value: humanDuration(night.sleepMinutes), label: "asleep" });
-    stats.push({ value: humanDuration(night.longestStretchMinutes), label: "longest stretch" });
+    stats.push({ value: humanDuration(night.sleepMinutes), label: t("asleep") });
+    stats.push({ value: humanDuration(night.longestStretchMinutes), label: t("longest stretch") });
   }
-  if (night.wakeUps > 0) stats.push({ value: String(night.wakeUps), label: night.wakeUps === 1 ? "waking" : "wakings" });
-  if (night.feeds > 0) stats.push({ value: String(night.feeds), label: night.feeds === 1 ? "night feed" : "night feeds" });
+  if (night.wakeUps > 0) stats.push({ value: String(night.wakeUps), label: night.wakeUps === 1 ? t("waking") : t("wakings") });
+  if (night.feeds > 0) stats.push({ value: String(night.feeds), label: night.feeds === 1 ? t("night feed") : t("night feeds") });
   return {
-    eyebrow: `Last night · ${longFormat.format(night.from)}`,
-    headline: `${possessive(name)} night`,
-    sub: night.firstFeedAt ? `First feed at ${formatTime(night.firstFeedAt)}.` : undefined,
+    eyebrow: t("Last night · {date}", { date: longFormat().format(night.from) }),
+    headline: t("{who} night", { who: possessive(name) }),
+    sub: night.firstFeedAt ? t("First feed at {time}.", { time: formatTime(night.firstFeedAt) }) : undefined,
     stats: stats.slice(0, 4),
   };
 }
@@ -188,16 +198,18 @@ export function nightCard(name: string, night: NightSummary): CardSpec {
  * parent who has just watched a prediction land and wants to show somebody.
  */
 export function rhythmCard(name: string, record: RhythmRecord): CardSpec {
-  const who = name.trim() || "our baby";
+  const who = name.trim() || t("our baby");
   const stats: CardStat[] = [
-    { value: `${record.hits}/${record.checked}`, label: "calls right" },
-    { value: record.typicalMiss === 0 ? "spot on" : `${record.typicalMiss} min`, label: "typical miss" },
+    { value: `${record.hits}/${record.checked}`, label: t("calls right") },
+    { value: record.typicalMiss === 0 ? t("spot on") : t("{n} min", { n: record.typicalMiss }), label: t("typical miss") },
   ];
   return {
-    eyebrow: record.kind === "sleep" ? "It knew when the next sleep was coming" : "It knew when the next feed was coming",
-    headline: `Numalog called ${who}’s last ${record.checked} ${record.kind === "sleep" ? "sleeps" : "feeds"}`,
-    sub: "Learned from our own log — no account, nothing sent anywhere.",
+    eyebrow: record.kind === "sleep" ? t("It knew when the next sleep was coming") : t("It knew when the next feed was coming"),
+    headline: record.kind === "sleep"
+      ? t("Numalog called {who}’s last {n} sleeps", { who, n: record.checked })
+      : t("Numalog called {who}’s last {n} feeds", { who, n: record.checked }),
+    sub: t("Learned from our own log — no account, nothing sent anywhere."),
     stats,
-    footnote: "It works out the rhythm from what you have already logged.",
+    footnote: t("It works out the rhythm from what you have already logged."),
   };
 }

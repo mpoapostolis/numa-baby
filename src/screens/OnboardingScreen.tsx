@@ -52,6 +52,7 @@ import { handoffPeers, handoffSendUrl, moveTarget, originLabel } from "../domain
 import { inAppBrowser } from "../domain/install";
 import { FeedingMode, Profile } from "../domain/types";
 import { FamilySync } from "../hooks/useFamilySync";
+import { t } from "../i18n";
 
 const RestoreWithGoogle = lazy(() =>
   import("../components/GoogleRecovery").then((m) => ({ default: m.RestoreWithGoogle })),
@@ -118,12 +119,12 @@ export default function OnboardingScreen({
       <header className="onboarding-header">
         <div className="onboarding-brand">
           <span className="wordmark-mark"><BabyFace /></span>
-          <span><strong>Numalog</strong><small>Private family log</small></span>
+          <span><strong>Numalog</strong><small>{t("Private family log")}</small></span>
         </div>
         <label className="onboarding-theme" htmlFor={nightModeId}>
           {nightMode ? <Moon size={17} /> : <Sun size={17} />}
-          <span>Night mode</span>
-          <Switch id={nightModeId} checked={nightMode} onCheckedChange={onNightModeChange} aria-label="Use night mode" />
+          <span>{t("Night mode")}</span>
+          <Switch id={nightModeId} checked={nightMode} onCheckedChange={onNightModeChange} aria-label={t("Use night mode")} />
         </label>
       </header>
 
@@ -134,25 +135,24 @@ export default function OnboardingScreen({
           <Card className="recovery-card">
             <CardHeader>
               <span className="onboarding-card-icon"><ShieldCheck /></span>
-              <CardTitle asChild><h1>Your local log needs attention</h1></CardTitle>
+              <CardTitle asChild><h1>{t("Your local log needs attention")}</h1></CardTitle>
               <CardDescription>
-                The saved copy could not be read, so Numalog left it untouched. Download it before starting over, or restore a valid backup.
+                {t("The saved copy could not be read, so Numalog left it untouched. Download it before starting over, or restore a valid backup.")}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {storageWarning && <div className="onboarding-alert" role="alert">{storageWarning}</div>}
               <div className="recovery-actions">
-                <Button onClick={onDownloadRecovery}><Download /> Download the saved copy</Button>
-                <Button variant="outline" onClick={() => restoreRef.current?.click()}><Upload /> Restore a backup</Button>
-                <Button variant="ghost" onClick={onResetRecovery}>Reset and start clean</Button>
+                <Button onClick={onDownloadRecovery}><Download /> {t("Download the saved copy")}</Button>
+                <Button variant="outline" onClick={() => restoreRef.current?.click()}><Upload /> {t("Restore a backup")}</Button>
+                <Button variant="ghost" onClick={onResetRecovery}>{t("Reset and start clean")}</Button>
               </div>
               {/* The cloud way home — for the family whose only good copy
                   lives behind their guard. Below the download on purpose:
                   restoring overwrites the unreadable local copy, so saving
                   it first stays the headline advice. */}
               <p className="t-meta">
-                Protected your log with Google or email? After downloading the
-                saved copy, you can bring everything back from the cloud:
+                {t("Protected your log with Google or email? After downloading the saved copy, you can bring everything back from the cloud:")}
               </p>
               <Suspense fallback={null}>
                 <RestoreWithGoogle familySync={familySync} onRestored={onGoogleRestored} />
@@ -164,19 +164,18 @@ export default function OnboardingScreen({
         <div className="onboarding-layout">
           <section className="onboarding-intro" aria-labelledby="onboarding-title">
             <NurseryScene className="onboarding-scene" />
-            <p className="eyebrow">Private by default</p>
-            <h1 id="onboarding-title">The whole day,<br />without the mental load.</h1>
-            <p>Log feeds, diapers, burping and growth in seconds. No account needed — your entries stay on this device until you choose to share them.</p>
+            <p className="eyebrow">{t("Private by default")}</p>
+            <h1 id="onboarding-title">{t("The whole day,")}<br />{t("without the mental load.")}</h1>
+            <p>{t("Log feeds, diapers, burping and growth in seconds. No account needed — your entries stay on this device until you choose to share them.")}</p>
           </section>
 
           {welcomeBack ? (
             <Card className="onboarding-card">
               <CardHeader>
                 <span className="onboarding-card-icon onboarding-baby-icon"><BabyFace /><TinyStars /></span>
-                <CardTitle asChild><h2>Welcome back</h2></CardTitle>
+                <CardTitle asChild><h2>{t("Welcome back")}</h2></CardTitle>
                 <CardDescription>
-                  This device has used Numalog before — continue, and your log
-                  comes straight down from the cloud.
+                  {t("This device has used Numalog before — continue, and your log comes straight down from the cloud.")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="welcome-back-body">
@@ -184,7 +183,7 @@ export default function OnboardingScreen({
                   <RestoreWithGoogle familySync={familySync} onRestored={onGoogleRestored} />
                 </Suspense>
                 <Button type="button" variant="ghost" onClick={() => setFreshSetup(true)}>
-                  Set up a new baby instead
+                  {t("Set up a new baby instead")}
                 </Button>
               </CardContent>
             </Card>
@@ -192,15 +191,15 @@ export default function OnboardingScreen({
           <Card className="onboarding-card">
             <CardHeader>
               <span className="onboarding-card-icon onboarding-baby-icon"><BabyFace /><TinyStars /></span>
-              <CardTitle asChild><h2>Set up your baby</h2></CardTitle>
-              <CardDescription>Everything is optional. You can change it later.</CardDescription>
+              <CardTitle asChild><h2>{t("Set up your baby")}</h2></CardTitle>
+              <CardDescription>{t("Everything is optional. You can change it later.")}</CardDescription>
             </CardHeader>
             <CardContent>
               <form
                 className="onboarding-form"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  onComplete({ ...draft, name: draft.name.trim() || "Baby" });
+                  onComplete({ ...draft, name: draft.name.trim() || t("Baby") });
                 }}
               >
                 <FieldGroup>
@@ -211,7 +210,7 @@ export default function OnboardingScreen({
                       stage list and every sourced fact simply do not render:
                       the app looks emptier than it is, for want of one tap. */}
                   <Field>
-                    <FieldLabel htmlFor={birthDateId}>Date of birth</FieldLabel>
+                    <FieldLabel htmlFor={birthDateId}>{t("Date of birth")}</FieldLabel>
                     {/* An empty date input draws nothing at all on iOS — a
                         blank rounded box under a label, with no hint that it
                         opens anything. The calendar mark says what it is, and
@@ -239,11 +238,11 @@ export default function OnboardingScreen({
                       />
                     </InputGroup>
                     <FieldDescription>
-                      Powers the day counter and matches the guidance to this exact week. You can skip it.
+                      {t("Powers the day counter and matches the guidance to this exact week. You can skip it.")}
                     </FieldDescription>
                   </Field>
                   <Field>
-                    <FieldLabel htmlFor={nameId}>Name <span className="optional-label">Optional</span></FieldLabel>
+                    <FieldLabel htmlFor={nameId}>{t("Name")} <span className="optional-label">{t("Optional")}</span></FieldLabel>
                     <InputGroup>
                       <InputGroupInput
                         id={nameId}
@@ -257,14 +256,14 @@ export default function OnboardingScreen({
                         // with someone who has never heard of it.
                         maxLength={80}
                         value={draft.name}
-                        placeholder="Baby’s name"
+                        placeholder={t("Baby’s name")}
                         onChange={(event) => setDraft({ ...draft, name: event.target.value })}
                       />
                     </InputGroup>
                   </Field>
 
                   <Field>
-                    <FieldLabel asChild><span id={sexLabelId}>Girl or boy <span className="optional-label">Optional</span></span></FieldLabel>
+                    <FieldLabel asChild><span id={sexLabelId}>{t("Girl or boy")} <span className="optional-label">{t("Optional")}</span></span></FieldLabel>
                     <ToggleGroup
                       type="single"
                       value={draft.sex ?? "skip"}
@@ -272,14 +271,14 @@ export default function OnboardingScreen({
                       aria-labelledby={sexLabelId}
                       onValueChange={(value) => value && setDraft({ ...draft, sex: value === "girl" || value === "boy" ? value : undefined })}
                     >
-                      <ToggleGroupItem value="girl">Girl<Check className="choice-check" /></ToggleGroupItem>
-                      <ToggleGroupItem value="boy">Boy<Check className="choice-check" /></ToggleGroupItem>
-                      <ToggleGroupItem value="skip">Skip<Check className="choice-check" /></ToggleGroupItem>
+                      <ToggleGroupItem value="girl">{t("Girl")}<Check className="choice-check" /></ToggleGroupItem>
+                      <ToggleGroupItem value="boy">{t("Boy")}<Check className="choice-check" /></ToggleGroupItem>
+                      <ToggleGroupItem value="skip">{t("Skip")}<Check className="choice-check" /></ToggleGroupItem>
                     </ToggleGroup>
-                    <FieldDescription>Used only for the growth guide’s reference ranges.</FieldDescription>
+                    <FieldDescription>{t("Used only for the growth guide’s reference ranges.")}</FieldDescription>
                   </Field>
                   <Field>
-                    <FieldLabel asChild><span id={feedingLabelId}>Feeding</span></FieldLabel>
+                    <FieldLabel asChild><span id={feedingLabelId}>{t("Feeding")}</span></FieldLabel>
                     <ToggleGroup
                       type="single"
                       value={draft.feedingMode}
@@ -289,19 +288,19 @@ export default function OnboardingScreen({
                     >
                       {(["breast", "bottle", "mixed"] as FeedingMode[]).map((feedingMode) => (
                         <ToggleGroupItem key={feedingMode} value={feedingMode}>
-                          {feedingMode[0].toUpperCase() + feedingMode.slice(1)}
+                          {t(feedingMode[0].toUpperCase() + feedingMode.slice(1))}
                           <Check className="choice-check" />
                         </ToggleGroupItem>
                       ))}
                     </ToggleGroup>
-                    <FieldDescription>This only changes the quick actions you see.</FieldDescription>
+                    <FieldDescription>{t("This only changes the quick actions you see.")}</FieldDescription>
                   </Field>
                 </FieldGroup>
 
                 {storageWarning && <div className="onboarding-alert" role="alert">{storageWarning}</div>}
-                <Button type="submit" size="lg" className="onboarding-primary">Start tracking <ChevronRight /></Button>
+                <Button type="submit" size="lg" className="onboarding-primary">{t("Start tracking")} <ChevronRight /></Button>
                 <Button type="button" variant="ghost" onClick={() => setRestoreOpen(true)}>
-                  <Upload /> I already have data — bring it back
+                  <Upload /> {t("I already have data — bring it back")}
                 </Button>
                 {/* Whoever arrives here from the app's older web address has a
                     full log sitting in a browser store this page cannot see —
@@ -320,20 +319,16 @@ export default function OnboardingScreen({
               they have not used yet. */}
           <aside className="onboarding-aside">
             <div className="onboarding-points">
-              <div><span className="glyph-bottle"><Milk /></span><p><strong>One-tap logging</strong><small>Details only when you need them.</small></p></div>
-              <div><span className="glyph-burp"><Clock /></span><p><strong>Live timers and patterns</strong><small>See what happened and what may be next.</small></p></div>
-              <div><span className="onboarding-private-icon"><ShieldCheck /></span><p><strong>Yours by default</strong><small>Entries stay on this device. Family Sync is opt-in.</small></p></div>
+              <div><span className="glyph-bottle"><Milk /></span><p><strong>{t("One-tap logging")}</strong><small>{t("Details only when you need them.")}</small></p></div>
+              <div><span className="glyph-burp"><Clock /></span><p><strong>{t("Live timers and patterns")}</strong><small>{t("See what happened and what may be next.")}</small></p></div>
+              <div><span className="onboarding-private-icon"><ShieldCheck /></span><p><strong>{t("Yours by default")}</strong><small>{t("Entries stay on this device. Family Sync is opt-in.")}</small></p></div>
             </div>
             {/* The human line, quietly, where a stranger decides whether to
               trust this thing with their baby's nights: who builds it,
               why, and that feedback is how it grows. A note, never a
               popup — the first open stays sacred. */}
           <p className="onboarding-note">
-            Built by two parents, for our own daughter — we use it every
-            day ourselves. It grows from what parents ask for: if anything
-            is broken, missing or annoying, tap the message bubble inside
-            and tell us. We read everything. And one rule above all: an app
-            can help, but your paediatrician always comes first.
+            {t("Built by two parents, for our own daughter — we use it every day ourselves. It grows from what parents ask for: if anything is broken, missing or annoying, tap the message bubble inside and tell us. We read everything. And one rule above all: an app can help, but your paediatrician always comes first.")}
           </p>
           {/* The person most likely to pass it on is the one who just
               arrived from a friend's link — meet them where they are. */}
@@ -346,7 +341,7 @@ export default function OnboardingScreen({
               setShareOpen(true);
             }}
           >
-            <Gift size={16} aria-hidden="true" /> Know another tired parent? Share Numalog
+            <Gift size={16} aria-hidden="true" /> {t("Know another tired parent? Share Numalog")}
           </Button>
           </aside>
         </div>
@@ -355,10 +350,9 @@ export default function OnboardingScreen({
       {mode === "onboarding" && (
         <Dialog open={restoreOpen} onOpenChange={setRestoreOpen}>
           <DialogContent className="restore-doors">
-            <DialogTitle>Bring your log back</DialogTitle>
+            <DialogTitle>{t("Bring your log back")}</DialogTitle>
             <DialogDescription>
-              However you kept it, there is a way home. Nothing here deletes
-              anything, anywhere.
+              {t("However you kept it, there is a way home. Nothing here deletes anything, anywhere.")}
             </DialogDescription>
             {/* Door one, emphasized: the cloud — everything downloads and
                 stays synced from then on. */}
@@ -366,11 +360,11 @@ export default function OnboardingScreen({
               <RestoreWithGoogle familySync={familySync} onRestored={onGoogleRestored} />
             </Suspense>
 
-            <div className="door-divider" aria-hidden="true"><span>or from this phone</span></div>
+            <div className="door-divider" aria-hidden="true"><span>{t("or from this phone")}</span></div>
 
             <div className="door-rows">
               <Button type="button" variant="ghost" className="door-row" onClick={() => { setRestoreOpen(false); restoreRef.current?.click(); }}>
-                <Upload /> Restore a backup file
+                <Upload /> {t("Restore a backup file")}
               </Button>
               {showHandoffDoor && handoffFrom && (
                 <Button
@@ -379,14 +373,13 @@ export default function OnboardingScreen({
                   className="door-row"
                   onClick={() => { window.location.href = handoffSendUrl(handoffFrom, window.location.origin); }}
                 >
-                  <ArrowLeftRight /> Bring my log from {originLabel(handoffFrom)}
+                  <ArrowLeftRight /> {t("Bring my log from {origin}", { origin: originLabel(handoffFrom) })}
                 </Button>
               )}
             </div>
 
             <p className="door-note">
-              Entries inside an installed home-screen app can’t travel by
-              link — for those, use a backup file or the cloud restore.
+              {t("Entries inside an installed home-screen app can’t travel by link — for those, use a backup file or the cloud restore.")}
             </p>
           </DialogContent>
         </Dialog>
