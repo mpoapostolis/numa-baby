@@ -46,6 +46,34 @@ export const REMINDERS = {
 export type ReminderKind = keyof typeof REMINDERS;
 
 /**
+ * The same two reminders, in the languages the app speaks.
+ *
+ * They live here rather than in the app's dictionary because nothing of the
+ * app is running when these are written: the phone is asleep, the words are
+ * chosen by a cron in a Worker, and the only thing it knows about the
+ * person is the language their phone said it wanted when the alarm was set.
+ * A language this table has never heard of falls back to the English above,
+ * which is the same bargain the app itself makes.
+ */
+const REMINDERS_EL: Record<ReminderKind, { title: string; body: string }> = {
+  feed: {
+    title: "Ώρα για τα σημάδια του ταΐσματος",
+    body: "Η υπενθύμιση ταΐσματος έφτασε. Ακολουθήστε τα σημάδια του μωρού σας και τις οδηγίες του γιατρού.",
+  },
+  diaper: {
+    title: "Έλεγχος πάνας",
+    body: "Έχει περάσει ώρα από την τελευταία αλλαγή.",
+  },
+};
+
+/** The lock-screen words for one due alarm, in that phone's language. */
+export function reminderCopy(kind: ReminderKind, lang: string | null) {
+  const english = REMINDERS[kind];
+  const translated = lang === "el" ? REMINDERS_EL[kind] : null;
+  return { ...english, ...(translated ?? {}) };
+}
+
+/**
  * The push services a real browser subscription can point at. Anything else
  * is either a mistake or someone trying to make this Worker fetch a URL of
  * their choosing.
@@ -108,6 +136,9 @@ export async function ensurePushTable(client: Client): Promise<void> {
   await client
     .execute("CREATE INDEX IF NOT EXISTS idx_push_family ON push_subscriptions(family_id)")
     .catch(() => undefined);
+  // Also added later. NULL means "never told us", which reads as English —
+  // the same fallback the app makes for a sentence nobody translated.
+  await client.execute("ALTER TABLE push_subscriptions ADD COLUMN lang TEXT").catch(() => undefined);
   tableReady = true;
 }
 
@@ -129,7 +160,16 @@ export type ScheduleBody = {
   keys?: { p256dh?: unknown; auth?: unknown };
   feedDueAt?: unknown;
   diaperDueAt?: unknown;
+  /** The language this phone reads, so the lock screen speaks it. */
+  lang?: unknown;
 };
+
+/** Anything that is not a language this Worker has words for is stored as
+    null and read as English. A short allowlist, not a sanitiser: this value
+    arrives unauthenticated and only ever chooses between fixed strings. */
+function language(value: unknown): string | null {
+  return value === "el" ? "el" : null;
+}
 
 /**
  * Store (or update) one phone's alarm clock.
@@ -155,6 +195,7 @@ export async function saveSchedule(
   if (p256dh.length > 200 || auth.length > 100) return false;
   const feedDueAt = dueAt(body.feedDueAt, now);
   const diaperDueAt = dueAt(body.diaperDueAt, now);
+  const lang = language(body.lang);
   // ASKED FOR AN ALARM AND GOT NONE STORED. dueAt() nulls a time that is in
   // the past or more than a week out, which a phone with a slow clock
   // produces routinely — and answering true for that was a lie the client
@@ -166,8 +207,8 @@ export async function saveSchedule(
   const at = new Date(now).toISOString();
   await ensurePushTable(client);
   await client.execute({
-    sql: `INSERT INTO push_subscriptions (endpoint, p256dh, auth, feed_due_at, diaper_due_at, created_at, updated_at, family_id)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    sql: `INSERT INTO push_subscriptions (endpoint, p256dh, auth, feed_due_at, diaper_due_at, created_at, updated_at, family_id, lang)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
           ON CONFLICT(endpoint) DO UPDATE SET
             p256dh = excluded.p256dh,
             auth = excluded.auth,
@@ -192,8 +233,11 @@ export async function saveSchedule(
             -- entitled to anyway. Losing a link is recoverable on the next
             -- write; keeping a stale one is a household's notifications
             -- going to a phone that left it.
-            family_id = excluded.family_id`,
-    args: [endpoint, p256dh, auth, feedDueAt, diaperDueAt, at, at, familyId],
+            family_id = excluded.family_id,
+            -- Same reasoning, less at stake: a phone whose owner switched to
+            -- English must stop being sent Greek.
+            lang = excluded.lang`,
+    args: [endpoint, p256dh, auth, feedDueAt, diaperDueAt, at, at, familyId, lang],
   });
   return true;
 }
@@ -246,7 +290,7 @@ const STALE_AFTER_MS = 45 * 60_000;
  */
 const MAX_SEND_ATTEMPTS = 3;
 
-export type DueRow = { endpoint: string; p256dh: string; auth: string; kind: ReminderKind; failures: number };
+export type DueRow = { endpoint: string; p256dh: string; auth: string; kind: ReminderKind; failures: number; lang: string | null };
 
 /** The rows whose time has come, oldest first, capped. */
 export async function findDue(client: Client, now: number, limit = SEND_LIMIT): Promise<DueRow[]> {
@@ -254,10 +298,10 @@ export async function findDue(client: Client, now: number, limit = SEND_LIMIT): 
   const at = new Date(now).toISOString();
   const floor = new Date(now - STALE_AFTER_MS).toISOString();
   const rows = await client.execute({
-    sql: `SELECT endpoint, p256dh, auth, failures, 'feed' AS kind, feed_due_at AS due FROM push_subscriptions
+    sql: `SELECT endpoint, p256dh, auth, failures, lang, 'feed' AS kind, feed_due_at AS due FROM push_subscriptions
             WHERE feed_due_at IS NOT NULL AND feed_due_at <= ? AND feed_due_at > ?
           UNION ALL
-          SELECT endpoint, p256dh, auth, failures, 'diaper' AS kind, diaper_due_at AS due FROM push_subscriptions
+          SELECT endpoint, p256dh, auth, failures, lang, 'diaper' AS kind, diaper_due_at AS due FROM push_subscriptions
             WHERE diaper_due_at IS NOT NULL AND diaper_due_at <= ? AND diaper_due_at > ?
           ORDER BY due LIMIT ?`,
     args: [at, floor, at, floor, limit],
@@ -268,6 +312,7 @@ export async function findDue(client: Client, now: number, limit = SEND_LIMIT): 
     auth: String(row.auth),
     kind: String(row.kind) === "diaper" ? "diaper" : "feed",
     failures: Number(row.failures ?? 0),
+    lang: row.lang == null ? null : String(row.lang),
   }));
 }
 
@@ -485,7 +530,7 @@ export async function sendDue(
   let gone = 0;
   let failed = 0;
 
-  const results = await deliver(vapid, due, (row) => ({ ...REMINDERS[row.kind], url: "/" }), 30 * 60);
+  const results = await deliver(vapid, due, (row) => ({ ...reminderCopy(row.kind, row.lang), url: "/" }), 30 * 60);
 
   for (const { row, status } of results) {
     if (isGone(status)) {

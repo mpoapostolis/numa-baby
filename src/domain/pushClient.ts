@@ -9,6 +9,8 @@
 // future timestamps. Never a name, never an entry, never how long since the
 // last feed. The server is an alarm clock, not a witness.
 
+import { currentLocale } from "../i18n";
+
 const KEY_URL = "/api/push/key";
 const SCHEDULE_URL = "/api/push/schedule";
 const OFF_URL = "/api/push/off";
@@ -83,6 +85,10 @@ export async function sendSchedule(schedule: Schedule, token?: string): Promise<
       keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
       feedDueAt: schedule.feedDueAt,
       diaperDueAt: schedule.diaperDueAt,
+      // Sent with the alarm, not with the person: the Worker writes the lock
+      // screen while this app is closed, so the language has to be stored
+      // beside the time it will ring.
+      lang: currentLocale(),
     }),
   })
     .then((response) => response.ok)

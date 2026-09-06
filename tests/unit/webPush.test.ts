@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { webcrypto as crypto } from "node:crypto";
 import { buildPushPayload } from "@block65/webcrypto-web-push";
-import { REMINDERS, dueAt, isPushEndpoint, saveSchedule, sendDue } from "../../worker/push";
+import { REMINDERS, dueAt, isPushEndpoint, reminderCopy, saveSchedule, sendDue } from "../../worker/push";
 
 // A push nobody can decrypt is a reminder that never rings, and the failure
 // is silent — the push service accepts the bytes and the phone drops them.
@@ -110,6 +110,26 @@ describe("the push a phone actually receives", () => {
     // people can see, and the server does not know any of it anyway.
     expect(words).not.toMatch(/\d/);
     expect(words.toLowerCase()).not.toMatch(/name|ago|hours since|ml|oz/);
+  });
+
+  it("rings in the language the phone asked for, and in English otherwise", () => {
+    // The app is closed when this text is chosen, so the only thing the
+    // Worker knows is what the phone said when it set the alarm.
+    expect(reminderCopy("feed", "el").title).toBe("Ώρα για τα σημάδια του ταΐσματος");
+    expect(reminderCopy("diaper", "el").body).toBe("Έχει περάσει ώρα από την τελευταία αλλαγή.");
+    // The tag comes from the English row either way: it is what makes the
+    // closed-app push replace the one the open app already showed.
+    expect(reminderCopy("feed", "el").tag).toBe(REMINDERS.feed.tag);
+    for (const unknown of [null, "en", "tl", "", "nonsense"]) {
+      expect(reminderCopy("feed", unknown).title).toBe(REMINDERS.feed.title);
+    }
+  });
+
+  it("keeps the Greek reminders as quiet about the baby as the English ones", () => {
+    const greek = [reminderCopy("feed", "el"), reminderCopy("diaper", "el")]
+      .map((r) => `${r.title} ${r.body}`)
+      .join(" ");
+    expect(greek).not.toMatch(/\d/);
   });
 });
 
