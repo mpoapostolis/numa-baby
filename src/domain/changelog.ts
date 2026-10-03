@@ -17,6 +17,17 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-10-03",
+    title: "Missed a tap? Fix the time. And sounds that keep going",
+    items: [
+      "Two of you asked for these through the feedback box — thank you, both are in.",
+      "Forgot to tap Sleep, or Wake up? While a timer is running, tap “Started 21:40 · Edit” under the clock: move the start back to when it really began, or fill in when the baby actually woke.",
+      "For a feed, nappy or sleep you never logged at all, tap “Earlier” in the corner of its card (it used to say “Past”) and set the times. A bottle’s time is under “Change”.",
+      "The sounds no longer stop when you switch tabs. Checking the timeline for the last feed used to silence the white noise — now it plays on.",
+      "The sounds panel remembers what you played last. Pick “Keep going” once and it stays picked; the volume still starts low every time.",
+    ],
+  },
+  {
     id: "2026-09-06",
     title: "Faster at 3am, and the theme follows your phone",
     items: [

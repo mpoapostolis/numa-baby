@@ -27,6 +27,8 @@ import {
   NoiseKind,
   TIMER_CHOICES,
   TimerChoice,
+  loadSootheChoice,
+  saveSootheChoice,
   soundUrl,
 } from "../domain/soothe";
 
@@ -46,13 +48,16 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
   // with it, so the white noise stopped with a baby half asleep.
   useCloseOnBack(open, () => onOpenChange(false));
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [mode, setMode] = useState<"noise" | "lullaby">("noise");
-  const [kind, setKind] = useState<NoiseKind>("brown");
-  const [tune, setTune] = useState<LullabyKind>("brahms");
+  // Opens on what was played last, "Keep going" included — read once, when
+  // the player first mounts.
+  const [remembered] = useState(loadSootheChoice);
+  const [mode, setMode] = useState<"noise" | "lullaby">(remembered.mode);
+  const [kind, setKind] = useState<NoiseKind>(remembered.kind);
+  const [tune, setTune] = useState<LullabyKind>(remembered.tune);
 
   const [playing, setPlaying] = useState(false);
   const [volume, setVolume] = useState(0.35);
-  const [timer, setTimer] = useState<TimerChoice>(30);
+  const [timer, setTimer] = useState<TimerChoice>(remembered.timer);
   // An end time, not a countdown: a decrementing counter drifts, and it stops
   // being decremented at all once the phone sleeps the timers.
   const [endsAt, setEndsAt] = useState<number | null>(null);
@@ -135,6 +140,7 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
     setPlaying(true);
     setNow(Date.now());
     setEndsAt(timer === null ? null : Date.now() + timer * 60_000);
+    saveSootheChoice({ mode, kind, tune, timer });
     track("soothe_started", { mode, sound: mode === "noise" ? kind : tune, timer: timer ?? 0 });
 
     // Lock-screen controls, so it can be stopped without unlocking a phone
@@ -228,6 +234,7 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
               <button
                 key={minutes}
                 type="button"
+                aria-pressed={timer === minutes}
                 className={timer === minutes ? "soothe-timer is-active" : "soothe-timer"}
                 onClick={() => setTimer(minutes)}
               >
@@ -236,6 +243,7 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
             ))}
             <button
               type="button"
+              aria-pressed={timer === null}
               className={timer === null ? "soothe-timer is-active" : "soothe-timer"}
               onClick={() => setTimer(null)}
             >

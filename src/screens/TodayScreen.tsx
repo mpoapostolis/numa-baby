@@ -1,5 +1,5 @@
 import { Suspense, lazy, memo, useState } from "react";
-import { ChevronRight, Cloud, CloudOff, Gift, Milk, Pill, ShieldCheck, Square, Thermometer, Utensils, Waves, Weight } from "lucide-react";
+import { ChevronRight, Cloud, CloudOff, Gift, History, Milk, Pill, ShieldCheck, Square, Thermometer, Utensils, Waves, Weight } from "lucide-react";
 
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -42,11 +42,6 @@ import { ROUTINE_TYPE, pendingRoutines, type Routine } from "../domain/routines"
 import { shareCardOnTap } from "../lib/shareOnTap";
 
 // A party is downloaded only on a day there is one.
-// The sound player is only needed once someone asks for it — it stays out
-// of the bundle every parent downloads.
-const SoothePlayer = lazy(() =>
-  import("../components/SoothePlayer").then((m) => ({ default: m.SoothePlayer })),
-);
 // Same rule for the share fallback dialog — phones use the native sheet and
 // never load this chunk at all.
 const ShareNumalogDialog = lazy(() => import("../components/ShareNumalog"));
@@ -155,7 +150,7 @@ function sideLabel(side: Activity["side"]) {
 // meant the tiles reflowed under a thumb mid-tap and the thing just started
 // was the one thing not on screen. One place per activity, always the same
 // place: tap Sleep and the Sleep tile becomes the clock.
-function TimerTile({ activity, onStop }: { activity: Activity; onStop: () => void }) {
+function TimerTile({ activity, onStop, onEdit }: { activity: Activity; onStop: () => void; onEdit: (activity: Activity) => void }) {
   const isSleep = activity.type === "sleep";
   const isBurp = activity.type === "burp";
   const title = isSleep
@@ -175,7 +170,13 @@ function TimerTile({ activity, onStop }: { activity: Activity; onStop: () => voi
       {/* Seconds, because a stopwatch that only moves once a minute looks
           stopped — and looking stopped is how a parent taps it twice. */}
       <p className="tile-elapsed"><LiveClock startedAt={activity.startedAt} /></p>
-      <p className="tile-started">Started {formatTime(activity.startedAt)}</p>
+      {/* Asked for from the feedback box: the tap that started this may have
+          come twenty minutes late, and the one that stops it may never come.
+          The start time is the way into the edit sheet, where Started moves
+          back and Ended takes the wake-up that was missed. */}
+      <button type="button" className="tile-started" onClick={() => onEdit(activity)}>
+        Started {formatTime(activity.startedAt)} <span className="tile-started-edit">· Edit</span>
+      </button>
       {/* The accessible name starts with the visible label, so "tap Wake up"
           works for voice control (WCAG label-in-name). */}
       <Button className="tile-stop" onClick={onStop} aria-label={`${stopLabel} — stop ${activity.type} timer`}>
@@ -192,10 +193,12 @@ function TimerRow({
   activity,
   now,
   onStop,
+  onEdit,
 }: {
   activity: Activity;
   now: number;
   onStop: () => void;
+  onEdit: (activity: Activity) => void;
 }) {
   const isSleep = activity.type === "sleep";
   const isBurp = activity.type === "burp";
@@ -219,6 +222,9 @@ function TimerRow({
       </div>
       {isBurp && <LiveClock startedAt={activity.startedAt} />}
       <div className="log-actions">
+        <Button variant="ghost" onClick={() => onEdit(activity)} aria-label={`Edit — change when this ${activity.type} started or ended`}>
+          Edit
+        </Button>
         <Button onClick={onStop} aria-label={`${stopLabel} — stop ${activity.type} timer`}>
           <Square size={14} fill="currentColor" aria-hidden="true" /> {stopLabel}
         </Button>
@@ -244,6 +250,8 @@ type TodayScreenProps = {
   onManualNursing: () => void;
   onEdit: (activity: Activity) => void;
   onSeeTimeline: () => void;
+  /** The sound player belongs to App, not to this screen — see App.tsx. */
+  onOpenSoothe: () => void;
   /** Where the log lives right now, in one word. */
   cloudState: "none" | "synced" | "syncing" | "offline" | "revoked";
   /** Tap on the note — the doors when unprotected, the details when synced. */
@@ -264,6 +272,7 @@ function TodayScreen({
   onManualNursing,
   onEdit,
   onSeeTimeline,
+  onOpenSoothe,
   cloudState,
   onOpenProtection,
 }: TodayScreenProps) {
@@ -292,14 +301,7 @@ function TodayScreen({
   // today, 1 is yesterday. Bounded by the first thing ever logged so the
   // arrows never step into blank prehistory — or into tomorrow.
   const [dayOffset, setDayOffset] = useState(0);
-  const [sootheOpen, setSootheOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  // The noise must survive its own sheet being closed. Rendering the player
-  // only while the sheet is open unmounted the <audio> the moment a parent
-  // tapped away — so the one thing they opened it for stopped, in the dark,
-  // with a baby half asleep. Once opened it stays mounted for the visit and
-  // the sheet is only its face.
-  const [sootheMounted, setSootheMounted] = useState(false);
   const forecastFeedSheet: "bottle" | "nursing" = profile.feedingMode === "breast"
     ? "nursing"
     : profile.feedingMode === "bottle"
@@ -651,6 +653,7 @@ function TodayScreen({
                 activity={timer}
                 now={minuteClock}
                 onStop={() => onStopTimer(timer.id)}
+                onEdit={onEdit}
               />
             ))}
 
@@ -777,7 +780,7 @@ function TodayScreen({
             )}
 
             {profile.feedingMode !== "bottle" && activeNursing && (
-              <TimerTile activity={activeNursing} onStop={stopNursing} />
+              <TimerTile activity={activeNursing} onStop={stopNursing} onEdit={onEdit} />
             )}
 
             {profile.feedingMode !== "bottle" && !activeNursing && (
@@ -814,7 +817,8 @@ function TodayScreen({
                   onClick={onManualNursing}
                   aria-label="Add a completed nursing session manually"
                 >
-                  Past
+                  <History aria-hidden="true" />
+                  Earlier
                 </Button>
               </div>
             )}
@@ -846,11 +850,12 @@ function TodayScreen({
                 onClick={() => onOpenSheet("diaper")}
                 aria-label="Log a diaper change at a different time"
               >
-                Past
+                <History aria-hidden="true" />
+                Earlier
               </Button>
             </div>
 
-            {activeSleep && <TimerTile activity={activeSleep} onStop={() => onStopTimer(activeSleep.id)} />}
+            {activeSleep && <TimerTile activity={activeSleep} onStop={() => onStopTimer(activeSleep.id)} onEdit={onEdit} />}
 
             {!activeSleep && (
               <div className="quick-tile tile-sleep">
@@ -873,12 +878,13 @@ function TodayScreen({
                   onClick={() => onOpenSheet("sleep")}
                   aria-label="Add a sleep that has already finished"
                 >
-                  Past
+                  <History aria-hidden="true" />
+                  Earlier
                 </Button>
               </div>
             )}
 
-            {activeBurp && <TimerTile activity={activeBurp} onStop={() => onStopTimer(activeBurp.id)} />}
+            {activeBurp && <TimerTile activity={activeBurp} onStop={() => onStopTimer(activeBurp.id)} onEdit={onEdit} />}
 
             {!activeBurp && (
               <div className="quick-tile tile-burp">
@@ -961,14 +967,12 @@ function TodayScreen({
             );
           })()}
           {/* Take two of the sounds — real files this time, see
-              domain/soothe.ts. Once opened, the player stays mounted for the
-              rest of the visit: unmounting it with its sheet was how the
-              noise stopped the moment a parent tapped away, in the dark,
-              with a baby half asleep. */}
+              domain/soothe.ts. The player itself lives in App, so the noise
+              outlasts both its sheet and this screen. */}
           <Button
             variant="ghost"
             className="log-row log-row-secondary action-soothe"
-            onClick={() => { track("soothe_opened"); setSootheMounted(true); setSootheOpen(true); }}
+            onClick={onOpenSoothe}
           >
             <span className="action-icon" aria-hidden="true"><Waves /></span>
             <span className="log-copy">
@@ -1032,12 +1036,6 @@ function TodayScreen({
       {shareOpen && (
         <Suspense fallback={null}>
           <ShareNumalogDialog open={shareOpen} onOpenChange={setShareOpen} />
-        </Suspense>
-      )}
-
-      {sootheMounted && (
-        <Suspense fallback={null}>
-          <SoothePlayer open={sootheOpen} onOpenChange={setSootheOpen} />
         </Suspense>
       )}
     </section>

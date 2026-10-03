@@ -77,6 +77,9 @@ const NightHelp = lazy(() => import("./components/NightHelp").then((m) => ({ def
 const ProtectIntro = lazy(() => import("./components/ProtectIntro").then((m) => ({ default: m.ProtectIntro })));
 const NewsDialog = lazy(() => import("./components/NewsDialog").then((m) => ({ default: m.NewsDialog })));
 const RecoverLinkDialog = lazy(() => import("./components/RecoverLinkDialog"));
+// The sound player is only needed once someone asks for it — it stays out
+// of the bundle every parent downloads.
+const SoothePlayer = lazy(() => import("./components/SoothePlayer").then((m) => ({ default: m.SoothePlayer })));
 // The toast library rides its own chunk and attaches to lib/toast when it
 // mounts; nothing on the boot path needs it before the first tap, and a
 // toast fired before then simply waits for it.
@@ -218,6 +221,13 @@ export default function HomePage() {
   // waits here while the person decides in a real dialog.
   const [recoverAsk, setRecoverAsk] = useState<string | null>(null);
   const [newsOpen, setNewsOpen] = useState(false);
+  // The noise must outlast everything a parent taps after starting it. It
+  // lived in the Today screen, and Today unmounts when another tab opens — so
+  // a look at the timeline for the last feed silenced it, the complaint that
+  // came back as "can we have the sound continuous". Once opened, the player
+  // stays mounted here for the visit and its sheet is only its face.
+  const [sootheMounted, setSootheMounted] = useState(false);
+  const [sootheOpen, setSootheOpen] = useState(false);
   // The topbar badge's own "read" flag for THIS visit. The what's-new card
   // deliberately writes only storage when it marks itself seen (so it can
   // stay on screen), which would leave the badge lit all visit — this flag
@@ -748,6 +758,11 @@ export default function HomePage() {
   const onOpenSheet = useStableCallback((next: Exclude<Sheet, null>) => openSheet(next));
   const onManualNursing = useStableCallback(() => openSheet("nursing", "manual"));
   const onSeeTimeline = useStableCallback(() => navigateTo("timeline"));
+  const onOpenSoothe = useStableCallback(() => {
+    track("soothe_opened");
+    setSootheMounted(true);
+    setSootheOpen(true);
+  });
   const onOpenProtection = useStableCallback(() => {
     track("cloud_note_tapped", { synced: Boolean(familySync.pairing) });
     // Unprotected -> the doors, right here. Synced -> the details.
@@ -1038,6 +1053,7 @@ export default function HomePage() {
               onManualNursing={onManualNursing}
               onEdit={openEdit}
               onSeeTimeline={onSeeTimeline}
+              onOpenSoothe={onOpenSoothe}
               cloudState={cloudState}
               onOpenProtection={onOpenProtection}
             />
@@ -1165,6 +1181,11 @@ export default function HomePage() {
         {newsOpen && (
           <Suspense fallback={null}>
             <NewsDialog open={newsOpen} onOpenChange={setNewsOpen} />
+          </Suspense>
+        )}
+        {sootheMounted && (
+          <Suspense fallback={null}>
+            <SoothePlayer open={sootheOpen} onOpenChange={setSootheOpen} />
           </Suspense>
         )}
         {protectAsk > 0 && (

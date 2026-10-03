@@ -35,3 +35,43 @@ export function soundUrl(kind: SoundKind): string {
 
 export const TIMER_CHOICES = [15, 30, 45, 60] as const;
 export type TimerChoice = (typeof TIMER_CHOICES)[number] | null;
+
+// What was last played, remembered on this phone. "Keep going" used to be a
+// choice made again every night — the player opened at 30 minutes each time,
+// and the noise stopped under a parent who had wanted it all night. The
+// volume is deliberately NOT here: it always opens low.
+export type SootheChoice = {
+  mode: "noise" | "lullaby";
+  kind: NoiseKind;
+  tune: LullabyKind;
+  timer: TimerChoice;
+};
+
+export const DEFAULT_SOOTHE_CHOICE: SootheChoice = { mode: "noise", kind: "brown", tune: "brahms", timer: 30 };
+
+const CHOICE_KEY = "numalog-soothe-v1";
+
+export function loadSootheChoice(): SootheChoice {
+  try {
+    const raw = window.localStorage.getItem(CHOICE_KEY);
+    if (!raw) return DEFAULT_SOOTHE_CHOICE;
+    const stored = JSON.parse(raw) as Record<string, unknown>;
+    const d = DEFAULT_SOOTHE_CHOICE;
+    return {
+      mode: stored.mode === "noise" || stored.mode === "lullaby" ? stored.mode : d.mode,
+      kind: NOISE_KINDS.find((n) => n.key === stored.kind)?.key ?? d.kind,
+      tune: LULLABIES.find((l) => l.key === stored.tune)?.key ?? d.tune,
+      timer: stored.timer === null ? null : TIMER_CHOICES.find((t) => t === stored.timer) ?? d.timer,
+    };
+  } catch {
+    return DEFAULT_SOOTHE_CHOICE;
+  }
+}
+
+export function saveSootheChoice(choice: SootheChoice) {
+  try {
+    window.localStorage.setItem(CHOICE_KEY, JSON.stringify(choice));
+  } catch {
+    // A remembered choice is a courtesy.
+  }
+}

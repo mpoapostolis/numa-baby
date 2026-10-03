@@ -426,9 +426,9 @@
 /* The paintbox: each tile borrows its activity's pigment as a whisper of a
    wash and a hue-kissed border — Bottle reads blue, Nursing blush, Diaper
    sage, Burp teal at arm's length, like a row of app icons. */
-/* No chip, no reserve. The widest chip ("Change") measures 73px. */
+/* No chip, no reserve. The widest chip ("Earlier", with its clock) measures 81px. */
 .quick-tile { --chip-w: 0px; }
-.quick-tile:has(.tile-chip) { --chip-w: 76px; }
+.quick-tile:has(.tile-chip) { --chip-w: 84px; }
 
 /* "2h 10m ago" under the Diaper title — the question a parent standing at the
    changing mat actually has. Sits on its own row so it never fights the chip
@@ -462,11 +462,27 @@
   line-height: 1.15;
 }
 
+/* The start time is a button into the edit sheet: a full 44px row that still
+   reads as the quiet line it was, with "Edit" lit to say it can be touched. */
 .tile-started {
-  margin: 2px 12px 0;
+  align-self: flex-start;
+  min-height: 44px;
+  margin: -8px 4px -10px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
   color: var(--ink-3);
+  font: inherit;
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tile-started-edit {
+  color: var(--signal);
+  font-weight: 550;
 }
 
 .quick-tile.is-running .tile-stop {
@@ -627,10 +643,16 @@
   min-height: 44px;
   min-width: 44px;
   padding: 0 14px;
+  gap: 4px;
   font-size: 0.75rem;
-  color: var(--ink-3);
-  background: color-mix(in oklch, var(--foreground) 4%, transparent);
+  color: var(--ink-2);
+  background: color-mix(in oklch, var(--foreground) 7%, transparent);
   border-radius: 0 var(--radius-xl) 0 var(--radius-sm);
+}
+
+.tile-chip svg {
+  width: 12px;
+  height: 12px;
 }
 
 /* Lullaby entrance: hero, fact and tiles rise in within ~600ms of opening.
