@@ -113,3 +113,16 @@ test("every prerendered page is whole", async () => {
     }
   }
 });
+
+test("an app one version behind can still find its sounds", async () => {
+  // The noise moved from 8-second WAVs to 10-minute AAC on 2026-10-04. An
+  // installed app can run one session on its old version before the update
+  // lands, and that version asks for the WAVs — deleting them turned the
+  // promised white noise into "your phone would not start the sound".
+  // Safe to drop once nobody can still be on a build from before that date.
+  const sounds = await readdir(new URL("sounds/", dist));
+  for (const kind of ["white", "pink", "brown"]) {
+    assert.ok(sounds.includes(`${kind}.m4a`), `${kind}.m4a ships`);
+    assert.ok(sounds.includes(`${kind}.wav`), `${kind}.wav still ships for older versions`);
+  }
+});

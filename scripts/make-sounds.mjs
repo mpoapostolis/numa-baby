@@ -15,6 +15,10 @@
 // of 450; at 48kbps mono that is about 3.6MB a sound. A tune tolerates the
 // gap at its loop point, so the lullabies stay short.
 //
+// The three .wav files still in public/sounds are NOT written here: they
+// are the old noise, left for an installed app still on a version from
+// before the switch (tests/build-output.test.mjs says when they can go).
+//
 // Everything here is synthesised from scratch — traditional melodies, no
 // recordings, nothing to license. Run: node scripts/make-sounds.mjs
 
