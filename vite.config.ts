@@ -137,12 +137,12 @@ export default defineConfig({
           "**/geist-cyrillic-ext-*.woff2",
           "**/geist-vietnamese-*.woff2",
         ],
-        // The soothing sounds are ~1.5MB of media nobody should pay for at
+        // The soothing sounds are ~11MB of media nobody should pay for at
         // install time — cached on first play instead, then they work
         // offline like everything else.
         runtimeCaching: [
           {
-            urlPattern: /\/sounds\/.*\.(wav|m4a)$/,
+            urlPattern: /\/sounds\/.*\.m4a$/,
             handler: "CacheFirst",
             options: {
               cacheName: "numalog-sounds",

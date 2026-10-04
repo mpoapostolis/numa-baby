@@ -17,6 +17,14 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-10-04",
+    title: "The white noise no longer pauses every few seconds",
+    items: [
+      "Thank you for writing back about the pause — you were right. Each noise was an eight-second recording on repeat, and a phone leaves a split-second gap every time it starts a sound over.",
+      "Each noise now runs ten minutes before it repeats, so that gap comes once every ten minutes instead of every eight seconds. Rumble also lost a faint click it had at every repeat.",
+    ],
+  },
+  {
     id: "2026-10-03",
     title: "Missed a tap? Fix the time. And sounds that keep going",
     items: [

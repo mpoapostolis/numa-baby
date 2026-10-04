@@ -7,10 +7,13 @@
 // modes: the tap spends its gesture on play() alone, and iOS treats a real
 // media file as media — it keeps playing with the screen locked.
 //
-// Noise ships as 8-second WAV loops (PCM has no encoder padding, so the loop
-// seam stays inaudible; 8s mono 22kHz is ~350KB). Lullabies ship as AAC
-// (.m4a via ffmpeg) — a tune tolerates the tiny encoder gap at the loop
-// point, and 60-90 seconds of WAV would not tolerate the size.
+// Everything ships as AAC (.m4a via ffmpeg). Noise used to be 8-second WAV
+// loops, on the theory that PCM has no encoder padding and so no seam — but
+// an <audio> element leaves a split-second gap every time it starts a file
+// over, whatever the format, and a parent heard it every eight seconds. The
+// noise is now ten minutes long, so the gap comes six times an hour instead
+// of 450; at 48kbps mono that is about 3.6MB a sound. A tune tolerates the
+// gap at its loop point, so the lullabies stay short.
 //
 // Everything here is synthesised from scratch — traditional melodies, no
 // recordings, nothing to license. Run: node scripts/make-sounds.mjs
@@ -18,6 +21,7 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { seamlessLoop } from "./loopSeam.mjs";
 
 const SAMPLE_RATE = 22_050;
 const OUT = "public/sounds";
@@ -55,11 +59,13 @@ function normalise(data, peakTarget) {
 
 // ---- Noise (see the old src/domain/soothe.ts this was ported from) ---------
 
-const NOISE_SECONDS = 8;
-const FADE = 512;
+// A whole number of 1024-sample AAC frames, so the encoder pads nothing on
+// to the end of the loop.
+const NOISE_LENGTH = Math.floor((SAMPLE_RATE * 600) / 1024) * 1024;
+const FADE = 2048;
 
 function generateNoise(kind) {
-  const length = SAMPLE_RATE * NOISE_SECONDS;
+  const length = NOISE_LENGTH + FADE;
   const data = new Float32Array(length);
   if (kind === "white") {
     for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
@@ -90,12 +96,7 @@ function generateNoise(kind) {
     }
   }
   normalise(data, 0.6);
-  // Crossfade the tail into the head so the loop point is inaudible.
-  for (let i = 0; i < FADE; i++) {
-    const t = i / FADE;
-    data[i] = data[i] * t + data[length - FADE + i] * (1 - t);
-  }
-  return data;
+  return seamlessLoop(data, FADE);
 }
 
 // ---- Lullabies (ported from the old src/domain/lullaby.ts) -----------------
@@ -166,17 +167,15 @@ function renderLullaby(kind) {
 
 mkdirSync(OUT, { recursive: true });
 
-for (const kind of ["white", "pink", "brown"]) {
-  const path = join(OUT, `${kind}.wav`);
-  writeFileSync(path, toWav(generateNoise(kind)));
-  console.log("wrote", path);
-}
-
-for (const kind of Object.keys(MELODIES)) {
+function writeAac(kind, samples, bitrate) {
   const wavPath = join(OUT, `${kind}.tmp.wav`);
   const m4aPath = join(OUT, `${kind}.m4a`);
-  writeFileSync(wavPath, toWav(renderLullaby(kind)));
-  execFileSync("ffmpeg", ["-y", "-i", wavPath, "-c:a", "aac", "-b:a", "64k", m4aPath], { stdio: "pipe" });
+  writeFileSync(wavPath, toWav(samples));
+  execFileSync("ffmpeg", ["-y", "-i", wavPath, "-c:a", "aac", "-b:a", bitrate, m4aPath], { stdio: "pipe" });
   rmSync(wavPath);
   console.log("wrote", m4aPath);
 }
+
+for (const kind of ["white", "pink", "brown"]) writeAac(kind, generateNoise(kind), "48k");
+
+for (const kind of Object.keys(MELODIES)) writeAac(kind, renderLullaby(kind), "64k");

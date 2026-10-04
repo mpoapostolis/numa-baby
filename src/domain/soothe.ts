@@ -7,9 +7,15 @@
 // parents it was built for. The sounds are now REAL FILES, rendered at
 // build time by scripts/make-sounds.mjs: the tap spends its whole gesture
 // on play(), and iOS treats a media file as media — it keeps playing with
-// the screen locked. Noise is WAV (PCM has no encoder padding, so the loop
-// seam is inaudible); lullabies are AAC, where a breath at the loop point
-// suits the tune anyway.
+// the screen locked.
+//
+// Take three, for the noise. It was an 8-second WAV on the theory that PCM
+// loops without a seam — but the seam that matters is the player's: an
+// <audio> element restarting a file leaves a split-second gap, and a parent
+// heard it every eight seconds. Gapless looping needs Web Audio, which iOS
+// suspends when the screen locks, so the gap stays and the loop got long:
+// ten minutes of AAC, six restarts an hour instead of 450. Lullabies were
+// AAC already, where a breath at the loop point suits the tune anyway.
 
 export type NoiseKind = "white" | "pink" | "brown";
 export type LullabyKind = "brahms" | "twinkle" | "rockabye";
@@ -27,10 +33,8 @@ export const LULLABIES: { key: LullabyKind; label: string; description: string }
   { key: "rockabye", label: "Rock-a-bye", description: "Traditional, gentle three-time" },
 ];
 
-const LULLABY_KEYS: readonly string[] = LULLABIES.map((l) => l.key);
-
 export function soundUrl(kind: SoundKind): string {
-  return `/sounds/${kind}.${LULLABY_KEYS.includes(kind) ? "m4a" : "wav"}`;
+  return `/sounds/${kind}.m4a`;
 }
 
 export const TIMER_CHOICES = [15, 30, 45, 60] as const;
