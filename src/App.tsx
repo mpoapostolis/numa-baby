@@ -25,7 +25,7 @@ import TodayScreen from "./screens/TodayScreen";
 import { Activity, ActivityType, Profile, Sheet, Tab } from "./domain/types";
 import { JOIN_CODE_PATTERN } from "./domain/familyPairing";
 import { track, suppressTracking } from "./domain/analytics";
-import { LATEST_RELEASE_ID, unseenReleases } from "./domain/changelog";
+import { LATEST_RELEASE_ID, unseenReleaseIds } from "./domain/releaseIds";
 import { parseStoredData } from "./domain/validate";
 // Static, all of it: the module is on the boot path anyway for the routing
 // half, so the dynamic imports that used to fetch the codec half moved no
@@ -462,7 +462,7 @@ export default function HomePage() {
   }
   const releasesToShow = seenRelease === null && (freshInstall || sortedActivities.length === 0)
     ? []
-    : unseenReleases(seenRelease);
+    : unseenReleaseIds(seenRelease);
   // ---- The moment chain -------------------------------------------------
   // Four surfaces used to compete for the same first glance — a birthday
   // party, the protect announcement, the what's-new card and the backup
@@ -1029,7 +1029,7 @@ export default function HomePage() {
           {showWhatsNew && (
             <Suspense fallback={null}>
             <WhatsNew
-              releases={releasesToShow}
+              releaseIds={releasesToShow}
               onDismiss={() => {
                 track("whats_new_dismissed", { release: LATEST_RELEASE_ID });
                 markReleasesSeen();

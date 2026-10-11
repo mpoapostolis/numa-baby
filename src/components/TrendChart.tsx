@@ -30,6 +30,29 @@ const SERIES: Series[] = [
   { key: "sleep", label: "Sleep", glyph: "sleep", hue: "var(--glyph-sleep)", unit: "m", value: (d) => d.sleepMinutes },
 ];
 
+// The series a parent picked stays picked, on Today and on Insights alike:
+// "which category I want to track" is a standing choice, not a tap to repeat
+// on every visit. Local to the phone, and a courtesy — storage that refuses
+// just means Milk again.
+const SERIES_KEY = "numalog-trend-series-v1";
+
+function rememberedSeries(): string {
+  try {
+    const stored = window.localStorage.getItem(SERIES_KEY);
+    return SERIES.some((s) => s.key === stored) ? stored! : SERIES[0].key;
+  } catch {
+    return SERIES[0].key;
+  }
+}
+
+function rememberSeries(key: string) {
+  try {
+    window.localStorage.setItem(SERIES_KEY, key);
+  } catch {
+    // Remembering is a courtesy.
+  }
+}
+
 const dayFormat = new Intl.DateTimeFormat("en", { weekday: "short" });
 const fullDayFormat = new Intl.DateTimeFormat("en", { month: "short", day: "numeric" });
 
@@ -40,7 +63,7 @@ const fullDayFormat = new Intl.DateTimeFormat("en", { month: "short", day: "nume
 const BAR_HEIGHT = 108;
 
 export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
-  const [activeKey, setActiveKey] = useState(SERIES[0].key);
+  const [activeKey, setActiveKey] = useState(rememberedSeries);
   const series = SERIES.find((s) => s.key === activeKey) ?? SERIES[0];
   const units = useUnits();
   // Bars are proportions, so only the WORDS convert: the millilitre series
@@ -115,7 +138,11 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
             aria-pressed={option.key === activeKey}
             className={option.key === activeKey ? "trend-tab is-active" : "trend-tab"}
             style={{ "--trend-hue": option.hue } as React.CSSProperties}
-            onClick={() => { track("trend_series_changed", { series: option.key }); setActiveKey(option.key); }}
+            onClick={() => {
+              track("trend_series_changed", { series: option.key });
+              setActiveKey(option.key);
+              rememberSeries(option.key);
+            }}
           >
             {option.label}
           </button>

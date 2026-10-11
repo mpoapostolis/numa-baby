@@ -8,6 +8,7 @@ import { shareLink } from "../domain/shareApp";
 import { renderCard, shareImage } from "../lib/shareCard";
 import { EmptyState } from "../components/EmptyState";
 import { GrowthChart } from "../components/GrowthChart";
+import { TrendChart } from "../components/TrendChart";
 import { LittleBottle } from "../components/illustrations";
 import { activityTitle } from "../domain/activityDisplay";
 import { formatVolume, formatWeight, useUnits, volumeParts, weightParts } from "../domain/units";
@@ -345,6 +346,14 @@ export default function InsightsScreen({
         <p className="insight-waiting">
           The dashes fill in on their own — they are waiting on {listOf(waitingFor)}.
         </p>
+      )}
+
+      {/* Asked for from the feedback box: "add which category I want to
+          track in the insights page, for example, sleep". The same chart as
+          Today's, and the same remembered choice — pick Sleep on either and
+          both open on Sleep. Shown once there are two days to compare. */}
+      {stats.recentDays.filter((day) => !day.isEmpty).length > 1 && (
+        <TrendChart days={stats.recentDays} />
       )}
 
       {showBottles && (

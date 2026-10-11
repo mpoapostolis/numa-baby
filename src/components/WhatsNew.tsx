@@ -15,15 +15,18 @@
 import { useState } from "react";
 import { ChevronDown, Sparkles, X } from "lucide-react";
 import { Button } from "./ui/button";
-import { Release } from "../domain/changelog";
+import { RELEASES } from "../domain/changelog";
 
 type WhatsNewProps = {
-  releases: Release[];
+  /** Which releases to tell; the words are looked up here, in this lazy
+      chunk, so they never ride the boot bundle (see domain/releaseIds.ts). */
+  releaseIds: readonly string[];
   onDismiss: () => void;
 };
 
-export function WhatsNew({ releases, onDismiss }: WhatsNewProps) {
+export function WhatsNew({ releaseIds, onDismiss }: WhatsNewProps) {
   const [open, setOpen] = useState(false);
+  const releases = RELEASES.filter((release) => releaseIds.includes(release.id));
   if (releases.length === 0) return null;
   // Closed, this is one line: the headline, which is written to be the whole
   // story on its own. The detail is a tap away for anyone who wants it. Four

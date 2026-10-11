@@ -70,7 +70,12 @@ const BUDGET_GZIP = {
   // gains features is not a budget, it is a ratchet — but the 500 bytes are
   // owed back, and the cheapest place to find them is the two reminder
   // timers in App.tsx, which are the same effect written twice.
-  "index-*.js": 118_500,
+  // 118_500 → 115_000 on 2026-10-11, paid back with interest: every word of
+  // "What's new" was on the boot path because App imported the changelog to
+  // decide whether to show it. It needs only the dates (releaseIds.ts); the
+  // words moved to the lazy news chunks and the shell lost 4.1 kB. Measured
+  // after: 114.4 kB.
+  "index-*.js": 115_000,
   "index-*.css": 29_000,
 };
 const LAZY_SCREENS = ["SettingsScreen", "GrowthGuideScreen", "InsightsScreen", "TimelineScreen", "LogSheet", "OnboardingScreen", "sonner", "FactOfTheDay"];

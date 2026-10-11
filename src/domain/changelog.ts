@@ -17,6 +17,14 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-10-11",
+    title: "Choose what to follow on Insights — sleep included",
+    items: [
+      "Asked for through the feedback box: Insights now has the day-by-day chart, and you pick what it shows — milk, feeds, wet or dirty nappies, or sleep. Choose Sleep to see how much your baby slept each day over the last two weeks, against the average.",
+      "The app remembers your pick. Choose Sleep once and the chart opens on Sleep next time, here and on Today.",
+    ],
+  },
+  {
     id: "2026-10-04",
     title: "The white noise no longer pauses every few seconds",
     items: [

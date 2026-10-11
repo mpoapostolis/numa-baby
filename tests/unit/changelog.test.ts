@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { LATEST_RELEASE_ID, RELEASES, unseenReleases } from "@/domain/changelog";
+import { LATEST_RELEASE_ID as BOOT_LATEST_ID, RELEASE_IDS, unseenReleaseIds } from "@/domain/releaseIds";
 
 describe("RELEASES", () => {
   it("is newest first with unique, sortable ids", () => {
@@ -33,5 +34,21 @@ describe("unseenReleases", () => {
 
   it("names the newest release", () => {
     expect(LATEST_RELEASE_ID).toBe(RELEASES[0].id);
+  });
+});
+
+describe("the boot path's release ids", () => {
+  // App decides whether to show "New" before a single word of news is read,
+  // so the words stay in the lazy chunks and only these dates ride the boot
+  // bundle. Every entry added to RELEASES must be added here too.
+  it("are the changelog's ids, newest first", () => {
+    expect(RELEASE_IDS).toEqual(RELEASES.map((release) => release.id));
+    expect(BOOT_LATEST_ID).toBe(RELEASES[0].id);
+  });
+
+  it("name what landed after the marker", () => {
+    expect(unseenReleaseIds(RELEASE_IDS[0])).toEqual([]);
+    expect(unseenReleaseIds(RELEASE_IDS[1])).toEqual([RELEASE_IDS[0]]);
+    expect(unseenReleaseIds(null)).toEqual(RELEASE_IDS);
   });
 });
