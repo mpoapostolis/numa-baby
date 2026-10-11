@@ -1106,20 +1106,49 @@
   padding-top: 10px;
 }
 
+/* No gap between the columns: the 3px between bars is padding inside each
+   day's button, so there is no dead strip a thumb can land in. */
 .trend-bars {
   position: relative;
   height: 100%;
   display: flex;
   align-items: flex-end;
-  gap: 3px;
 }
 
+/* Each day is a button the full height of the plot, so a thumb only has to
+   land in the right column, not on a short bar. */
 .trend-bar {
   flex: 1;
   height: 100%;
   display: flex;
   align-items: flex-end;
   min-width: 0;
+  padding: 0 1.5px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.trend-bar:focus-visible {
+  outline: 2px solid var(--trend-hue);
+  outline-offset: 1px;
+}
+
+/* The day the readout is about: its column washed, its bar at full colour. */
+.trend-bar.is-picked {
+  background: color-mix(in oklch, var(--trend-hue) 12%, transparent);
+}
+
+.trend-bar.is-picked .trend-fill {
+  background: var(--trend-hue);
+}
+
+@media (hover: hover) {
+  .trend-bar:hover {
+    background: color-mix(in oklch, var(--trend-hue) 8%, transparent);
+  }
 }
 
 .trend-fill {

@@ -7,7 +7,8 @@ describe("RELEASES", () => {
     const ids = RELEASES.map((r) => r.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect([...ids].sort().reverse()).toEqual(ids);
-    for (const id of ids) expect(id).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    // A date, or a date and ".2" for a second release that day.
+    for (const id of ids) expect(id).toMatch(/^\d{4}-\d{2}-\d{2}(\.\d+)?$/);
   });
 
   it("every entry says something concrete", () => {

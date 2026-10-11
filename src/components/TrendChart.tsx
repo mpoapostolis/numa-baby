@@ -55,6 +55,7 @@ function rememberSeries(key: string) {
 
 const dayFormat = new Intl.DateTimeFormat("en", { weekday: "short" });
 const fullDayFormat = new Intl.DateTimeFormat("en", { month: "short", day: "numeric" });
+const pickedDayFormat = new Intl.DateTimeFormat("en", { weekday: "short", month: "short", day: "numeric" });
 
 // Geometry in percentages, laid out with CSS rather than a stretched viewBox.
 // The old chart used preserveAspectRatio="none", which distorted every slope
@@ -99,19 +100,36 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
   const trackedDays = loggedDays.length;
   const average = trackedDays > 0 ? Math.round(total / trackedDays) : 0;
 
-  const description = `${series.label} per day. ${days
-    .map((day) => day.isEmpty
-      ? `${fullDayFormat.format(day.date)}: not logged`
-      : `${fullDayFormat.format(day.date)}: ${fmt(series.value(day))}${unitLabel ? ` ${unitLabel}` : ""}`)
-    .join(", ")}.`;
+  // Which day the readout is about, if any. Asked for from the feedback box:
+  // each bar's total used to live in a title tooltip, which a mouse can
+  // summon and a phone never shows — so on a phone the chart said only the
+  // average. A tap pins a day (tap it again to let go); a mouse only has to
+  // hover. Held by date rather than position, so the day stays chosen when
+  // the category changes: "and how many wet nappies that day?" is the next
+  // question.
+  const [pinned, setPinned] = useState<number | null>(null);
+  const [hovered, setHovered] = useState<number | null>(null);
+  const shownAt = hovered ?? pinned;
+  const shownIndex = shownAt === null ? -1 : days.findIndex((day) => day.date.getTime() === shownAt);
+  const shown = shownIndex >= 0 ? days[shownIndex] : null;
+  const withUnit = (value: number) => `${fmt(value)}${unitLabel ? ` ${unitLabel}` : ""}`;
 
   return (
     <section className="trend-card" aria-label={`${series.label} over the last ${days.length} days`}>
       <header className="trend-head">
         <div className="trend-titles">
           <span className="t-label">Last {days.length} days</span>
-          <p className="trend-average">
-            {trackedDays > 0 ? (
+          <p className="trend-average" aria-live="polite">
+            {shown ? (
+              shown.isEmpty ? (
+                <span>Nothing logged on {pickedDayFormat.format(shown.date)}</span>
+              ) : (
+                <>
+                  <strong className="figure">{fmt(series.value(shown))}{unitLabel && <span className="unit">{unitLabel}</span>}</strong>
+                  <span>{shown.isToday ? " so far today" : ` on ${pickedDayFormat.format(shown.date)}`}</span>
+                </>
+              )
+            ) : trackedDays > 0 ? (
               <>
                 <strong className="figure">{fmt(average)}{unitLabel && <span className="unit">{unitLabel}</span>}</strong>
                 <span> a day on average</span>
@@ -152,17 +170,25 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
       <div
         className="trend-plot"
         style={{ "--trend-hue": series.hue, height: `${BAR_HEIGHT}px` } as React.CSSProperties}
-        role="img"
-        aria-label={description}
+        role="group"
+        aria-label={`${series.label} per day — tap a day for its total`}
       >
         <div className="trend-bars">
-          {values.map((value, index) => (
-            <div
-              className={index === todayIndex ? "trend-bar is-today" : "trend-bar"}
+          {values.map((value, index) => {
+            const at = days[index].date.getTime();
+            return (
+            <button
+              type="button"
+              className={`trend-bar${index === todayIndex ? " is-today" : ""}${index === shownIndex ? " is-picked" : ""}`}
               key={days[index].date.toISOString()}
-              title={days[index].isEmpty
-                ? `${fullDayFormat.format(days[index].date)}: not logged`
-                : `${fullDayFormat.format(days[index].date)}: ${fmt(value)}${unitLabel ? ` ${unitLabel}` : ""}`}
+              aria-label={`${fullDayFormat.format(days[index].date)}: ${days[index].isEmpty ? "not logged" : withUnit(value)}`}
+              aria-pressed={pinned === at}
+              onClick={() => {
+                if (pinned !== at) track("trend_day_picked", { series: series.key });
+                setPinned((current) => (current === at ? null : at));
+              }}
+              onPointerEnter={(event) => { if (event.pointerType === "mouse") setHovered(at); }}
+              onPointerLeave={(event) => { if (event.pointerType === "mouse") setHovered(null); }}
             >
               {/* Three distinct states, because a day nobody logged is not a
                   day with none: a bar, a hairline for a logged zero, and
@@ -173,8 +199,9 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
                   style={{ height: value > 0 ? `${Math.max(3, (value / scaleMax) * 100)}%` : "2px" }}
                 />
               )}
-            </div>
-          ))}
+            </button>
+            );
+          })}
           {/* The average is the reading that makes a bar mean something: a day
               is only "a lot" against the fortnight it sits in. It lives INSIDE
               the bars container for two load-bearing reasons. Percentages: an

@@ -9,13 +9,23 @@
 // just arrived, and greeting them with a changelog is noise, not news.
 
 export type Release = {
-  /** ISO date, and the marker stored once this entry has been read. */
+  /** ISO date, and the marker stored once this entry has been read. A second
+      release on the same day is "2026-10-11.2": it sorts after the first, so
+      a phone that already saw the morning's entry still gets this one. */
   id: string;
   title: string;
   items: string[];
 };
 
 export const RELEASES: Release[] = [
+  {
+    id: "2026-10-11.2",
+    title: "Tap a day on the chart to see its total",
+    items: [
+      "Asked for the day the chart arrived: tap any day on it to see that day’s total — how long your baby slept, how much milk, how many nappies. Tap it again to go back to the average. On a computer, just hover.",
+      "The day stays chosen when you switch category, so you can check sleep, then feeds, for the same day.",
+    ],
+  },
   {
     id: "2026-10-11",
     title: "Choose what to follow on Insights — sleep included",
