@@ -2,6 +2,7 @@ import * as React from "react"
 import { Dialog as DialogPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import { isToastTarget } from "@/lib/toast"
 import { Button } from "@/components/ui/button"
 import { XIcon } from "lucide-react"
 
@@ -49,6 +50,8 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  onPointerDownOutside,
+  onFocusOutside,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
@@ -63,6 +66,16 @@ function DialogContent({
           className
         )}
         {...props}
+        // A toast can be tapped over a dialog (an Undo); that tap is not
+        // "outside", and must not close the dialog under it.
+        onPointerDownOutside={(event) => {
+          onPointerDownOutside?.(event)
+          if (isToastTarget(event.detail.originalEvent.target)) event.preventDefault()
+        }}
+        onFocusOutside={(event) => {
+          onFocusOutside?.(event)
+          if (isToastTarget(event.target)) event.preventDefault()
+        }}
       >
         {children}
         {showCloseButton && (

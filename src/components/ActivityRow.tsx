@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Pencil } from "lucide-react";
+import { Camera, Pencil } from "lucide-react";
 import { Button } from "./ui/button";
 import {
   Item,
@@ -35,6 +35,9 @@ export const ActivityRow = memo(function ActivityRow({
           {detail && <span data-slot="item-description">{detail}</span>}
         </ItemContent>
         <ItemActions className="activity-meta">
+          {/* A badge, not the picture: a nappy photo has no business on a
+              screen shown across a room. It opens with the entry. */}
+          {activity.photo && <Camera className="activity-photo-badge" role="img" aria-label="Has a photo" />}
           <time dateTime={activity.startedAt}>{formatTime(activity.startedAt)}</time>
           <Pencil className="activity-row-action" aria-hidden="true" />
         </ItemActions>

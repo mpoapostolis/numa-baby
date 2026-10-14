@@ -23,6 +23,7 @@ import {
   handleListDevices,
   handleRevokeDevice,
 } from "./devices";
+import { handlePhoto } from "./photos";
 
 // Family Sync API — the doorman between the PWA and the Turso database.
 // Same origin as the static app: /api/* is handled here, everything else
@@ -34,6 +35,9 @@ import {
 
 type Env = {
   ASSETS: Fetcher;
+  /** The private photo bucket (wrangler.jsonc r2_buckets). Unset means
+      photos stay on each phone and are not shared. */
+  PHOTOS?: R2Bucket;
   TURSO_DATABASE_URL: string;
   TURSO_AUTH_TOKEN: string;
   /** Operator password for /admin. Unset means the page does not exist. */
@@ -73,6 +77,14 @@ const MAX_PAYLOAD_BYTES = 8_192;
 const JOIN_TRIES_PER_HOUR = 30;
 /** A phone re-schedules on every feed; a busy night is perhaps twenty. */
 const PUSH_WRITES_PER_HOUR = 120;
+/** Photo uploads per family per hour (worker/photos.ts). */
+const PHOTO_PUTS_PER_HOUR = 60;
+// And per address: families are free to create, so a per-family allowance
+// alone let one connection multiply it, family by family, until the storage
+// every family shares was full. Above one family's own sixty, because a
+// mobile carrier puts many families behind one address; a refusal is a
+// pause the phone waits out, not a lost photo.
+const PHOTO_PUTS_PER_ADDRESS_PER_HOUR = 120;
 // Wrong codes across the WHOLE door per hour. A family mistypes a handful;
 // six hundred is a loop — and a loop with a thousand addresses used to have
 // a thousand budgets.
@@ -654,6 +666,26 @@ export default {
       }
       if (url.pathname === "/api/family/invite" && request.method === "POST") {
         return await handleInvite(env, familyId);
+      }
+      // A family's photos, and only theirs (worker/photos.ts).
+      if (url.pathname.startsWith("/api/photos/")) {
+        if (!env.PHOTOS) return bad("Photo sharing is not set up here.", 503);
+        const name = decodeURIComponent(url.pathname.slice("/api/photos/".length));
+        return await handlePhoto(
+          {
+            db: db(env),
+            bucket: env.PHOTOS,
+            // A family adds a photo a month and the odd nappy; sixty an hour
+            // is a phone stuck in a loop, and each one is a paid R2 write.
+            spend: async () =>
+              (await spendBudget(db(env), `photo-ip:${budgetKey(request.headers.get("cf-connecting-ip") ?? "unknown")}`, PHOTO_PUTS_PER_ADDRESS_PER_HOUR))
+              && (await spendBudget(db(env), `photo:${familyId}`, PHOTO_PUTS_PER_HOUR)),
+          },
+          request,
+          familyId,
+          name,
+          new Date().toISOString(),
+        );
       }
       if (url.pathname === "/api/sync/pull" && request.method === "GET") {
         return await handlePull(env, request, familyId, ctx);

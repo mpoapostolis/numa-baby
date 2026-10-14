@@ -9,6 +9,12 @@ import {
 import { saveAuthHint } from "../domain/authHint";
 import { nextPullCursor, selectPushDelta } from "../domain/syncCursor";
 import * as transport from "../domain/syncTransport";
+import { hasQueuedPhotos } from "../domain/photoRef";
+
+/** Retry photo uploads that failed — loading the photo code only if any did. */
+function flushPhotoQueue() {
+  if (hasQueuedPhotos()) void import("../lib/photos").then((photos) => photos.flushPhotoQueue());
+}
 import { Activity, BootState, Profile } from "../domain/types";
 import { activityUpdatedAt, clampFutureUpdatedAt, isValidActivity, sanitizeProfile } from "../domain/validate";
 
@@ -365,7 +371,12 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
   useEffect(() => {
     if (debugMode || !paired || bootState !== "ready") return;
     const interval = window.setInterval(() => {
-      if (!document.hidden) void runPull(false);
+      if (document.hidden) return;
+      void runPull(false);
+      // A photo that failed to upload (a tunnel, a lift) goes with the next
+      // beat. An empty queue costs nothing — no request is made. A phone
+      // whose key was revoked would only be refused, every minute.
+      if (!live.current.revoked) flushPhotoQueue();
     }, solo ? SOLO_PULL_INTERVAL_MS : PULL_INTERVAL_MS);
     return () => window.clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -373,10 +384,14 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
 
   useEffect(() => {
     if (debugMode || !paired || bootState !== "ready") return;
-    const opener = window.setTimeout(() => void runPull(true), 0);
+    const opener = window.setTimeout(() => {
+      void runPull(true);
+      if (!live.current.revoked) flushPhotoQueue();
+    }, 0);
     const onVisibility = () => {
       if (!document.hidden) {
         void runPull(true);
+        if (!live.current.revoked) flushPhotoQueue();
         return;
       }
       // Going dark. A feed logged and the phone locked inside the two-second
@@ -458,6 +473,22 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
       lastPushedProfileAt: "",
     });
     setStatus({ phase: "idle", lastSyncAt: null, deviceCount: null });
+    // The photos the log refers to follow it into the family's space: taken
+    // before Family Sync, or in the family this phone just left. (Sending
+    // one the bucket already has costs a write, not a second photo.)
+    // Only what the log still refers to: an upload queued for an entry
+    // deleted since is dropped, not sent. And a joining phone's own baby
+    // picture stays its own — its profile has just given way to the family's.
+    const { activities, profile, profileUpdatedAt } = readPersisted();
+    const photos = [profileUpdatedAt ? profile.photo : undefined, ...activities.filter((a) => !a.deleted).map((a) => a.photo)]
+      .filter((id): id is string => Boolean(id));
+    if (photos.length || hasQueuedPhotos()) {
+      void import("../lib/photos").then((lib) => {
+        lib.keepOnlyQueuedPuts(photos);
+        lib.queuePhotos(photos);
+        return lib.flushPhotoQueue();
+      });
+    }
     // The effects above notice `paired` flip true and take it from here:
     // a full first pull, then the entire local backlog pushes up. But a
     // SWITCH (paired -> paired, new family) never flips that flag — pull

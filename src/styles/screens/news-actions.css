@@ -1,0 +1,65 @@
+/* The buttons under a release note (ReleaseActions.tsx), on the card on
+   Today and in the News archive. Lazy, with those two: never on the boot
+   path. Each wears the hue of the row it opens — honey for Months, the
+   health coral for Vaccines, the nursing rose of the baby's face. */
+.release-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.release-action {
+  --tone: var(--glyph-growth);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in oklab, var(--tone) 32%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--tone) var(--glyph-wash), var(--card));
+  color: color-mix(in oklab, var(--tone) 72%, var(--ink-1));
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 300ms ease;
+}
+
+.release-action svg {
+  color: var(--tone);
+}
+
+.release-action.is-vaccines {
+  --tone: var(--glyph-health);
+}
+
+.release-action.is-profile {
+  --tone: var(--glyph-nursing);
+}
+
+.release-action:active {
+  transition-duration: 90ms;
+  transform: scale(0.97);
+}
+
+.release-action:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .release-action:hover {
+    border-color: color-mix(in oklab, var(--tone) 55%, var(--border));
+  }
+}
+
+/* On the card the buttons sit under the one-line headline, closed or open. */
+.whats-new .release-actions {
+  margin-top: 4px;
+}
+
+.news-release .release-actions {
+  margin-top: 10px;
+}

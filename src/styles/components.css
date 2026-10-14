@@ -138,6 +138,7 @@
 }
 
 .action-growth .action-icon,
+.action-months .action-icon,
 .glyph-growth {
   background: color-mix(in oklab, var(--glyph-growth) var(--glyph-wash), var(--card));
   color: var(--glyph-growth);
@@ -297,8 +298,19 @@
   place-items: center;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
+}
+
+/* The neutral chip at zero specificity, so a sheet's activity hue wins
+   wherever its .glyph-* rule sits in the file. It used to lose to the later
+   declaration here: every edit sheet's tone and the Months sheet rendered
+   grey. A tinted chip drops its outline, like the .action-icon wells. */
+:where(.sheet-symbol) {
   background: var(--muted);
   color: var(--ink-2);
+}
+
+.sheet-symbol[class*="glyph-"] {
+  border-color: transparent;
 }
 
 .sheet-symbol > svg {
@@ -1494,6 +1506,7 @@ body:has(.feedback-bubble) .content {
 }
 
 .action-medicine .action-icon,
+.action-vaccines .action-icon,
 .glyph-medicine {
   background: color-mix(in oklab, var(--glyph-health) var(--glyph-wash), var(--card));
   color: var(--glyph-health);
@@ -1702,4 +1715,35 @@ body:has(.feedback-bubble) .content {
 [data-sonner-toast].cn-toast[data-styled] [data-close-button] {
   width: 32px;
   height: 32px;
+}
+
+/* A modal sheet sets pointer-events: none on <body>, and sonner sets none of
+   its own — so a toast (and its Undo) over an open sheet could not be tapped.
+   Months and Vaccines stay open after a save, so their toasts land there.
+   Every dialog takes a tap on a toast as not "outside" it (ui/dialog.tsx),
+   so the tap never closes what is under it. */
+[data-sonner-toaster] [data-sonner-toast]:not([data-visible="false"]) {
+  pointer-events: auto;
+}
+
+/* ---- On Today, so on the boot path. Everything else for photos, months and
+   vaccines lives in screens/keepsake.css and loads with those sheets. ---- */
+
+/* "This entry has a photo" in a list row — the picture opens with the entry. */
+.activity-photo-badge {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  color: var(--ink-3);
+}
+
+/* The next vaccine wraps rather than losing its date to an ellipsis; one
+   that is late says so in the warning colour. */
+.action-vaccines .log-copy small {
+  white-space: normal;
+}
+
+.action-vaccines .is-late {
+  color: var(--destructive);
+  font-weight: 600;
 }

@@ -10,6 +10,8 @@ import {
 } from "./activitySchema";
 import { Activity, ActivityType, Profile, ReminderSettings, StoredData } from "./types";
 import { sanitizeRoutines } from "./routines";
+import { PHOTO_ID, sanitizePhotoRef } from "./photoRef";
+import { MONTHS_KEPT } from "./keepsakes";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -78,6 +80,14 @@ export function isValidActivity(value: unknown): value is Activity {
   // Which daily routine a tick belongs to. Bounded like every other string
   // that arrives from storage or from another phone.
   if (value.routineId !== undefined && (typeof value.routineId !== "string" || value.routineId.length > 64)) return false;
+  // A photo is referenced by id, in the one shape the Worker serves.
+  if (value.photo !== undefined && (typeof value.photo !== "string" || !PHOTO_ID.test(value.photo))) return false;
+  if (value.month !== undefined && (!Number.isInteger(value.month) || Number(value.month) < 1 || Number(value.month) > MONTHS_KEPT)) return false;
+  if (value.vaccine !== undefined && (typeof value.vaccine !== "string" || value.vaccine.length > NOTE_MAX_LENGTH)) return false;
+  // `place` is deliberately not checked: an unknown place from a later build
+  // reads as "not said", never as a reason to drop someone's vaccine record.
+  if (value.planned !== undefined && value.planned !== true) return false;
+  if (value.due !== undefined && (typeof value.due !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value.due))) return false;
   if (invalidStoredNumber("amount", value.amount)) return false;
   if (invalidStoredNumber("weightGrams", value.weightGrams)) return false;
   if (invalidStoredNumber("lengthCm", value.lengthCm)) return false;
@@ -104,7 +114,7 @@ export function activityUpdatedAt(activity: Activity): string {
   return activity.updatedAt ?? activity.startedAt;
 }
 
-function isValidProfile(value: unknown): value is Profile & { isDemo?: boolean; routines?: unknown } {
+function isValidProfile(value: unknown): value is Profile & { isDemo?: boolean; routines?: unknown; photo?: unknown } {
   return (
     isRecord(value) &&
     typeof value.name === "string" &&
@@ -140,6 +150,8 @@ export function sanitizeProfile(value: unknown): Profile | null {
     // merge keeps what it already had. An explicit [] still means "the
     // family cleared the list", which is a real edit and must travel.
     routines: value.routines === undefined ? undefined : sanitizeRoutines(value.routines),
+    // Same rule as routines: absent is "nothing to say", not "none".
+    photo: sanitizePhotoRef(value.photo),
   };
 }
 
@@ -189,6 +201,7 @@ export function parseStoredData(value: string): StoredData {
       // growth guide falls back to its combined girls-and-boys envelope.
       sex: storedProfile.sex === "girl" || storedProfile.sex === "boy" ? storedProfile.sex : undefined,
       routines: sanitizeRoutines(storedProfile.routines),
+      photo: sanitizePhotoRef(storedProfile.photo),
     },
     activities,
     nightMode: typeof parsed.nightMode === "boolean" ? parsed.nightMode : undefined,

@@ -3,13 +3,24 @@
 // row can summon the same dialog from different chunks.
 
 import "../styles/screens/recovery.css";
-import { RELEASES } from "../domain/changelog";
+import { RELEASES, type ReleaseAction } from "../domain/changelog";
+import { ReleaseActions } from "./ReleaseActions";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 import { useCloseOnBack } from "../hooks/useCloseOnBack";
 
 const newsDateFormat = new Intl.DateTimeFormat("en", { dateStyle: "long" });
 
-export function NewsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+export function NewsDialog({
+  open,
+  onOpenChange,
+  onAction,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** Open what a release is about. The archive closes first, so Back from
+      the sheet returns to Today, not to a dialog behind it. */
+  onAction?: (to: ReleaseAction["to"]) => void;
+}) {
   useCloseOnBack(open, () => onOpenChange(false));
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -50,6 +61,16 @@ export function NewsDialog({ open, onOpenChange }: { open: boolean; onOpenChange
                 {index === 0 && <span className="news-latest">Latest</span>}
               </p>
               <h3>{release.title}</h3>
+              {/* Under the title, as on the card: the way to the thing
+                  before the words about it. */}
+              <ReleaseActions
+                actions={release.actions}
+                from="news"
+                onAction={onAction && ((to) => {
+                  onOpenChange(false);
+                  onAction(to);
+                })}
+              />
               <ul>
                 {release.items.map((item) => <li key={item}>{item}</li>)}
               </ul>

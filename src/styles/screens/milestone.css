@@ -70,3 +70,22 @@
   color: var(--ink-2);
   font-size: 0.8125rem;
 }
+
+/* The month-birthday card's way to that month's page (MonthsSheet). The
+   same honey as the Months row on Today. */
+.milestone-month {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  min-height: 44px;
+  margin-top: 4px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in oklab, var(--glyph-growth) 35%, var(--border));
+  border-radius: var(--radius-md);
+  background: color-mix(in oklab, var(--glyph-growth) var(--glyph-wash), var(--card));
+  color: var(--glyph-growth);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+}

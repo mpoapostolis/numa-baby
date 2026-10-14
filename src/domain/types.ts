@@ -4,7 +4,7 @@
 
 import type { Routine } from "./routines";
 
-export type ActivityType = "bottle" | "nursing" | "diaper" | "burp" | "sleep" | "growth" | "health" | "medicine" | "solid" | "routine";
+export type ActivityType = "bottle" | "nursing" | "diaper" | "burp" | "sleep" | "growth" | "health" | "medicine" | "solid" | "routine" | "month" | "vaccine";
 export type DiaperKind = "wet" | "dirty" | "both";
 export type FeedingMode = "mixed" | "breast" | "bottle";
 export type Tab = "today" | "timeline" | "insights" | "guide" | "more";
@@ -40,6 +40,24 @@ export type Activity = {
       like anything else — the point being that the OTHER parent can see the
       vitamin was already given. */
   routineId?: string;
+  /** A photo on the entry (domain/photoRef.ts): the nappy worth showing the
+      doctor, a month's picture. Only the id is in the log. */
+  photo?: string;
+  /** Which month-birthday a "month" entry is about, 1-24. Stored, not worked
+      out from startedAt, so editing the birth date cannot move a note. */
+  month?: number;
+  /** A "vaccine" entry: what was (or will be) given. Free text, like a
+      medicine — the app records, it does not check schedules. */
+  vaccine?: string;
+  /** Where: a public health centre or a private clinic. Kept open-ended in
+      validation, so a later build's third place is not a dropped row. */
+  place?: "public" | "private";
+  /** A vaccine that is PLANNED rather than given, with its appointment as
+      `due` (YYYY-MM-DD). The entry itself is stamped when it was planned:
+      anything dated two days ahead is thrown away on load. Never inferred
+      from the date — a missed appointment must not turn into a given dose. */
+  planned?: true;
+  due?: string;
   note?: string;
   // Sync-ready metadata. Absent on legacy rows: a missing updatedAt is treated
   // as equal to startedAt (activityUpdatedAt in validate.ts) and stored data is
@@ -61,6 +79,10 @@ export type Profile = {
       this family's day is run, not how one phone is configured, and so it
       reaches the other parent by the path the baby's name already travels. */
   routines?: Routine[];
+  /** The baby's profile picture: a photo id (domain/photoRef.ts), "" once
+      removed. Only the id rides the profile — the profile goes out with
+      every pull and is capped at 8 KB; the picture itself does not. */
+  photo?: string;
 };
 
 export type BootState = "loading" | "onboarding" | "ready" | "recovery";
@@ -85,6 +107,8 @@ export type Sheet =
   | "growth"
   | "health"
   | "profile"
+  | "months"
+  | "vaccines"
   | "edit";
 
 export type StoredData = {

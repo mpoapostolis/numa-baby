@@ -32,6 +32,11 @@ import { formatTime, formatTimelineDay, localDateInput } from "../domain/time";
 import { DraftErrorField, validateDraft } from "../domain/validate";
 import { NOTE_MAX_LENGTH } from "../domain/activitySchema";
 import { Activity, DiaperKind, FeedingMode, Profile, Sheet } from "../domain/types";
+import { PhotoField } from "./PhotoField";
+import { MonthsSheet } from "./MonthsSheet";
+import { VaccinesSheet } from "./VaccinesSheet";
+import { forgetPhoto, sharePhoto } from "../lib/photos";
+import { resolvePhotoSave } from "../domain/photoSave";
 import { ActivityGlyph } from "./ActivityGlyph";
 import { TemperatureAdvice } from "./TemperatureAdvice";
 import {
@@ -68,7 +73,13 @@ type SheetDraft = {
   foodText: string;
   nursingEntryMode: "timer" | "manual";
   diaperKind: DiaperKind;
+  /** A photo on a nappy entry, kept on this phone until Save (PhotoField). */
+  photo?: string;
 };
+
+function sheetOpenedAt() {
+  return Date.now();
+}
 
 // Module scope: the initial draft reads the clock once per open, which the
 // render-purity analysis would reject inline in a useState initialiser.
@@ -119,6 +130,7 @@ function initialSheetDraft(
       foodText: editing.food ?? "",
       doseText: editing.dose ?? "",
       diaperKind: editing.diaperKind ?? "wet",
+      photo: editing.photo,
     };
   }
   if (sheet === "sleep") {
@@ -156,10 +168,19 @@ type LogSheetProps = {
   profile: Profile;
   onAdd: (activity: Activity, message: string) => boolean;
   onUpdate: (activity: Activity) => boolean;
-  onRemove: (activity: Activity) => boolean;
+  onRemove: (activity: Activity, message?: string) => boolean;
   onSaveProfile: (profile: Profile) => boolean;
   onClose: () => void;
-  showToast: (message: string) => void;
+  showToast: (message: string, undo?: () => void) => void;
+  /** The month pages and the vaccinations: in the log, but not care, so not
+      in `activities` (domain/keepsakes.ts careEntries). */
+  monthEntries: Activity[];
+  vaccineEntries: Activity[];
+  onUpsert: (activity: Activity) => boolean;
+  /** The month to open on, when the months sheet comes from the party card. */
+  initialMonth?: number;
+  /** Switch to the baby profile — the months need a date of birth. */
+  onOpenProfileSheet?: () => void;
 };
 
 export function LogSheet({
@@ -177,7 +198,16 @@ export function LogSheet({
   onSaveProfile,
   onClose,
   showToast,
+  monthEntries,
+  vaccineEntries,
+  onUpsert,
+  initialMonth,
+  onOpenProfileSheet,
 }: LogSheetProps) {
+  // The clock, read once per open (module scope keeps the render pure).
+  const [openedAt] = useState(sheetOpenedAt);
+  // A photo still being prepared holds Save, or it would be lost on the way.
+  const [photoBusy, setPhotoBusy] = useState(false);
   const editing = sheet === "edit" ? editingActivity : null;
   const units = useUnits();
   const stepper = bottleStepper(units);
@@ -433,8 +463,12 @@ export function LogSheet({
       diaperKind: kind,
       startedAt: outcome.value.startedAt,
       note: outcome.value.note,
+      ...(draft.photo ? { photo: draft.photo } : {}),
     };
-    if (onAdd(entry, `${kind === "both" ? "Wet + dirty" : kind === "dirty" ? "Dirty" : "Wet"} diaper saved`)) onClose();
+    if (!onAdd(entry, `${kind === "both" ? "Wet + dirty" : kind === "dirty" ? "Dirty" : "Wet"} diaper saved`)) return;
+    // Saved: now, and only now, the photo goes to the family's other phones.
+    if (draft.photo) void sharePhoto(draft.photo);
+    onClose();
   }
 
   function saveGrowth() {
@@ -523,7 +557,18 @@ export function LogSheet({
       next.milkType = draft.milkType;
     }
     if (next.type === "nursing") next.side = draft.nursingSide;
-    if (next.type === "diaper") next.diaperKind = draft.diaperKind;
+    // The photo: the parent's change wins; untouched, it is whatever it is
+    // now — the other parent may have changed it since this sheet opened.
+    const photoPlan = resolvePhotoSave({
+      opened: editing.photo,
+      draft: draft.photo,
+      live: activities.find((activity) => activity.id === editing.id)?.photo,
+    });
+    if (next.type === "diaper") {
+      next.diaperKind = draft.diaperKind;
+      if (photoPlan.photo) next.photo = photoPlan.photo;
+      else delete next.photo;
+    }
     if (next.type === "growth") {
       next.weightGrams = outcome.value.weightGrams;
       next.lengthCm = outcome.value.lengthCm;
@@ -540,15 +585,50 @@ export function LogSheet({
     }
 
     if (!onUpdate(next)) return;
+    // A photo added, replaced or removed travels only now, on Save.
+    if (next.type === "diaper") {
+      if (photoPlan.share) void sharePhoto(photoPlan.share);
+      if (photoPlan.forget) void forgetPhoto(photoPlan.forget);
+    }
     onClose();
     showToast(`${activityTitle(next)} updated`);
   }
 
   return (
     <>
+      {sheet === "months" && (
+        <MonthsSheet
+          profile={profile}
+          months={monthEntries}
+          now={openedAt}
+          initialMonth={initialMonth}
+          onOpenProfile={onOpenProfileSheet}
+          onUpsert={(entry) => {
+            if (!onUpsert(entry)) return false;
+            showToast(`Saved to ${profile.name.trim() || "your baby"}’s months`);
+            return true;
+          }}
+        />
+      )}
+
+      {sheet === "vaccines" && (
+        <VaccinesSheet
+          name={profile.name}
+          vaccines={vaccineEntries}
+          now={openedAt}
+          onAdd={(entry, message) => onAdd(entry, message)}
+          onUpdate={(entry, message, undo) => {
+            if (!onUpdate(entry)) return false;
+            showToast(message, undo);
+            return true;
+          }}
+          onRemove={(entry, message) => onRemove(entry, message)}
+        />
+      )}
+
       {sheet === "bottle" && (
         <SheetForm onSubmit={saveBottle}>
-          <LogDialogHeader icon={<Milk />} eyebrow="Quick log" title="Bottle" description="Record the amount now; adjust details only if needed." />
+          <LogDialogHeader icon={<Milk />} tone="glyph-bottle" eyebrow="Quick log" title="Bottle" description="Record the amount now; adjust details only if needed." />
           <Field className="amount-field">
             <FieldLabel>Amount</FieldLabel>
             <ButtonGroup className="amount-control" aria-label="Bottle amount">
@@ -578,7 +658,7 @@ export function LogSheet({
 
       {sheet === "nursing" && (
         <SheetForm onSubmit={saveNursing}>
-          <LogDialogHeader icon={<Heart />} eyebrow="Nursing" title="Log a nursing session" description="Start a live timer or add a completed session." />
+          <LogDialogHeader icon={<Heart />} tone="glyph-nursing" eyebrow="Nursing" title="Log a nursing session" description="Start a live timer or add a completed session." />
           <Field className="choice-field">
             <FieldLabel>Entry method</FieldLabel>
             <ToggleGroup
@@ -632,6 +712,7 @@ export function LogSheet({
         <SheetForm onSubmit={saveSleep}>
           <LogDialogHeader
             icon={<Moon />}
+            tone="glyph-sleep"
             eyebrow="Past sleep"
             title="Add a sleep"
             description="A stretch that has already finished — the night you meant to log at the time."
@@ -665,6 +746,7 @@ export function LogSheet({
         <SheetForm onSubmit={saveMedicine}>
           <LogDialogHeader
             icon={<Pill />}
+            tone="glyph-medicine"
             eyebrow="Medicine"
             title="Log a dose"
             description="So the next person knows it has already been given."
@@ -739,6 +821,7 @@ export function LogSheet({
         <SheetForm onSubmit={saveSolid}>
           <LogDialogHeader
             icon={<Utensils />}
+            tone="glyph-solid"
             eyebrow="Solids"
             title="Log a food"
             description="What went in, and roughly when — tastes count."
@@ -770,7 +853,7 @@ export function LogSheet({
 
       {sheet === "diaper" && (
         <SheetForm onSubmit={() => saveDiaper(draft.diaperKind)}>
-          <LogDialogHeader icon={<Droplet />} eyebrow="Quick log" title="Diaper" description="Choose the closest match and save." />
+          <LogDialogHeader icon={<Droplet />} tone="glyph-diaper" eyebrow="Quick log" title="Diaper" description="Choose the closest match and save." />
           <Field className="choice-field">
             <FieldLabel>Diaper type</FieldLabel>
             <ToggleGroup type="single" value={draft.diaperKind} className="diaper-grid" aria-label="Diaper type" onValueChange={(value) => value && patch({ diaperKind: value as DiaperKind })}>
@@ -781,13 +864,14 @@ export function LogSheet({
           </Field>
           <TimeField quick value={draft.logTime} onChange={(value) => patch({ logTime: value })} />
           <NoteField value={draft.note} onChange={(value) => patch({ note: value })} />
-          <SheetFooter><Button type="submit" className="primary-button sheet-primary">Save {draft.diaperKind === "both" ? "wet + dirty" : draft.diaperKind} diaper</Button></SheetFooter>
+          <PhotoField variant="compact" label="Photo" photoId={draft.photo} onChange={(photo) => patch({ photo })} onBusyChange={setPhotoBusy} />
+          <SheetFooter><Button type="submit" className="primary-button sheet-primary" disabled={photoBusy}>Save {draft.diaperKind === "both" ? "wet + dirty" : draft.diaperKind} diaper</Button></SheetFooter>
         </SheetForm>
       )}
 
       {sheet === "growth" && (
         <SheetForm onSubmit={saveGrowth}>
-          <LogDialogHeader icon={<Weight />} eyebrow="Growth check" title="Add measurement" description="Weight now, length and head if you have them." />
+          <LogDialogHeader icon={<Weight />} tone="glyph-growth" eyebrow="Growth check" title="Add measurement" description="Weight now, length and head if you have them." />
           <FieldGroup className="measurement-fields">
             <UnitField {...measureProps("weightGrams")} value={draft.weightGrams} inputRef={weightRef} autoFocus invalid={formError?.field === "weightGrams"} onChange={(value) => { patch({ weightGrams: value }); setFormError(null); }} placeholder={measurementPlaceholder("weightGrams", units)} className="measurement-primary" />
             <div className="measurement-row">
@@ -805,7 +889,7 @@ export function LogSheet({
 
       {sheet === "health" && (
         <SheetForm onSubmit={saveHealthNote}>
-          <LogDialogHeader icon={<Thermometer />} eyebrow="Health log" title="Temperature or note" description="Keep a time-stamped note you can refer back to." />
+          <LogDialogHeader icon={<Thermometer />} tone="glyph-health" eyebrow="Health log" title="Temperature or note" description="Keep a time-stamped note you can refer back to." />
           <UnitField {...measureProps("temperatureC")} optional value={draft.temperatureC} inputRef={temperatureRef} autoFocus invalid={formError?.field === "temperatureC"} onChange={(value) => { patch({ temperatureC: value }); setFormError(null); }} placeholder={measurementPlaceholder("temperatureC", units)} />
           <TemperatureAdvice value={metricMeasurement("temperatureC")} ageMonths={babyAgeMonths} />
           <TimeField value={draft.logTime} onChange={(value) => patch({ logTime: value })} />
@@ -904,6 +988,10 @@ export function LogSheet({
             </FieldGroup>
           )}
 
+          {editing.type === "diaper" && (
+            <PhotoField label="Photo" photoId={draft.photo} onChange={(photo) => patch({ photo })} onBusyChange={setPhotoBusy} hint="Anything unusual — for you, or to show the doctor." />
+          )}
+
           {editing.type === "health" && (
             <>
               <UnitField {...measureProps("temperatureC")} optional value={draft.temperatureC} inputRef={temperatureRef} autoFocus invalid={formError?.field === "temperatureC"} onChange={(value) => { patch({ temperatureC: value }); setFormError(null); }} placeholder={measurementPlaceholder("temperatureC", units)} />
@@ -929,7 +1017,7 @@ export function LogSheet({
             </Button>
           </div>
 
-          <SheetFooter><Button type="submit" className="primary-button sheet-primary">Save changes</Button></SheetFooter>
+          <SheetFooter><Button type="submit" className="primary-button sheet-primary" disabled={photoBusy}>Save changes</Button></SheetFooter>
         </SheetForm>
       )}
 
@@ -946,14 +1034,37 @@ export function LogSheet({
 
 function ProfileForm({ profile, onChange, onDone }: { profile: Profile; onChange: (profile: Profile) => boolean; onDone: () => void }) {
   const [draft, setDraft] = useState(profile);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  // The photo this form opened with; the live one may change while it is open.
+  const [openedPhoto] = useState(profile.photo);
   const nameId = useId();
   const birthDateId = useId();
   return (
     <SheetForm onSubmit={() => {
-      if (onChange({ ...draft, name: draft.name.trim() || "Baby" })) onDone();
+      // Only on Save does a photo leave this phone (for a family that shares
+      // its log), and only then is the one it replaced let go of. Untouched,
+      // the photo stays whatever it is now — the other parent may have just
+      // set one (domain/photoRef.ts resolvePhotoSave).
+      const untouched = (draft.photo || undefined) === (openedPhoto || undefined);
+      const plan = resolvePhotoSave({ opened: openedPhoto || undefined, draft: draft.photo || undefined, live: profile.photo || undefined });
+      const photo = untouched ? profile.photo : plan.photo ?? "";
+      if (!onChange({ ...draft, photo, name: draft.name.trim() || "Baby" })) return;
+      if (plan.share) void sharePhoto(plan.share);
+      if (plan.forget) void forgetPhoto(plan.forget);
+      onDone();
     }}>
-      <LogDialogHeader icon={<Baby />} eyebrow="Keep it personal" title="Baby profile" description="Personalises your tracker — shared only with the phones in your Family Sync." />
+      <LogDialogHeader icon={<Baby />} tone="glyph-nursing" eyebrow="Keep it personal" title="Baby profile" description="Personalises your tracker — shared only with the phones in your Family Sync." />
       <FieldGroup>
+        <PhotoField
+          variant="avatar"
+          label="Photo"
+          photoId={draft.photo || undefined}
+          // Into the latest draft: a photo finishes preparing after the name
+          // or date typed meanwhile, and must not put them back.
+          onChange={(photo) => setDraft((current) => ({ ...current, photo: photo ?? "" }))}
+          onBusyChange={setPhotoBusy}
+          hint="Kept on this phone — and, with Family Sync, on your family’s other phones. Never public."
+        />
         <Field>
           <FieldLabel htmlFor={nameId}>Name</FieldLabel>
           <InputGroup><InputGroupInput id={nameId} autoFocus data-initial-focus maxLength={80} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Baby’s name" /></InputGroup>
@@ -979,7 +1090,7 @@ function ProfileForm({ profile, onChange, onDone }: { profile: Profile; onChange
           <FieldDescription>This changes which quick actions are shown.</FieldDescription>
         </Field>
       </FieldGroup>
-      <SheetFooter><Button type="submit" className="primary-button sheet-primary">Save profile</Button></SheetFooter>
+      <SheetFooter><Button type="submit" className="primary-button sheet-primary" disabled={photoBusy}>Save profile</Button></SheetFooter>
     </SheetForm>
   );
 }

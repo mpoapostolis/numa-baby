@@ -65,6 +65,10 @@ export function HandoffScreen({
             installed icon until the new address shows your entries: deleting an installed
             app deletes its storage with it.</li>
           <li>You will be asked to confirm again on the other side before anything is merged.</li>
+          {/* The entries fit in a link; photos do not, and each address keeps
+              its own storage. With Family Sync they come from the family's
+              space instead. */}
+          <li>Photos stay at this address. With Family Sync on, they come back on the new one once it joins your family too.</li>
         </ul>
 
         {state === "too-large" && (

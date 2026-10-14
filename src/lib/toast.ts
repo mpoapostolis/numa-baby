@@ -9,6 +9,9 @@ export type ToastOptions = {
   duration?: number;
   description?: string;
   action?: { label: string; onClick: () => void };
+  /** The toast timed out, or was swiped or closed — its Undo is gone. */
+  onAutoClose?: () => void;
+  onDismiss?: () => void;
 };
 
 type ToastFn = (message: string, options?: ToastOptions) => void;
@@ -30,3 +33,13 @@ export function attachToaster(fn: ToastFn) {
 export function detachToaster() {
   impl = null;
 }
+
+/**
+ * A tap on a toast is not a tap outside an open dialog. Toasts can be tapped
+ * over a dialog (an Undo over the sheet that just saved), and a dialog that
+ * took that tap as "outside" would close under the parent's thumb.
+ */
+export function isToastTarget(target: EventTarget | null) {
+  return target instanceof Element && target.closest("[data-sonner-toaster]") !== null;
+}
+

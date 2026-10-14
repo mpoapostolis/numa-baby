@@ -39,6 +39,9 @@ test("ships offline assets, security headers, reminders and a real 404", async (
   assert.ok(files.includes("notification-sw.js"));
   assert.ok(files.some((file) => file.startsWith("workbox-") && file.endsWith(".js")));
   assert.match(headers, /Content-Security-Policy:/);
+  // Baby photos are shown from this phone's own storage as blob: URLs.
+  // Without it in img-src they work on localhost and not on the live site.
+  assert.match(headers, /img-src [^;]*\bblob:/);
   assert.match(headers, /Strict-Transport-Security:/);
   assert.match(headers, /X-Content-Type-Options: nosniff/);
   assert.match(notificationWorker, /notificationclick/);
@@ -75,7 +78,30 @@ const BUDGET_GZIP = {
   // decide whether to show it. It needs only the dates (releaseIds.ts); the
   // words moved to the lazy news chunks and the shell lost 4.1 kB. Measured
   // after: 114.4 kB.
-  "index-*.js": 115_000,
+  // 115_000 → 115_500 on 2026-10-14 for baby photos, split rule honoured
+  // first: compression, IndexedDB and upload load only when a photo is
+  // chosen or shown (lib/photos.ts, via dynamic import). What stays on the
+  // boot path is the avatar and the photo-id check every incoming profile
+  // and entry must pass. Measured after: 115.0 kB.
+  // 115_500 → 118_000 the same day for months and vaccinations, the split
+  // rule honoured again: both screens are in the lazy LogSheet chunk, and
+  // every photo routine loads on demand. On the boot path: the two rows on
+  // Today that open them (and their icons), the camera badge on a row, and
+  // the validation of the new fields. Measured after: 117.8 kB — still under
+  // the 118.5 kB this budget stood at before the news split.
+  // 118_000 → 119_000 the same day, and not for new code: the bundler folded
+  // a 2.25 kB chunk of Radix primitives, until then preloaded beside the
+  // shell, into it. The phone fetches the same bytes in one file fewer. All
+  // the initial JS together went 134.6 → 136.4 kB for photos, months and
+  // vaccinations; the shell itself 114.7 → 118.5 kB, and 118.8 kB with the
+  // way into the months album under the baby's age on Today.
+  // 119_000 → 119_500, still the same day, for what the review before the
+  // first push found — and only what has to run before any tap: a back
+  // gesture that closes a sheet opened from the News (not the app), a toast
+  // tapped over any dialog not closing it, and the profile photo reaching a
+  // partner phone that updated second. The photo-only parts of those fixes
+  // load with the photo code. Measured after: 119.3 kB.
+  "index-*.js": 119_500,
   "index-*.css": 29_000,
 };
 const LAZY_SCREENS = ["SettingsScreen", "GrowthGuideScreen", "InsightsScreen", "TimelineScreen", "LogSheet", "OnboardingScreen", "sonner", "FactOfTheDay"];

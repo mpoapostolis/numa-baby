@@ -1,5 +1,6 @@
 import { BarChart3, ChevronRight, Clock, Home, Ruler, Settings } from "lucide-react";
 import { BabyFace } from "./illustrations";
+import { BabyAvatar } from "./BabyAvatar";
 import {
   Sidebar,
   SidebarContent,
@@ -88,7 +89,7 @@ export function AppSidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" className="sidebar-profile-button" aria-label="Baby profile" onClick={onProfile}>
-              <span className="baby-avatar"><BabyFace /></span>
+              <span className="baby-avatar"><BabyAvatar photo={profile.photo} /></span>
               <span className="sidebar-profile-copy">
                 <strong>{profile.name}</strong>
                 <small>Baby profile</small>

@@ -127,9 +127,23 @@ function sweepExpiredTombstones(list: Activity[]): Activity[] {
   return swept.length === list.length ? list : swept;
 }
 
+/**
+ * A deleted entry's photo is let go of when the Undo toast leaves the screen.
+ * An app closed or killed before that never had the moment: on the next
+ * start — no Undo on screen any more — those photos go (lib/photos.ts).
+ */
+function releaseDeletedPhotos(list: Activity[], profile: Profile) {
+  if (!list.some((item) => item.deleted && item.photo)) return;
+  // Off the start-up path: the photo code loads a moment later.
+  window.setTimeout(() => {
+    void import("../lib/photos").then((photos) => photos.releaseDeletedPhotos(list, profile));
+  }, 3_000);
+}
+
 type TrackerStoreOptions = {
   debugMode: boolean;
-  showToast: (message: string, undo?: () => void) => void;
+  /** `onGone` runs once the toast — and its Undo — has left the screen. */
+  showToast: (message: string, undo?: () => void, onGone?: () => void) => void;
   onNotificationPermission: (permission: NotificationPermission | "unsupported") => void;
 };
 
@@ -264,6 +278,7 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
                 reminders: parsed.reminders ?? DEFAULT_REMINDERS,
                 bootState: "ready",
               });
+              releaseDeletedPhotos(parsed.activities, parsed.profile);
               if (parsed.droppedActivities > 0) {
                 try {
                   window.localStorage.setItem(RECOVERY_KEY, saved);
@@ -425,8 +440,30 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
       );
       if (!persistSnapshot(undone)) return;
       syncActivitiesFromRef();
+      // Undoing a save undoes its photo too: it was never meant to be kept.
+      if (stamped.photo) {
+        const photo = stamped.photo;
+        void import("../lib/photos").then((photos) => photos.forgetPhoto(photo));
+      }
       showToast("Last change undone");
     });
+    return true;
+  }
+
+  /** Write an entry under its own id: replace the row if it exists — live or
+      deleted, so a tombstone is revived rather than joined by a second row
+      with the same id — and add it if it does not. For entries whose id is
+      chosen, not random: a month's note (domain/months.ts). */
+  function upsertActivity(next: Activity) {
+    const stamped: Activity = { ...next, updatedAt: new Date().toISOString() };
+    delete stamped.deleted;
+    const current = persistedStateRef.current.activities;
+    const exists = current.some((activity) => activity.id === stamped.id);
+    const nextActivities = exists
+      ? current.map((activity) => (activity.id === stamped.id ? stamped : activity))
+      : [stamped, ...current];
+    if (!persistSnapshot(nextActivities)) return false;
+    syncActivitiesFromRef();
     return true;
   }
 
@@ -438,7 +475,7 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     return true;
   }
 
-  function removeActivity(activity: Activity) {
+  function removeActivity(activity: Activity, message = "Entry removed") {
     // Delete is a tombstone write, not a filter-out: the row stays in storage
     // (deleted: true) so a future sync can merge the deletion, and the UI only
     // ever sees the live view.
@@ -449,7 +486,32 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     );
     if (!persistSnapshot(next)) return false;
     syncActivitiesFromRef();
-    showToast("Entry removed", () => {
+    // Its photo goes too — once Undo can no longer bring the entry back,
+    // which is when the toast leaves the screen. Not on a clock of its own:
+    // the toast's timer pauses while the app is in the background or a finger
+    // rests on it, and an Undo still on screen must still bring the photo.
+    // (An app closed before then lets go of it on its next start.)
+    // The stored row's photo — the caller's copy may predate a change to it.
+    const photo = persistedStateRef.current.activities.find((item) => item.id === activity.id)?.photo;
+    // Held while the Undo is on offer, so another tab or window starting
+    // meanwhile leaves this photo alone (lib/photos.ts releaseDeletedPhotos).
+    // The browser lets go of it by itself if this tab closes.
+    let letGo = () => {};
+    if (photo) {
+      const held = new Promise<void>((done) => { letGo = done; });
+      void navigator.locks?.request(`numalog-photo-undo:${photo}`, () => held).catch(() => undefined);
+    }
+    const releasePhoto = photo
+      ? () => {
+          letGo();
+          const row = persistedStateRef.current.activities.find((item) => item.id === activity.id);
+          if (row?.deleted && row.photo === photo) {
+            void import("../lib/photos").then((photos) => photos.forgetPhoto(photo));
+          }
+        }
+      : undefined;
+    showToast(message, () => {
+      letGo();
       // Undo revives the tombstone in place: the deleted flag comes off and the
       // revival is itself a fresh write (restamped updatedAt) so it wins a merge.
       const restored = persistedStateRef.current.activities.map((item) => {
@@ -461,7 +523,7 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
       if (!persistSnapshot(restored)) return;
       syncActivitiesFromRef();
       showToast("Entry restored");
-    });
+    }, releasePhoto);
     return true;
   }
 
@@ -723,6 +785,27 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     const applied = applyRemote(current.activities, remote);
     const merged = applied.activities;
     const summary = { added: applied.added, updated: applied.updated };
+    // The other parent deleted an entry with a photo, or replaced its photo:
+    // this phone's copy of the old one goes too. (Their phone removes it from
+    // the bucket; this only cleans up here.)
+    if (merged !== current.activities) {
+      const before = new Map(current.activities.map((item) => [item.id, item]));
+      const released = merged.flatMap((item) => {
+        const was = before.get(item.id);
+        // Only rows this merge changed.
+        if (!was?.photo || was === item) return [];
+        // Another photo now: nothing will bring this one back, not even an
+        // Undo — that would restore the row as it now is.
+        if (item.photo !== was.photo) return [was.photo];
+        // The same photo: let go only when a live row became a tombstone. A
+        // tombstone of this phone's own is let go of when its Undo leaves
+        // the screen, and may yet be undone.
+        return item.deleted && !was.deleted ? [was.photo] : [];
+      });
+      if (released.length) {
+        void import("../lib/photos").then((photos) => released.forEach((id) => void photos.deleteLocalPhoto(id)));
+      }
+    }
     // Profile rule: adopt the remote copy only when it cannot clobber a fresher
     // local edit — the local profile is still the untouched empty default, or
     // the remote stamp is strictly newer than the local one. A local profile
@@ -732,7 +815,17 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     const localMs = current.profileUpdatedAt ? new Date(current.profileUpdatedAt).getTime() : -1;
     const remoteMs = remoteProfileUpdatedAt ? new Date(remoteProfileUpdatedAt).getTime() : -1;
     const emptyDefault = current.profile.name === "" && current.profile.birthDate === "";
-    const adoptProfile = remoteProfile !== undefined && (emptyDefault || remoteMs > localMs);
+    // The same edit under the same stamp, but with the photo this phone's
+    // copy is missing: a phone still on an older build adopted it once and
+    // could not keep the field. Take it now — nothing else will ever send it
+    // again under a newer stamp.
+    const samePhotoStripped = remoteProfile !== undefined && remoteMs >= 0 && remoteMs === localMs
+      && current.profile.photo === undefined && remoteProfile.photo !== undefined;
+    const adoptProfile = remoteProfile !== undefined && (emptyDefault || remoteMs > localMs || samePhotoStripped);
+    // A photo only counts as this phone's own while its profile does: a
+    // phone joining a family (or mirroring the cloud) had its stamp taken
+    // away, and its old picture must not become the family's.
+    const localPhoto = current.profileUpdatedAt ? current.profile.photo : undefined;
     if (summary.added === 0 && summary.updated === 0 && !adoptProfile) return { added: 0, updated: 0, persisted: true };
     // The profile is adopted whole — except for the routine list, which a
     // phone on an older build does not know about and therefore sends as
@@ -741,9 +834,27 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     // first time anyone renamed the baby on the older phone. An explicit
     // empty list is still adopted, because clearing the list is a real edit.
     const nextProfile = adoptProfile && remoteProfile
-      ? { ...remoteProfile, routines: remoteProfile.routines ?? current.profile.routines }
+      ? {
+          ...remoteProfile,
+          routines: remoteProfile.routines ?? current.profile.routines,
+          // The profile photo arrived later still, and is kept for the same
+          // reason: an older phone's silence is not a removal ("" is).
+          photo: remoteProfile.photo ?? localPhoto,
+        }
       : current.profile;
-    const nextStamp = adoptProfile && remoteProfileUpdatedAt ? remoteProfileUpdatedAt : current.profileUpdatedAt;
+    // Kept a photo (or a removal) the incoming profile says nothing about:
+    // the merged profile is newer than either copy, so stamp it now and let
+    // the next push carry it back. Under the remote stamp the two phones
+    // would disagree about the baby's picture for good.
+    // Strictly after the remote stamp, too — a partner's clock that runs
+    // ahead would otherwise win every round, and the photo would be re-kept,
+    // re-stamped and refused on every pull.
+    const keptLocalPhoto = adoptProfile && remoteProfile?.photo === undefined && localPhoto !== undefined;
+    const nextStamp = adoptProfile && remoteProfileUpdatedAt
+      ? (keptLocalPhoto
+          ? new Date(Math.max(Date.now(), Number.isFinite(remoteMs) ? remoteMs + 1 : 0)).toISOString()
+          : remoteProfileUpdatedAt)
+      : current.profileUpdatedAt;
     if (!persistSnapshot(merged, nextProfile, undefined, undefined, undefined, nextStamp)) {
       return { added: 0, updated: 0, persisted: false };
     }
@@ -1025,6 +1136,8 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     try {
       window.localStorage.removeItem(STORAGE_KEY);
       window.localStorage.removeItem(RECOVERY_KEY);
+      // The photos live apart from the log (IndexedDB), and go with it.
+      void import("../lib/photos").then((photos) => photos.clearAllPhotos());
       applyLoadedState({
         activities: [],
         profile: EMPTY_PROFILE,
@@ -1080,5 +1193,6 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     resetUnreadableData,
     dismissRecoveredNotice,
     eraseAllData,
+    upsertActivity,
   };
 }

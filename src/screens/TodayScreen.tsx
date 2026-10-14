@@ -1,5 +1,5 @@
 import { Suspense, lazy, memo, useState } from "react";
-import { ChevronRight, Cloud, CloudOff, Gift, History, Milk, Pill, ShieldCheck, Square, Thermometer, Utensils, Waves, Weight } from "lucide-react";
+import { CalendarHeart, Camera, ChevronRight, Cloud, CloudOff, Gift, History, Milk, Pill, ShieldCheck, Square, Syringe, Thermometer, Utensils, Waves, Weight } from "lucide-react";
 
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -31,6 +31,9 @@ import {
   liveDuration,
   minutesBetween,
 } from "../domain/time";
+import { dueLabel, vaccineLabel } from "../domain/vaccines";
+import { MONTHS_KEPT } from "../domain/keepsakes";
+import { usePhoto } from "../hooks/usePhoto";
 import { Activity, DiaperKind, Profile, Sheet } from "../domain/types";
 import { UnitSystem, formatVolume, useUnits } from "../domain/units";
 import { Milestone } from "../domain/milestones";
@@ -40,6 +43,11 @@ import { isMorning, summarizeNight } from "../domain/nightSummary";
 import { typicalVerdict } from "../domain/typical";
 import { ROUTINE_TYPE, pendingRoutines, type Routine } from "../domain/routines";
 import { shareCardOnTap } from "../lib/shareOnTap";
+
+/** "Jun 28" — the short day the secondary rows speak in. */
+function shortDay(value: Date) {
+  return value.toLocaleDateString("en", { month: "short", day: "numeric" });
+}
 
 // A party is downloaded only on a day there is one.
 // Same rule for the share fallback dialog — phones use the native sheet and
@@ -104,6 +112,46 @@ function DurationFigure({ minutes }: { minutes: number }) {
         </>
       )}
     </>
+  );
+}
+
+/**
+ * The way into the months album, under the baby's age at the top of Today —
+ * where a parent looks, rather than eight rows down. Until this month has
+ * its photo it asks for it ("Add the 4‑month photo") and opens that page;
+ * once it has one, it wears it, and opens the album.
+ */
+function MonthsPill({
+  who,
+  month,
+  photo,
+  onOpenMonth,
+  onOpenAlbum,
+}: {
+  who: string;
+  month: number;
+  photo: string | undefined;
+  onOpenMonth: (month: number) => void;
+  onOpenAlbum: () => void;
+}) {
+  const url = usePhoto(photo);
+  // No page to fill: before the first month-birthday, past the second year.
+  const asks = month >= 1 && month <= MONTHS_KEPT && !photo;
+  return (
+    <button
+      type="button"
+      className={asks ? "months-pill is-asking" : "months-pill"}
+      onClick={() => (asks ? onOpenMonth(month) : onOpenAlbum())}
+    >
+      {url ? (
+        <img src={url} alt="" />
+      ) : asks ? (
+        <Camera size={12} aria-hidden="true" />
+      ) : (
+        <CalendarHeart size={12} aria-hidden="true" />
+      )}
+      <span>{asks ? `Add the ${month}‑month photo` : `${who}’s months`}</span>
+    </button>
   );
 }
 
@@ -252,6 +300,15 @@ type TodayScreenProps = {
   onSeeTimeline: () => void;
   /** The sound player belongs to App, not to this screen — see App.tsx. */
   onOpenSoothe: () => void;
+  /** The soonest planned vaccination, for the Vaccines row. */
+  nextVaccine?: Activity;
+  /** The latest vaccine given, when nothing is planned. */
+  lastVaccine?: Activity;
+  /** The month the family is living in (0 before the first month-birthday)
+      and its photo, if it has one; null without a date of birth. */
+  monthNow: { month: number; photo?: string } | null;
+  /** Open one month's page — from the hero, and the month-birthday card. */
+  onOpenMonth: (month: number) => void;
   /** Where the log lives right now, in one word. */
   cloudState: "none" | "synced" | "syncing" | "offline" | "revoked";
   /** Tap on the note — the doors when unprotected, the details when synced. */
@@ -273,6 +330,10 @@ function TodayScreen({
   onEdit,
   onSeeTimeline,
   onOpenSoothe,
+  nextVaccine,
+  lastVaccine,
+  monthNow,
+  onOpenMonth,
   cloudState,
   onOpenProtection,
 }: TodayScreenProps) {
@@ -561,7 +622,7 @@ function TodayScreen({
     >
       {celebration && (
         <Suspense fallback={null}>
-          <MilestoneParty milestone={celebration} totals={milestoneTotals} onDismiss={onDismissCelebration} />
+          <MilestoneParty milestone={celebration} totals={milestoneTotals} onDismiss={onDismissCelebration} onAddMonth={onOpenMonth} monthHasPhoto={Boolean(monthNow?.photo)} />
         </Suspense>
       )}
 
@@ -578,13 +639,24 @@ function TodayScreen({
           {/* The quiet truth about where the data lives — all four of them.
               A state, not a nudge: small, constant, honest. Unprotected taps
               open the doors; a synced one opens the details. */}
-          <button type="button" className={cloudState === "none" || cloudState === "revoked" ? "cloud-note" : "cloud-note is-good"} onClick={onOpenProtection}>
-            {cloudState === "none" && <><CloudOff size={12} aria-hidden="true" /> On this phone only</>}
-            {cloudState === "synced" && <><Cloud size={12} aria-hidden="true" /> Synced to the cloud</>}
-            {cloudState === "syncing" && <><Cloud size={12} aria-hidden="true" /> Syncing…</>}
-            {cloudState === "offline" && <><CloudOff size={12} aria-hidden="true" /> Offline — will catch up</>}
-            {cloudState === "revoked" && <><CloudOff size={12} aria-hidden="true" /> Sync disconnected — tap to fix</>}
-          </button>
+          <div className="welcome-pills">
+            <button type="button" className={cloudState === "none" || cloudState === "revoked" ? "cloud-note" : "cloud-note is-good"} onClick={onOpenProtection}>
+              {cloudState === "none" && <><CloudOff size={12} aria-hidden="true" /> On this phone only</>}
+              {cloudState === "synced" && <><Cloud size={12} aria-hidden="true" /> Synced to the cloud</>}
+              {cloudState === "syncing" && <><Cloud size={12} aria-hidden="true" /> Syncing…</>}
+              {cloudState === "offline" && <><CloudOff size={12} aria-hidden="true" /> Offline — will catch up</>}
+              {cloudState === "revoked" && <><CloudOff size={12} aria-hidden="true" /> Sync disconnected — tap to fix</>}
+            </button>
+            {monthNow && (
+              <MonthsPill
+                who={trimmedName ? displayName : "Your baby"}
+                month={monthNow.month}
+                photo={monthNow.photo}
+                onOpenMonth={onOpenMonth}
+                onOpenAlbum={() => onOpenSheet("months")}
+              />
+            )}
+          </div>
           <p className="welcome-date">
             {statusDateFormat.format(new Date(minuteClock))}
             {babyDays !== null && <span className="welcome-day-count">Day {babyDays + 1}</span>}
@@ -923,6 +995,47 @@ function TodayScreen({
             <span className="log-copy">
               <strong>Growth</strong>
               <small>Weight, length, head</small>
+            </span>
+            <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
+          </Button>
+          {/* Asked for from the feedback box: a section for vaccinations —
+              public health center or private clinic, the schedule and what
+              was given. The next appointment is on the row itself; a late
+              one says so, and after a week asks rather than shouts. */}
+          <Button
+            variant="ghost"
+            className="log-row log-row-secondary action-vaccines"
+            onClick={() => onOpenSheet("vaccines")}
+          >
+            <span className="action-icon" aria-hidden="true"><Syringe /></span>
+            <span className="log-copy">
+              <strong>Vaccines</strong>
+              <small>
+                {nextVaccine?.due
+                  ? (() => {
+                      const due = dueLabel(nextVaccine.due, minuteClock);
+                      const label = vaccineLabel(nextVaccine);
+                      if (due.days <= -7) return `${label} — was it given?`;
+                      return <span className={due.overdue ? "is-late" : undefined}>{label} · {due.inline}{due.overdue ? " — given?" : ""}</span>;
+                    })()
+                  : lastVaccine
+                    ? `Last: ${vaccineLabel(lastVaccine)} · ${shortDay(new Date(lastVaccine.startedAt))}`
+                    : "What was given, and what is next"}
+              </small>
+            </span>
+            <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
+          </Button>
+          {/* Asked for from the feedback box: a monthly milestone note, and a
+              monthly photo. */}
+          <Button
+            variant="ghost"
+            className="log-row log-row-secondary action-months"
+            onClick={() => onOpenSheet("months")}
+          >
+            <span className="action-icon" aria-hidden="true"><CalendarHeart /></span>
+            <span className="log-copy">
+              <strong>Months</strong>
+              <small>A photo and a note for each month</small>
             </span>
             <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
           </Button>

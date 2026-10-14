@@ -132,6 +132,17 @@
   color: color-mix(in oklab, var(--glyph-nursing) 45%, var(--foreground));
 }
 
+/* The baby's own photo, once chosen in the profile, fills the circle. */
+.baby-avatar {
+  overflow: hidden;
+}
+
+.baby-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .dark .wordmark-mark,
 .dark .baby-avatar {
   background: color-mix(in oklab, var(--glyph-nursing) 20%, var(--card));

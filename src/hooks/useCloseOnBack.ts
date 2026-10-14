@@ -21,17 +21,33 @@ import { useEffect, useRef } from "react";
 // gives the entry back on its way out, or the stack would be left with a
 // phantom on top that swallowed every later gesture.
 
-type Entry = { token: symbol; close: () => void };
+type Entry = { token: symbol; close: () => void; pushed: boolean };
 
 const stack: Entry[] = [];
 // Pops this module caused itself (history.back() after a programmatic close)
 // must not be answered as gestures.
 let ownPops = 0;
 let listening = false;
+// Surfaces opened while one of those pops is still on its way — one closed
+// and another opened by the same tap (a News button that opens Months). The
+// browser goes back AFTER the code that asked, so an entry pushed at once
+// would be the one taken away, and the next back gesture would close the
+// app. Their entries are pushed once the pop has landed.
+let waiting: Entry[] = [];
+
+function pushEntry(entry: Entry) {
+  entry.pushed = true;
+  window.history.pushState({ numaSheet: true }, "");
+}
 
 function onPop() {
   if (ownPops > 0) {
     ownPops -= 1;
+    if (ownPops === 0) {
+      const ready = waiting.filter((entry) => stack.includes(entry));
+      waiting = [];
+      ready.forEach(pushEntry);
+    }
     return;
   }
   const top = stack.pop();
@@ -44,12 +60,32 @@ function listen() {
   window.addEventListener("popstate", onPop);
 }
 
+// Entries given back during this task, taken back in one step.
+let stepsBack = 0;
+
 function release(token: symbol) {
   const at = stack.findIndex((entry) => entry.token === token);
   if (at < 0) return;
-  stack.splice(at, 1);
-  ownPops += 1;
-  window.history.back();
+  const [entry] = stack.splice(at, 1);
+  // Closed before its entry was ever pushed: there is nothing to take back.
+  if (!entry.pushed) {
+    waiting = waiting.filter((other) => other !== entry);
+    return;
+  }
+  // Surfaces closed by one tap — a sheet and the month page or vaccine form
+  // open inside it — leave in ONE step: Safari folds two history.back()
+  // calls made at once into a single step with a single popstate, which
+  // would leave a phantom entry behind and swallow the next back gesture.
+  // Counted now, so a surface opened in this same moment waits for it.
+  if (stepsBack === 0) {
+    ownPops += 1;
+    queueMicrotask(() => {
+      const steps = stepsBack;
+      stepsBack = 0;
+      window.history.go(-steps);
+    });
+  }
+  stepsBack += 1;
 }
 
 export function useCloseOnBack(open: boolean, onClose: () => void) {
@@ -66,8 +102,10 @@ export function useCloseOnBack(open: boolean, onClose: () => void) {
     listen();
     const held = stack.some((entry) => entry.token === token.current);
     if (open && !held) {
-      stack.push({ token: token.current, close: () => close.current() });
-      window.history.pushState({ numaSheet: true }, "");
+      const entry: Entry = { token: token.current, close: () => close.current(), pushed: false };
+      stack.push(entry);
+      if (ownPops > 0) waiting.push(entry);
+      else pushEntry(entry);
       return;
     }
     // Closed by the X, by Escape, or by saving. Remove our entry so back

@@ -8,7 +8,7 @@
 
 import "../styles/screens/milestone.css";
 import { useEffect, useState } from "react";
-import { PartyPopper, Share2 } from "lucide-react";
+import { Camera, PartyPopper, Share2 } from "lucide-react";
 import { toast } from "../lib/toast";
 import { LifetimeTotals } from "../domain/lifetime";
 import { milestoneCard } from "../domain/shareCards";
@@ -34,9 +34,14 @@ type Props = {
   /** Everything since day one, so the card can say what the family has done. */
   totals: LifetimeTotals | null;
   onDismiss?: () => void;
+  /** Open this month's page (components/MonthsSheet.tsx) — offered on a
+      month-birthday, the moment a parent wants the month's photo. */
+  onAddMonth?: (month: number) => void;
+  /** This month already has its photo: the button opens its page instead. */
+  monthHasPhoto?: boolean;
 };
 
-export function MilestoneParty({ milestone, totals, onDismiss }: Props) {
+export function MilestoneParty({ milestone, totals, onDismiss, onAddMonth, monthHasPhoto }: Props) {
   const units = useUnits();
   const [dismissed, setDismissed] = useState(false);
   // Confetti falls once and cleans up after itself; the card stays until read.
@@ -65,6 +70,10 @@ export function MilestoneParty({ milestone, totals, onDismiss }: Props) {
   }
 
   if (dismissed) return null;
+  // "m3" is the third month-birthday; "d7", "d100" and the later birthdays
+  // have no month page of their own.
+  const monthMatch = /^m(\d+)$/.exec(milestone.id);
+  const month = monthMatch && Number(monthMatch[1]) <= 24 ? Number(monthMatch[1]) : null;
 
   return (
     <>
@@ -91,6 +100,11 @@ export function MilestoneParty({ milestone, totals, onDismiss }: Props) {
         <div className="milestone-copy">
           <strong>{milestone.title}</strong>
           <small>{milestone.sub}</small>
+          {month !== null && onAddMonth && (
+            <button type="button" className="milestone-month" onClick={() => onAddMonth(month)}>
+              <Camera size={14} aria-hidden="true" /> {monthHasPhoto ? "Open this month’s page" : "Add this month’s photo"}
+            </button>
+          )}
         </div>
         <Button variant="ghost" size="sm" aria-label="Share this milestone as a picture" onClick={() => void share()}><Share2 size={18} aria-hidden="true" /></Button>
         <Button variant="ghost" size="sm" aria-label="Dismiss the celebration" onClick={() => { setDismissed(true); onDismiss?.(); }}>🎉</Button>

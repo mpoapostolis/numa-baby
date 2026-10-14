@@ -7,8 +7,9 @@ import { Newspaper } from "lucide-react";
 import { NewsDialog } from "./NewsDialog";
 import { SettingsAction } from "./SettingsAction";
 import { track } from "../domain/analytics";
+import type { ReleaseAction } from "../domain/changelog";
 
-export function AppNews() {
+export function AppNews({ onAction }: { onAction?: (to: ReleaseAction["to"]) => void }) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -18,7 +19,7 @@ export function AppNews() {
         icon={<Newspaper />}
         onClick={() => { track("news_opened", { from: "settings" }); setOpen(true); }}
       />
-      <NewsDialog open={open} onOpenChange={setOpen} />
+      <NewsDialog open={open} onOpenChange={setOpen} onAction={onAction} />
     </>
   );
 }

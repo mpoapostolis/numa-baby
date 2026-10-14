@@ -58,6 +58,8 @@ type SettingsScreenProps = {
   onShare: () => void;
   onImport: (event: ChangeEvent<HTMLInputElement>) => void;
   onOpenProfile: () => void;
+  /** Open what a release note in the News archive is about. */
+  onOpenSheet: (sheet: "months" | "vaccines" | "profile") => void;
   onRoutinesChange: (routines: Routine[]) => void;
   onEraseAll: () => void;
   familySync: FamilySync;
@@ -167,6 +169,7 @@ export default function SettingsScreen({
   onShare,
   onImport,
   onOpenProfile,
+  onOpenSheet,
   onRoutinesChange,
   onEraseAll,
   familySync,
@@ -386,7 +389,7 @@ export default function SettingsScreen({
         </CardHeader>
         <CardContent>
           <ItemGroup className="settings-action-list" role="group" aria-label="Backup actions">
-            <AppNews />
+            <AppNews onAction={onOpenSheet} />
             <ItemSeparator />
             <SettingsAction title="Share with partner" description="Sends your whole log as a file — their app merges it, nothing gets replaced" icon={<Share2 />} onClick={() => { track("data_shared"); onShare(); }} />
             <ItemSeparator />
@@ -467,9 +470,9 @@ export default function SettingsScreen({
       <Card className="privacy-card">
         <span><ShieldCheck size={18} /></span>
         {familySync.pairing ? (
-          <div><strong>Shared with your family</strong><p>Entries are stored in your family’s space in the cloud so both phones stay in step. Anonymous usage statistics help improve the app.</p></div>
+          <div><strong>Shared with your family</strong><p>Entries, and any photos you add, are stored in your family’s private space in the cloud so both phones stay in step — never public. Anonymous usage statistics help improve the app.</p></div>
         ) : (
-          <div><strong>On this device</strong><p>Your baby’s entries stay in this browser until you turn on Family Sync. Anonymous usage statistics help improve the app.</p></div>
+          <div><strong>On this device</strong><p>Your baby’s entries and photos stay in this browser until you turn on Family Sync. Anonymous usage statistics help improve the app.</p></div>
         )}
       </Card>
 

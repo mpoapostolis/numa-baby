@@ -36,7 +36,7 @@ No account is required. By default baby data stays in the browser's local storag
 
 Two things do leave the device, and both are stated in the app:
 
-- **Family Sync (opt-in).** Turning it on stores your entries in your family's own space in a hosted database, so a second phone can share the log. Leave the family and the phone keeps its data and stops syncing.
+- **Family Sync (opt-in).** Turning it on stores your entries in your family's own space in a hosted database, so a second phone can share the log. Photos you add (the baby's profile picture, a month's photo, a nappy photo) are compressed on the phone, lose their EXIF/location data, and go to a private Cloudflare R2 bucket reachable only through the Worker with the family's key — never by a public URL. Without Family Sync, photos stay in the phone's IndexedDB. Leave the family and the phone keeps its data and stops syncing.
 - **Anonymous usage statistics.** The app loads Google Analytics to count page views. It never receives your baby's entries — those are not sent anywhere except through Family Sync, if you enable it.
 
 ## Family Sync service

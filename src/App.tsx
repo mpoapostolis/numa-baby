@@ -10,7 +10,8 @@ import {
   useSidebar,
 } from "./components/ui/sidebar";
 import { AppSidebar } from "./components/AppSidebar";
-import { BabyFace, SleepingBaby } from "./components/illustrations";
+import { BabyAvatar } from "./components/BabyAvatar";
+import { SleepingBaby } from "./components/illustrations";
 import { ConsentBanner } from "./components/ConsentBanner";
 import { InAppEscape } from "./components/InAppEscape";
 import { Milestone, milestoneFor, milestoneSeen } from "./domain/milestones";
@@ -43,6 +44,7 @@ import { reminderNudge } from "./domain/reminderNudge";
 import { onConsentChange, readConsent } from "./domain/consent";
 import { ageInDays } from "./domain/time";
 import { dayKey } from "./domain/daySummary";
+import { careEntries, monthsReached } from "./domain/keepsakes";
 import { useActivityStats } from "./hooks/useActivityStats";
 import { useFamilySync } from "./hooks/useFamilySync";
 import { useMinuteClock } from "./hooks/useMinuteClock";
@@ -203,7 +205,11 @@ const arrivedVia = readArrival();
 export default function HomePage() {
   const [debugMode] = useState(() => {
     const on = new URLSearchParams(window.location.search).has("debug");
-    if (on) suppressTracking();
+    if (on) {
+      suppressTracking();
+      // Made-up data on a phone that may be paired: no photo goes anywhere.
+      void import("./lib/photos").then((photos) => photos.setPhotoSharingSuspended(true));
+    }
     return on;
   });
   const [incomingJoinCode, setIncomingJoinCode] = useState(readIncomingJoinCode);
@@ -221,6 +227,8 @@ export default function HomePage() {
   // waits here while the person decides in a real dialog.
   const [recoverAsk, setRecoverAsk] = useState<string | null>(null);
   const [newsOpen, setNewsOpen] = useState(false);
+  // The month-birthday card opens that month's page directly.
+  const [monthToOpen, setMonthToOpen] = useState<number | null>(null);
   // The noise must outlast everything a parent taps after starting it. It
   // lived in the Today screen, and Today unmounts when another tab opens — so
   // a look at the timeline for the last feed silenced it, the complaint that
@@ -292,14 +300,17 @@ export default function HomePage() {
   const backToToday = useCallback(() => setActiveTab("today"), []);
   useCloseOnBack(activeTab !== "today", backToToday);
 
-  function showToast(message: string, undo?: () => void) {
+  function showToast(message: string, undo?: () => void, onGone?: () => void) {
     toast(message, {
-      // A toast that carries Undo stays twice as long: on a touchscreen the
-      // timer never pauses (nothing hovers), and the mis-tap it exists for —
-      // Wet for Dirty, four pixels apart — is found with the eyes, in the
-      // dark, after the baby has been settled.
+      // A toast that carries Undo stays twice as long: the mis-tap it exists
+      // for — Wet for Dirty, four pixels apart — is found with the eyes, in
+      // the dark, after the baby has been settled. (Its timer also pauses
+      // while the app is in the background, or a finger rests on it.)
       duration: undo ? 8_000 : 4_200,
       action: undo ? { label: "Undo", onClick: undo } : undefined,
+      // When its Undo is no longer on offer — whenever that turns out to be.
+      onAutoClose: onGone,
+      onDismiss: onGone,
     });
   }
 
@@ -314,6 +325,7 @@ export default function HomePage() {
     recoveredNotice,
     addActivity,
     updateActivity,
+    upsertActivity,
     removeActivity,
     stopTimer,
     changeNightMode,
@@ -450,7 +462,21 @@ export default function HomePage() {
     setSeenRelease(LATEST_RELEASE_ID);
   }
 
-  const stats = useActivityStats(activities, profile, minuteClock);
+  // Care only: a month's note and a vaccination are in the log (they sync and
+  // back up like any entry) but never in a total, a chart, a forecast or the
+  // timeline. They have screens of their own.
+  const care = useMemo(() => careEntries(activities), [activities]);
+  const monthEntries = useMemo(() => activities.filter((a) => a.type === "month"), [activities]);
+  const vaccineEntries = useMemo(() => activities.filter((a) => a.type === "vaccine"), [activities]);
+  const nextVaccine = useMemo(
+    () => vaccineEntries.filter((v) => v.planned && v.due).sort((a, b) => (a.due! < b.due! ? -1 : 1))[0],
+    [vaccineEntries],
+  );
+  const lastVaccine = useMemo(
+    () => vaccineEntries.filter((v) => !v.planned).sort((a, b) => (a.startedAt < b.startedAt ? 1 : -1))[0],
+    [vaccineEntries],
+  );
+  const stats = useActivityStats(care, profile, minuteClock);
   const { sortedActivities, feedCount, lastFeed, lastBottle, activeNursing, babyAgeMonths } = stats;
 
   // A fresh install is latched the first time it is seen, not re-tested on
@@ -483,9 +509,17 @@ export default function HomePage() {
   }
   const celebration = milestoneGate.milestone;
   const milestoneToday = celebration !== null;
+  // The month the family is living in, and its photo if it has one: the
+  // way into the months album from the top of Today, and on a month-birthday
+  // the party's "Add this month's photo" (or "Open this month's page").
+  const monthNow = useMemo(() => {
+    const month = profile.birthDate ? monthsReached(profile.birthDate, minuteClock) : null;
+    if (month === null) return null;
+    return { month, photo: monthEntries.find((m) => m.month === month)?.photo };
+  }, [profile.birthDate, minuteClock, monthEntries]);
   // The party's picture says what the family has done since day one. Summed
   // only on a milestone day; every other day this is null and costs nothing.
-  const milestoneTotals = useMemo(() => (celebration ? lifetimeTotals(activities) : null), [celebration, activities]);
+  const milestoneTotals = useMemo(() => (celebration ? lifetimeTotals(care) : null), [celebration, care]);
   const dismissCelebration = useCallback(() => setMilestoneGate((gate) => ({ ...gate, milestone: null })), []);
   // The first morning. A family's first night is the moment the other parent
   // wakes up not knowing when the last feed was — the one sentence that
@@ -737,6 +771,9 @@ export default function HomePage() {
       ? document.activeElement
       : null;
     setEditingActivity(null);
+    // Every open starts on the months list; the party card sets its month
+    // straight after this, in the same event.
+    setMonthToOpen(null);
     setNursingInitialMode(nursingMode);
     setSheet(next);
   }
@@ -758,6 +795,12 @@ export default function HomePage() {
   const onOpenSheet = useStableCallback((next: Exclude<Sheet, null>) => openSheet(next));
   const onManualNursing = useStableCallback(() => openSheet("nursing", "manual"));
   const onSeeTimeline = useStableCallback(() => navigateTo("timeline"));
+  // A release note's buttons: the feature it announces, opened.
+  const onReleaseAction = useStableCallback((to: "months" | "vaccines" | "profile") => openSheet(to));
+  const onOpenMonth = useStableCallback((month: number) => {
+    openSheet("months");
+    setMonthToOpen(month);
+  });
   const onOpenSoothe = useStableCallback(() => {
     track("soothe_opened");
     setSootheMounted(true);
@@ -923,7 +966,7 @@ export default function HomePage() {
             {releasesToShow.length > 0 && !newsSeen && <span className="news-badge" aria-hidden="true" />}
           </Button>
           <Button variant="ghost" className="baby-identity" aria-label="Baby profile" onClick={() => openSheet("profile")}>
-            <span className="baby-avatar"><BabyFace size={22} /></span>
+            <span className="baby-avatar"><BabyAvatar photo={profile.photo} size={22} /></span>
             <span>
               <strong>{profile.name}</strong>
               <small>Baby profile</small>
@@ -1030,6 +1073,7 @@ export default function HomePage() {
             <Suspense fallback={null}>
             <WhatsNew
               releaseIds={releasesToShow}
+              onAction={onReleaseAction}
               onDismiss={() => {
                 track("whats_new_dismissed", { release: LATEST_RELEASE_ID });
                 markReleasesSeen();
@@ -1054,6 +1098,10 @@ export default function HomePage() {
               onEdit={openEdit}
               onSeeTimeline={onSeeTimeline}
               onOpenSoothe={onOpenSoothe}
+              onOpenMonth={onOpenMonth}
+              nextVaccine={nextVaccine}
+              lastVaccine={lastVaccine}
+              monthNow={monthNow}
               cloudState={cloudState}
               onOpenProtection={onOpenProtection}
             />
@@ -1079,7 +1127,7 @@ export default function HomePage() {
           {activeTab === "insights" && (
             <Suspense fallback={screenFallback}>
               <InsightsScreen
-                activities={activities}
+                activities={care}
                 profile={profile}
                 ageDays={ageInDays(profile.birthDate, minuteClock)}
                 feedingMode={profile.feedingMode}
@@ -1121,6 +1169,7 @@ export default function HomePage() {
                 onShare={() => void sharePartner()}
                 onImport={importData}
                 onOpenProfile={() => openSheet("profile")}
+                onOpenSheet={onReleaseAction}
                 onRoutinesChange={(routines) => saveProfile({ ...profile, routines })}
                 onEraseAll={() => {
                   // ONE confirm gates EVERYTHING. The audit caught the
@@ -1180,7 +1229,7 @@ export default function HomePage() {
             already guarded. */}
         {newsOpen && (
           <Suspense fallback={null}>
-            <NewsDialog open={newsOpen} onOpenChange={setNewsOpen} />
+            <NewsDialog open={newsOpen} onOpenChange={setNewsOpen} onAction={onReleaseAction} />
           </Suspense>
         )}
         {sootheMounted && (
@@ -1266,7 +1315,7 @@ export default function HomePage() {
                 initialNursingMode={nursingInitialMode}
                 lastBottle={lastBottle}
                 activeNursing={activeNursing}
-                activities={activities}
+                activities={care}
                 babyAgeMonths={babyAgeMonths}
                 profile={profile}
                 onAdd={addActivity}
@@ -1275,6 +1324,11 @@ export default function HomePage() {
                 onSaveProfile={saveProfile}
                 onClose={() => setSheet(null)}
                 showToast={showToast}
+                monthEntries={monthEntries}
+                vaccineEntries={vaccineEntries}
+                onUpsert={upsertActivity}
+                initialMonth={sheet === "months" ? monthToOpen ?? undefined : undefined}
+                onOpenProfileSheet={() => openSheet("profile")}
               />
               </Suspense>
             </DialogContent>

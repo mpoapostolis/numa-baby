@@ -28,19 +28,24 @@ export function LogDialogHeader({
   title,
   description,
   tone = "",
+  titleRef,
 }: {
   icon: React.ReactNode;
   eyebrow: string;
   title: string;
   description: string;
   tone?: string;
+  /** For a view that replaces another inside the same sheet: focus lands on
+      the title, which a screen reader announces and which does not throw up
+      the phone's keyboard the way focusing a field would. */
+  titleRef?: React.Ref<HTMLHeadingElement>;
 }) {
   return (
     <DialogHeader className="log-dialog-header">
       <span className={`sheet-symbol ${tone}`}>{icon}</span>
       <div>
         <span className="dialog-eyebrow">{eyebrow}</span>
-        <DialogTitle>{title}</DialogTitle>
+        <DialogTitle ref={titleRef} tabIndex={titleRef ? -1 : undefined}>{title}</DialogTitle>
         <DialogDescription>{description}</DialogDescription>
       </div>
     </DialogHeader>

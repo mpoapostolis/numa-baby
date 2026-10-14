@@ -34,6 +34,9 @@
     "run_worker_first": true
   },
   "send_email": [{ "name": "EMAIL" }],
+  // Baby photos for families who share a log. Private: no r2.dev URL and no
+  // custom domain — the Worker (worker/photos.ts) is the only way in.
+  "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "numa" }],
   "vars": {
     "TURSO_DATABASE_URL": "https://numa-baby-sync-mpoapostolis.aws-eu-west-1.turso.io",
     "GOOGLE_CLIENT_ID": "705272946048-nprhdf7r57ufsvu20hvschnb733oivp2.apps.googleusercontent.com"

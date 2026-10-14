@@ -8,6 +8,10 @@
 // One rule: a FRESH install shows nothing. Everything is new to someone who
 // just arrived, and greeting them with a changelog is noise, not news.
 
+/** A place a release note can take the parent to — the thing it is about,
+    one tap away, instead of directions to it. */
+export type ReleaseAction = { label: string; to: "months" | "vaccines" | "profile" };
+
 export type Release = {
   /** ISO date, and the marker stored once this entry has been read. A second
       release on the same day is "2026-10-11.2": it sorts after the first, so
@@ -15,9 +19,27 @@ export type Release = {
   id: string;
   title: string;
   items: string[];
+  actions?: ReleaseAction[];
 };
 
 export const RELEASES: Release[] = [
+  {
+    id: "2026-10-14",
+    title: "Months, photos and vaccines",
+    items: [
+      "Three of you asked through the feedback box, and all three are here — the buttons take you straight to each one.",
+      "Months: a page for every month-birthday, with a photo and a note, kept as an album you can look back through. It is at the top of Today, under your baby’s name, and in the list on Today.",
+      "Your baby’s own picture: the Baby’s photo button here, or your baby’s name and face in the app — then Add a photo. It replaces the little drawing.",
+      "Vaccines, on Today under Growth: log each one as it is given — public health center or private clinic — and add the next ones from your card. The next one shows on Today, and one that is late says so until you mark it given.",
+      "Photos on nappies: tap Earlier on the Diaper card, or any nappy in the timeline, and add a photo of anything unusual — for you, or to show the doctor.",
+      "Photos are made small on your phone and lose their location data before they are kept. With Family Sync they are kept in your family’s private space in the cloud so your other phones can show them — never public. Without it, they stay on this phone. Backup files carry entries, not photos.",
+    ],
+    actions: [
+      { label: "Months", to: "months" },
+      { label: "Vaccines", to: "vaccines" },
+      { label: "Baby’s photo", to: "profile" },
+    ],
+  },
   {
     id: "2026-10-11.2",
     title: "Tap a day on the chart to see its total",

@@ -15,16 +15,19 @@
 import { useState } from "react";
 import { ChevronDown, Sparkles, X } from "lucide-react";
 import { Button } from "./ui/button";
-import { RELEASES } from "../domain/changelog";
+import { RELEASES, type ReleaseAction } from "../domain/changelog";
+import { ReleaseActions } from "./ReleaseActions";
 
 type WhatsNewProps = {
   /** Which releases to tell; the words are looked up here, in this lazy
       chunk, so they never ride the boot bundle (see domain/releaseIds.ts). */
   releaseIds: readonly string[];
   onDismiss: () => void;
+  /** Open what a release is about — its buttons, shown closed or open. */
+  onAction?: (to: ReleaseAction["to"]) => void;
 };
 
-export function WhatsNew({ releaseIds, onDismiss }: WhatsNewProps) {
+export function WhatsNew({ releaseIds, onDismiss, onAction }: WhatsNewProps) {
   const [open, setOpen] = useState(false);
   const releases = RELEASES.filter((release) => releaseIds.includes(release.id));
   if (releases.length === 0) return null;
@@ -63,6 +66,9 @@ export function WhatsNew({ releaseIds, onDismiss }: WhatsNewProps) {
             {items.map((item) => <li key={item}>{item}</li>)}
           </ul>
         )}
+        {/* The newest release's buttons are part of its headline: closed,
+            the card is the news and the way to it. */}
+        <ReleaseActions actions={releases[0].actions} from="card" onAction={onAction} />
       </div>
       <Button
         variant="ghost"
