@@ -101,7 +101,14 @@ const BUDGET_GZIP = {
   // tapped over any dialog not closing it, and the profile photo reaching a
   // partner phone that updated second. The photo-only parts of those fixes
   // load with the photo code. Measured after: 119.3 kB.
-  "index-*.js": 119_500,
+  // 119_500 → 119_750 the next day, for what two rounds of a first-click
+  // test with three first-time parents asked of Today itself: a vaccine that
+  // is due or late named at the top, the monthly photos beside the baby's
+  // age, the baby's face opening the profile, and "Add photo" on the Diaper
+  // card right after Dirty. Everything else that changed with it is in lazy
+  // sheets, and the month-birthday maths stayed there. Measured after:
+  // 119.72 kB.
+  "index-*.js": 119_750,
   "index-*.css": 29_000,
 };
 const LAZY_SCREENS = ["SettingsScreen", "GrowthGuideScreen", "InsightsScreen", "TimelineScreen", "LogSheet", "OnboardingScreen", "sonner", "FactOfTheDay"];

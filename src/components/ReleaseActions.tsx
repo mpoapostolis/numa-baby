@@ -4,11 +4,11 @@
 // archive.
 
 import "../styles/screens/news-actions.css";
-import { CalendarHeart, Camera, Syringe } from "lucide-react";
+import { Camera, Images, Syringe } from "lucide-react";
 import type { ReleaseAction } from "../domain/changelog";
 import { track } from "../domain/analytics";
 
-const ICON = { months: CalendarHeart, vaccines: Syringe, profile: Camera } as const;
+const ICON = { months: Images, vaccines: Syringe, profile: Camera } as const;
 
 export function ReleaseActions({
   actions,

@@ -1,5 +1,5 @@
 import { Suspense, lazy, memo, useState } from "react";
-import { CalendarHeart, Camera, ChevronRight, Cloud, CloudOff, Gift, History, Milk, Pill, ShieldCheck, Square, Syringe, Thermometer, Utensils, Waves, Weight } from "lucide-react";
+import { Camera, ChevronRight, Cloud, CloudOff, Gift, History, Images, Milk, Pill, ShieldCheck, Square, Syringe, Thermometer, Utensils, Waves, Weight } from "lucide-react";
 
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -31,7 +31,7 @@ import {
   liveDuration,
   minutesBetween,
 } from "../domain/time";
-import { dueLabel, vaccineLabel } from "../domain/vaccines";
+import { dueLabel, dueSoon, vaccineLabel } from "../domain/vaccines";
 import { MONTHS_KEPT } from "../domain/keepsakes";
 import { usePhoto } from "../hooks/usePhoto";
 import { Activity, DiaperKind, Profile, Sheet } from "../domain/types";
@@ -115,42 +115,51 @@ function DurationFigure({ minutes }: { minutes: number }) {
   );
 }
 
+/** The baby's photo, small, on the drawn face — once it is on this phone. */
+function FacePhoto({ photo }: { photo: string }) {
+  const url = usePhoto(photo);
+  return url ? <span className="welcome-face-photo"><img src={url} alt="" decoding="async" /></span> : null;
+}
+
+/** "4‑month", "1‑year": a month-birthday as a word before a noun. */
+function monthWord(month: number) {
+  return month % 12 === 0 ? `${month / 12}‑year` : `${month}‑month`;
+}
+
 /**
- * The way into the months album, under the baby's age at the top of Today —
- * where a parent looks, rather than eight rows down. Until this month has
- * its photo it asks for it ("Add the 4‑month photo") and opens that page;
- * once it has one, it wears it, and opens the album.
+ * A vaccine that is late or due this week, named at the top of Today — where
+ * a parent looks first — until it is marked given. Most days: nothing.
  */
-function MonthsPill({
-  who,
-  month,
-  photo,
-  onOpenMonth,
-  onOpenAlbum,
-}: {
-  who: string;
+function VaccinePill({ vaccine, now, onOpen }: { vaccine: Activity | undefined; now: number; onOpen: () => void }) {
+  if (!vaccine?.due) return null;
+  const due = dueLabel(vaccine.due, now);
+  const when = due.overdue ? `${-due.days} day${due.days === -1 ? "" : "s"} late` : due.inline;
+  return (
+    <button type="button" className={due.overdue ? "top-pill is-vaccine is-late" : "top-pill is-vaccine"} onClick={onOpen}>
+      <Syringe size={14} aria-hidden="true" />
+      <span>{vaccine.vaccine ?? "Vaccine"} vaccine · {when}</span>
+      <ChevronRight size={12} aria-hidden="true" />
+    </button>
+  );
+}
+
+/**
+ * The way into the monthly photos, always there beside the baby's age: it
+ * asks for this month's photo until there is one ("Add the 4‑month photo"),
+ * and then wears it.
+ */
+function MonthsPill({ month, photo, onOpenMonth, onOpenAlbum }: {
   month: number;
   photo: string | undefined;
   onOpenMonth: (month: number) => void;
   onOpenAlbum: () => void;
 }) {
   const url = usePhoto(photo);
-  // No page to fill: before the first month-birthday, past the second year.
   const asks = month >= 1 && month <= MONTHS_KEPT && !photo;
   return (
-    <button
-      type="button"
-      className={asks ? "months-pill is-asking" : "months-pill"}
-      onClick={() => (asks ? onOpenMonth(month) : onOpenAlbum())}
-    >
-      {url ? (
-        <img src={url} alt="" />
-      ) : asks ? (
-        <Camera size={12} aria-hidden="true" />
-      ) : (
-        <CalendarHeart size={12} aria-hidden="true" />
-      )}
-      <span>{asks ? `Add the ${month}‑month photo` : `${who}’s months`}</span>
+    <button type="button" className="top-pill is-month" onClick={() => (asks ? onOpenMonth(month) : onOpenAlbum())}>
+      {url ? <img src={url} alt="" /> : <Camera size={14} aria-hidden="true" />}
+      <span>{asks ? `Add the ${monthWord(month)} photo` : "Monthly photos"}</span>
     </button>
   );
 }
@@ -300,8 +309,8 @@ type TodayScreenProps = {
   onSeeTimeline: () => void;
   /** The sound player belongs to App, not to this screen — see App.tsx. */
   onOpenSoothe: () => void;
-  /** The soonest planned vaccination, for the Vaccines row. */
-  nextVaccine?: Activity;
+  /** The vaccination schedule, soonest first. */
+  plannedVaccines: Activity[];
   /** The latest vaccine given, when nothing is planned. */
   lastVaccine?: Activity;
   /** The month the family is living in (0 before the first month-birthday)
@@ -330,7 +339,7 @@ function TodayScreen({
   onEdit,
   onSeeTimeline,
   onOpenSoothe,
-  nextVaccine,
+  plannedVaccines,
   lastVaccine,
   monthNow,
   onOpenMonth,
@@ -630,9 +639,17 @@ function TodayScreen({
           does the maths ("Mia is 2 weeks old · day 15"), and one verified,
           age-matched fact sits underneath with its source in plain sight. */}
       <header className="welcome-hero">
-        <span className={`welcome-face mood-${companionMood}`} aria-hidden="true">
+        {/* The face is where a parent looks for the baby's picture: it opens
+            the baby profile, and wears the photo once there is one. */}
+        <button
+          type="button"
+          className={`welcome-face mood-${companionMood}`}
+          aria-label={`${displayName}’s profile and picture`}
+          onClick={() => onOpenSheet("profile")}
+        >
           <BabyCompanion mood={companionMood} size={84} reactionKey={reactionKey} />
-        </span>
+          {profile.photo && <FacePhoto photo={profile.photo} />}
+        </button>
         <div className="welcome-copy">
           <span className="welcome-greeting t-label">{greeting()}</span>
           <h1 id="today-heading" className="t-title-1 welcome-headline">{headline}</h1>
@@ -647,14 +664,9 @@ function TodayScreen({
               {cloudState === "offline" && <><CloudOff size={12} aria-hidden="true" /> Offline — will catch up</>}
               {cloudState === "revoked" && <><CloudOff size={12} aria-hidden="true" /> Sync disconnected — tap to fix</>}
             </button>
+            <VaccinePill vaccine={plannedVaccines.find((v) => dueSoon(v, minuteClock))} now={minuteClock} onOpen={() => onOpenSheet("vaccines")} />
             {monthNow && (
-              <MonthsPill
-                who={trimmedName ? displayName : "Your baby"}
-                month={monthNow.month}
-                photo={monthNow.photo}
-                onOpenMonth={onOpenMonth}
-                onOpenAlbum={() => onOpenSheet("months")}
-              />
+              <MonthsPill month={monthNow.month} photo={monthNow.photo} onOpenMonth={onOpenMonth} onOpenAlbum={() => onOpenSheet("months")} />
             )}
           </div>
           <p className="welcome-date">
@@ -901,11 +913,20 @@ function TodayScreen({
                 <span className="tile-title">Diaper</span>
                 {/* Asked for by a user: the question at the changing mat is
                     never "how many today", it is "how long has it been". */}
-                {lastDiaper && (
-                  <span className="tile-since">
-                    {humanDuration(minutesBetween(lastDiaper.startedAt, new Date(minuteClock).toISOString()))} ago
-                  </span>
-                )}
+                {lastDiaper && (() => {
+                  const since = minutesBetween(lastDiaper.startedAt, new Date(minuteClock).toISOString());
+                  // Asked for from the feedback box: a photo of a nappy, for
+                  // the doctor. Right after Dirty or Both is when it is taken,
+                  // so for a quarter of an hour the time is the way to add one.
+                  if (lastDiaper.diaperKind !== "wet" && !lastDiaper.photo && since < 15) {
+                    return (
+                      <button type="button" className="tile-since tile-since-photo" onClick={() => onEdit(lastDiaper)}>
+                        {lastDiaper.diaperKind === "both" ? "Wet + dirty" : "Dirty"} · {humanDuration(since)} ago <span className="tile-started-edit">· <Camera size={12} aria-hidden="true" /> Add photo</span>
+                      </button>
+                    );
+                  }
+                  return <span className="tile-since">{humanDuration(since)} ago</span>;
+                })()}
               </div>
               <div className="tile-split">
                 <Button variant="outline" onClick={() => quickLogDiaper("wet")} aria-label="Log wet diaper">Wet</Button>
@@ -1000,8 +1021,8 @@ function TodayScreen({
           </Button>
           {/* Asked for from the feedback box: a section for vaccinations —
               public health center or private clinic, the schedule and what
-              was given. The next appointment is on the row itself; a late
-              one says so, and after a week asks rather than shouts. */}
+              was given. Right under Growth, where parents found it; a dose
+              that is late or due this week is also at the top of Today. */}
           <Button
             variant="ghost"
             className="log-row log-row-secondary action-vaccines"
@@ -1011,31 +1032,38 @@ function TodayScreen({
             <span className="log-copy">
               <strong>Vaccines</strong>
               <small>
-                {nextVaccine?.due
-                  ? (() => {
-                      const due = dueLabel(nextVaccine.due, minuteClock);
-                      const label = vaccineLabel(nextVaccine);
-                      if (due.days <= -7) return `${label} — was it given?`;
-                      return <span className={due.overdue ? "is-late" : undefined}>{label} · {due.inline}{due.overdue ? " — given?" : ""}</span>;
-                    })()
-                  : lastVaccine
-                    ? `Last: ${vaccineLabel(lastVaccine)} · ${shortDay(new Date(lastVaccine.startedAt))}`
-                    : "What was given, and what is next"}
+                {(() => {
+                  const late = plannedVaccines.find((v) => dueLabel(v.due!, minuteClock).overdue);
+                  const next = plannedVaccines.find((v) => !dueLabel(v.due!, minuteClock).overdue);
+                  const nextWhen = next ? dueLabel(next.due!, minuteClock) : null;
+                  if (late) {
+                    const lateBy = -dueLabel(late.due!, minuteClock).days;
+                    return (
+                      <>
+                        <span className="is-late">{late.vaccine ?? "Vaccine"} {lateBy} day{lateBy === 1 ? "" : "s"} late</span>
+                        {next && nextWhen ? ` · next: ${next.vaccine ?? "vaccine"} ${nextWhen.inline}` : ""}
+                      </>
+                    );
+                  }
+                  if (next && nextWhen) return `Next: ${next.vaccine ?? "Vaccine"} ${nextWhen.inline}`;
+                  if (lastVaccine) return `Last: ${vaccineLabel(lastVaccine)} · ${shortDay(new Date(lastVaccine.startedAt))}`;
+                  return "What was given, and what is next";
+                })()}
               </small>
             </span>
             <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
           </Button>
           {/* Asked for from the feedback box: a monthly milestone note, and a
-              monthly photo. */}
+              monthly photo — in the parents' own words. */}
           <Button
             variant="ghost"
             className="log-row log-row-secondary action-months"
             onClick={() => onOpenSheet("months")}
           >
-            <span className="action-icon" aria-hidden="true"><CalendarHeart /></span>
+            <span className="action-icon" aria-hidden="true"><Images /></span>
             <span className="log-copy">
-              <strong>Months</strong>
-              <small>A photo and a note for each month</small>
+              <strong>Monthly photos</strong>
+              <small>A photo and a note each month</small>
             </span>
             <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
           </Button>

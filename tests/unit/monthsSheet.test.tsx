@@ -31,7 +31,7 @@ function setup(months: Activity[] = [], birthDate = profile.birthDate) {
 }
 
 const card = () => document.querySelector<HTMLButtonElement>(".months-now")!;
-const rows = () => Array.from(document.querySelectorAll<HTMLButtonElement>(".month-row"));
+const rows = () => Array.from(document.querySelectorAll<HTMLButtonElement>(".month-tile"));
 const note = () => screen.getByRole("textbox", { name: /^Note/ }) as HTMLTextAreaElement;
 
 test("this month leads as a card, the earlier months follow, newest first", () => {
@@ -46,7 +46,7 @@ test("a note written for a month is saved as that month's one entry", () => {
   const { onUpsert } = setup();
   fireEvent.click(rows()[1]);
   fireEvent.change(note(), { target: { value: "Rolled over!" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save this month" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
   const saved = onUpsert.mock.calls[0][0];
   expect(saved).toMatchObject({ id: "month-2", type: "month", month: 2, note: "Rolled over!" });
@@ -60,7 +60,7 @@ test("a month already written shows its words, and editing keeps the same entry"
   fireEvent.click(card());
   expect(note().value).toBe("Laughs at the cat");
   fireEvent.change(note(), { target: { value: "Laughs at the cat, every time" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save this month" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
   expect(onUpsert.mock.calls[0][0]).toMatchObject({ id: "month-4", note: "Laughs at the cat, every time" });
 });
 
@@ -78,4 +78,22 @@ test("past the second year, the two-year page is the last page, not this month",
   setup([], "2024-04-14");
   expect(card().textContent).toContain("Last page");
   expect(card().textContent).not.toContain("This month");
+});
+
+// A month with no photo says so in words — a big number read as a photo
+// that had failed to load.
+test("an earlier month without a photo says no photo yet, and shows its note", () => {
+  setup([{ id: "month-2", type: "month", month: 2, startedAt: new Date(NOW).toISOString(), note: "Rolled over!" }]);
+  const two = rows().find((row) => row.textContent?.includes("2 months"))!;
+  expect(two.textContent).toContain("No photo yet");
+  expect(two.textContent).toContain("Rolled over!");
+});
+
+// Looking back through the album is not editing it.
+test("a month opened and left as it was offers Done, and saves nothing", () => {
+  const { onUpsert } = setup();
+  fireEvent.click(rows()[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Done" }));
+  expect(onUpsert).not.toHaveBeenCalled();
+  expect(card()).toBeTruthy();
 });

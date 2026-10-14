@@ -182,8 +182,10 @@ export function PhotoField({
             {pickWords}
           </label>
           {photoId && !busy && (
+            // Said in words: a bare bin beside "Change photo" read as a way
+            // to delete something bigger.
             <Button type="button" variant="ghost" className="photo-remove" aria-label="Remove photo" onClick={remove}>
-              <Trash2 size={17} aria-hidden="true" />
+              <Trash2 size={16} aria-hidden="true" /> Remove
             </Button>
           )}
         </div>

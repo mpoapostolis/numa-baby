@@ -25,19 +25,19 @@ export type Release = {
 export const RELEASES: Release[] = [
   {
     id: "2026-10-14",
-    title: "Months, photos and vaccines",
+    title: "Monthly photos and vaccines",
     items: [
-      "Three of you asked through the feedback box, and all three are here — the buttons take you straight to each one.",
-      "Months: a page for every month-birthday, with a photo and a note, kept as an album you can look back through. It is at the top of Today, under your baby’s name, and in the list on Today.",
-      "Your baby’s own picture: the Baby’s photo button here, or your baby’s name and face in the app — then Add a photo. It replaces the little drawing.",
-      "Vaccines, on Today under Growth: log each one as it is given — public health center or private clinic — and add the next ones from your card. The next one shows on Today, and one that is late says so until you mark it given.",
-      "Photos on nappies: tap Earlier on the Diaper card, or any nappy in the timeline, and add a photo of anything unusual — for you, or to show the doctor.",
+      "Three of you asked through the chat button, and all three are here — the buttons take you straight to each one.",
+      "Monthly photos: a page for every month-birthday, with a photo and a note, kept as an album you can look back through. Tap Monthly photos under your baby’s age at the top of Today — it asks for this month’s photo until there is one.",
+      "Vaccines has its own row on Today, under Growth: add the next appointment from the health center or clinic card, or record one already given. One that is due this week, or late, also shows at the top of Today until you mark it given.",
+      "Your baby’s profile picture: tap your baby’s face at the top of Today, or the round picture at the top right.",
+      "Photos on diapers: right after you tap Dirty or Both, tap Add photo on the Diaper card — or open any diaper in the Timeline. Photos in the Timeline shows them all.",
       "Photos are made small on your phone and lose their location data before they are kept. With Family Sync they are kept in your family’s private space in the cloud so your other phones can show them — never public. Without it, they stay on this phone. Backup files carry entries, not photos.",
     ],
     actions: [
-      { label: "Months", to: "months" },
+      { label: "Monthly photos", to: "months" },
       { label: "Vaccines", to: "vaccines" },
-      { label: "Baby’s photo", to: "profile" },
+      { label: "Profile picture", to: "profile" },
     ],
   },
   {

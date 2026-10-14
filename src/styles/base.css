@@ -86,6 +86,13 @@ textarea,
   outline-offset: 2px;
 }
 
+/* A sheet's title takes focus so a screen reader announces the new page
+   (and no keyboard is thrown up). It is not something to tap: a ring around
+   it made "Next appointment" look like a box to type in. */
+[data-slot="dialog-title"][tabindex="-1"]:focus-visible {
+  outline: none;
+}
+
 /* Text fields already carry their own ring-3 focus indicator (input.tsx /
    input-group.tsx); the global outline on top rendered as a double border. */
 [data-slot="input"]:focus-visible,

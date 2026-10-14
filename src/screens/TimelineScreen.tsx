@@ -13,12 +13,16 @@ import { bucketByDay, dayKey, summarizeDay } from "../domain/daySummary";
 import { formatTimelineDay } from "../domain/time";
 import { Activity, ActivityType } from "../domain/types";
 
+/** Every entry, one kind, or — asked for alongside nappy photos — the
+    entries that have a photo, to find the one for the doctor again. */
+export type TimelineFilter = "all" | "photos" | ActivityType;
+
 type TimelineScreenProps = {
   activities: Activity[];
   minuteClock: number;
-  filter: "all" | ActivityType;
+  filter: TimelineFilter;
   limit: number;
-  onFilterChange: (filter: "all" | ActivityType) => void;
+  onFilterChange: (filter: TimelineFilter) => void;
   onShowMore: () => void;
   onEdit: (activity: Activity) => void;
 };
@@ -33,7 +37,7 @@ export default function TimelineScreen({
   onEdit,
 }: TimelineScreenProps) {
   const filteredTimeline = useMemo(
-    () => activities.filter((activity) => filter === "all" || activity.type === filter),
+    () => activities.filter((activity) => filter === "all" || (filter === "photos" ? Boolean(activity.photo) : activity.type === filter)),
     [activities, filter],
   );
   const timelineGroups = useMemo(() => {
@@ -86,14 +90,14 @@ export default function TimelineScreen({
           aria-label="Filter timeline"
           onValueChange={(value) => {
             if (!value) return;
-            onFilterChange(value as "all" | ActivityType);
+            onFilterChange(value as TimelineFilter);
           }}
         >
-          {(["all", "bottle", "nursing", "diaper", "burp", "sleep", "solid", "medicine", "growth", "health"] as const).map((option) => (
+          {(["all", "photos", "bottle", "nursing", "diaper", "burp", "sleep", "solid", "medicine", "growth", "health"] as const).map((option) => (
             <ToggleGroupItem
               key={option}
               value={option}
-              aria-label={`Show ${option} logs`}
+              aria-label={option === "photos" ? "Show entries with a photo" : `Show ${option} logs`}
             >
               {option === "all" ? "All" : option === "solid" ? "Solids" : option[0].toUpperCase() + option.slice(1)}
             </ToggleGroupItem>
@@ -134,7 +138,7 @@ export default function TimelineScreen({
                 <EmptyState text="Nothing logged yet — your day builds here from the Today screen." />
               ) : (
                 <>
-                  <EmptyState text={`No ${filter} entries yet.`} />
+                  <EmptyState text={filter === "photos" ? "No photos yet." : `No ${filter} entries yet.`} />
                   <Button variant="outline" className="timeline-clear-filter" onClick={() => onFilterChange("all")}>
                     Show all entries
                   </Button>

@@ -15,21 +15,14 @@ import { MONTHS_KEPT } from "./keepsakes";
 
 export { MONTHS_KEPT };
 
-export type MonthSlot = {
-  /** 1 for the first month-birthday. */
-  month: number;
-  /** The month-birthday itself, at local noon. */
-  date: Date;
-};
-
 function daysInMonth(year: number, month: number): number {
   return new Date(year, month + 1, 0).getDate();
 }
 
+/** The month-birthday `months` after `birth`, at local noon — the same day
+    of the month, clamped for short months (born on the 31st: the 30th). */
 function monthBirthday(birth: Date, months: number): Date {
-  const year = birth.getFullYear();
-  const month = birth.getMonth() + months;
-  const first = new Date(year, month, 1, 12);
+  const first = new Date(birth.getFullYear(), birth.getMonth() + months, 1, 12);
   const day = Math.min(birth.getDate(), daysInMonth(first.getFullYear(), first.getMonth()));
   return new Date(first.getFullYear(), first.getMonth(), day, 12);
 }
@@ -39,6 +32,13 @@ export function monthBirthdayOf(birthDate: string, month: number): Date | null {
   const birth = new Date(`${birthDate.slice(0, 10)}T12:00:00`);
   return Number.isFinite(birth.getTime()) ? monthBirthday(birth, month) : null;
 }
+
+export type MonthSlot = {
+  /** 1 for the first month-birthday. */
+  month: number;
+  /** The month-birthday itself, at local noon. */
+  date: Date;
+};
 
 /** Every month-birthday reached by `now`, newest first. */
 export function monthSlots(birthDate: string, now: number): MonthSlot[] {

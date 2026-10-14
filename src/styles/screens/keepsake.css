@@ -21,7 +21,6 @@
 /* ---- The house press recipe, for this file's own surfaces ---------------- */
 .months-now,
 .vaccine-open,
-.vaccine-add,
 .photo-pick,
 .photo-drop,
 button.photo-thumb {
@@ -46,7 +45,6 @@ button.photo-thumb:active {
 
 @media (hover: hover) and (pointer: fine) {
   .vaccine-open:hover,
-  .vaccine-add:hover,
   .photo-pick:hover {
     background-color: var(--muted);
   }
@@ -125,10 +123,11 @@ button.photo-thumb:disabled {
 }
 
 .photo-remove {
-  width: 56px;
   min-height: 56px;
+  padding: 0 12px;
   border-radius: var(--radius-lg);
   color: var(--ink-3);
+  font-size: 0.8125rem;
 }
 
 /* compact — the nappy log: one quiet button until a photo is chosen. */
@@ -323,52 +322,99 @@ button.photo-thumb:disabled {
   margin: 0;
 }
 
-.months-list {
+.months-grid {
   display: grid;
-  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.log-row.month-row {
+.month-tile {
+  display: grid;
+  gap: 6px;
   width: 100%;
-  min-height: 64px;
-  padding: 8px 12px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-1);
   text-align: left;
+  cursor: pointer;
+  transition: transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* The row leads with its photo, or a quiet camera well — the same place,
-   the same size, so the copy column never jumps. */
-.month-thumb {
-  flex: 0 0 48px;
-  width: 48px;
-  height: 48px;
+.month-tile:active {
+  transition-duration: 90ms;
+  transform: scale(0.97);
+}
+
+.month-tile:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+  border-radius: var(--radius-lg);
+}
+
+/* Square, so the months line up; a month without a photo shows its number
+   on the honey wash, like the big card does. */
+.month-tile-media {
   display: grid;
   place-items: center;
   overflow: hidden;
-  border-radius: 12px;
+  aspect-ratio: 1;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   background: var(--muted);
-  color: var(--ink-3);
 }
 
-.month-thumb img {
+.month-tile-media img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   animation: photo-in 200ms ease-out both;
 }
 
-.month-note {
+.month-tile-media.is-empty {
+  border-color: color-mix(in oklab, var(--glyph-growth) 22%, var(--border));
+  background: color-mix(in oklab, var(--glyph-growth) var(--glyph-wash), var(--card));
+  color: var(--glyph-growth);
+}
+
+.month-tile-copy {
+  display: grid;
+  gap: 1px;
+  padding: 0 2px;
+}
+
+.month-tile-copy strong {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.month-tile-copy small {
+  color: var(--ink-3);
+  font-size: 0.75rem;
+}
+
+/* The note's first words, as the album's caption. */
+.month-tile-note {
   display: -webkit-box;
   overflow: hidden;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   color: var(--ink-2);
-  font-size: 0.8125rem;
-  line-height: 1.45;
-  white-space: normal;
+  font-size: 0.75rem;
+  line-height: 1.4;
   overflow-wrap: anywhere;
+}
+
+/* No photo yet: a camera and the words, in the month's honey. */
+.months-no-photo {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .months-empty svg {
@@ -425,23 +471,15 @@ button.photo-thumb:disabled {
   font-weight: 600;
 }
 
-.vaccine-add {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 44px;
-  margin: -4px -6px;
-  padding: 4px 6px;
-  border: 0;
-  border-radius: var(--radius-md);
-  background: none;
-  color: var(--ink-2);
-  font-size: 0.8125rem;
-  font-weight: 500;
-  cursor: pointer;
+/* The card's two actions, side by side and the same size: the date on the
+   card, or the dose just given. */
+.sheet-form > [data-slot="dialog-footer"].vaccine-footer {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
+.vaccine-footer .sheet-primary {
+  padding: 0 12px;
+}
 .vaccine-card-note {
   margin: 0 0 10px;
   color: var(--ink-3);

@@ -27,11 +27,11 @@ test("a release's buttons open what it announces, closing the archive first", ()
       onAction={(to) => calls.push(to)}
     />,
   );
-  fireEvent.click(screen.getByRole("button", { name: "Months" }));
+  fireEvent.click(screen.getByRole("button", { name: "Monthly photos" }));
   expect(calls).toEqual(["close", "months"]);
 });
 
 test("without a way to open them, the buttons are not offered", () => {
   render(<NewsDialog open onOpenChange={() => {}} />);
-  expect(screen.queryByRole("button", { name: "Months" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Monthly photos" })).toBeNull();
 });

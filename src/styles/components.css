@@ -1737,12 +1737,8 @@ body:has(.feedback-bubble) .content {
   color: var(--ink-3);
 }
 
-/* The next vaccine wraps rather than losing its date to an ellipsis; one
-   that is late says so in the warning colour. */
-.action-vaccines .log-copy small {
-  white-space: normal;
-}
-
+/* A vaccine that is late says so in the warning colour (the line itself
+   wraps — see screens/today.css, with Medicine). */
 .action-vaccines .is-late {
   color: var(--destructive);
   font-weight: 600;

@@ -1,5 +1,5 @@
 import { Baby, Check, Droplet, Heart, Milk, Minus, Moon, Pill, Plus, Thermometer, Trash2, Utensils, Weight } from "lucide-react";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "./ui/button";
 import { ButtonGroup, ButtonGroupText } from "./ui/button-group";
 import {
@@ -605,7 +605,7 @@ export function LogSheet({
           onOpenProfile={onOpenProfileSheet}
           onUpsert={(entry) => {
             if (!onUpsert(entry)) return false;
-            showToast(`Saved to ${profile.name.trim() || "your baby"}’s months`);
+            showToast(`Saved to ${profile.name.trim() || "your baby"}’s monthly photos`);
             return true;
           }}
         />
@@ -853,7 +853,7 @@ export function LogSheet({
 
       {sheet === "diaper" && (
         <SheetForm onSubmit={() => saveDiaper(draft.diaperKind)}>
-          <LogDialogHeader icon={<Droplet />} tone="glyph-diaper" eyebrow="Quick log" title="Diaper" description="Choose the closest match and save." />
+          <LogDialogHeader icon={<Droplet />} tone="glyph-diaper" eyebrow="Diaper change" title="Diaper" description="Choose the closest match and save." />
           <Field className="choice-field">
             <FieldLabel>Diaper type</FieldLabel>
             <ToggleGroup type="single" value={draft.diaperKind} className="diaper-grid" aria-label="Diaper type" onValueChange={(value) => value && patch({ diaperKind: value as DiaperKind })}>
@@ -863,8 +863,10 @@ export function LogSheet({
             </ToggleGroup>
           </Field>
           <TimeField quick value={draft.logTime} onChange={(value) => patch({ logTime: value })} />
+          {/* Above the note, and a real button: a photo for the doctor is
+              why most parents open this form rather than tapping the tile. */}
+          <PhotoField label="Photo" photoId={draft.photo} onChange={(photo) => patch({ photo })} onBusyChange={setPhotoBusy} hint="Anything unusual — for you, or to show the doctor." />
           <NoteField value={draft.note} onChange={(value) => patch({ note: value })} />
-          <PhotoField variant="compact" label="Photo" photoId={draft.photo} onChange={(photo) => patch({ photo })} onBusyChange={setPhotoBusy} />
           <SheetFooter><Button type="submit" className="primary-button sheet-primary" disabled={photoBusy}>Save {draft.diaperKind === "both" ? "wet + dirty" : draft.diaperKind} diaper</Button></SheetFooter>
         </SheetForm>
       )}
@@ -1039,6 +1041,12 @@ function ProfileForm({ profile, onChange, onDone }: { profile: Profile; onChange
   const [openedPhoto] = useState(profile.photo);
   const nameId = useId();
   const birthDateId = useId();
+  // Opened to change a picture as often as a name: focus the title (it is
+  // announced), not the Name field, which threw the keyboard up unasked.
+  const titleRef = useRef<HTMLHeadingElement | null>(null);
+  useEffect(() => {
+    titleRef.current?.focus({ preventScroll: true });
+  }, []);
   return (
     <SheetForm onSubmit={() => {
       // Only on Save does a photo leave this phone (for a family that shares
@@ -1053,7 +1061,7 @@ function ProfileForm({ profile, onChange, onDone }: { profile: Profile; onChange
       if (plan.forget) void forgetPhoto(plan.forget);
       onDone();
     }}>
-      <LogDialogHeader icon={<Baby />} tone="glyph-nursing" eyebrow="Keep it personal" title="Baby profile" description="Personalises your tracker — shared only with the phones in your Family Sync." />
+      <LogDialogHeader icon={<Baby />} tone="glyph-nursing" eyebrow="Your baby" title="Baby profile" description="Name, birthday and picture. Shared only with your family’s phones." titleRef={titleRef} />
       <FieldGroup>
         <PhotoField
           variant="avatar"
@@ -1063,11 +1071,13 @@ function ProfileForm({ profile, onChange, onDone }: { profile: Profile; onChange
           // or date typed meanwhile, and must not put them back.
           onChange={(photo) => setDraft((current) => ({ ...current, photo: photo ?? "" }))}
           onBusyChange={setPhotoBusy}
-          hint="Kept on this phone — and, with Family Sync, on your family’s other phones. Never public."
+          hint={(draft.photo || undefined) !== (openedPhoto || undefined)
+            ? "Tap Save profile to keep this picture."
+            : "Kept on this phone — and, with Family Sync, on your family’s other phones. Never public."}
         />
         <Field>
           <FieldLabel htmlFor={nameId}>Name</FieldLabel>
-          <InputGroup><InputGroupInput id={nameId} autoFocus data-initial-focus maxLength={80} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Baby’s name" /></InputGroup>
+          <InputGroup><InputGroupInput id={nameId} maxLength={80} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Baby’s name" /></InputGroup>
         </Field>
         <Field>
           <FieldLabel htmlFor={birthDateId}>Date of birth</FieldLabel>

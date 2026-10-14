@@ -32,3 +32,11 @@ export function dueLabel(due: string, now: number): { text: string; inline: stri
 export function vaccineLabel(entry: { vaccine?: string; dose?: string }): string {
   return `${entry.vaccine ?? "Vaccine"}${entry.dose ? ` · ${entry.dose}` : ""}`;
 }
+
+/** Late, or due within the week: the doses the Vaccines card offers a
+    one-tap Given for, and the one Today names at the top. */
+export function dueSoon(entry: { due?: string }, now: number): boolean {
+  if (!entry.due) return false;
+  const due = dueLabel(entry.due, now);
+  return due.overdue || due.days <= 7;
+}

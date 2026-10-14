@@ -8,12 +8,14 @@
 // not care: it never reaches a total, a chart or the timeline.
 //
 // It opens as an album, not a ledger: the month the family is living in now
-// as a large card, the earlier ones as photo tiles. An empty month is a page
-// waiting, not a chore — no "you haven't" anywhere.
+// as a large card, the earlier ones as a grid of photos. An empty month is a
+// page waiting, not a chore — no "you haven't" anywhere. Called "Monthly
+// photos", the parents' own words: "Months" with a calendar read as
+// appointments.
 
 import "../styles/screens/keepsake.css";
 import { useEffect, useId, useRef, useState } from "react";
-import { CalendarHeart, Camera, ChevronRight } from "lucide-react";
+import { Camera, Images } from "lucide-react";
 import { Button } from "./ui/button";
 import { DialogFooter } from "./ui/dialog";
 import { Field, FieldLabel } from "./ui/field";
@@ -54,21 +56,17 @@ function turned(who: string, slot: MonthSlot, now: number) {
   return `${who} turned ${label} on ${dayName(slot.date, now)}.`;
 }
 
-/** A month's row in the album: its photo leads, or a quiet camera well. */
-function MonthThumb({ photo }: { photo: string | undefined }) {
-  const url = usePhoto(photo);
-  return (
-    <span className="month-thumb" aria-hidden="true">
-      {url ? <img src={url} alt="" loading="lazy" decoding="async" /> : <Camera size={19} />}
-    </span>
-  );
-}
-
-function MonthMedia({ photo, month, className }: { photo: string | undefined; month: number; className: string }) {
+/** A month's photo — or, without one, a camera and "No photo yet", which no
+    one reads as a photo that failed to load. */
+function MonthMedia({ photo, className }: { photo: string | undefined; className: string }) {
   const url = usePhoto(photo);
   return (
     <span className={url ? className : `${className} is-empty`} aria-hidden="true">
-      {url ? <img src={url} alt="" loading="lazy" decoding="async" /> : <span className="months-numeral">{month}</span>}
+      {url ? (
+        <img src={url} alt="" loading="lazy" decoding="async" />
+      ) : (
+        <span className="months-no-photo"><Camera size={22} />No photo yet</span>
+      )}
     </span>
   );
 }
@@ -128,17 +126,17 @@ function MonthEditor({
   return (
     <SheetForm onSubmit={save}>
       <LogDialogHeader
-        icon={<CalendarHeart />}
+        icon={<Images />}
         tone="glyph-growth"
-        eyebrow={`${who}’s months`}
+        eyebrow={`${who}’s monthly photos`}
         title={monthLabel(slot.month)}
         description={turned(who, slot, now)}
         titleRef={titleRef}
       />
       <PhotoField
         variant="hero"
-        label="This month’s photo"
-        addLabel="Add this month’s photo"
+        label="Photo"
+        addLabel="Add a photo"
         photoId={photo}
         onChange={setPhoto}
         onBusyChange={setPhotoBusy}
@@ -160,7 +158,13 @@ function MonthEditor({
           does not close the sheet. */}
       <DialogFooter>
         <Button type="button" variant="ghost" className="sheet-cancel" onClick={onDone}>Back</Button>
-        <Button type="submit" className="primary-button sheet-primary" disabled={photoBusy}>Save this month</Button>
+        {/* Looking back through the album is not editing it: nothing
+            changed, nothing to save. */}
+        {note.trim() === (entry?.note ?? "") && photo === openedPhoto ? (
+          <Button type="button" className="primary-button sheet-primary" disabled={photoBusy} onClick={onDone}>Done</Button>
+        ) : (
+          <Button type="submit" className="primary-button sheet-primary" disabled={photoBusy}>Save</Button>
+        )}
       </DialogFooter>
     </SheetForm>
   );
@@ -209,10 +213,10 @@ export function MonthsSheet({
 
   const header = (
     <LogDialogHeader
-      icon={<CalendarHeart />}
+      icon={<Images />}
       tone="glyph-growth"
-      eyebrow="Keepsake"
-      title={`${who}’s months`}
+      eyebrow="Monthly photos"
+      title={`${who}’s monthly photos`}
       description="A photo and a note each month. Only your family sees them."
     />
   );
@@ -222,7 +226,7 @@ export function MonthsSheet({
       <div className="sheet-form sheet-list">
         {header}
         <div className="empty-state months-empty">
-          <CalendarHeart aria-hidden="true" />
+          <Images aria-hidden="true" />
           <p>Add {profile.name.trim() ? `${profile.name.trim()}’s` : "the"} date of birth and each month‑birthday gets its own page.</p>
           {onOpenProfile && (
             <Button type="button" variant="outline" data-initial-focus="" onClick={onOpenProfile}>Add date of birth</Button>
@@ -264,40 +268,48 @@ export function MonthsSheet({
               data-initial-focus=""
               onClick={() => openMonth(current.month)}
             >
-              <MonthMedia photo={entry?.photo} month={current.month} className="months-now-media" />
+              <MonthMedia photo={entry?.photo} className="months-now-media" />
               <span className="months-now-copy">
                 <span className="t-label">{pastAlbum ? "Last page" : "This month"}</span>
                 <strong>{monthLabel(current.month)}</strong>
                 <small>{turned(who, current, now)}</small>
                 {entry?.note && <span className="months-now-note">{entry.note}</span>}
-                {!entry?.photo && (
-                  <span className="months-invite"><Camera size={14} aria-hidden="true" /> {pastAlbum ? "Add a photo" : "Add this month’s photo"}</span>
-                )}
+                {/* Says what a tap does, photo or not: the card is the way in. */}
+                <span className="months-invite">
+                  <Camera size={14} aria-hidden="true" />{" "}
+                  {entry?.photo ? "Change photo or note" : pastAlbum ? "Add a photo" : "Add this month’s photo"}
+                </span>
               </span>
             </button>
           );
         })()
       )}
 
-      {next && <p className="months-next t-meta">{monthLabel(current!.month + 1)} on {dayName(next, now)}</p>}
+      {next && (
+        <p className="months-next t-meta">
+          {who} turns {monthLabel(current!.month + 1)}{" "}
+          {sameDay(next, new Date(now + 86_400_000)) ? "tomorrow" : `on ${dayName(next, now)}`} — a new page opens then.
+        </p>
+      )}
 
       {earlier.length > 0 && (
         <section className="months-earlier" aria-labelledby="months-earlier">
           <h3 className="t-label" id="months-earlier">Earlier</h3>
-          <ul className="months-list">
+          {/* An album: the photos large, two to a row, so the months can be
+              seen side by side. A month without one shows its number. */}
+          <ul className="months-grid">
             {earlier.map((slot) => {
               const entry = byMonth.get(slot.month);
               return (
                 <li key={slot.month}>
-                  <button type="button" className="log-row log-row-secondary month-row" data-focus-key={`month-${slot.month}`} onClick={() => openMonth(slot.month)}>
-                    <MonthThumb photo={entry?.photo} />
-                    <span className="log-copy">
+                  <button type="button" className="month-tile" data-focus-key={`month-${slot.month}`} onClick={() => openMonth(slot.month)}>
+                    <MonthMedia photo={entry?.photo} className="month-tile-media" />
+                    <span className="month-tile-copy">
                       <strong>{monthLabel(slot.month)}</strong>
                       <small>{shortDate(slot.date, now)}</small>
-                      {entry?.note && <span className="month-note">{entry.note}</span>}
-                      {entry?.photo && <span className="sr-only">, with a photo</span>}
+                      {entry?.note && <span className="month-tile-note">{entry.note}</span>}
                     </span>
-                    <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
+                    {entry?.photo && <span className="sr-only">, with a photo</span>}
                   </button>
                 </li>
               );

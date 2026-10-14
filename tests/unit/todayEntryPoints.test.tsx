@@ -43,16 +43,42 @@ test("Today says which vaccine is next, and opens the vaccinations", async () =>
   expect(await screen.findByText("Mia’s vaccines")).toBeTruthy();
 }, 15_000);
 
-test("Today opens the month pages", async () => {
+test("Today opens the monthly photos", async () => {
   render(<App />);
-  const months = await row(/^Months/);
+  const months = await row(/^Monthly photos/);
   await act(async () => fireEvent.click(months));
-  expect(await screen.findByText("Mia’s months")).toBeTruthy();
+  expect(await screen.findByRole("heading", { name: "Mia’s monthly photos" })).toBeTruthy();
 }, 15_000);
 
-/** A family whose baby is about three months old, with this log. */
-function seedBabyOfThreeMonths(activities: Activity[] = []) {
-  const born = new Date(Date.now() - 100 * 86_400_000);
+// A dose late or due this week is at the top of Today, beside the baby's
+// age — where the testers looked for it — not only in the list below.
+test("a vaccine due this week is named at the top of Today, and opens the vaccines", async () => {
+  render(<App />);
+  const pill = await row(/^Pentavalent vaccine · in 5 days$/);
+  expect(pill.closest(".welcome-hero")).toBeTruthy();
+  await act(async () => fireEvent.click(pill));
+  expect(await screen.findByText("Mia’s vaccines")).toBeTruthy();
+}, 15_000);
+
+// The drawn face is where a parent looks for the baby's picture.
+test("the baby's face at the top of Today opens the baby profile", async () => {
+  render(<App />);
+  const button = await waitFor(() => {
+    const found = document.querySelector<HTMLButtonElement>(".welcome-hero button.welcome-face");
+    if (!found) throw new Error("not on Today yet");
+    return found;
+  }, { timeout: 5_000 });
+  expect(button.getAttribute("aria-label")).toBe("Mia’s profile and picture");
+  await act(async () => fireEvent.click(button));
+  expect(await screen.findByRole("heading", { name: "Baby profile" })).toBeTruthy();
+}, 15_000);
+
+/** A family whose baby turned three months old two days ago, with this log. */
+function seedFreshThirdMonth(activities: Activity[] = []) {
+  // Born on a day every month has, so the month-birthday is never clamped
+  // out of this week, whatever day the test runs.
+  const ref = new Date(Date.now() - 2 * 86_400_000);
+  const born = new Date(ref.getFullYear(), ref.getMonth() - 3, Math.min(ref.getDate(), 28), 12);
   const birthDate = `${born.getFullYear()}-${String(born.getMonth() + 1).padStart(2, "0")}-${String(born.getDate()).padStart(2, "0")}`;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
     activities,
@@ -63,24 +89,50 @@ function seedBabyOfThreeMonths(activities: Activity[] = []) {
   return monthsReached(birthDate, Date.now())!;
 }
 
-// "We said god-tier UX — I can't tell where it is." The months are at the top
-// of Today, under the baby's age, not eight rows down.
+// Beside the baby's age, always: the way into the monthly photos. Until this
+// month has its photo it asks for it, and opens that month's page.
 test("under the baby's age, Today asks for this month's photo and opens that month", async () => {
-  const month = seedBabyOfThreeMonths();
+  const month = seedFreshThirdMonth();
   render(<App />);
   const pill = await row(new RegExp(`^Add the ${month}‑month photo$`));
   expect(pill.closest(".welcome-hero")).toBeTruthy();
   await act(async () => fireEvent.click(pill));
-  expect(await screen.findByRole("button", { name: "Save this month" })).toBeTruthy();
+  expect(await screen.findByLabelText(/Add a photo/i)).toBeTruthy();
   expect(screen.getByText(`${month} months`)).toBeTruthy();
 }, 15_000);
 
-test("once this month has its photo, the same place opens the album", async () => {
-  const month = seedBabyOfThreeMonths();
-  seedBabyOfThreeMonths([{ id: `month-${month}`, type: "month", month, photo: "3f2a9c1e-0b7d-4e55-9a1f-2c8d7e6b5a40", startedAt: stamped }]);
+test("once that month has its photo, the same place opens the album", async () => {
+  const month = seedFreshThirdMonth();
+  seedFreshThirdMonth([{ id: `month-${month}`, type: "month", month, photo: "3f2a9c1e-0b7d-4e55-9a1f-2c8d7e6b5a40", startedAt: stamped }]);
   render(<App />);
-  const pill = await row(/^Mia’s months$/);
+  const pill = await row(/^Monthly photos$/);
   await act(async () => fireEvent.click(pill));
-  expect(await screen.findByRole("heading", { name: "Mia’s months" })).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "Save this month" })).toBeNull();
+  expect(await screen.findByRole("heading", { name: "Mia’s monthly photos" })).toBeTruthy();
+}, 15_000);
+
+// Asked for from the feedback box: a photo of a nappy for the doctor. Right
+// after Dirty, the Diaper card offers it — and not after Wet.
+test("right after a dirty nappy, the Diaper card offers to add a photo of it", async () => {
+  render(<App />);
+  const dirty = await waitFor(() => {
+    const found = document.querySelector<HTMLButtonElement>('button[aria-label="Log dirty diaper"]');
+    if (!found) throw new Error("not on Today yet");
+    return found;
+  }, { timeout: 5_000 });
+  await act(async () => fireEvent.click(dirty));
+  const add = await row(/Add photo$/);
+  await act(async () => fireEvent.click(add));
+  expect(await screen.findByLabelText(/Add a photo/i)).toBeTruthy();
+}, 15_000);
+
+test("after a wet one, it does not", async () => {
+  render(<App />);
+  const wet = await waitFor(() => {
+    const found = document.querySelector<HTMLButtonElement>('button[aria-label="Log wet diaper"]');
+    if (!found) throw new Error("not on Today yet");
+    return found;
+  }, { timeout: 5_000 });
+  await act(async () => fireEvent.click(wet));
+  await waitFor(() => expect(document.querySelector(".tile-since")).not.toBeNull());
+  expect(document.querySelector(".tile-since-photo")).toBeNull();
 }, 15_000);

@@ -23,7 +23,8 @@ import { FeedbackBubble } from "./components/FeedbackBubble";
 // welcome pitch; only a genuinely fresh (or recovering) visit pays for it.
 const OnboardingScreen = lazy(() => import("./screens/OnboardingScreen"));
 import TodayScreen from "./screens/TodayScreen";
-import { Activity, ActivityType, Profile, Sheet, Tab } from "./domain/types";
+import { Activity, Profile, Sheet, Tab } from "./domain/types";
+import type { TimelineFilter } from "./screens/TimelineScreen";
 import { JOIN_CODE_PATTERN } from "./domain/familyPairing";
 import { track, suppressTracking } from "./domain/analytics";
 import { LATEST_RELEASE_ID, unseenReleaseIds } from "./domain/releaseIds";
@@ -275,10 +276,13 @@ export default function HomePage() {
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | "unsupported">(
     () => "Notification" in window ? Notification.permission : "unsupported",
   );
-  const [timelineFilter, setTimelineFilter] = useState<"all" | ActivityType>("all");
+  const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>("all");
   const [timelineLimit, setTimelineLimit] = useState(80);
   const [sidebarDefaultOpen] = useState(() => !document.cookie.split("; ").includes("sidebar_state=false"));
   const sheetTriggerRef = useRef<HTMLElement | null>(null);
+  // The card the trigger sat on: where focus goes back if the trigger itself
+  // is gone when the sheet closes.
+  const sheetReturnRef = useRef<HTMLElement | null>(null);
   const minuteClock = useMinuteClock();
 
   const [backupDismissedAt, setBackupDismissedAt] = useState(() => readStamp(BACKUP_DISMISSED_KEY));
@@ -468,8 +472,9 @@ export default function HomePage() {
   const care = useMemo(() => careEntries(activities), [activities]);
   const monthEntries = useMemo(() => activities.filter((a) => a.type === "month"), [activities]);
   const vaccineEntries = useMemo(() => activities.filter((a) => a.type === "vaccine"), [activities]);
-  const nextVaccine = useMemo(
-    () => vaccineEntries.filter((v) => v.planned && v.due).sort((a, b) => (a.due! < b.due! ? -1 : 1))[0],
+  // The schedule, soonest first: Today names a late dose and the next one.
+  const plannedVaccines = useMemo(
+    () => vaccineEntries.filter((v) => v.planned && v.due).sort((a, b) => (a.due! < b.due! ? -1 : 1)),
     [vaccineEntries],
   );
   const lastVaccine = useMemo(
@@ -770,6 +775,7 @@ export default function HomePage() {
     sheetTriggerRef.current = document.activeElement instanceof HTMLElement
       ? document.activeElement
       : null;
+    sheetReturnRef.current = sheetTriggerRef.current?.closest<HTMLElement>(".quick-tile, .welcome-hero") ?? null;
     setEditingActivity(null);
     // Every open starts on the months list; the party card sets its month
     // straight after this, in the same event.
@@ -783,6 +789,7 @@ export default function HomePage() {
     sheetTriggerRef.current = document.activeElement instanceof HTMLElement
       ? document.activeElement
       : null;
+    sheetReturnRef.current = sheetTriggerRef.current?.closest<HTMLElement>(".quick-tile, .welcome-hero") ?? null;
     setEditingActivity(activity);
     setSheet("edit");
   }, []);
@@ -1099,7 +1106,7 @@ export default function HomePage() {
               onSeeTimeline={onSeeTimeline}
               onOpenSoothe={onOpenSoothe}
               onOpenMonth={onOpenMonth}
-              nextVaccine={nextVaccine}
+              plannedVaccines={plannedVaccines}
               lastVaccine={lastVaccine}
               monthNow={monthNow}
               cloudState={cloudState}
@@ -1294,7 +1301,12 @@ export default function HomePage() {
               }}
               onCloseAutoFocus={(event) => {
                 event.preventDefault();
-                sheetTriggerRef.current?.focus();
+                // The button that opened the sheet may be gone by now (the
+                // Diaper card's "Add photo", once there is a photo): then the
+                // card it was on, so focus does not fall to the page top.
+                const trigger = sheetTriggerRef.current;
+                if (trigger?.isConnected) trigger.focus();
+                else sheetReturnRef.current?.querySelector<HTMLElement>("button")?.focus();
               }}
             >
               {/* The grab pill is the universal "pull me down" affordance, and

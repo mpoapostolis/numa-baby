@@ -39,7 +39,7 @@ const dateInput = () => document.querySelector<HTMLInputElement>('input[type="da
 
 test("a vaccine given today is logged with where it was given", () => {
   const { onAdd } = setup();
-  fireEvent.click(screen.getByRole("button", { name: "Log a vaccine" }));
+  fireEvent.click(screen.getByRole("button", { name: "Record a vaccine" }));
   fireEvent.change(textbox(/^Vaccine/), { target: { value: "BCG" } });
   fireEvent.change(textbox(/^Dose/), { target: { value: "1st dose" } });
   fireEvent.click(screen.getByRole("radio", { name: /Private clinic/ }));
@@ -54,12 +54,12 @@ test("a vaccine given today is logged with where it was given", () => {
 
 test("a vaccine on the schedule is kept as planned, its date apart from the entry's", () => {
   const { onAdd } = setup();
-  fireEvent.click(screen.getByRole("button", { name: "Plan a vaccine" }));
+  fireEvent.click(screen.getByRole("button", { name: "Add appointment" }));
   fireEvent.change(textbox(/^Vaccine/), { target: { value: "Pentavalent" } });
   fireEvent.change(textbox(/^Dose/), { target: { value: "2nd dose" } });
   fireEvent.change(dateInput(), { target: { value: "2026-11-20" } });
   fireEvent.click(screen.getByRole("radio", { name: /Public health center/ }));
-  fireEvent.click(screen.getByRole("button", { name: "Save to the schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save appointment" }));
 
   const saved = onAdd.mock.calls[0][0];
   expect(saved).toMatchObject({ type: "vaccine", vaccine: "Pentavalent", planned: true, due: "2026-11-20", place: "public" });
@@ -67,19 +67,22 @@ test("a vaccine on the schedule is kept as planned, its date apart from the entr
   expect(new Date(saved.startedAt).getTime()).toBeLessThanOrEqual(NOW);
 });
 
-test("the schedule comes first, soonest first, and a dose due this week is given in one tap", () => {
+test("the schedule comes first, soonest first, and a dose due today is given in one tap", () => {
   const { onUpdate } = setup([
     { id: "late", type: "vaccine", vaccine: "MMR", planned: true, due: "2027-04-01", startedAt: stamped },
-    { id: "soon", type: "vaccine", vaccine: "Pentavalent", dose: "2nd dose", planned: true, due: "2026-10-20", place: "public", startedAt: stamped },
+    { id: "soon", type: "vaccine", vaccine: "Pentavalent", dose: "2nd dose", planned: true, due: "2026-10-14", place: "public", startedAt: stamped },
+    { id: "week", type: "vaccine", vaccine: "PCV", dose: "2nd dose", planned: true, due: "2026-10-18", startedAt: stamped },
     { id: "done", type: "vaccine", vaccine: "BCG", startedAt: stamped },
   ]);
   const text = document.body.textContent ?? "";
   expect(text.indexOf("Pentavalent")).toBeLessThan(text.indexOf("MMR"));
   expect(text.indexOf("MMR")).toBeLessThan(text.indexOf("BCG"));
-  // Months away: no Given button to mis-tap at 3am.
+  // Days or months away: no Mark given to mis-tap at 3am — only on the day,
+  // or once it is late.
   expect(screen.queryByRole("button", { name: /Mark MMR/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Mark PCV/ })).toBeNull();
 
-  fireEvent.click(screen.getByRole("button", { name: "Mark Pentavalent, 2nd dose, as given" }));
+  fireEvent.click(screen.getByRole("button", { name: "Mark Pentavalent, 2nd dose, as given today" }));
   const [given, message, undo] = onUpdate.mock.calls[0];
   expect(given).toMatchObject({ id: "soon", vaccine: "Pentavalent", dose: "2nd dose", place: "public" });
   expect(given.planned).toBeUndefined();
@@ -93,9 +96,9 @@ test("a missed appointment stays planned — the date passing does not make it g
   expect(document.body.textContent).toContain("13 days late");
 });
 
-test("a date still to come under 'Log a vaccine' is questioned, not quietly made today", () => {
+test("a date still to come under 'Record a vaccine' is questioned, not quietly made today", () => {
   const { onAdd } = setup();
-  fireEvent.click(screen.getByRole("button", { name: "Log a vaccine" }));
+  fireEvent.click(screen.getByRole("button", { name: "Record a vaccine" }));
   fireEvent.change(textbox(/^Vaccine/), { target: { value: "MMR" } });
   fireEvent.change(dateInput(), { target: { value: "2026-10-20" } });
   fireEvent.click(screen.getByRole("button", { name: "Save vaccine" }));
@@ -107,7 +110,7 @@ test("logging a dose that waits on the schedule gives THAT one, rather than a co
   const { onAdd, onUpdate } = setup([
     { id: "pcv2", type: "vaccine", vaccine: "PCV", dose: "2nd dose", planned: true, due: "2026-10-11", startedAt: stamped },
   ]);
-  fireEvent.click(screen.getByRole("button", { name: "Log a vaccine" }));
+  fireEvent.click(screen.getByRole("button", { name: "Record a vaccine" }));
   fireEvent.change(textbox(/^Vaccine/), { target: { value: "pcv" } });
   fireEvent.change(textbox(/^Dose/), { target: { value: "2nd dose" } });
   fireEvent.click(screen.getByRole("button", { name: "Save vaccine" }));
@@ -118,15 +121,15 @@ test("logging a dose that waits on the schedule gives THAT one, rather than a co
 
 test("a vaccine given before is one tap, with the next dose counted", () => {
   setup([{ id: "p1", type: "vaccine", vaccine: "Pentavalent", dose: "1st dose", place: "public", startedAt: stamped }]);
-  fireEvent.click(screen.getByRole("button", { name: "Log a vaccine" }));
+  fireEvent.click(screen.getByRole("button", { name: "Record a vaccine" }));
   fireEvent.click(screen.getByRole("button", { name: /^Pentavalent/ }));
-  expect(textbox(/Or type a new one/).value).toBe("Pentavalent");
+  expect(textbox(/Or type the name/).value).toBe("Pentavalent");
   expect(textbox(/^Dose/).value).toBe("2nd dose");
 });
 
 test("the card opens with focus on its main action, in the thumb's reach", () => {
   setup();
-  expect(screen.getByRole("button", { name: "Log a vaccine" }).hasAttribute("data-initial-focus")).toBe(true);
+  expect(screen.getByRole("button", { name: "Record a vaccine" }).hasAttribute("data-initial-focus")).toBe(true);
 });
 
 // Dose is optional, so two entries without one are "the same dose" — and a
@@ -135,7 +138,7 @@ test("a dose logged today does not take an appointment that is weeks away", () =
   const { onAdd, onUpdate } = setup([
     { id: "nov", type: "vaccine", vaccine: "Pentavalent", planned: true, due: "2026-11-14", startedAt: stamped },
   ]);
-  fireEvent.click(screen.getByRole("button", { name: "Log a vaccine" }));
+  fireEvent.click(screen.getByRole("button", { name: "Record a vaccine" }));
   fireEvent.change(textbox(/^Vaccine/), { target: { value: "Pentavalent" } });
   fireEvent.click(screen.getByRole("button", { name: "Save vaccine" }));
   expect(onUpdate).not.toHaveBeenCalled();
@@ -146,10 +149,35 @@ test("an earlier dose filled in afterwards does not take today's appointment", (
   const { onAdd, onUpdate } = setup([
     { id: "due", type: "vaccine", vaccine: "Pentavalent", planned: true, due: "2026-10-13", startedAt: new Date(NOW - 60_000).toISOString() },
   ]);
-  fireEvent.click(screen.getByRole("button", { name: "Log a vaccine" }));
+  fireEvent.click(screen.getByRole("button", { name: "Record a vaccine" }));
   fireEvent.change(textbox(/^Vaccine/), { target: { value: "Pentavalent" } });
   fireEvent.change(dateInput(), { target: { value: "2026-08-10" } });
   fireEvent.click(screen.getByRole("button", { name: "Save vaccine" }));
   expect(onUpdate).not.toHaveBeenCalled();
   expect(onAdd).toHaveBeenCalled();
+});
+
+// "Next dose of" offers what is still to arrange: not a dose already on the
+// card as an appointment, and not a vaccine with no next dose.
+test("next-dose chips leave out a dose already booked and a vaccine given at birth", () => {
+  setup([
+    { id: "p1", type: "vaccine", vaccine: "Pentavalent", dose: "1st dose", startedAt: stamped },
+    { id: "p2", type: "vaccine", vaccine: "Pentavalent", dose: "2nd dose", planned: true, due: "2026-11-20", startedAt: stamped },
+    { id: "r1", type: "vaccine", vaccine: "Rotavirus", dose: "1st dose", startedAt: stamped },
+    { id: "b", type: "vaccine", vaccine: "BCG", dose: "At birth", startedAt: stamped },
+  ]);
+  fireEvent.click(screen.getByRole("button", { name: "Add appointment" }));
+  const chips = screen.getByRole("group", { name: "Next dose of" }).textContent ?? "";
+  expect(chips).toContain("Rotavirus");
+  expect(chips).not.toContain("Pentavalent");
+  expect(chips).not.toContain("BCG");
+});
+
+// Nothing chosen until a parent chooses: last time's place is not assumed.
+test("where it was given starts unchosen", () => {
+  const { onAdd } = setup([{ id: "x", type: "vaccine", vaccine: "BCG", place: "public", startedAt: stamped }]);
+  fireEvent.click(screen.getByRole("button", { name: "Record a vaccine" }));
+  fireEvent.change(textbox(/Or type the name|^Vaccine/), { target: { value: "MMR" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save vaccine" }));
+  expect(onAdd.mock.calls[0][0].place).toBeUndefined();
 });

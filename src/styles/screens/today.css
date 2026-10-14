@@ -19,7 +19,11 @@
    lavender at nap time, bottle blue when hungry. Background-only — no border
    and no clipping, so the drifting z's and the thought bubble stay free. */
 .welcome-face {
+  position: relative;
   flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
   line-height: 0;
   color: var(--ink-2);
   border-radius: 50%;
@@ -29,6 +33,38 @@
     transparent 78%
   );
   transition: background-color 600ms ease;
+}
+
+.welcome-face:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* The baby's photo, once there is one, as a small round badge on the face —
+   the drawing stays: its expression is the app's read of the moment. */
+.welcome-face-photo {
+  position: absolute;
+  right: -2px;
+  bottom: 0;
+  width: 26px;
+  height: 26px;
+  overflow: hidden;
+  border: 2px solid var(--background);
+  border-radius: 50%;
+  background: var(--muted);
+  box-shadow: 0 1px 3px color-mix(in oklab, var(--foreground) 18%, transparent);
+}
+
+/* At a feed the companion holds its bottle just there: the photo steps
+   aside for it. */
+.welcome-face.mood-feeding .welcome-face-photo {
+  display: none;
+}
+
+.welcome-face-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .welcome-face.mood-sleeping {
@@ -440,6 +476,32 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* The quarter of an hour after Dirty or Both: the time is also the way to
+   add a photo of it (the entry's own sheet). Small to look at, 44px to hit. */
+.tile-since-photo {
+  position: relative;
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.75rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Tall enough to hit, and never down over Wet and Dirty below it. */
+.tile-since-photo::before {
+  content: "";
+  position: absolute;
+  inset: -18px -8px -8px;
+}
+
+.tile-since-photo svg {
+  display: inline;
+  vertical-align: -2px;
+}
+
 /* A tile that is currently a stopwatch. It keeps its place in the grid and its
    own hue; what changes is that it is obviously LIVE — a stronger edge, a
    numeral big enough to read at arm's length in the dark, and a stop button
@@ -705,7 +767,8 @@
    name (the field allows 240) pushed it past the right-edge ellipsis, so the
    one part a parent came to read was the first part deleted. Wrapping is the
    coming-row precedent: an extra line costs less than a missing answer. */
-.action-medicine .log-copy small {
+.action-medicine .log-copy small,
+.action-vaccines .log-copy small {
   white-space: normal;
 }
 
@@ -1349,6 +1412,12 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  /* The longer "Dirty · 2m ago · Add photo" goes under the title, not into a
+     second column that pushed the title over its glyph. */
+  .tile-head .tile-since-photo {
+    grid-column: 1;
+  }
+
   .tile-main .activity-glyph {
     grid-row: auto;
   }
@@ -1374,6 +1443,10 @@
   .quick-grid > .tile-diaper .tile-main {
     grid-template-columns: auto minmax(0, 1fr);
     justify-items: start;
+  }
+
+  .quick-grid > .tile-diaper .tile-head .tile-since-photo {
+    grid-column: 2;
   }
 
   /* The parity rule above stretches the last tile when the count is odd. With
@@ -1440,52 +1513,65 @@
   border-color: var(--border-strong);
 }
 
-/* The hero's small pills — where the log lives, and the months album. The
-   gaps are as wide as the pills' invisible touch margins, so neither pill's
-   44px target reaches over the other one. */
+/* The hero's small pills — where the log lives, the monthly photos, and a
+   vaccine on the days one is due. On a narrow phone a pill takes a line of
+   its own rather than cutting its words short ("3 days late: …" said
+   nothing). Stacked, they sit close; each one's invisible touch margin is
+   half the gap, so no target reaches over another. */
 .welcome-pills {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  min-width: 0;
   margin-top: 2px;
 }
 
-/* The months album's front door: the cloud note's shape in the honey of
-   growth — a keepsake, not a status. It wears this month's photo once it
-   has one. */
-.months-pill {
+.welcome-pills .cloud-note::before,
+.welcome-pills .top-pill::before {
+  inset: -4px;
+}
+
+.welcome-pills .cloud-note {
+  flex-shrink: 0;
+}
+
+/* Something that is time now: a vaccine due or late (the health coral, rose
+   once late), or this month's photo in the week after its month-birthday
+   (the honey of growth). */
+.top-pill {
+  --pill-hue: var(--glyph-growth);
   position: relative;
   display: inline-flex;
   align-items: center;
   gap: 5px;
   min-width: 0;
-  max-width: 100%;
   padding: 3px 9px;
-  border: 1px solid color-mix(in oklab, var(--glyph-growth) 32%, var(--border));
+  border: 1px solid color-mix(in oklab, var(--pill-hue) 32%, var(--border));
   border-radius: 999px;
-  background: color-mix(in oklab, var(--glyph-growth) var(--glyph-wash), var(--card));
-  color: color-mix(in oklab, var(--glyph-growth) 72%, var(--ink-1));
+  background: color-mix(in oklab, var(--pill-hue) var(--glyph-wash), var(--card));
+  color: color-mix(in oklab, var(--pill-hue) 72%, var(--ink-1));
   font-size: 0.6875rem;
   font-weight: 500;
   letter-spacing: 0.02em;
   cursor: pointer;
 }
 
-.months-pill::before {
-  content: "";
-  position: absolute;
-  inset: -10px -6px;
+.top-pill.is-vaccine {
+  --pill-hue: var(--glyph-health);
 }
 
-.months-pill span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.top-pill.is-late {
+  --pill-hue: var(--destructive);
+  font-weight: 600;
 }
 
-.months-pill img {
+.top-pill svg {
+  flex: 0 0 auto;
+}
+
+/* This month's photo, once it has one, in place of the camera. */
+.top-pill img {
   flex: 0 0 auto;
   width: 16px;
   height: 16px;
@@ -1494,9 +1580,22 @@
   object-fit: cover;
 }
 
-.months-pill:hover,
-.months-pill:focus-visible {
-  border-color: color-mix(in oklab, var(--glyph-growth) 55%, var(--border));
+.top-pill::before {
+  content: "";
+  position: absolute;
+  inset: -10px -6px;
+}
+
+.top-pill span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.top-pill:hover,
+.top-pill:focus-visible {
+  border-color: color-mix(in oklab, var(--pill-hue) 55%, var(--border));
 }
 
 /* The good states wear the calm green of the diaper glyph — quietly. */

@@ -33,10 +33,10 @@ test("from a month back to the album", async () => {
       </DialogContent>
     </Dialog>,
   );
-  fireEvent.click(document.querySelector<HTMLButtonElement>(".month-row")!);
-  expect(screen.getByRole("button", { name: "Save this month" })).toBeTruthy();
+  fireEvent.click(document.querySelector<HTMLButtonElement>(".month-tile")!);
+  expect(screen.getByRole("button", { name: "Done" })).toBeTruthy();
   await back();
-  expect(screen.queryByRole("button", { name: "Save this month" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
   expect(document.querySelector(".months-now")).not.toBeNull();
 });
 
@@ -48,9 +48,9 @@ test("from a vaccine form back to the card", async () => {
       </DialogContent>
     </Dialog>,
   );
-  fireEvent.click(screen.getByRole("button", { name: "Plan a vaccine" }));
-  expect(screen.getByRole("button", { name: "Save to the schedule" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Add appointment" }));
+  expect(screen.getByRole("button", { name: "Save appointment" })).toBeTruthy();
   await back();
-  expect(screen.queryByRole("button", { name: "Save to the schedule" })).toBeNull();
-  expect(screen.getByRole("button", { name: "Log a vaccine" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Save appointment" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Record a vaccine" })).toBeTruthy();
 });
