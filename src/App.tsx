@@ -677,18 +677,19 @@ export default function HomePage() {
   // What the server is told is two timestamps and nothing else: not the
   // baby, not the entry, not how long it has been. It is an alarm clock.
   useEffect(() => {
-    if (notificationPermission !== "granted") return;
-    const feedDueAt = reminders.feedEnabled && feedReminderTargetAt !== null
-      ? new Date(feedReminderTargetAt).toISOString()
-      : null;
-    const diaperDueAt = reminders.diaperEnabled && diaperReminderTargetAt !== null
-      ? new Date(diaperReminderTargetAt).toISOString()
-      : null;
+    // Not before the saved settings are read. Until then every reminder looks
+    // off, and each cold start told the server to stop — unsubscribing the
+    // phone and deleting its alarm while the real schedule was on its way.
+    if (notificationPermission !== "granted" || bootState === "loading") return;
+    const feed = reminders.feedEnabled ? feedReminderTargetAt : null;
+    const diaper = reminders.diaperEnabled ? diaperReminderTargetAt : null;
     // Fetched on the tap that needs it: a phone that never allowed
     // notifications should not carry the subscription code in its first
     // download, and by the time this runs the app has long since opened.
     void import("./domain/pushClient").then(async (push) => {
-      if (feedDueAt === null && diaperDueAt === null) {
+      // Stop only when no reminder is on at all. One that is merely overdue
+      // is still on, and scheduleFor leaves it to the server.
+      if (feed === null && diaper === null) {
         await push.stopPush();
         setPushArmed(false);
         return;
@@ -696,10 +697,11 @@ export default function HomePage() {
       // False means the server does not have it — no key, no subscription, a
       // refused permission, a request that failed — and the in-page timers
       // are the only thing left.
-      setPushArmed(await push.sendSchedule({ feedDueAt, diaperDueAt }, familySync.pairing?.token));
+      setPushArmed(await push.sendSchedule(push.scheduleFor({ feed, diaper }, Date.now()), familySync.pairing?.token));
     });
   }, [
     notificationPermission,
+    bootState,
     reminders.feedEnabled,
     reminders.diaperEnabled,
     feedReminderTargetAt,
@@ -727,8 +729,12 @@ export default function HomePage() {
           icon: "/icon-192.png",
           badge: "/icon-192.png",
           tag: "feed-reminder",
+          // Ring again even if the last one is still in the shade: replacing
+          // a notification with the same tag is otherwise silent. TypeScript's
+          // NotificationOptions leaves it out, hence the cast.
+          renotify: true,
           data: { url: "/" },
-        }))
+        } as NotificationOptions))
         .catch(() => undefined);
     }, delay);
 
@@ -754,8 +760,9 @@ export default function HomePage() {
           icon: "/icon-192.png",
           badge: "/icon-192.png",
           tag: "diaper-reminder",
+          renotify: true,
           data: { url: "/" },
-        }))
+        } as NotificationOptions))
         .catch(() => undefined);
     }, delay);
 

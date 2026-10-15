@@ -52,7 +52,24 @@ export async function ensureSubscription(): Promise<PushSubscription | null> {
     .catch(() => null);
 }
 
-export type Schedule = { feedDueAt: string | null; diaperDueAt: string | null };
+/** Per reminder: a time is the next ring, null is "this one is off", and
+    left out is "no new time — keep what you have". */
+export type Schedule = { feedDueAt?: string | null; diaperDueAt?: string | null };
+
+/**
+ * What to tell the server, from the two times this phone worked out (null:
+ * that reminder is off, or there is nothing to count from yet).
+ *
+ * A time already past is LEFT OUT. The server refuses a past time, and with
+ * it the whole request — so one overdue nappy reminder used to keep a stale
+ * feed alarm ringing and throw the new one away. It is not sent as null
+ * either: an overdue reminder has either rung already or is about to on the
+ * server's next pass, and null would cancel that.
+ */
+export function scheduleFor(times: { feed: number | null; diaper: number | null }, now: number): Schedule {
+  const due = (at: number | null) => (at === null ? null : at > now ? new Date(at).toISOString() : undefined);
+  return { feedDueAt: due(times.feed), diaperDueAt: due(times.diaper) };
+}
 
 /**
  * Tell the server when to ring, and nothing else. Returns false when there is
@@ -81,6 +98,7 @@ export async function sendSchedule(schedule: Schedule, token?: string): Promise<
     body: JSON.stringify({
       endpoint: json.endpoint,
       keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
+      // A left-out time stays out of the JSON, which is how "keep" is said.
       feedDueAt: schedule.feedDueAt,
       diaperDueAt: schedule.diaperDueAt,
     }),

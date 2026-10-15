@@ -15,6 +15,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useCloseOnBack } from "../hooks/useCloseOnBack";
+import { useStableCallback } from "../hooks/useStableCallback";
 import "../styles/screens/soothe.css";
 import { ExternalLink, Pause, Play, Waves } from "lucide-react";
 import { Button } from "./ui/button";
@@ -80,7 +81,16 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
     audio.style.display = "none";
     document.body.appendChild(audio);
     audioRef.current = audio;
+    // The button follows the element, not only our own taps: a call, a voice
+    // note or another app pauses it too, and the panel went on saying "Stop"
+    // over silence. If the phone resumes it, "play" puts it back.
+    const onPause = () => setPlaying(false);
+    const onPlay = () => setPlaying(true);
+    audio.addEventListener("pause", onPause);
+    audio.addEventListener("play", onPlay);
     return () => {
+      audio.removeEventListener("pause", onPause);
+      audio.removeEventListener("play", onPlay);
       audio.pause();
       audio.remove();
       audioRef.current = null;
@@ -92,9 +102,12 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
   }, [volume]);
 
   // The file loads AHEAD of the tap, so the gesture is spent on play() alone.
+  // Only when the choice changed, or the last load failed: reloading on every
+  // pause would also cancel the phone resuming the sound after a call.
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || playing) return;
+    if (audio.getAttribute("src") === selectedUrl && !audio.error) return;
     audio.src = selectedUrl;
     audio.load();
   }, [selectedUrl, playing]);
@@ -113,6 +126,12 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
     }, 1000);
     return () => window.clearInterval(id);
   }, [playing, endsAt]);
+
+  // The lock-screen handlers outlive the render that set them. Calling the
+  // start() they closed over put the volume back to what it was at the first
+  // Play — loud, if it had been turned down since — so they go through these.
+  const latestStart = useStableCallback(start);
+  const latestStop = useStableCallback(stop);
 
   function start() {
     const audio = audioRef.current;
@@ -150,8 +169,8 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
         title: mode === "noise" ? "White noise" : "Lullaby",
         artist: "Numalog",
       });
-      navigator.mediaSession.setActionHandler("pause", () => stop());
-      navigator.mediaSession.setActionHandler("play", () => start());
+      navigator.mediaSession.setActionHandler("pause", () => latestStop());
+      navigator.mediaSession.setActionHandler("play", () => latestStart());
     }
   }
 
@@ -160,6 +179,18 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
     setPlaying(false);
     setEndsAt(null);
     track("soothe_stopped", { mode });
+  }
+
+  // A timer changed while the sound plays is for this play, not the next one:
+  // "Keep going" picked mid-play used to stop at 30 minutes anyway. The tap
+  // reads the clock and passes it in; the render-purity analysis rejects a
+  // clock read here.
+  function chooseTimer(next: TimerChoice, at: number) {
+    setTimer(next);
+    if (!playing) return;
+    setNow(at);
+    setEndsAt(next === null ? null : at + next * 60_000);
+    saveSootheChoice({ mode, kind, tune, timer: next });
   }
 
   return (
@@ -236,7 +267,7 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
                 type="button"
                 aria-pressed={timer === minutes}
                 className={timer === minutes ? "soothe-timer is-active" : "soothe-timer"}
-                onClick={() => setTimer(minutes)}
+                onClick={() => chooseTimer(minutes, Date.now())}
               >
                 {minutes}m
               </button>
@@ -245,7 +276,7 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
               type="button"
               aria-pressed={timer === null}
               className={timer === null ? "soothe-timer is-active" : "soothe-timer"}
-              onClick={() => setTimer(null)}
+              onClick={() => chooseTimer(null, Date.now())}
             >
               Keep going
             </button>
