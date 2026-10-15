@@ -392,27 +392,26 @@ export default function HomePage() {
 
   // A tapped magic link. The confirm kind is safe in any state — it only
   // marks an address as this family's guard. The recover kind REPLACES the
-  // pairing, so it only acts on a phone with nothing to lose (onboarding);
-  // anywhere else it explains itself instead of silently mixing two logs.
+  // pairing, so it never acts on a page load: it asks first, every time.
   useEffect(() => {
     const tapped = magicTokenRef.current;
     if (!tapped || bootState === "loading") return;
     magicTokenRef.current = null;
     if (tapped.purpose === "recover") {
-      if (bootState === "recovery") {
-        // recovery boot: the local copy is unreadable and downloading it
-        // comes first — the restore doors are on the screen already.
-        showToast("Save this phone's copy first — then use the restore options right here.");
-      } else {
-        // A phone WITH a log tapped a recovery link: that is the standard
-        // merge-or-adopt decision, and it gets the standard real dialog —
-        // not a four-second toast that spends the link's one moment on a
-        // dead end. An EMPTY phone gets the same dialog with one button:
-        // the token is spent by a tap, never by a page load, because the
-        // browsers that open links inside mail scanners run JavaScript too.
-        // Cancel leaves the token unspent and this phone whole.
-        setRecoverAsk(tapped.token);
-      }
+      // A phone WITH a log tapped a recovery link: that is the standard
+      // merge-or-adopt decision, and it gets the standard real dialog —
+      // not a four-second toast that spends the link's one moment on a
+      // dead end. An EMPTY phone gets the same dialog with one button:
+      // the token is spent by a tap, never by a page load, because the
+      // browsers that open links inside mail scanners run JavaScript too.
+      // Cancel leaves the token unspent and this phone whole.
+      //
+      // The recovery screen too. It offers "Email me a link" itself, and
+      // the toast that used to answer the tap threw that link away, every
+      // time. Restoring there is what its Google button already does: the
+      // unreadable original was set aside (RECOVERY_KEY) when the app
+      // opened, and the dialog offers to download it first.
+      setRecoverAsk(tapped.token);
       return;
     }
     void familySync.emailRedeem(tapped.token, "This phone").then((outcome) => {
@@ -918,6 +917,7 @@ export default function HomePage() {
             token={recoverAsk}
             familySync={familySync}
             onRecovered={() => { completeJoin(); }}
+            onDownloadFirst={bootState === "recovery" ? downloadRecovery : undefined}
             onClosed={() => setRecoverAsk(null)}
           />
         </Suspense>

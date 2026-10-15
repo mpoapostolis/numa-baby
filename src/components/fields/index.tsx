@@ -100,9 +100,13 @@ export function TimeField({
           aria-label="How long ago"
           value={preset}
           onValueChange={(next) => {
-            if (!next) return;
-            setPreset(next);
-            onChange(localDateInput(new Date(Date.now() - Number(next) * 60_000)));
+            // A tap on the lit chip arrives as "" (deselect). Read it as that
+            // chip again, from the clock now: a sheet left open for twenty
+            // minutes must still be able to say "Now".
+            const chosen = next || preset;
+            if (!chosen) return;
+            setPreset(chosen);
+            onChange(localDateInput(new Date(Date.now() - Number(chosen) * 60_000)));
           }}
         >
           {QUICK_OFFSETS.map((offset) => (

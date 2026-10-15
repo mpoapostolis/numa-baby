@@ -19,12 +19,15 @@ export default function RecoverLinkDialog({
   token,
   familySync,
   onRecovered,
+  onDownloadFirst,
   onClosed,
 }: {
   token: string;
   familySync: FamilySync;
   /** The log is on its way. An empty phone uses this to leave onboarding. */
   onRecovered?: () => void;
+  /** On the recovery screen: save the unreadable copy before restoring. */
+  onDownloadFirst?: () => void;
   onClosed: () => void;
 }) {
   const [busy, setBusy] = useState(false);
@@ -58,6 +61,13 @@ export default function RecoverLinkDialog({
             happens until you tap Restore — if this isn’t your phone, just close this.
           </DialogDescription>
           <DialogFooter className="merge-choice-actions">
+            {/* The recovery screen's own advice, kept within reach: the
+                card's Download button is behind this dialog. */}
+            {onDownloadFirst && (
+              <Button variant="outline" disabled={busy} onClick={onDownloadFirst}>
+                Download the saved copy first
+              </Button>
+            )}
             <Button disabled={busy} onClick={() => void redeem(false)}>
               Restore my log here
             </Button>
