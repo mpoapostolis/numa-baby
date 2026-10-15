@@ -119,7 +119,8 @@ it("adds up short tummy-time goes before rounding them", async () => {
     if (!found) throw new Error("not on Today yet");
     return found;
   }, { timeout: 5_000 });
-  expect(row.textContent).toContain("1m today");
+  // "1m today", or "1m of 10m today" while there is a goal for the age.
+  expect(row.textContent).toMatch(/^Tummy time1m (of \d+m )?today/);
 }, 15_000);
 
 describe("a running timer's row", () => {

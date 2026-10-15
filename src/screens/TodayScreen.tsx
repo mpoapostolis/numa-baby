@@ -35,6 +35,7 @@ import {
 } from "../domain/time";
 import { dueLabel, dueSoon, vaccineLabel } from "../domain/vaccines";
 import { MONTHS_KEPT } from "../domain/keepsakes";
+import { tummyGoalMinutes } from "../domain/tummyGoal";
 import { usePhoto } from "../hooks/usePhoto";
 import { Activity, DiaperKind, Profile, Sheet } from "../domain/types";
 import { UnitSystem, formatVolume, useUnits } from "../domain/units";
@@ -219,6 +220,18 @@ function TummyRunning({ activity, onStop, onEdit }: { activity: Activity; onStop
       </Button>
     </div>
   );
+}
+
+/**
+ * The tummy time row, idle: what today adds up to against the day's goal for
+ * this age — none yet, how much is left, or that it is done. With no goal
+ * (no birth date, or past about 7 months) just the total, or how to start.
+ */
+function tummyLine(minutes: number, goal: number | null): string {
+  if (goal === null) return minutes > 0 ? `${humanDuration(minutes)} today · start the timer` : "Start the timer — awake, and watched";
+  if (minutes === 0) return `None yet today · aim for ${humanDuration(goal)}, awake and watched`;
+  if (minutes < goal) return `${humanDuration(minutes)} of ${humanDuration(goal)} today · ${humanDuration(goal - minutes)} to go`;
+  return `${humanDuration(minutes)} today · today’s ${humanDuration(goal)} done`;
 }
 
 /** "Both" is a real answer for a nursing session, not a missing one. */
@@ -633,6 +646,7 @@ function TodayScreen({
 
   const babyAge = formatBabyAge(profile.birthDate, minuteClock);
   const babyDays = ageInDays(profile.birthDate, minuteClock);
+  const tummyGoal = tummyGoalMinutes(babyDays);
 
   // Last night, in the morning. Recomputed on the minute clock like every
   // other figure on this screen, so it appears and retires on its own.
@@ -1074,7 +1088,9 @@ function TodayScreen({
               <span className="action-icon" aria-hidden="true"><Smile /></span>
               <span className="log-copy">
                 <strong>Tummy time</strong>
-                <small>{tummyToday > 0 ? `${humanDuration(tummyToday)} today · start the timer` : "Start the timer — awake, and watched"}</small>
+                <small className={tummyGoal !== null && tummyToday === 0 ? "tummy-none" : undefined}>
+                  {tummyLine(tummyToday, tummyGoal)}
+                </small>
               </span>
               <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
             </Button>

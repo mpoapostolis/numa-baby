@@ -24,6 +24,14 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-10-15.3",
+    title: "Tummy time: what is left for today",
+    items: [
+      "The Tummy time row on Today now says how today is going against the usual daily amount for your baby’s age: “None yet today”, “12m of 30m today · 18m to go”, or that today’s is done.",
+      "The amounts are the ones in the Guide: about 10 minutes a day in short goes at first, building to 15–30 minutes a day from around 7 weeks. From around 7 months, when most babies roll both ways, it just shows the total.",
+    ],
+  },
+  {
     id: "2026-10-15.2",
     title: "Answers to your messages, in the app",
     items: [

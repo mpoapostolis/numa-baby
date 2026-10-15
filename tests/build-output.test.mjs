@@ -128,7 +128,10 @@ const BUDGET_GZIP = {
   // announced over a log sheet. Checking for answers, the conversation and
   // the form load only on a phone that has written, after the first paint.
   // Measured after: 121.34 kB.
-  "index-*.js": 121_350,
+  // 121_350 → 121_500 the same evening for tummy time against the day's goal
+  // ("12m of 30m today · 18m to go", "None yet today") — Today's row is the
+  // boot path, and the goal is two numbers by age. Measured after: 121.46 kB.
+  "index-*.js": 121_500,
   "index-*.css": 29_000,
 };
 const LAZY_SCREENS = ["SettingsScreen", "GrowthGuideScreen", "InsightsScreen", "TimelineScreen", "LogSheet", "OnboardingScreen", "sonner", "FactOfTheDay"];

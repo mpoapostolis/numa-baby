@@ -815,8 +815,16 @@
    one part a parent came to read was the first part deleted. Wrapping is the
    coming-row precedent: an extra line costs less than a missing answer. */
 .action-medicine .log-copy small,
-.action-vaccines .log-copy small {
+.action-vaccines .log-copy small,
+.action-tummy .log-copy small {
   white-space: normal;
+}
+
+/* No tummy time yet today, with a goal for this age: said a shade louder,
+   since a day without it is the thing the line is there to catch. */
+.action-tummy .log-copy small.tummy-none {
+  color: var(--ink);
+  font-weight: 500;
 }
 
 .log-row-secondary .log-chevron {

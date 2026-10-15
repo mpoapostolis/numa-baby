@@ -42,13 +42,61 @@ test("Today has its own tummy time timer: one tap starts it, Done stops it", asy
   expect(stored().filter((a) => a.type === "tummy" && a.endedAt)).toHaveLength(1);
 }, 15_000);
 
-test("the row says how much tummy time there has been today", async () => {
-  const start = new Date();
-  start.setMinutes(start.getMinutes() - 30);
-  const end = new Date(start.getTime() + 12 * 60_000);
-  seedLog([{ id: "t1", type: "tummy", startedAt: start.toISOString(), endedAt: end.toISOString() }]);
+/** A baby this many days old today, for the seeded profile. */
+function bornDaysAgo(days: number) {
+  const birth = new Date();
+  birth.setDate(birth.getDate() - days);
+  const iso = `${birth.getFullYear()}-${String(birth.getMonth() + 1).padStart(2, "0")}-${String(birth.getDate()).padStart(2, "0")}`;
+  const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY)!);
+  saved.profile.birthDate = iso;
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+}
+
+function goneFor(minutes: number) {
+  // Ended a minute ago, so it is today whatever the hour the suite runs at
+  // — unless that is the first minutes after midnight, when it was yesterday.
+  const end = new Date(Date.now() - 60_000);
+  const start = new Date(end.getTime() - minutes * 60_000);
+  return { id: `t${minutes}`, type: "tummy" as const, startedAt: start.toISOString(), endedAt: end.toISOString() };
+}
+
+const fitsToday = (minutes: number) => new Date(Date.now() - (minutes + 1) * 60_000).getDate() === new Date().getDate();
+
+// "You know you didn't do tummy time today — how much is left?"
+test("the row says how much is left of today's tummy time", async () => {
+  if (!fitsToday(12)) return;
+  seedLog([goneFor(12)]);
+  bornDaysAgo(80);
   render(<App />);
-  expect((await tummyRow()).textContent).toContain("12m today");
+  expect((await tummyRow()).textContent).toContain("12m of 30m today · 18m to go");
+}, 15_000);
+
+test("a day with none yet says so, with the goal for this age", async () => {
+  seedLog([]);
+  bornDaysAgo(20);
+  render(<App />);
+  const row = await tummyRow();
+  expect(row.textContent).toContain("None yet today · aim for 10m, awake and watched");
+  expect(row.querySelector("small.tummy-none")).not.toBeNull();
+}, 15_000);
+
+test("a goal met says so", async () => {
+  if (!fitsToday(35)) return;
+  seedLog([goneFor(35)]);
+  bornDaysAgo(80);
+  render(<App />);
+  expect((await tummyRow()).textContent).toContain("35m today · today’s 30m done");
+}, 15_000);
+
+// Rolling both ways by about 7 months: floor time, not a timer to fill.
+test("past about seven months there is no goal, only the total", async () => {
+  if (!fitsToday(12)) return;
+  seedLog([goneFor(12)]);
+  bornDaysAgo(240);
+  render(<App />);
+  const text = (await tummyRow()).textContent;
+  expect(text).toContain("12m today · start the timer");
+  expect(text).not.toContain("to go");
 }, 15_000);
 
 test("in the log it is called tummy time, and has a filter of its own", () => {
