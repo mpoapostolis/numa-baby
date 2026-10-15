@@ -112,7 +112,13 @@ const BUDGET_GZIP = {
   // feedback box: a timer of its own on Today, with today's total — Today is
   // the boot path, and the timer is the existing one, taught a fourth kind.
   // Measured after: 120.09 kB.
-  "index-*.js": 120_100,
+  // 120_100 → 120_700 the same day, for the fixes from a whole-app bug sweep
+  // that live where they must run before any tap: entries kept through a
+  // wrong phone clock, sync races that could mix two families' logs, an Undo
+  // for a discarded timer, reminders that keep their schedule, an update
+  // that waits for the sounds and the open form, and Today's figures. Only
+  // their lazy halves load later. Measured after: 120.65 kB.
+  "index-*.js": 120_700,
   "index-*.css": 29_000,
 };
 const LAZY_SCREENS = ["SettingsScreen", "GrowthGuideScreen", "InsightsScreen", "TimelineScreen", "LogSheet", "OnboardingScreen", "sonner", "FactOfTheDay"];
