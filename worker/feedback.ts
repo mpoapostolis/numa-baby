@@ -24,6 +24,8 @@ const MAX_REPLY = 4_000;
 const THREAD_LIMIT = 200;
 /** The phone's key: 32 random bytes, base64url. */
 const KEY_PATTERN = /^[A-Za-z0-9_-]{32,128}$/;
+/** The name the dashboard gives an answer before sending it. */
+const REPLY_ID_PATTERN = /^[A-Za-z0-9-]{16,64}$/;
 
 // The tables are created on first use rather than requiring a manual
 // migration before the feature works. Every statement is idempotent, and the
@@ -61,6 +63,9 @@ export async function ensureFeedbackTables(client: Client) {
       "CREATE INDEX IF NOT EXISTS feedback_by_reader ON feedback (reader, created_at)",
       "CREATE INDEX IF NOT EXISTS feedback_replies_by_reader ON feedback_replies (reader, created_at)",
       "CREATE INDEX IF NOT EXISTS feedback_replies_by_message ON feedback_replies (feedback_id)",
+      // "The address this phone last left" walks only the messages that
+      // carry one, however many came without.
+      "CREATE INDEX IF NOT EXISTS feedback_contact_by_reader ON feedback (reader, created_at) WHERE contact IS NOT NULL",
     ],
     "write",
   );
@@ -71,6 +76,35 @@ export async function ensureFeedbackTables(client: Client) {
 export function resetFeedbackTablesForTest() {
   ensured = false;
 }
+
+/**
+ * Per-address limits for the feedback endpoints, kept in this isolate's
+ * memory and nowhere else. A budget row in the database would hold the
+ * address beside the moment the message arrived — and the photo and join
+ * budgets hold the same address beside a family id, which would join the
+ * message to a family. Memory forgets; each isolate counts on its own, so
+ * a determined sender gets a few isolates' worth, and the service-wide
+ * ceiling in index.ts bounds the rest.
+ */
+export function makeLimiter(maxKeys = 5_000) {
+  const counts = new Map<string, { hour: number; n: number }>();
+  return {
+    allow(key: string, max: number, now: number): boolean {
+      const hour = Math.floor(now / 3_600_000);
+      const seen = counts.get(key);
+      if (!seen || seen.hour !== hour) {
+        // An hour's worth of addresses at most: the oldest go first.
+        if (!seen && counts.size >= maxKeys) counts.delete(counts.keys().next().value as string);
+        counts.set(key, { hour, n: 1 });
+        return true;
+      }
+      seen.n += 1;
+      return seen.n <= max;
+    },
+  };
+}
+
+export const feedbackLimiter = makeLimiter();
 
 function respond(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -155,6 +189,8 @@ export type ReplyResult =
       emailError?: string;
       /** Sent, but the conversation could not be ticked off. */
       unticked?: boolean;
+      /** This answer had already arrived on an earlier try; nothing was sent again. */
+      already?: boolean;
     };
 
 function escapeHtml(text: string): string {
@@ -259,7 +295,28 @@ export async function replyToFeedback(
   }
   if (!reader && !email) return { error: "Email is not set up on this deployment, and it is the only way to reach them." };
 
-  const id = crypto.randomUUID();
+  // The dashboard names each answer before sending it, and sends the same
+  // name again when it cannot tell whether the first try arrived (a dropped
+  // connection). An answer already stored under that name is not stored, or
+  // mailed, twice.
+  const named = typeof body.replyId === "string" && REPLY_ID_PATTERN.test(body.replyId) ? body.replyId : null;
+  if (named) {
+    const earlier = await client.execute({
+      sql: "select id, created_at, body, emailed_to from feedback_replies where id = ?",
+      args: [named],
+    });
+    const done = earlier.rows[0];
+    if (done) {
+      return {
+        ok: true,
+        reply: { id: named, at: String(done.created_at), from: "dev", text: String(done.body) },
+        inApp: Boolean(reader),
+        emailedTo: done.emailed_to == null ? null : String(done.emailed_to),
+        already: true,
+      };
+    }
+  }
+  const id = named ?? crypto.randomUUID();
   const at = new Date(now).toISOString();
   await client.execute({
     sql: "insert into feedback_replies (id, feedback_id, reader, created_at, body, emailed_to) values (?, ?, ?, ?, ?, null)",

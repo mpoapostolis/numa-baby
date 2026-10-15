@@ -44,6 +44,8 @@ const STATS = {
 const posted: Array<{ url: string; body: Record<string, unknown> | null }> = [];
 let replyAnswer: Record<string, unknown> = { ok: true, inApp: true, emailedTo: "mum@example.com" };
 let replyOk = true;
+// A dropped connection: the request went, the answer never came back.
+let replyDrops = false;
 
 async function settle() {
   for (let i = 0; i < 4; i++) {
@@ -61,6 +63,7 @@ beforeAll(async () => {
   vi.stubGlobal("fetch", (url: string, init?: { body?: string }) => {
     posted.push({ url, body: init?.body ? JSON.parse(init.body) : null });
     const isReply = url.includes("/feedback/reply");
+    if (isReply && replyDrops) return Promise.reject(new TypeError("Failed to fetch"));
     const payload = url.includes("/stats") ? STATS : isReply ? replyAnswer : { ok: true };
     return Promise.resolve({ ok: isReply ? replyOk : true, json: () => Promise.resolve(payload) });
   });
@@ -164,7 +167,8 @@ describe("sending an answer", () => {
     await settle();
     const replies = posted.filter((p) => p.url === "/api/admin/feedback/reply");
     expect(replies).toHaveLength(1);
-    expect(replies[0].body).toEqual({ id: "m4", text: "Glad it helps!", email: true });
+    expect(replies[0].body).toMatchObject({ id: "m4", text: "Glad it helps!", email: true });
+    expect(String(replies[0].body!.replyId)).toMatch(/^[A-Za-z0-9-]{16,64}$/);
     // Sent: the box is empty after the reload and the page says where it went.
     expect(box(PHONE).value).toBe("");
     expect(note(PHONE).textContent).toBe("Sent ✓ — in the app and to mum@example.com.");
@@ -179,5 +183,40 @@ describe("sending an answer", () => {
     expect(box(OLD_MAIL).value).toBe("Sorry for the wait");
     expect(note(OLD_MAIL).textContent).toBe("The email did not send.");
     expect(sendButton(OLD_MAIL).disabled).toBe(false);
+  });
+});
+
+describe("a connection that drops while an answer is on its way", () => {
+  it("does not claim it failed, and a second press goes under the same name", async () => {
+    replyOk = true;
+    replyAnswer = { ok: true, inApp: true, emailedTo: null };
+    replyDrops = true;
+    box(PHONE).value = "Are you still there?";
+    box(PHONE).dispatchEvent(new Event("input", { bubbles: true }));
+    posted.length = 0;
+    sendButton(PHONE).click();
+    await settle();
+    expect(note(PHONE).textContent).toContain("it may have gone");
+    // It reloaded to show whether the answer is there, and kept the words.
+    expect(posted.some((p) => p.url === "/api/admin/stats")).toBe(true);
+    expect(box(PHONE).value).toBe("Are you still there?");
+
+    replyDrops = false;
+    sendButton(PHONE).click();
+    await settle();
+    const tries = posted.filter((p) => p.url === "/api/admin/feedback/reply");
+    expect(tries).toHaveLength(2);
+    expect(tries[1].body!.replyId).toBe(tries[0].body!.replyId);
+  });
+
+  it("gives new words a new name", async () => {
+    posted.length = 0;
+    box(PHONE).value = "Another answer";
+    box(PHONE).dispatchEvent(new Event("input", { bubbles: true }));
+    sendButton(PHONE).click();
+    await settle();
+    const [again] = posted.filter((p) => p.url === "/api/admin/feedback/reply");
+    expect(again.body!.text).toBe("Another answer");
+    expect(again.body!.replyId).toBeTruthy();
   });
 });

@@ -1,8 +1,10 @@
 import { DatabaseSync, type SQLInputValue } from "node:sqlite";
 import { beforeEach, describe, expect, it } from "vitest";
+import { collectStats } from "../../worker/adminStats";
 import {
   ensureFeedbackTables,
   handleFeedback,
+  makeLimiter,
   handleThread,
   markFeedback,
   replyEmail,
@@ -22,7 +24,7 @@ function sqliteClient(db = new DatabaseSync(":memory:")) {
     const sql = typeof statement === "string" ? statement : statement.sql;
     const args = (typeof statement === "string" ? [] : (statement.args ?? [])) as SQLInputValue[];
     const prepared = db.prepare(sql);
-    if (/^\s*select/i.test(sql)) return { rows: prepared.all(...args) as Record<string, unknown>[] };
+    if (/^\s*(select|with|explain)/i.test(sql)) return { rows: prepared.all(...args) as Record<string, unknown>[] };
     prepared.run(...args);
     return { rows: [] };
   }
@@ -160,6 +162,22 @@ describe("answering", () => {
     expect(result).toMatchObject({ ok: true, emailedTo: "me@example.com", unticked: true });
   });
 
+  // The dashboard names an answer before sending it and, when the
+  // connection drops before the server's answer comes back, sends it again
+  // under the same name: stored and mailed once.
+  it("does not send an answer twice when it is sent again under the same name", async () => {
+    const { client, db } = sqliteClient();
+    const first = await send(client, { message: "Hi there", contact: "me@example.com", key: KEY }, "2026-10-15T08:00:00.000Z");
+    const mail = mailbox();
+    const name = "0f8e2c4a-1b3d-4e5f-9a7b-6c5d4e3f2a1b";
+    const once = await replyToFeedback(client, mail.service, { id: first.id, text: "Answer", replyId: name });
+    const twice = await replyToFeedback(client, mail.service, { id: first.id, text: "Answer", replyId: name });
+    expect(once).toMatchObject({ ok: true, emailedTo: "me@example.com" });
+    expect(twice).toMatchObject({ ok: true, already: true, emailedTo: "me@example.com" });
+    expect(mail.sent).toHaveLength(1);
+    expect(db.prepare("select count(*) as n from feedback_replies").get()).toEqual({ n: 1 });
+  });
+
   it("does not show one phone's answers to another", async () => {
     const { client } = sqliteClient();
     const mine = await send(client, { message: "Mine", key: KEY }, "2026-10-15T08:00:00.000Z");
@@ -269,6 +287,63 @@ describe("reading a conversation", () => {
       expect(plan).toContain("_by_reader");
       expect(plan).not.toContain("TEMP B-TREE");
     }
+  });
+});
+
+describe("the dashboard's messages", () => {
+  // The form asks for an address once, so it is often on a message far older
+  // than the two hundred the dashboard shows — and it is looked up after the
+  // limit, once per phone, not for every message ever stored.
+  it("carries each phone's address from anywhere in the conversation", async () => {
+    const { client } = sqliteClient();
+    await send(client, { message: "First, with my address", contact: "mum@example.com", key: KEY }, "2026-10-01T08:00:00.000Z");
+    for (let i = 0; i < 3; i++) {
+      await send(client, { message: `Later message ${i}`, key: KEY }, `2026-10-1${i}T08:00:00.000Z`);
+    }
+    await send(client, { message: "No address here", key: OTHER_KEY }, "2026-10-14T08:00:00.000Z");
+    await send(client, { message: "Old app", contact: "dad@example.com" }, "2026-10-14T09:00:00.000Z");
+
+    const stats = await collectStats(client, Date.parse("2026-10-15T10:00:00.000Z"));
+    const rows = stats.feedback as Array<Record<string, unknown>>;
+    expect(rows.map((r) => r.message)).toEqual([
+      "Old app", "No address here", "Later message 2", "Later message 1", "Later message 0", "First, with my address",
+    ]);
+    expect(rows.find((r) => r.message === "Later message 2")).toMatchObject({ thread_contact: "mum@example.com", contact: null });
+    expect(rows.find((r) => r.message === "No address here")).toMatchObject({ thread_contact: null });
+    expect(rows.find((r) => r.message === "Old app")).toMatchObject({ thread: null, contact: "dad@example.com" });
+  });
+
+  it("finds that address through the messages that carry one", async () => {
+    const { client, db } = sqliteClient();
+    await ensureFeedbackTables(client);
+    const plan = db.prepare(`explain query plan select contact from feedback
+        where reader = ? and contact is not null and contact like '%_@_%._%' order by created_at desc limit 1`)
+      .all("x").map((row) => String((row as { detail: string }).detail)).join(" | ");
+    expect(plan).toContain("feedback_contact_by_reader");
+  });
+});
+
+describe("the per-address limit", () => {
+  // Kept in memory, never in the database: a stored address beside the time
+  // a message arrived would join the message to a family through the other
+  // budgets that hold the same address.
+  it("lets an hour's allowance through, then refuses until the next hour", () => {
+    const limiter = makeLimiter();
+    const at = Date.parse("2026-10-15T10:05:00.000Z");
+    for (let i = 0; i < 3; i++) expect(limiter.allow("write:203.0.113.5", 3, at)).toBe(true);
+    expect(limiter.allow("write:203.0.113.5", 3, at)).toBe(false);
+    expect(limiter.allow("write:198.51.100.7", 3, at)).toBe(true);
+    expect(limiter.allow("write:203.0.113.5", 3, at + 3_600_000)).toBe(true);
+  });
+
+  it("keeps a bounded number of addresses", () => {
+    const limiter = makeLimiter(2);
+    const at = Date.now();
+    limiter.allow("a", 1, at);
+    limiter.allow("b", 1, at);
+    limiter.allow("c", 1, at);
+    // "a" was forgotten to make room, so it starts again.
+    expect(limiter.allow("a", 1, at)).toBe(true);
   });
 });
 

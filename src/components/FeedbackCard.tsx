@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/
 import { track } from "../domain/analytics";
 import {
   addSent,
+  conversationOnScreen,
   getInbox,
   inboxKey,
   markInboxSeen,
@@ -40,6 +41,7 @@ function stamp(at: string): string {
 
 function Thread({ thread }: { thread: ThreadMessage[] }) {
   const listRef = useRef<HTMLOListElement>(null);
+  const visibleRef = useRef(false);
   const unread = unreadReplies(getInbox());
 
   // The newest is what matters: open at the bottom, like any conversation.
@@ -48,21 +50,34 @@ function Thread({ thread }: { thread: ThreadMessage[] }) {
     if (list) list.scrollTop = list.scrollHeight;
   }, [thread.length]);
 
-  // An answer counts as read once it is on screen — not merely because
-  // Settings was opened with the conversation far below the fold.
+  // Is the conversation in front of the parent? Then an answer counts as
+  // read — not merely because Settings was opened with it far below the
+  // fold — and arriving, it is not announced over itself.
   useEffect(() => {
     const list = listRef.current;
-    if (!list || !unread) return;
-    const last = list.lastElementChild;
-    if (!last || typeof IntersectionObserver === "undefined") {
-      markInboxSeen();
-      return;
+    if (!list) return;
+    const show = (visible: boolean) => {
+      if (visible === visibleRef.current) return;
+      visibleRef.current = visible;
+      conversationOnScreen(visible ? 1 : -1);
+      if (visible) markInboxSeen();
+    };
+    if (typeof IntersectionObserver === "undefined") {
+      show(true);
+    } else {
+      const observer = new IntersectionObserver((entries) => show(entries.some((entry) => entry.isIntersecting)));
+      observer.observe(list);
+      return () => {
+        observer.disconnect();
+        show(false);
+      };
     }
-    const observer = new IntersectionObserver((entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) markInboxSeen();
-    });
-    observer.observe(last);
-    return () => observer.disconnect();
+    return () => show(false);
+  }, []);
+
+  // An answer that arrives while it is on screen is read as it lands.
+  useEffect(() => {
+    if (visibleRef.current && unread) markInboxSeen();
   }, [unread, thread.length]);
 
   return (

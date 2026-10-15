@@ -3,7 +3,15 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { FeedbackBubble } from "@/components/FeedbackBubble";
 import { FeedbackCard } from "@/components/FeedbackCard";
-import { forgetInboxForTest, getInbox, INBOX_STORE, refreshInbox, type ThreadMessage } from "@/domain/feedbackInbox";
+import {
+  forgetInbox,
+  forgetInboxForTest,
+  getInbox,
+  inboxKey,
+  INBOX_STORE,
+  refreshInbox,
+  type ThreadMessage,
+} from "@/domain/feedbackInbox";
 import { attachToaster, detachToaster } from "@/lib/toast";
 import { stubBrowser } from "./appHarness";
 
@@ -164,6 +172,45 @@ test("no announcement over the conversation it is about", async () => {
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
   expect(toasts).toEqual([]);
 }, 10_000);
+
+// Nor over the same conversation shown in Settings: the parent left the app
+// there, and comes back to the answer already on screen.
+test("no announcement over the conversation in Settings", async () => {
+  // As a browser does it: the observer answers a frame after it is asked.
+  vi.stubGlobal("IntersectionObserver", class {
+    constructor(private callback: (entries: Array<{ isIntersecting: boolean }>) => void) {}
+    observe() { setTimeout(() => this.callback([{ isIntersecting: true }]), 16); }
+    disconnect() {}
+  });
+  seed([asked]);
+  serverThread = [asked];
+  render(<><FeedbackBubble hidden={false} /><FeedbackCard /></>);
+  await screen.findByRole("button", { name: "Messages" }, { timeout: 4_000 });
+
+  serverThread = [asked, answered];
+  vi.spyOn(Date, "now").mockReturnValue(Date.now() + 11 * 60_000);
+  act(() => { document.dispatchEvent(new Event("visibilitychange")); });
+  await screen.findByText("It is in today’s update!", {}, { timeout: 4_000 });
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+  expect(toasts).toEqual([]);
+}, 10_000);
+
+// Storage full when the phone first wrote: the key lived only in memory.
+// Erase all must still take it — it used to write itself back afterwards.
+test("erasing everything forgets a conversation that only lived in memory", async () => {
+  const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    throw new DOMException("full", "QuotaExceededError");
+  });
+  const key = inboxKey();
+  expect(getInbox()?.key).toBe(key);
+  setItem.mockRestore();
+
+  forgetInbox();
+  expect(getInbox()).toBeNull();
+  await refreshInbox(true);
+  expect(window.localStorage.getItem(INBOX_STORE)).toBeNull();
+  expect(requests).toEqual([]);
+});
 
 test("a refusal says why instead of blaming the connection", async () => {
   vi.stubGlobal("fetch", async () =>

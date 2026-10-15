@@ -138,6 +138,31 @@ export function inboxKey(): string {
   return key;
 }
 
+// How many conversation views are on screen right now — the bubble's dialog,
+// the Settings card, the Thanks dialog. An answer arriving while one is in
+// front of the parent needs no announcing: it is already there to read.
+let onScreen = 0;
+
+/** A conversation view came into sight (+1) or went out of it (-1). */
+export function conversationOnScreen(change: 1 | -1) {
+  onScreen = Math.max(0, onScreen + change);
+}
+
+/** "Erase all data": forget the conversation, in memory as well as in
+    storage — a copy kept only in memory (storage was full) would otherwise
+    outlive the erase and write itself back. */
+export function forgetInbox() {
+  inbox = null;
+  raw = undefined;
+  inFlight = null;
+  try {
+    window.localStorage.removeItem(INBOX_STORE);
+  } catch {
+    // Nothing stored, then.
+  }
+  notify();
+}
+
 /** A message the server has just taken, shown before the next check. */
 export function addSent(message: ThreadMessage) {
   const current = getInbox();
@@ -215,7 +240,8 @@ export function watchInbox(
   function announce() {
     const current = getInbox();
     const newest = newestReply(current);
-    if (!current || !newest || newest <= current.seenAt || newest <= current.toastedAt || quiet()) return;
+    if (!current || !newest || newest <= current.seenAt || newest <= current.toastedAt) return;
+    if (quiet() || onScreen > 0) return;
     write({ ...current, toastedAt: newest });
     toast("Apostolis replied to your message", {
       duration: 10_000,
@@ -242,4 +268,5 @@ export function forgetInboxForTest() {
   inbox = null;
   raw = undefined;
   inFlight = null;
+  onScreen = 0;
 }

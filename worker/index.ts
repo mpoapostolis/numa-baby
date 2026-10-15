@@ -5,7 +5,7 @@ import { refreshStats } from "./adminStats";
 import { SEND_LIMIT, ScheduleBody, forgetSubscription, saveSchedule, sendDue, vapidKeys } from "./push";
 import { sendBroadcastChunk } from "./broadcast";
 import { budgetKey } from "./budgetKey";
-import { handleFeedback, handleThread } from "./feedback";
+import { feedbackLimiter, handleFeedback, handleThread } from "./feedback";
 import {
   handleEmailLink,
   handleEmailRecoverRequest,
@@ -77,13 +77,17 @@ const MAX_PAYLOAD_BYTES = 8_192;
 const JOIN_TRIES_PER_HOUR = 30;
 /** A phone re-schedules on every feed; a busy night is perhaps twenty. */
 const PUSH_WRITES_PER_HOUR = 120;
-// The "Need anything?" box, per address. A parent writes a handful of
-// messages in an evening; the rest is someone filling the table.
+// The "Need anything?" box. Its limits never write an address down: a
+// budget row holding an address next to the minute a message arrived would
+// join that message, through the photo and join budgets beside it, to a
+// family — the one thing feedback must never be joinable to. So the
+// per-address limits live in this isolate's memory only (see feedbackLimiter
+// in feedback.ts), and the one limit kept in the database is for the whole
+// service, with no address in it at all.
 const FEEDBACK_MESSAGES_PER_HOUR = 20;
-// And reads of a conversation: a phone that has written looks every ten
-// minutes it is open, and on every open of the conversation. Many families
-// share one carrier address, so this is generous.
 const FEEDBACK_READS_PER_HOUR = 240;
+/** Every message from everyone, per hour: a ceiling on filling the table. */
+const FEEDBACK_MESSAGES_PER_HOUR_ALL = 300;
 /** Photo uploads per family per hour (worker/photos.ts). */
 const PHOTO_PUTS_PER_HOUR = 60;
 // And per address: families are free to create, so a per-family allowance
@@ -625,8 +629,11 @@ export default {
       // the ones who never paired a second phone.
       if (url.pathname === "/api/feedback" && request.method === "POST") {
         const ip = budgetKey(request.headers.get("cf-connecting-ip") ?? "unknown");
-        if (!(await spendBudget(db(env), `feedback:${ip}`, FEEDBACK_MESSAGES_PER_HOUR))) {
+        if (!feedbackLimiter.allow(`write:${ip}`, FEEDBACK_MESSAGES_PER_HOUR, Date.now())) {
           return bad("Too many messages from this connection — try again in an hour.", 429);
+        }
+        if (!(await spendBudget(db(env), "feedback:all", FEEDBACK_MESSAGES_PER_HOUR_ALL))) {
+          return bad("Too many messages are arriving right now — try again in an hour.", 429);
         }
         return await handleFeedback(db(env), request);
       }
@@ -634,7 +641,7 @@ export default {
       // the lock: no account, because the message never needed one either.
       if (url.pathname === "/api/feedback/thread" && request.method === "POST") {
         const ip = budgetKey(request.headers.get("cf-connecting-ip") ?? "unknown");
-        if (!(await spendBudget(db(env), `feedback-read:${ip}`, FEEDBACK_READS_PER_HOUR))) {
+        if (!feedbackLimiter.allow(`read:${ip}`, FEEDBACK_READS_PER_HOUR, Date.now())) {
           return bad("Too many checks from this connection — try again later.", 429);
         }
         return await handleThread(db(env), request);

@@ -496,6 +496,14 @@ export function adminPageHtml(nonce: string): string {
   // newest one on screen and moves. "sending" keeps a button that is already
   // on its way from being pressed again on a re-drawn page.
   var drafts = {}, noMail = {}, notes = {}, sending = {};
+  // The name each answer is sent under, kept until it is known to have
+  // arrived: a retry after a dropped connection sends the same name, and the
+  // server stores and mails it once. New words get a new name.
+  var replyIds = {};
+  function newReplyId() {
+    if (window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
+    return "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 14) + Math.random().toString(36).slice(2, 14);
+  }
 
   function messagesCard(d) {
     var list = conversations(d), waiting = 0, html = "";
@@ -672,7 +680,9 @@ export function adminPageHtml(nonce: string): string {
       var key = boxes[j].getAttribute("data-conv");
       if (drafts[key]) boxes[j].value = drafts[key];
       boxes[j].addEventListener("input", function (e) {
-        drafts[e.currentTarget.getAttribute("data-conv")] = e.currentTarget.value;
+        var c = e.currentTarget.getAttribute("data-conv");
+        drafts[c] = e.currentTarget.value;
+        delete replyIds[c];
       });
     }
     var mails = document.querySelectorAll(".reply-mail");
@@ -700,6 +710,7 @@ export function adminPageHtml(nonce: string): string {
         if (!text) { showNote(conv, "Write the reply first."); return; }
         sending[conv] = true;
         delete notes[conv];
+        if (!replyIds[conv]) replyIds[conv] = newReplyId();
         b.disabled = true;
         b.textContent = "Sending…";
         // Looked up again when the answer comes: the page may have been
@@ -707,7 +718,7 @@ export function adminPageHtml(nonce: string): string {
         function button() { return byConv(".reply button.send", conv); }
         fetch("/api/admin/feedback/reply", {
           method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify({ id: id, text: text, email: tick ? tick.checked : false })
+          body: JSON.stringify({ id: id, text: text, email: tick ? tick.checked : false, replyId: replyIds[conv] })
         }).then(function (res) {
           return res.json().catch(function () { return {}; }).then(function (r) { return { ok: res.ok, r: r }; });
         }).then(function (x) {
@@ -719,11 +730,13 @@ export function adminPageHtml(nonce: string): string {
             return;
           }
           var r = x.r;
+          delete replyIds[conv];
           var said = r.inApp && r.emailedTo ? "Sent ✓ — in the app and to " + r.emailedTo + "."
             : r.inApp ? "Sent ✓ — they will see it in the app."
             : "Sent ✓ — emailed to " + r.emailedTo + ".";
           if (r.emailError) said = "In the app ✓ — but the email did not go: " + r.emailError;
           if (r.unticked) said += " It could not be ticked off — tick it by hand.";
+          if (r.already) said = "Already sent ✓ — the first try had arrived; nothing went twice.";
           // Shown and cleared at once, before the reload: if the reload
           // fails, the page must still say it went, or it invites a resend.
           delete drafts[conv];
@@ -733,10 +746,16 @@ export function adminPageHtml(nonce: string): string {
           showNote(conv, said, r.emailError || r.unticked ? "note-bad" : "note-ok");
           load();
         }).catch(function () {
+          // No answer is not "not sent": the server may have stored and
+          // mailed it before the connection dropped. Reload to show what is
+          // there; a second press re-sends under the same name, so it can
+          // never arrive twice.
           delete sending[conv];
           var again = button();
           if (again) { again.disabled = false; again.textContent = "Send reply"; }
-          showNote(conv, "That did not send — check the connection, the text is still here.");
+          showNote(conv, "No answer from the server — it may have gone. Check the conversation above; " +
+            "pressing Send again cannot send it twice.", "note-bad");
+          load();
         });
       });
     }

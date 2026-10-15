@@ -379,14 +379,25 @@ export async function collectStats(client: Client, now: number) {
       client,
       // thread_contact: the address that phone last left, wherever in the
       // conversation — the form asks for it only once, so it is often on a
-      // message older than the two hundred shown.
-      `select id, created_at as at, substr(created_at, 1, 16) as sent, message, contact, app_version, handled,
-              substr(reader, 1, 16) as thread,
-              case when reader is null then null else (
-                select f2.contact from feedback f2
-                where f2.reader = feedback.reader and f2.contact like '%_@_%._%'
-                order by f2.created_at desc limit 1) end as thread_contact
-       from feedback order by created_at desc limit 200`,
+      // message older than the two hundred shown. Looked up once per phone
+      // among the two hundred, AFTER the limit: as a column of the outer
+      // query it ran for every message ever stored.
+      `with shown as (
+         select id, created_at, message, contact, app_version, handled, reader
+         from feedback order by created_at desc limit 200
+       ),
+       phones as (
+         select r.reader, (
+           select f2.contact from feedback f2
+           where f2.reader = r.reader and f2.contact is not null and f2.contact like '%_@_%._%'
+           order by f2.created_at desc limit 1) as thread_contact
+         from (select distinct reader from shown where reader is not null) r
+       )
+       select shown.id, shown.created_at as at, substr(shown.created_at, 1, 16) as sent, shown.message,
+              shown.contact, shown.app_version, shown.handled, substr(shown.reader, 1, 16) as thread,
+              phones.thread_contact
+       from shown left join phones on phones.reader = shown.reader
+       order by shown.created_at desc`,
     ),
     safe(
       client,

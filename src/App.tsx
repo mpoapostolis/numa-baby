@@ -1224,6 +1224,9 @@ export default function HomePage() {
                   } catch {
                     // The blob is already gone; the sweep is best-effort.
                   }
+                  // The conversation with the developer goes too, from memory
+                  // as well — loaded only if it ever was.
+                  void import("./domain/feedbackInbox").then((inbox) => inbox.forgetInbox(), () => undefined);
                 }}
                 familySync={familySync}
                 incomingJoinCode={incomingJoinCode}
