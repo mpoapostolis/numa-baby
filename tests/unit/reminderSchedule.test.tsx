@@ -83,3 +83,16 @@ test("feed reminders off, with the nappy one overdue, still clears the feed alar
   expect(await sent()).toEqual({ feedDueAt: null });
   expect(push.stopPush).not.toHaveBeenCalled();
 });
+
+// The recovery screen could not read the saved settings at all — every
+// reminder looks off there. That must not tell the server to stop: it would
+// unsubscribe the phone and delete the alarm the parent set.
+test("the recovery screen does not switch off the reminders it could not read", async () => {
+  window.localStorage.clear();
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ activities: [], profile: null, onboardingComplete: true, reminders: { feedEnabled: true } }));
+  render(<App />);
+  await waitFor(() => expect(document.body.textContent).toMatch(/could not be read/), { timeout: 5_000 });
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  expect(push.stopPush).not.toHaveBeenCalled();
+  expect(push.sendSchedule).not.toHaveBeenCalled();
+});

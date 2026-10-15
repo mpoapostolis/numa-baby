@@ -70,7 +70,7 @@ export function visitDocument(
     ],
     note: [
       band
-        ? `WHO reference at this age: ${formatKg(band.p3, units)}–${formatKg(band.p97, units)} (P3–P97), midpoint ${formatKg(band.p50, units)}.`
+        ? `WHO reference at ${summary.latestWeightAt ? `the age on ${dayFormat.format(new Date(summary.latestWeightAt))}, the latest weighing` : "this age"}: ${formatKg(band.p3, units)}–${formatKg(band.p97, units)} (P3–P97), midpoint ${formatKg(band.p50, units)}.`
         : "No age on file, so no WHO reference is shown.",
       gain ? `Typical gain ${gain.minGramsPerWeek}–${gain.maxGramsPerWeek} g a week.` : "",
     ].filter(Boolean).join(" "),

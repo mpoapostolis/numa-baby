@@ -33,7 +33,7 @@ describe("visitDocument", () => {
     expect(doc.coverage).toMatch(/not logged, so the daily figures are medians/);
     expect(doc.sections.map((s) => s.heading)).toEqual(["Feeding", "Nappies", "Growth"]);
     expect(doc.sections[0].figures[0]).toEqual({ value: "5", label: "feeds a day" });
-    expect(doc.sections[2].note).toMatch(/WHO reference at this age: 3.2 kg–5.7 kg/);
+    expect(doc.sections[2].note).toMatch(/WHO reference at (this age|the age on .+, the latest weighing): 3.2 kg–5.7 kg/);
     expect(doc.days.filter((d) => d.blank).map((d) => d.label)).toEqual(["Aug 19", "Aug 25", "Sep 1"]);
   });
 

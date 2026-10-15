@@ -65,7 +65,7 @@ type FamilySyncOptions = {
   readPersisted: () => { activities: Activity[]; profile: Profile; profileUpdatedAt?: string };
   /** Makes an unstamped legacy profile syncable. Only ever called on create. */
   stampProfileForSync: () => void;
-  mergeRemote: (remote: Activity[], profile?: Profile, profileUpdatedAt?: string) => { added: number; updated: number; persisted: boolean };
+  mergeRemote: (remote: Activity[], profile?: Profile, profileUpdatedAt?: string, serverNow?: number) => { added: number; updated: number; persisted: boolean };
   showToast: (message: string) => void;
 };
 
@@ -223,7 +223,9 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
         }
         const profile = sanitizeProfile(page.profile) ?? undefined;
         const stamp = typeof page.profileUpdatedAt === "string" ? page.profileUpdatedAt : undefined;
-        const merged = mergeRemote(rows, profile, stamp);
+        // Own stamps are measured against the server's clock only when the
+        // server said what it is — never against this phone's own.
+        const merged = mergeRemote(rows, profile, stamp, Number.isFinite(served) ? served : undefined);
         added += merged.added;
         // A merge that could not persist (storage blocked) must not let the
         // cursor advance past rows this device never actually kept.

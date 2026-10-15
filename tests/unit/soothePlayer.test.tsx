@@ -116,3 +116,24 @@ test("a pause does not reload the sound the phone may be about to resume", () =>
   act(() => { document.querySelector("audio")!.dispatchEvent(new Event("pause")); });
   expect(load).not.toHaveBeenCalled();
 });
+
+// A call pauses the sound; the parent picks "Keep going" meanwhile. When the
+// phone resumes it, the old 30-minute end must not stop it.
+test("a timer picked while the phone has paused the sound is the one it keeps", () => {
+  vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "setTimeout", "clearTimeout", "Date"] });
+  try {
+    const pause = vi.mocked(HTMLMediaElement.prototype.pause);
+    saveSootheChoice({ mode: "noise", kind: "brown", tune: "brahms", timer: 30 });
+    render(<SoothePlayer open onOpenChange={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: /^Play$/ }));
+    const audio = document.querySelector("audio")!;
+    act(() => { audio.dispatchEvent(new Event("pause")); });
+    fireEvent.click(screen.getByRole("button", { name: "Keep going" }));
+    act(() => { audio.dispatchEvent(new Event("play")); });
+    act(() => { vi.advanceTimersByTime(31 * 60_000); });
+    expect(pause).not.toHaveBeenCalled();
+    expect(loadSootheChoice().timer).toBeNull();
+  } finally {
+    vi.useRealTimers();
+  }
+});

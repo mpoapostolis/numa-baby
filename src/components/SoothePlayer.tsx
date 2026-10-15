@@ -49,6 +49,10 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
   // with it, so the white noise stopped with a baby half asleep.
   useCloseOnBack(open, () => onOpenChange(false));
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  // A play the parent started and has not stopped — including while the
+  // phone itself has paused it (a call, a voice note): a timer picked then
+  // is for this play, not the next one.
+  const sessionRef = useRef(false);
   // Opens on what was played last, "Keep going" included — read once, when
   // the player first mounts.
   const [remembered] = useState(loadSootheChoice);
@@ -118,6 +122,7 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
     const id = window.setInterval(() => {
       if (Date.now() >= endsAt) {
         audioRef.current?.pause();
+        sessionRef.current = false;
         setPlaying(false);
         setEndsAt(null);
       } else {
@@ -150,7 +155,9 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
     audio.volume = volume;
     audio.muted = false;
     // play() is called synchronously inside the gesture, never after an await.
+    sessionRef.current = true;
     audio.play().catch((error: unknown) => {
+      sessionRef.current = false;
       setPlaying(false);
       setEndsAt(null);
       track("soothe_failed", { stage: "play", name: error instanceof Error ? error.name : "unknown" });
@@ -176,6 +183,7 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
 
   function stop() {
     audioRef.current?.pause();
+    sessionRef.current = false;
     setPlaying(false);
     setEndsAt(null);
     track("soothe_stopped", { mode });
@@ -187,7 +195,7 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
   // clock read here.
   function chooseTimer(next: TimerChoice, at: number) {
     setTimer(next);
-    if (!playing) return;
+    if (!playing && !sessionRef.current) return;
     setNow(at);
     setEndsAt(next === null ? null : at + next * 60_000);
     saveSootheChoice({ mode, kind, tune, timer: next });

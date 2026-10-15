@@ -489,6 +489,29 @@ describe("an alarm the server accepts is an alarm the server keeps", () => {
     expect(rows.get(who.endpoint)?.feed_due_at).toBeNull();
   });
 
+  // A phone a couple of minutes slow sees the nappy reminder as still to
+  // come and sends it; by the server's clock it is just past. That must not
+  // cost the new feed time.
+  it("takes a just-past time from a slightly slow phone as 'keep what you have'", async () => {
+    const { client, rows } = alarmDb();
+    const who = await subscriber();
+    await saveSchedule(client, wire(who, scheduleFor({ feed: at("03:30"), diaper: at("03:00") }, at("01:00"))), at("01:00"));
+    expect(await saveSchedule(client, wire(who, { feedDueAt: "2026-09-05T06:10:00.000Z", diaperDueAt: "2026-09-05T03:00:00.000Z" }), at("03:02"))).toBe(true);
+    expect(rows.get(who.endpoint)?.feed_due_at).toBe("2026-09-05T06:10:00.000Z");
+    expect(rows.get(who.endpoint)?.diaper_due_at).toBe("2026-09-05T03:00:00.000Z");
+    // An hour behind is still a phone clock that is wrong: refused.
+    expect(await saveSchedule(client, wire(who, { feedDueAt: "2026-09-05T02:00:00.000Z" }), at("03:02"))).toBe(false);
+  });
+
+  // A feed logged while the phone's clock ran a month fast puts the next
+  // feed a month out — past what the server keeps. Left out, it does not
+  // cost the nappy reminder its alarm.
+  it("leaves out a time beyond the server's week, rather than losing the other", () => {
+    const schedule = scheduleFor({ feed: at("03:30") + 30 * 86_400_000, diaper: at("03:00") }, at("01:00"));
+    expect(schedule.feedDueAt).toBeUndefined();
+    expect(schedule.diaperDueAt).toBe("2026-09-05T03:00:00.000Z");
+  });
+
   it("still rings an overdue reminder the server has not got to yet", async () => {
     const { client, rows } = alarmDb();
     const who = await subscriber();

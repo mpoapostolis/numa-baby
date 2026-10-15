@@ -82,8 +82,11 @@ export function VisitSummarySheet({ open, onOpenChange, summary, profile, ageMon
   const name = profile.name.trim() || "Baby";
   const age = formatBabyAge(profile.birthDate, now);
   // The band from fractional age, as the Guide draws it: whole months showed
-  // a 26-day-old the birth-day range, and a median weight read as P97.
-  const exactMonths = ageMonths === null ? null : exactAgeInMonths(profile.birthDate, now);
+  // a 26-day-old the birth-day range, and a median weight read as P97. And at
+  // the age on the day of the weighing, not today: a weight from a month ago
+  // set against today's band read as far below it.
+  const weighedAt = summary.latestWeightAt ? Math.min(new Date(summary.latestWeightAt).getTime(), now) : now;
+  const exactMonths = ageMonths === null ? null : exactAgeInMonths(profile.birthDate, weighedAt);
   const band = exactMonths === null ? null : expectedWeightRange(exactMonths, profile.sex);
   const gainBand = ageMonths === null ? null : typicalWeeklyGain(ageMonths);
   const doc = visitDocument(summary, name, age, units, band, gainBand, now);

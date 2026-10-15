@@ -43,10 +43,11 @@ export function activityDetail(activity: Activity, units: UnitSystem = "metric",
     );
   }
   if (activity.type === "nursing") {
-    const side = activity.side === "both" ? "Both sides" : activity.side === "left" ? "Left side" : "Right side";
+    // No side saved is no side shown — not a guess of "Right".
+    const side = activity.side === "both" ? "Both sides" : activity.side === "left" ? "Left side" : activity.side === "right" ? "Right side" : null;
     const detail = activity.endedAt
-      ? `${side} · ${formatTime(activity.startedAt)}–${formatTime(activity.endedAt)} · ${humanDuration(minutesBetween(activity.startedAt, activity.endedAt))}`
-      : `${side} · started ${formatTime(activity.startedAt)}`;
+      ? [side, `${formatTime(activity.startedAt)}–${formatTime(activity.endedAt)}`, humanDuration(minutesBetween(activity.startedAt, activity.endedAt))].filter(Boolean).join(" · ")
+      : side ? `${side} · started ${formatTime(activity.startedAt)}` : `Started ${formatTime(activity.startedAt)}`;
     return includeNote(detail, activity.note);
   }
   if (activity.type === "sleep") {

@@ -3,6 +3,8 @@ import { cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { VisitSummarySheet } from "@/components/VisitSummarySheet";
 import { exactAgeInMonths } from "@/domain/time";
+import { expectedWeightRange } from "@/domain/growthReference";
+import { formatKg } from "@/domain/units";
 import { Activity, Profile } from "@/domain/types";
 import { buildVisitSummary } from "@/domain/visitSummary";
 import GrowthGuideScreen from "@/screens/GrowthGuideScreen";
@@ -46,8 +48,27 @@ test("the summary for the paediatrician quotes the band for a 26-day-old, not fo
     />,
   );
   const text = document.body.textContent ?? "";
-  expect(text).toContain("WHO reference at this age: 3.1 kg–5.2 kg (P3–P97), midpoint 4.1 kg.");
+  expect(text).toContain("WHO reference at the age on Oct 14, the latest weighing: 3.1 kg–5.2 kg (P3–P97), midpoint 4.1 kg.");
   expect(text).not.toContain("2.4 kg–4.2 kg");
+});
+
+// The latest weight is set against the band for the age it was taken at —
+// a weight from a month ago against today's band read as far below it.
+test("an older weighing is compared with the band for the age it was taken at", () => {
+  const now = new Date(2026, 9, 14, 12, 0).getTime();
+  const profile: Profile = { name: "Mia", birthDate: "2026-07-14", feedingMode: "bottle", sex: "girl" };
+  const weighed = new Date(2026, 8, 14, 12, 0);
+  const log: Activity[] = [
+    { id: "g", type: "growth", startedAt: weighed.toISOString(), weightGrams: 4400 },
+    { id: "b", type: "bottle", startedAt: new Date(now - 7_200_000).toISOString(), amount: 120, milkType: "formula" },
+  ];
+  render(
+    <VisitSummarySheet open onOpenChange={() => {}} summary={buildVisitSummary(log, now, 30)} profile={profile} ageMonths={3} now={now} />,
+  );
+  const text = document.body.textContent ?? "";
+  // At two months (when weighed), not at three (today).
+  const atWeighing = expectedWeightRange(exactAgeInMonths(profile.birthDate, weighed.getTime())!, "girl");
+  expect(text).toContain(`WHO reference at the age on Sep 14, the latest weighing: ${formatKg(atWeighing.p3, "metric")}–${formatKg(atWeighing.p97, "metric")}`);
 });
 
 function guide(weighedOn: Date, weightGrams: number) {

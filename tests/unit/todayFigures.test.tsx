@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, test } from "vitest";
 import App from "@/App";
 import { DayRecap } from "@/components/DayRecap";
 import TimelineScreen from "@/screens/TimelineScreen";
@@ -163,4 +163,12 @@ it("does not score a top-up bottle as a missed forecast", () => {
   expect(record.checked).toBeGreaterThan(0);
   expect(record.hits).toBe(record.checked);
   expect(rhythmLine(record, "Mia")).toMatch(/^Right every one/);
+});
+
+// A nursing saved without a side shows no side — not a guess of "Right".
+test("a nursing with no side saved is not labelled Right", async () => {
+  const { activityDetail } = await import("@/domain/activityDisplay");
+  const detail = activityDetail({ id: "n", type: "nursing", startedAt: "2026-10-15T08:00:00.000Z", endedAt: "2026-10-15T08:15:00.000Z" });
+  expect(detail).not.toMatch(/Right|Left/);
+  expect(detail).toContain("15m");
 });

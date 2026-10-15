@@ -67,9 +67,16 @@ export type Schedule = { feedDueAt?: string | null; diaperDueAt?: string | null 
  * server's next pass, and null would cancel that.
  */
 export function scheduleFor(times: { feed: number | null; diaper: number | null }, now: number): Schedule {
-  const due = (at: number | null) => (at === null ? null : at > now ? new Date(at).toISOString() : undefined);
+  // More than a week out is refused the same way (worker/push.ts dueAt) — a
+  // feed logged while this phone's clock ran fast lands there — so it is
+  // left out too, rather than costing the other reminder its alarm.
+  const due = (at: number | null) =>
+    at === null ? null : at > now && at <= now + SERVER_HORIZON_MS ? new Date(at).toISOString() : undefined;
   return { feedDueAt: due(times.feed), diaperDueAt: due(times.diaper) };
 }
+
+/** How far ahead the server stores an alarm (worker/push.ts dueAt). */
+const SERVER_HORIZON_MS = 7 * 86_400_000;
 
 /**
  * Tell the server when to ring, and nothing else. Returns false when there is

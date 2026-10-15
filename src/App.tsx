@@ -130,6 +130,32 @@ function NavTrigger() {
   );
 }
 
+/**
+ * A reminder from this page, when the server holds none. It shares its tag
+ * with the server's push, so the two never show twice — and it rings again
+ * only over an OLDER reminder still in the shade: the same one arriving
+ * twice replaces itself quietly (see public/notification-sw.js).
+ */
+function ringReminder(title: string, body: string, tag: string) {
+  void navigator.serviceWorker.ready
+    .then(async (registration) => {
+      const open = await registration.getNotifications({ tag }).catch(() => [] as Notification[]);
+      const same = open.some((notification) => Date.now() - (notification.data?.shownAt ?? 0) < 60 * 60_000);
+      if (!same) open.forEach((notification) => notification.close());
+      // renotify: replacing a same-tag notification is otherwise silent.
+      // TypeScript's NotificationOptions leaves it out, hence the cast.
+      return registration.showNotification(title, {
+        body,
+        icon: "/icon-192.png",
+        badge: "/icon-192.png",
+        tag,
+        renotify: !same,
+        data: { url: "/", shownAt: Date.now() },
+      } as NotificationOptions);
+    })
+    .catch(() => undefined);
+}
+
 const SEEN_RELEASE_KEY = "numa-baby-seen-release-v1";
 const BACKUP_DISMISSED_KEY = "numa-baby-backup-nudge-v1";
 /** "Not now" on the reminders announcement. */
@@ -680,7 +706,9 @@ export default function HomePage() {
     // Not before the saved settings are read. Until then every reminder looks
     // off, and each cold start told the server to stop — unsubscribing the
     // phone and deleting its alarm while the real schedule was on its way.
-    if (notificationPermission !== "granted" || bootState === "loading") return;
+    // Nor on the recovery screen (the settings could not be read at all) or
+    // in the made-up preview: neither knows this family's reminders.
+    if (notificationPermission !== "granted" || bootState === "loading" || bootState === "recovery" || debugMode) return;
     const feed = reminders.feedEnabled ? feedReminderTargetAt : null;
     const diaper = reminders.diaperEnabled ? diaperReminderTargetAt : null;
     // Fetched on the tap that needs it: a phone that never allowed
@@ -702,6 +730,7 @@ export default function HomePage() {
   }, [
     notificationPermission,
     bootState,
+    debugMode,
     reminders.feedEnabled,
     reminders.diaperEnabled,
     feedReminderTargetAt,
@@ -722,20 +751,8 @@ export default function HomePage() {
     const delay = feedReminderTargetAt - Date.now();
     if (delay <= 0 || delay > MAX_REMINDER_DELAY_MS) return;
     const timer = window.setTimeout(() => {
-      void navigator.serviceWorker.ready
-        .then((registration) => registration.showNotification("Time to check feeding cues", {
-          // No name on a lock screen — the notification may show in a shared room.
-          body: "A feed reminder is due. Follow your baby’s cues and care plan.",
-          icon: "/icon-192.png",
-          badge: "/icon-192.png",
-          tag: "feed-reminder",
-          // Ring again even if the last one is still in the shade: replacing
-          // a notification with the same tag is otherwise silent. TypeScript's
-          // NotificationOptions leaves it out, hence the cast.
-          renotify: true,
-          data: { url: "/" },
-        } as NotificationOptions))
-        .catch(() => undefined);
+      // No name on a lock screen — the notification may show in a shared room.
+      ringReminder("Time to check feeding cues", "A feed reminder is due. Follow your baby’s cues and care plan.", "feed-reminder");
     }, delay);
 
     return () => window.clearTimeout(timer);
@@ -753,17 +770,8 @@ export default function HomePage() {
     const delay = diaperReminderTargetAt - Date.now();
     if (delay <= 0 || delay > MAX_REMINDER_DELAY_MS) return;
     const timer = window.setTimeout(() => {
-      void navigator.serviceWorker.ready
-        .then((registration) => registration.showNotification("Diaper check", {
-          // No name on a lock screen — this may show in a shared room.
-          body: "It has been a while since the last change.",
-          icon: "/icon-192.png",
-          badge: "/icon-192.png",
-          tag: "diaper-reminder",
-          renotify: true,
-          data: { url: "/" },
-        } as NotificationOptions))
-        .catch(() => undefined);
+      // No name on a lock screen — this may show in a shared room.
+      ringReminder("Diaper check", "It has been a while since the last change.", "diaper-reminder");
     }, delay);
 
     return () => window.clearTimeout(timer);

@@ -11,11 +11,11 @@ const source = readFileSync(new URL("../../public/notification-sw.js", import.me
 type Listener = (event: Record<string, unknown>) => void;
 type Shown = { title: string; options: Record<string, unknown> };
 
-function serviceWorker({ openAt = "https://numalog.app/", hasGetNotifications = true } = {}) {
+function serviceWorker({ openAt = "https://numalog.app/", hasGetNotifications = true, shownAt = 0 } = {}) {
   const listeners: Record<string, Listener> = {};
   const calls: string[] = [];
   const shown: Shown[] = [];
-  const open = [{ tag: "feed-reminder", close: () => calls.push("close feed-reminder") }];
+  const open = [{ tag: "feed-reminder", data: { shownAt }, close: () => calls.push("close feed-reminder") }];
   const client = {
     url: openAt,
     focus: async () => { calls.push("focus"); return client; },
@@ -39,7 +39,7 @@ function serviceWorker({ openAt = "https://numalog.app/", hasGetNotifications = 
     },
     location: new URL("https://numalog.app/sw.js"),
   };
-  vm.runInNewContext(source, { self, URL, Promise });
+  vm.runInNewContext(source, { self, URL, Promise, Date });
 
   async function dispatch(type: string, event: Record<string, unknown>) {
     let work: Promise<unknown> = Promise.resolve();
@@ -100,4 +100,13 @@ test("with the app closed, a tap opens it", async () => {
   const sw = serviceWorker({ openAt: "" });
   await sw.tap("/");
   expect(sw.calls).toEqual(["open /"]);
+});
+
+// The same reminder from the phone's own timer and from the server's push,
+// or a resend: one alert, not two.
+test("the same reminder arriving twice replaces itself quietly", async () => {
+  const sw = serviceWorker({ shownAt: Date.now() - 5 * 60_000 });
+  await sw.push(feed);
+  expect(sw.shown[0].options).toMatchObject({ tag: "feed-reminder", renotify: false });
+  expect(sw.calls).toEqual(["show feed-reminder"]);
 });

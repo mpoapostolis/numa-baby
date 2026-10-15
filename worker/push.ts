@@ -115,6 +115,9 @@ const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
 
 /** A due time this Worker will accept: a real stamp, in the future, and not
     so far ahead that a wrong clock parks a notification in the next decade. */
+/** How far behind the server a phone's "still to come" may arrive. */
+const SKEW_GRACE_MS = 10 * 60_000;
+
 export function dueAt(value: unknown, now: number): string | null {
   if (typeof value !== "string" || !ISO.test(value)) return null;
   const at = Date.parse(value);
@@ -153,15 +156,27 @@ export async function saveSchedule(
   const auth = typeof body.keys?.auth === "string" ? body.keys.auth : "";
   if (!isPushEndpoint(endpoint) || !p256dh || !auth) return false;
   if (p256dh.length > 200 || auth.length > 100) return false;
-  const feedDueAt = dueAt(body.feedDueAt, now);
-  const diaperDueAt = dueAt(body.diaperDueAt, now);
+  // A time a few minutes behind the server's clock is one the phone saw as
+  // still to come (its clock a little slow, or the request slow to arrive).
+  // Do what it would have done with the right clock: leave it out, keeping
+  // the stored alarm — not refuse the whole schedule over it. A time well in
+  // the past is still refused below.
+  const justPast = (value: unknown) => {
+    if (typeof value !== "string" || !ISO.test(value)) return false;
+    const at = Date.parse(value);
+    return at <= now && at > now - SKEW_GRACE_MS;
+  };
+  const sentFeed = justPast(body.feedDueAt) ? undefined : body.feedDueAt;
+  const sentDiaper = justPast(body.diaperDueAt) ? undefined : body.diaperDueAt;
+  const feedDueAt = dueAt(sentFeed, now);
+  const diaperDueAt = dueAt(sentDiaper, now);
   // ASKED FOR AN ALARM AND GOT NONE STORED. dueAt() nulls a time that is in
   // the past or more than a week out, which a phone with a slow clock
   // produces routinely — and answering true for that was a lie the client
   // acts on: it reads "the server holds this" and stands its own timer down,
   // so the reminder rings nowhere. Refusing lets the in-page timer, which
   // runs on the same clock that computed the time, keep working.
-  if ((body.feedDueAt != null && !feedDueAt) || (body.diaperDueAt != null && !diaperDueAt)) return false;
+  if ((sentFeed != null && !feedDueAt) || (sentDiaper != null && !diaperDueAt)) return false;
   // LEFT OUT means "keep what you have", which is not the same as null
   // ("this reminder is off"). The phone leaves out a reminder that is already
   // overdue: it has no new time for it, and the stored one has either rung
@@ -169,8 +184,8 @@ export async function saveSchedule(
   // time used to get the WHOLE request refused, so one overdue nappy
   // reminder kept a stale feed alarm ringing and lost the new one. Older
   // builds always send both keys, so nothing changes for them.
-  const keepFeed = body.feedDueAt === undefined ? 1 : 0;
-  const keepDiaper = body.diaperDueAt === undefined ? 1 : 0;
+  const keepFeed = sentFeed === undefined ? 1 : 0;
+  const keepDiaper = sentDiaper === undefined ? 1 : 0;
 
   const at = new Date(now).toISOString();
   await ensurePushTable(client);

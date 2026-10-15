@@ -223,7 +223,13 @@ function TummyRunning({ activity, onStop, onEdit }: { activity: Activity; onStop
 
 /** "Both" is a real answer for a nursing session, not a missing one. */
 function sideLabel(side: Activity["side"]) {
-  return side === "both" ? "Both" : side === "left" ? "Left" : "Right";
+  return side === "both" ? "Both" : side === "left" ? "Left" : side === "right" ? "Right" : null;
+}
+
+/** "Nursing · Left", or just "Nursing" when no side was saved. */
+function nursingTitle(side: Activity["side"]) {
+  const label = sideLabel(side);
+  return label ? `Nursing · ${label}` : "Nursing";
 }
 
 // A running timer stays in the tile that started it.
@@ -239,7 +245,7 @@ function TimerTile({ activity, onStop, onEdit }: { activity: Activity; onStop: (
     ? "Sleeping"
     : isBurp
       ? "Burping"
-      : `Nursing · ${sideLabel(activity.side)}`;
+      : nursingTitle(activity.side);
   const stopLabel = isSleep ? "Wake up" : isBurp ? "Done" : "Stop";
   return (
     <div className={`quick-tile tile-${activity.type} is-running`}>
@@ -288,7 +294,7 @@ function TimerRow({
     ? "Sleeping now"
     : isBurp
       ? "Burping"
-      : `Nursing · ${sideLabel(activity.side)}`;
+      : nursingTitle(activity.side);
   const stopLabel = isSleep ? "Wake up" : isBurp ? "Done" : "Stop";
   return (
     <div className="log-row timer-row">
