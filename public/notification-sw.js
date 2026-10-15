@@ -17,6 +17,9 @@ self.addEventListener("push", (event) => {
   const title = typeof payload.title === "string" ? payload.title : "Numalog";
   // Never empty: renotify with an empty tag is a TypeError.
   const tag = typeof payload.tag === "string" && payload.tag ? payload.tag : "numalog";
+  // Which reminder this is: the time it was due for. The phone's own timer
+  // and the server's push for the SAME reminder carry the same time.
+  const due = typeof payload.due === "string" ? payload.due : null;
   const show = (ring) =>
     self.registration.showNotification(title, {
       body: typeof payload.body === "string" ? payload.body : "",
@@ -27,28 +30,23 @@ self.addEventListener("push", (event) => {
       // parent who fed at 3am and opened the app from its icon left the 3am
       // reminder in the shade, and the 6am one quietly took its place.
       renotify: ring,
-      data: { url: typeof payload.url === "string" ? payload.url : "/", shownAt: Date.now() },
+      data: { url: typeof payload.url === "string" ? payload.url : "/", due },
     });
-  // Ring again only over an OLDER reminder. The same one arriving twice — the
-  // phone's own timer and the server's push, or a resend — replaces itself
-  // quietly: under the shortest interval the settings allow (90 minutes), a
-  // notification shown less than an hour ago is this one. renotify is
-  // Chrome's; closing the older one first makes the new one a fresh alert
-  // everywhere else too. Nothing here may stop the show itself.
+  // The same reminder arriving twice — the phone's own timer and the server's
+  // push, or a resend — replaces itself quietly. Anything else rings: a new
+  // reminder, a note from the developer. renotify is Chrome's; closing the
+  // older one first makes the new one a fresh alert everywhere else too.
+  // Nothing here may stop the show itself.
   const decide = Promise.resolve()
     .then(() => self.registration.getNotifications({ tag }))
     .then((open) => {
-      if (open.some((notification) => Date.now() - (notification.data?.shownAt ?? 0) < SAME_REMINDER_MS)) return false;
+      if (due && open.some((notification) => notification.data?.due === due)) return false;
       open.forEach((notification) => notification.close());
       return true;
     })
     .catch(() => true);
   event.waitUntil(decide.then(show));
 });
-
-/** Under the shortest reminder interval: a same-tag notification younger than
-    this is the same reminder, delivered twice. */
-const SAME_REMINDER_MS = 60 * 60_000;
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();

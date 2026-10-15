@@ -270,7 +270,7 @@ const STALE_AFTER_MS = 45 * 60_000;
  */
 const MAX_SEND_ATTEMPTS = 3;
 
-export type DueRow = { endpoint: string; p256dh: string; auth: string; kind: ReminderKind; failures: number };
+export type DueRow = { endpoint: string; p256dh: string; auth: string; kind: ReminderKind; failures: number; due: string };
 
 /** The rows whose time has come, oldest first, capped. */
 export async function findDue(client: Client, now: number, limit = SEND_LIMIT): Promise<DueRow[]> {
@@ -292,6 +292,7 @@ export async function findDue(client: Client, now: number, limit = SEND_LIMIT): 
     auth: String(row.auth),
     kind: String(row.kind) === "diaper" ? "diaper" : "feed",
     failures: Number(row.failures ?? 0),
+    due: String(row.due),
   }));
 }
 
@@ -438,7 +439,9 @@ export async function storedVapid(client: Client): Promise<{ publicKey: string; 
   return stored ? { publicKey: stored.publicKey, createdAt: stored.createdAt } : null;
 }
 
-export type PushMessage = { title: string; body: string; tag: string; url: string };
+/** `due` names WHICH reminder this is: the phone's own timer for the same one
+    carries the same time, so the two show once (public/notification-sw.js). */
+export type PushMessage = { title: string; body: string; tag: string; url: string; due?: string };
 
 export type Target = { endpoint: string; p256dh: string; auth: string };
 
@@ -509,7 +512,7 @@ export async function sendDue(
   let gone = 0;
   let failed = 0;
 
-  const results = await deliver(vapid, due, (row) => ({ ...REMINDERS[row.kind], url: "/" }), 30 * 60);
+  const results = await deliver(vapid, due, (row) => ({ ...REMINDERS[row.kind], url: "/", due: row.due }), 30 * 60);
 
   for (const { row, status } of results) {
     if (isGone(status)) {

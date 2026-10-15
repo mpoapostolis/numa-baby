@@ -132,15 +132,15 @@ function NavTrigger() {
 
 /**
  * A reminder from this page, when the server holds none. It shares its tag
- * with the server's push, so the two never show twice — and it rings again
- * only over an OLDER reminder still in the shade: the same one arriving
- * twice replaces itself quietly (see public/notification-sw.js).
+ * and its due time with the server's push for the same reminder, so the two
+ * show once; any other reminder still in the shade is replaced with a fresh
+ * alert (see public/notification-sw.js).
  */
-function ringReminder(title: string, body: string, tag: string) {
+function ringReminder(title: string, body: string, tag: string, due: string) {
   void navigator.serviceWorker.ready
     .then(async (registration) => {
       const open = await registration.getNotifications({ tag }).catch(() => [] as Notification[]);
-      const same = open.some((notification) => Date.now() - (notification.data?.shownAt ?? 0) < 60 * 60_000);
+      const same = open.some((notification) => notification.data?.due === due);
       if (!same) open.forEach((notification) => notification.close());
       // renotify: replacing a same-tag notification is otherwise silent.
       // TypeScript's NotificationOptions leaves it out, hence the cast.
@@ -150,7 +150,7 @@ function ringReminder(title: string, body: string, tag: string) {
         badge: "/icon-192.png",
         tag,
         renotify: !same,
-        data: { url: "/", shownAt: Date.now() },
+        data: { url: "/", due },
       } as NotificationOptions);
     })
     .catch(() => undefined);
@@ -372,6 +372,7 @@ export default function HomePage() {
     backfillVersion,
     backfillOldestAt,
     mergeRemote,
+    settlePushedStamps,
     readPersisted,
     stampProfileForSync,
     demoteProfileForJoin,
@@ -398,6 +399,7 @@ export default function HomePage() {
     demoteProfileForJoin,
     dropLocalForAdoption,
     mergeRemote,
+    settlePushedStamps,
     showToast,
   });
 
@@ -752,7 +754,7 @@ export default function HomePage() {
     if (delay <= 0 || delay > MAX_REMINDER_DELAY_MS) return;
     const timer = window.setTimeout(() => {
       // No name on a lock screen — the notification may show in a shared room.
-      ringReminder("Time to check feeding cues", "A feed reminder is due. Follow your baby’s cues and care plan.", "feed-reminder");
+      ringReminder("Time to check feeding cues", "A feed reminder is due. Follow your baby’s cues and care plan.", "feed-reminder", new Date(feedReminderTargetAt).toISOString());
     }, delay);
 
     return () => window.clearTimeout(timer);
@@ -771,7 +773,7 @@ export default function HomePage() {
     if (delay <= 0 || delay > MAX_REMINDER_DELAY_MS) return;
     const timer = window.setTimeout(() => {
       // No name on a lock screen — this may show in a shared room.
-      ringReminder("Diaper check", "It has been a while since the last change.", "diaper-reminder");
+      ringReminder("Diaper check", "It has been a while since the last change.", "diaper-reminder", new Date(diaperReminderTargetAt).toISOString());
     }, delay);
 
     return () => window.clearTimeout(timer);

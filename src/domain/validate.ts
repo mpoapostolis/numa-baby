@@ -30,7 +30,7 @@ function isValidDate(value: unknown): value is string {
    The local quick-log path stays stricter (safeStartedAt clamps to now). */
 const FUTURE_TOLERANCE_MS = 48 * 60 * 60 * 1000;
 
-function tooFarInFuture(value: string, now = Date.now()) {
+export function tooFarInFuture(value: string, now = Date.now()) {
   return new Date(value).getTime() > now + FUTURE_TOLERANCE_MS;
 }
 

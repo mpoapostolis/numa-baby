@@ -107,7 +107,7 @@ test("a partner's rows are judged by the server's clock, not by a phone clock go
       backfillVersion: store.backfillVersion, backfillOldestAt: store.backfillOldestAt,
       readPersisted: store.readPersisted, stampProfileForSync: store.stampProfileForSync,
       demoteProfileForJoin: store.demoteProfileForJoin, dropLocalForAdoption: store.dropLocalForAdoption,
-      mergeRemote: store.mergeRemote, showToast: () => {},
+      mergeRemote: store.mergeRemote, settlePushedStamps: store.settlePushedStamps, showToast: () => {},
     });
     return store;
   });

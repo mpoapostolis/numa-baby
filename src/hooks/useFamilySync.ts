@@ -16,7 +16,7 @@ function flushPhotoQueue() {
   if (hasQueuedPhotos()) void import("../lib/photos").then((photos) => photos.flushPhotoQueue());
 }
 import { Activity, BootState, Profile } from "../domain/types";
-import { activityUpdatedAt, clampFutureUpdatedAt, isValidActivity, sanitizeProfile } from "../domain/validate";
+import { activityUpdatedAt, clampFutureUpdatedAt, isValidActivity, sanitizeProfile, tooFarInFuture } from "../domain/validate";
 
 // The family-sync orchestrator. Owns the pairing lifecycle (create / invite /
 // join / leave), pulls the family's changes into the store and pushes local
@@ -65,7 +65,10 @@ type FamilySyncOptions = {
   readPersisted: () => { activities: Activity[]; profile: Profile; profileUpdatedAt?: string };
   /** Makes an unstamped legacy profile syncable. Only ever called on create. */
   stampProfileForSync: () => void;
-  mergeRemote: (remote: Activity[], profile?: Profile, profileUpdatedAt?: string, serverNow?: number) => { added: number; updated: number; persisted: boolean };
+  mergeRemote: (remote: Activity[], profile?: Profile, profileUpdatedAt?: string) => { added: number; updated: number; persisted: boolean };
+  /** Rows the server has just taken, stamped far ahead of its clock: it kept
+      them as "received now", and this phone's copies say the same. */
+  settlePushedStamps: (pushed: Array<{ id: string; updatedAt: string }>, serverNow: number) => void;
   showToast: (message: string) => void;
 };
 
@@ -122,7 +125,7 @@ type LiveSync = {
   lastSyncFailed: boolean;
 };
 
-export function useFamilySync({ debugMode, bootState, persistVersion, backfillVersion, backfillOldestAt, readPersisted, stampProfileForSync, demoteProfileForJoin, dropLocalForAdoption, mergeRemote, showToast }: FamilySyncOptions) {
+export function useFamilySync({ debugMode, bootState, persistVersion, backfillVersion, backfillOldestAt, readPersisted, stampProfileForSync, demoteProfileForJoin, dropLocalForAdoption, mergeRemote, settlePushedStamps, showToast }: FamilySyncOptions) {
   const [pairing, setPairing] = useState<FamilyPairing | null>(() => (debugMode ? null : loadPairing()));
   const [status, setStatus] = useState<SyncStatus>(() => ({
     phase: "idle",
@@ -223,9 +226,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
         }
         const profile = sanitizeProfile(page.profile) ?? undefined;
         const stamp = typeof page.profileUpdatedAt === "string" ? page.profileUpdatedAt : undefined;
-        // Own stamps are measured against the server's clock only when the
-        // server said what it is — never against this phone's own.
-        const merged = mergeRemote(rows, profile, stamp, Number.isFinite(served) ? served : undefined);
+        const merged = mergeRemote(rows, profile, stamp);
         added += merged.added;
         // A merge that could not persist (storage blocked) must not let the
         // cursor advance past rows this device never actually kept.
@@ -313,6 +314,12 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     setStatus((s) => (s.phase === "syncing" ? s : { ...s, phase: "syncing" }));
     try {
       let maxStamp = before.lastPushedAt;
+      // Rows written while this phone's clock ran fast, which the server has
+      // stored as "received now" (worker/index.ts). Left with their future
+      // stamps here, they would win every conflict against the other
+      // parent's later edits, and go out again on every push.
+      const settled: Array<{ id: string; updatedAt: string }> = [];
+      let settledAt = Number.NaN;
       // Chunked to the server's batch cap; Math.max keeps one iteration for a
       // profile-only save.
       for (let index = 0; index < Math.max(delta.length, 1); index += PUSH_CHUNK) {
@@ -320,7 +327,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
         // under a key already handed back.
         if (live.current.pairing?.token !== before.token) return;
         const chunk = delta.slice(index, index + PUSH_CHUNK);
-        await transport.pushBatch(before.token, {
+        const result = await transport.pushBatch(before.token, {
           activities: chunk.map((activity) => ({
             id: activity.id,
             payload: toPayload(activity),
@@ -331,11 +338,17 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
           // The profile rides the first chunk only — one stamp, one winner.
           ...(index === 0 && sendProfile ? { profile, profileUpdatedAt } : {}),
         });
+        const served = Date.parse(result?.serverTime ?? "");
         for (const activity of chunk) {
           const stamp = activityUpdatedAt(activity);
           if (stamp > maxStamp) maxStamp = stamp;
+          if (Number.isFinite(served) && tooFarInFuture(stamp, served)) {
+            settled.push({ id: activity.id, updatedAt: stamp });
+            settledAt = served;
+          }
         }
       }
+      if (settled.length) settlePushedStamps(settled, settledAt);
       // Clamp the cursor to this device's clock: a partner's future-skewed
       // stamp we merged and echoed must never freeze our own future pushes.
       if (maxStamp > now) maxStamp = now;

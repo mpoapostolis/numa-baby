@@ -11,11 +11,11 @@ const source = readFileSync(new URL("../../public/notification-sw.js", import.me
 type Listener = (event: Record<string, unknown>) => void;
 type Shown = { title: string; options: Record<string, unknown> };
 
-function serviceWorker({ openAt = "https://numalog.app/", hasGetNotifications = true, shownAt = 0 } = {}) {
+function serviceWorker({ openAt = "https://numalog.app/", hasGetNotifications = true, openDue = null as string | null } = {}) {
   const listeners: Record<string, Listener> = {};
   const calls: string[] = [];
   const shown: Shown[] = [];
-  const open = [{ tag: "feed-reminder", data: { shownAt }, close: () => calls.push("close feed-reminder") }];
+  const open = [{ tag: "feed-reminder", data: { due: openDue }, close: () => calls.push("close feed-reminder") }];
   const client = {
     url: openAt,
     focus: async () => { calls.push("focus"); return client; },
@@ -103,10 +103,19 @@ test("with the app closed, a tap opens it", async () => {
 });
 
 // The same reminder from the phone's own timer and from the server's push,
-// or a resend: one alert, not two.
+// or a resend: one alert, not two. Which reminder it is, is its due time.
 test("the same reminder arriving twice replaces itself quietly", async () => {
-  const sw = serviceWorker({ shownAt: Date.now() - 5 * 60_000 });
-  await sw.push(feed);
+  const sw = serviceWorker({ openDue: "2026-10-15T06:10:00.000Z" });
+  await sw.push({ ...feed, due: "2026-10-15T06:10:00.000Z" });
   expect(sw.shown[0].options).toMatchObject({ tag: "feed-reminder", renotify: false });
   expect(sw.calls).toEqual(["show feed-reminder"]);
+});
+
+// A new reminder soon after the last — a feed logged in the past, a short
+// interval — is a new reminder, and rings.
+test("a different reminder rings, however soon after the last", async () => {
+  const sw = serviceWorker({ openDue: "2026-10-15T06:10:00.000Z" });
+  await sw.push({ ...feed, due: "2026-10-15T06:40:00.000Z" });
+  expect(sw.shown[0].options).toMatchObject({ renotify: true });
+  expect(sw.calls).toEqual(["close feed-reminder", "show feed-reminder"]);
 });

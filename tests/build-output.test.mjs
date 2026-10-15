@@ -117,10 +117,10 @@ const BUDGET_GZIP = {
   // wrong phone clock, sync races that could mix two families' logs, an Undo
   // for a discarded timer, reminders that keep their schedule, an update
   // that waits for the sounds and the open form, and Today's figures. Only
-  // their lazy halves load later. With the review that followed (own stamps
-  // checked against the server's clock, one ring per reminder, the recovery
-  // screen leaving reminders alone): 120.81 kB.
-  "index-*.js": 120_850,
+  // their lazy halves load later. With the two reviews that followed (a
+  // fast-clock entry taking the server's time once it is sent, one ring per
+  // reminder, the recovery screen leaving reminders alone): 120.92 kB.
+  "index-*.js": 120_950,
   "index-*.css": 29_000,
 };
 const LAZY_SCREENS = ["SettingsScreen", "GrowthGuideScreen", "InsightsScreen", "TimelineScreen", "LogSheet", "OnboardingScreen", "sonner", "FactOfTheDay"];

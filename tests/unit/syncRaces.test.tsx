@@ -23,7 +23,7 @@ function useBoth(toasts: string[] = []) {
     backfillVersion: store.backfillVersion, backfillOldestAt: store.backfillOldestAt,
     readPersisted: store.readPersisted, stampProfileForSync: store.stampProfileForSync,
     demoteProfileForJoin: store.demoteProfileForJoin, dropLocalForAdoption: store.dropLocalForAdoption,
-    mergeRemote: store.mergeRemote, showToast: (message) => toasts.push(message),
+    mergeRemote: store.mergeRemote, settlePushedStamps: store.settlePushedStamps, showToast: (message) => toasts.push(message),
   });
   return { store, sync };
 }
@@ -146,3 +146,32 @@ test("a pull of nothing but a partner's deletion is saved, and not announced as 
   await waitFor(() => expect(blob().activities.find((a) => a.id === "partner-oops")?.deleted).toBe(true));
   expect(toasts.filter((message) => message.startsWith("Synced"))).toEqual([]);
 });
+
+// An entry written while this phone's clock ran ten days fast. It must still
+// reach the other parent (it is sent like any other), and once the server
+// has stored it as "received now" this phone's copy says the same — or it
+// would win every conflict against the other parent's later edits, and go
+// out again on every push.
+test("a fast-clock entry is sent, then takes the server's time", async () => {
+  const future = new Date(Date.now() + 10 * 86_400_000).toISOString();
+  seedLog([{ id: "fast", type: "bottle", amount: 90, startedAt: new Date(Date.now() - 3_600_000).toISOString(), updatedAt: future }]);
+  pair("tok");
+  const pushed: string[][] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+    const now = new Date().toISOString();
+    if (String(url).startsWith("/api/sync/pull")) {
+      return new Response(JSON.stringify({ activities: [], profile: null, profileUpdatedAt: null, deviceCount: 2, serverTime: now }), { status: 200 });
+    }
+    if (String(url).startsWith("/api/sync/push")) {
+      const body = JSON.parse(String(init?.body ?? "{}")) as { activities?: Array<{ id: string }> };
+      pushed.push((body.activities ?? []).map((row) => row.id));
+      return new Response(JSON.stringify({ accepted: body.activities?.length ?? 0, serverTime: now }), { status: 200 });
+    }
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+  }));
+
+  renderHook(() => useBoth());
+  await waitFor(() => expect(pushed.flat()).toContain("fast"), { timeout: 8_000 });
+  await waitFor(() => expect(Date.parse(blob().activities.find((a) => a.id === "fast")!.updatedAt!)).toBeLessThanOrEqual(Date.now()));
+  expect(blob().activities.find((a) => a.id === "fast")).toMatchObject({ amount: 90 });
+}, 12_000);

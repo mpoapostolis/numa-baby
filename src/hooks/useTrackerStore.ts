@@ -1,6 +1,6 @@
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { applyRemote, mergeStored, summarizeMerge } from "../domain/merge";
-import { activityUpdatedAt, clampFutureUpdatedAt, liveActivities, parseStoredData } from "../domain/validate";
+import { activityUpdatedAt, liveActivities, parseStoredData } from "../domain/validate";
 import { Activity, BootState, Profile, ReminderSettings } from "../domain/types";
 import { STALE_OPEN_SPAN_MINUTES } from "../domain/daySummary";
 import { humanDuration } from "../domain/time";
@@ -138,18 +138,6 @@ function releaseDeletedPhotos(list: Activity[], profile: Profile) {
   window.setTimeout(() => {
     void import("../lib/photos").then((photos) => photos.releaseDeletedPhotos(list, profile));
   }, 3_000);
-}
-
-/** Every row's write stamp no further ahead of `now` than the future fence
-    allows; the same array when none needed it. */
-function clampOwnStamps(list: Activity[], now: number): Activity[] {
-  let changed = false;
-  const clamped = list.map((activity) => {
-    const next = clampFutureUpdatedAt(activity, now);
-    if (next !== activity) changed = true;
-    return next;
-  });
-  return changed ? clamped : list;
 }
 
 type TrackerStoreOptions = {
@@ -814,19 +802,12 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
   // `persisted: false` is the one outcome the sync cursor must respect: the
   // merge computed fine but the write to storage failed, so advancing past
   // these rows would skip them forever.
-  function mergeRemote(remote: Activity[], remoteProfile?: Profile, remoteProfileUpdatedAt?: string, serverNow?: number): { added: number; updated: number; persisted: boolean } {
+  function mergeRemote(remote: Activity[], remoteProfile?: Profile, remoteProfileUpdatedAt?: string): { added: number; updated: number; persisted: boolean } {
     const current = persistedStateRef.current;
-    // This phone's own rows stamped far ahead of the SERVER's clock were
-    // written while its clock ran fast. Left as they are, they win every
-    // conflict — the other parent's deletions and edits lose for as long as
-    // the skew lasts. Measured against the server (which a flat battery
-    // cannot wind back, unlike this phone's clock) they become "written now".
-    // The same array when nothing needed it.
-    const own = serverNow === undefined ? current.activities : clampOwnStamps(current.activities, serverNow);
     // applyRemote, not mergeActivities: only the incoming rows are examined
     // (the whole-log re-merge cost a paired family a long main-thread stall
     // per poll at a year of entries), and an unchanged log is the same array.
-    const applied = applyRemote(own, remote);
+    const applied = applyRemote(current.activities, remote);
     const merged = applied.activities;
     const summary = { added: applied.added, updated: applied.updated };
     // The other parent deleted an entry with a photo, or replaced its photo:
@@ -907,6 +888,24 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     syncActivitiesFromRef();
     if (adoptProfile) setProfile(nextProfile);
     return { added: summary.added, updated: summary.updated, persisted: true };
+  }
+
+  // Rows the server has just stored as "received now" because they were
+  // stamped far ahead of its clock (written while this phone's clock ran
+  // fast). This phone's copies take the server's time too — no later than
+  // this phone's own clock, so they sit below the push cursor and do not go
+  // out again — and the other parent's later edits win once more. A row
+  // changed again since it was sent is left alone.
+  function settlePushedStamps(pushed: Array<{ id: string; updatedAt: string }>, serverNow: number) {
+    const sent = new Map(pushed.map((row) => [row.id, row.updatedAt]));
+    const stamp = new Date(Math.min(serverNow, Date.now())).toISOString();
+    let changed = false;
+    const next = persistedStateRef.current.activities.map((activity) => {
+      if (sent.get(activity.id) !== activityUpdatedAt(activity)) return activity;
+      changed = true;
+      return { ...activity, updatedAt: stamp };
+    });
+    if (changed && persistSnapshot(next)) syncActivitiesFromRef();
   }
 
   // Sync egress. A function rather than a value so the debounced push reads
@@ -1221,6 +1220,7 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     backfillVersion,
     backfillOldestAt,
     mergeRemote,
+    settlePushedStamps,
     readPersisted,
     addActivity,
     updateActivity,
