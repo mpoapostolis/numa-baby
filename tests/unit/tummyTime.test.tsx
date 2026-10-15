@@ -80,6 +80,28 @@ test("a day with none yet says so, with the goal for this age", async () => {
   expect(row.querySelector("small.tummy-none")).not.toBeNull();
 }, 15_000);
 
+// Judged on the seconds: a 20-second go is not "none", and 29m 30s of a
+// 30-minute goal is not done.
+test("progress is judged on the seconds, not the rounded minutes", async () => {
+  const end = new Date(Date.now() - 60_000);
+  const goes = [
+    { id: "short", type: "tummy" as const, startedAt: new Date(end.getTime() - 20_000).toISOString(), endedAt: end.toISOString() },
+  ];
+  if (new Date(end.getTime() - 20_000).getDate() !== new Date().getDate()) return;
+  seedLog(goes);
+  bornDaysAgo(80);
+  render(<App />);
+  expect((await tummyRow()).textContent).toContain("<1m of 30m today · 30m to go");
+  cleanup();
+
+  const long = new Date(end.getTime() - (29 * 60 + 30) * 1_000);
+  if (long.getDate() !== new Date().getDate()) return;
+  seedLog([{ id: "long", type: "tummy", startedAt: long.toISOString(), endedAt: end.toISOString() }]);
+  bornDaysAgo(80);
+  render(<App />);
+  expect((await tummyRow()).textContent).toContain("29m of 30m today · 1m to go");
+}, 20_000);
+
 test("a goal met says so", async () => {
   if (!fitsToday(35)) return;
   seedLog([goneFor(35)]);

@@ -295,10 +295,20 @@ export async function replyToFeedback(
   }
   if (!reader && !email) return { error: "Email is not set up on this deployment, and it is the only way to reach them." };
 
+  const tick = () =>
+    reader
+      ? { sql: "update feedback set handled = 1 where reader = ? and created_at <= ?", args: [reader, answeredUpTo] }
+      : { sql: "update feedback set handled = 1 where id = ?", args: [feedbackId] };
+
   // The dashboard names each answer before sending it, and sends the same
   // name again when it cannot tell whether the first try arrived (a dropped
-  // connection). An answer already stored under that name is not stored, or
-  // mailed, twice.
+  // connection). What a stored row proves depends on the channel:
+  // - in the app, the row IS the delivery — the parent reads it from there —
+  //   so the answer is not stored twice; whether its email went is told as
+  //   it is, and the email is not tried again;
+  // - by email only (an older app), the row is written before the email and
+  //   marked once it went. A row not marked yet proves nothing: the first try
+  //   may still be sending, or have failed — so it is not reported as sent.
   const named = typeof body.replyId === "string" && REPLY_ID_PATTERN.test(body.replyId) ? body.replyId : null;
   if (named) {
     const earlier = await client.execute({
@@ -307,12 +317,28 @@ export async function replyToFeedback(
     });
     const done = earlier.rows[0];
     if (done) {
+      const mailedBefore = done.emailed_to == null ? null : String(done.emailed_to);
+      if (!reader && !mailedBefore) {
+        return {
+          error:
+            "The first try has not confirmed its email — it may still be sending, or it failed. Reload in a " +
+            "minute: if the answer shows “emailed to”, it went; if not, send it again.",
+        };
+      }
+      let unticked = false;
+      await client.execute(tick()).catch(() => {
+        unticked = true;
+      });
       return {
         ok: true,
         reply: { id: named, at: String(done.created_at), from: "dev", text: String(done.body) },
         inApp: Boolean(reader),
-        emailedTo: done.emailed_to == null ? null : String(done.emailed_to),
+        emailedTo: mailedBefore,
         already: true,
+        ...(wantsEmail && !mailedBefore
+          ? { emailError: "it is not known whether the first try's email went, and it was not sent again." }
+          : {}),
+        ...(unticked ? { unticked: true } : {}),
       };
     }
   }
@@ -354,9 +380,7 @@ export async function replyToFeedback(
         ...(emailedTo
           ? [{ sql: "update feedback_replies set emailed_to = ? where id = ?", args: [emailedTo, id] }]
           : []),
-        reader
-          ? { sql: "update feedback set handled = 1 where reader = ? and created_at <= ?", args: [reader, answeredUpTo] }
-          : { sql: "update feedback set handled = 1 where id = ?", args: [feedbackId] },
+        tick(),
       ],
       "write",
     );

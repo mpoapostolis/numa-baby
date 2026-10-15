@@ -131,7 +131,11 @@ const BUDGET_GZIP = {
   // 121_350 → 121_500 the same evening for tummy time against the day's goal
   // ("12m of 30m today · 18m to go", "None yet today") — Today's row is the
   // boot path, and the goal is two numbers by age. Measured after: 121.46 kB.
-  "index-*.js": 121_500,
+  // 121_500 → 121_600 for Erase all taking the conversation with the
+  // developer along (one lazy import, run only on erase) and the tummy line
+  // judged on seconds. 121.55 kB measured — and the build stamp alone moves
+  // it by a few bytes, so the line keeps some room.
+  "index-*.js": 121_600,
   "index-*.css": 29_000,
 };
 const LAZY_SCREENS = ["SettingsScreen", "GrowthGuideScreen", "InsightsScreen", "TimelineScreen", "LogSheet", "OnboardingScreen", "sonner", "FactOfTheDay"];

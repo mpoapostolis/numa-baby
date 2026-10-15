@@ -227,11 +227,21 @@ function TummyRunning({ activity, onStop, onEdit }: { activity: Activity; onStop
  * this age — none yet, how much is left, or that it is done. With no goal
  * (no birth date, or past about 7 months) just the total, or how to start.
  */
-function tummyLine(minutes: number, goal: number | null): string {
-  if (goal === null) return minutes > 0 ? `${humanDuration(minutes)} today · start the timer` : "Start the timer — awake, and watched";
-  if (minutes === 0) return `None yet today · aim for ${humanDuration(goal)}, awake and watched`;
-  if (minutes < goal) return `${humanDuration(minutes)} of ${humanDuration(goal)} today · ${humanDuration(goal - minutes)} to go`;
-  return `${humanDuration(minutes)} today · today’s ${humanDuration(goal)} done`;
+function tummyLine(ms: number, goal: number | null): string {
+  // Judged on the seconds, shown in minutes: a 20-second go is not "none",
+  // and 29m 30s of a 30-minute goal is not done.
+  const minutes = Math.round(ms / 60_000);
+  const done = ms > 0 && minutes === 0 ? "<1m" : humanDuration(minutes);
+  if (goal === null) return ms > 0 ? `${done} today · start the timer` : "Start the timer — awake, and watched";
+  if (ms === 0) return `None yet today · aim for ${humanDuration(goal)}, awake and watched`;
+  const left = goal * 60_000 - ms;
+  if (left > 0) {
+    // Short of the goal, the minutes so far round down and those to go round
+    // up, so the two always add up: never "30m of 30m · 1m to go".
+    const sofar = Math.floor(ms / 60_000);
+    return `${sofar === 0 ? "<1m" : humanDuration(sofar)} of ${humanDuration(goal)} today · ${humanDuration(Math.ceil(left / 60_000))} to go`;
+  }
+  return `${done} today · today’s ${humanDuration(goal)} done`;
 }
 
 /** "Both" is a real answer for a nursing session, not a missing one. */
@@ -599,11 +609,9 @@ function TodayScreen({
   }
   // Added up to the second and rounded once: a newborn's goes are often under
   // a minute each, and rounding every one first turned three of them into 0m.
-  const tummyToday = Math.round(
-    sortedActivities
-      .filter((activity) => activity.type === "tummy" && activity.endedAt && isSameDay(activity.startedAt, new Date(minuteClock)))
-      .reduce((total, activity) => total + Math.max(0, new Date(activity.endedAt!).getTime() - new Date(activity.startedAt).getTime()), 0) / 60_000,
-  );
+  const tummyTodayMs = sortedActivities
+    .filter((activity) => activity.type === "tummy" && activity.endedAt && isSameDay(activity.startedAt, new Date(minuteClock)))
+    .reduce((total, activity) => total + Math.max(0, new Date(activity.endedAt!).getTime() - new Date(activity.startedAt).getTime()), 0);
 
   function toggleBurp() {
     if (activeBurp) {
@@ -1088,8 +1096,8 @@ function TodayScreen({
               <span className="action-icon" aria-hidden="true"><Smile /></span>
               <span className="log-copy">
                 <strong>Tummy time</strong>
-                <small className={tummyGoal !== null && tummyToday === 0 ? "tummy-none" : undefined}>
-                  {tummyLine(tummyToday, tummyGoal)}
+                <small className={tummyGoal !== null && tummyTodayMs === 0 ? "tummy-none" : undefined}>
+                  {tummyLine(tummyTodayMs, tummyGoal)}
                 </small>
               </span>
               <ChevronRight size={16} className="log-chevron" aria-hidden="true" />

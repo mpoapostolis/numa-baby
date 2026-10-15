@@ -178,6 +178,39 @@ describe("answering", () => {
     expect(db.prepare("select count(*) as n from feedback_replies").get()).toEqual({ n: 1 });
   });
 
+  // The first try's email never confirmed (still sending, or the Worker was
+  // cut off): to a parent reachable only by email, that is not "sent".
+  it("does not call an unconfirmed email-only answer sent on a retry", async () => {
+    const { client, db } = sqliteClient();
+    const old = await send(client, { message: "Old build", contact: "me@example.com" }, "2026-10-15T08:00:00.000Z");
+    const name = "1f8e2c4a-1b3d-4e5f-9a7b-6c5d4e3f2a1b";
+    // The first try stored its row, then hung on the email.
+    void replyToFeedback(client, { send: () => new Promise(() => {}) }, { id: old.id, text: "Answer", replyId: name });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(db.prepare("select count(*) as n from feedback_replies").get()).toEqual({ n: 1 });
+
+    const mail = mailbox();
+    const retry = await replyToFeedback(client, mail.service, { id: old.id, text: "Answer", replyId: name });
+    expect(retry).toHaveProperty("error");
+    expect(mail.sent).toHaveLength(0);
+  });
+
+  // In the app the stored row is the answer; the email is told as it is.
+  it("on a retry in the app, says the earlier email is unknown rather than sending it again", async () => {
+    const { client, db } = sqliteClient();
+    const first = await send(client, { message: "Hi there", contact: "me@example.com", key: KEY }, "2026-10-15T08:00:00.000Z");
+    const name = "2f8e2c4a-1b3d-4e5f-9a7b-6c5d4e3f2a1b";
+    void replyToFeedback(client, { send: () => new Promise(() => {}) }, { id: first.id, text: "Answer", replyId: name });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    const mail = mailbox();
+    const retry = await replyToFeedback(client, mail.service, { id: first.id, text: "Answer", replyId: name });
+    expect(retry).toMatchObject({ ok: true, already: true, emailedTo: null, emailError: expect.stringContaining("not known") });
+    expect(mail.sent).toHaveLength(0);
+    // And the conversation is ticked off, as the first try never got to.
+    expect(db.prepare("select handled from feedback").get()).toEqual({ handled: 1 });
+  });
+
   it("does not show one phone's answers to another", async () => {
     const { client } = sqliteClient();
     const mine = await send(client, { message: "Mine", key: KEY }, "2026-10-15T08:00:00.000Z");

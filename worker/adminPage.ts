@@ -526,6 +526,9 @@ export function adminPageHtml(nonce: string): string {
         bubbles += '<div class="bub' + (it.me ? ' me' : '') + '"><div class="tiny">' +
           (it.me ? 'You · ' : '') + esc(String(it.sent || '').replace('T', ' ')) +
           (it.me && it.emailed ? ' · emailed to ' + esc(it.emailed) : '') +
+          // Email was the only way to this parent, and it is not confirmed:
+          // still sending, or it failed — it did not reach them.
+          (it.me && !it.emailed && !c.inApp ? ' · not confirmed as emailed' : '') +
           '</div><p>' + esc(it.text) + '</p></div>';
       }
       var id = esc(c.lastId), conv = esc(c.key);
@@ -725,8 +728,11 @@ export function adminPageHtml(nonce: string): string {
           delete sending[conv];
           var again = button();
           if (!x.ok || !x.r.ok) {
+            // The server answered "no": the next press is a new try, under a
+            // new name.
+            delete replyIds[conv];
             if (again) { again.disabled = false; again.textContent = "Send reply"; }
-            showNote(conv, (x.r && x.r.error) || "That did not send.");
+            showNote(conv, (x.r && x.r.error) || "That did not send.", "note-bad");
             return;
           }
           var r = x.r;
@@ -736,7 +742,10 @@ export function adminPageHtml(nonce: string): string {
             : "Sent ✓ — emailed to " + r.emailedTo + ".";
           if (r.emailError) said = "In the app ✓ — but the email did not go: " + r.emailError;
           if (r.unticked) said += " It could not be ticked off — tick it by hand.";
-          if (r.already) said = "Already sent ✓ — the first try had arrived; nothing went twice.";
+          if (r.already) {
+            said = "Already sent ✓ — the first try had arrived; nothing went twice.";
+            if (r.emailError) said = "In the app ✓ (the first try had arrived) — but " + r.emailError;
+          }
           // Shown and cleared at once, before the reload: if the reload
           // fails, the page must still say it went, or it invites a resend.
           delete drafts[conv];

@@ -195,6 +195,26 @@ test("no announcement over the conversation in Settings", async () => {
   expect(toasts).toEqual([]);
 }, 10_000);
 
+// Settings open with the conversation below the fold: the answer is not
+// read just because the card exists, and it is announced.
+test("an answer below the fold in Settings stays unread, and is announced", async () => {
+  vi.stubGlobal("IntersectionObserver", class {
+    constructor(private callback: (entries: Array<{ isIntersecting: boolean }>) => void) {}
+    observe() { setTimeout(() => this.callback([{ isIntersecting: false }]), 16); }
+    disconnect() {}
+  });
+  seed([asked]);
+  serverThread = [asked];
+  render(<><FeedbackBubble hidden={false} /><FeedbackCard /></>);
+  await screen.findByRole("button", { name: "Messages" }, { timeout: 4_000 });
+
+  serverThread = [asked, answered];
+  vi.spyOn(Date, "now").mockReturnValue(Date.now() + 11 * 60_000);
+  act(() => { document.dispatchEvent(new Event("visibilitychange")); });
+  expect(await screen.findByRole("button", { name: "Messages — 1 new reply" }, { timeout: 4_000 })).toBeTruthy();
+  await waitFor(() => expect(toasts).toEqual(["Apostolis replied to your message"]));
+}, 10_000);
+
 // Storage full when the phone first wrote: the key lived only in memory.
 // Erase all must still take it — it used to write itself back afterwards.
 test("erasing everything forgets a conversation that only lived in memory", async () => {

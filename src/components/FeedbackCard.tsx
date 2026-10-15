@@ -50,30 +50,39 @@ function Thread({ thread }: { thread: ThreadMessage[] }) {
     if (list) list.scrollTop = list.scrollHeight;
   }, [thread.length]);
 
-  // Is the conversation in front of the parent? Then an answer counts as
-  // read — not merely because Settings was opened with it far below the
-  // fold — and arriving, it is not announced over itself.
+  // Is the newest message in front of the parent, above the bottom bar? Then an answer counts as read, and arriving, it
+  // is not announced over itself. Not merely because Settings was opened
+  // with the conversation far below the fold, or its top edge peeking out.
+  const show = (visible: boolean) => {
+    if (visible === visibleRef.current) return;
+    visibleRef.current = visible;
+    conversationOnScreen(visible ? 1 : -1);
+    if (visible) markInboxSeen();
+  };
+  const showRef = useRef(show);
   useEffect(() => {
-    const list = listRef.current;
-    if (!list) return;
-    const show = (visible: boolean) => {
-      if (visible === visibleRef.current) return;
-      visibleRef.current = visible;
-      conversationOnScreen(visible ? 1 : -1);
-      if (visible) markInboxSeen();
-    };
+    showRef.current = show;
+  });
+  useEffect(() => () => showRef.current(false), []);
+  // Watched again whenever a message is added, since the newest is what
+  // counts; what was seen stays seen in between, so an answer landing on an
+  // open conversation is not announced in the moment before it is watched.
+  useEffect(() => {
+    const last = listRef.current?.lastElementChild;
+    if (!last) return;
     if (typeof IntersectionObserver === "undefined") {
-      show(true);
-    } else {
-      const observer = new IntersectionObserver((entries) => show(entries.some((entry) => entry.isIntersecting)));
-      observer.observe(list);
-      return () => {
-        observer.disconnect();
-        show(false);
-      };
+      showRef.current(true);
+      return;
     }
-    return () => show(false);
-  }, []);
+    const observer = new IntersectionObserver(
+      (entries) => showRef.current(entries[entries.length - 1].isIntersecting),
+      // Any of it above the bottom bar: a long answer can be taller than
+      // the scrolling list, so "half of it" might never be on screen at all.
+      { rootMargin: "0px 0px -96px 0px" },
+    );
+    observer.observe(last);
+    return () => observer.disconnect();
+  }, [thread.length]);
 
   // An answer that arrives while it is on screen is read as it lands.
   useEffect(() => {
