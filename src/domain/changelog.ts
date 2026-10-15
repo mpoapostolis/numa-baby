@@ -29,6 +29,9 @@ export const RELEASES: Release[] = [
     items: [
       "Tummy time has its own timer now, on Today, with today’s total under it — it adds up the short goes, which is how the advice counts it. Asked for by a mum who was timing it with the burping timer.",
       "Logged the wrong amount of a medicine? Open it from Today or the Timeline and change how much — or the name. Until now only the time and the note could be changed.",
+      "Reminders keep their schedule: one that was already due no longer cancels the next one, and a new reminder rings even when the last is still on your lock screen.",
+      "White noise keeps playing when the app updates or a call interrupts it, and a timer you pick while it plays is the one it stops on.",
+      "Insights averages count whole days only, and the summary for your paediatrician compares the latest weight with the right age.",
     ],
   },
   {
