@@ -260,7 +260,8 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
         const saved = window.localStorage.getItem(STORAGE_KEY);
         if (saved) {
           try {
-            const parsed = parseStoredData(saved);
+            // This phone's own log: its clock, right or wrong, does not judge it.
+            const parsed = parseStoredData(saved, { ownLog: true });
             if (parsed.legacyDemo || !parsed.onboardingComplete) {
               applyLoadedState({
                 activities: [],
@@ -329,7 +330,7 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
         return;
       }
       try {
-        const parsed = parseStoredData(event.newValue);
+        const parsed = parseStoredData(event.newValue, { ownLog: true });
         if (parsed.legacyDemo || !parsed.onboardingComplete) {
           applyLoadedState({
             activities: [],
@@ -575,7 +576,29 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
         );
         if (!persistSnapshot(withoutIt)) return;
         syncActivitiesFromRef();
-        showToast("Timer discarded — nothing was added to the log");
+        // Cancel is also how people back out of a dialog, so the discard gets
+        // the Undo every other removal has: the timer comes back running,
+        // and the next tap on stop can choose OK to save it.
+        showToast("Timer discarded — nothing was added to the log", () => {
+          const anotherRunning = persistedStateRef.current.activities.some(
+            (activity) => activity.id !== id && activity.type === target.type && !activity.endedAt && !activity.deleted,
+          );
+          if (anotherRunning) {
+            showToast(`Another ${TIMER_NOUN[target.type] ?? "timer"} is already running — stop that one first.`);
+            return;
+          }
+          // Revived like removeActivity's Undo: a fresh stamp, so it wins
+          // the merge over the tombstone on the other phone too.
+          const revived = persistedStateRef.current.activities.map((activity) => {
+            if (activity.id !== id) return activity;
+            const running: Activity = { ...activity, updatedAt: new Date().toISOString() };
+            delete running.deleted;
+            return running;
+          });
+          if (!persistSnapshot(revived)) return;
+          syncActivitiesFromRef();
+          showToast("Timer resumed");
+        });
         return;
       }
     }
@@ -828,7 +851,9 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     // phone joining a family (or mirroring the cloud) had its stamp taken
     // away, and its old picture must not become the family's.
     const localPhoto = current.profileUpdatedAt ? current.profile.photo : undefined;
-    if (summary.added === 0 && summary.updated === 0 && !adoptProfile) return { added: 0, updated: 0, persisted: true };
+    // Decided by the list, not the counts: a page of nothing but deletions
+    // counts nothing as added and must still be saved.
+    if (merged === current.activities && !adoptProfile) return { added: 0, updated: 0, persisted: true };
     // The profile is adopted whole — except for the routine list, which a
     // phone on an older build does not know about and therefore sends as
     // ABSENT rather than as a deliberate empty list (see sanitizeProfile).
@@ -1074,7 +1099,8 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
         // cursor past it — without this, merged entries were pulled fine but
         // never pushed, and two paired phones could drift apart forever (the
         // exact mismatch one family chased for days).
-        if (summary.added > 0 || summary.updated > 0) {
+        // Deletions count here though not in the toast: they must travel too.
+        if (summary.added > 0 || summary.updated > 0 || summary.deletions > 0) {
           const oldest = parsed.activities.reduce(
             (low, activity) => {
               const stamp = activityUpdatedAt(activity);
@@ -1128,11 +1154,19 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
   function eraseAllData(): boolean {
     // Count only live entries — tombstones are invisible bookkeeping and would
     // inflate the number a parent is asked to confirm deleting.
-    const count = liveActivities(persistedStateRef.current.activities).length;
+    const live = liveActivities(persistedStateRef.current.activities);
+    const count = live.length;
+    // A backup file carries the entries but not the photos, so "download a
+    // backup first" alone was advice that lost every photo it was followed by.
+    const photoCount = live.filter((activity) => activity.photo).length + (persistedStateRef.current.profile.photo ? 1 : 0);
     const name = persistedStateRef.current.profile.name.trim() || "your baby";
+    const what = `${count} ${count === 1 ? "entry" : "entries"}${photoCount ? ` and ${photoCount} ${photoCount === 1 ? "photo" : "photos"}` : ""}`;
     if (
       !window.confirm(
-        `Erase all of ${name}'s data from this device? ${count} ${count === 1 ? "entry" : "entries"} will be deleted. Download a backup first if you may ever need it — this cannot be undone.`,
+        `Erase all of ${name}'s data from this device? ${what} will be deleted. ` +
+          (photoCount
+            ? "A backup keeps your entries but not photos, so save any photo you want to keep first. This cannot be undone."
+            : "Download a backup first if you may ever need it — this cannot be undone."),
       )
     ) return false;
     try {

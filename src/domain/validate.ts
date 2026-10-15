@@ -51,7 +51,12 @@ function invalidStoredNumber(name: NumericFieldName, value: unknown) {
   return value !== undefined && (typeof value !== "number" || outsideStoredBounds(name, value));
 }
 
-export function isValidActivity(value: unknown): value is Activity {
+/**
+ * @param now the clock the future fence is read against: this phone's by
+ *            default, the server's for a pulled row (rowToActivity), and
+ *            null for no fence at all (parseStoredData's `ownLog`).
+ */
+export function isValidActivity(value: unknown, now: number | null = Date.now()): value is Activity {
   if (!isRecord(value)) return false;
   // The type check is deliberately tolerant of UNKNOWN type strings. When a
   // new activity type ships (solids did tonight), a partner phone still on
@@ -68,7 +73,7 @@ export function isValidActivity(value: unknown): value is Activity {
   if (!isValidDate(value.startedAt) || (value.endedAt !== undefined && !isValidDate(value.endedAt))) {
     return false;
   }
-  if (tooFarInFuture(value.startedAt) || (value.endedAt !== undefined && tooFarInFuture(value.endedAt))) {
+  if (now !== null && (tooFarInFuture(value.startedAt, now) || (value.endedAt !== undefined && tooFarInFuture(value.endedAt, now)))) {
     return false;
   }
   if (value.note !== undefined && (typeof value.note !== "string" || value.note.length > NOTE_MAX_LENGTH)) return false;
@@ -169,7 +174,17 @@ function isValidReminderSettings(value: unknown): value is ReminderSettings {
   return true;
 }
 
-export function parseStoredData(value: string): StoredData {
+/**
+ * @param ownLog the blob this phone wrote itself (start-up, another tab), as
+ *               against a file or a link. Every row in it passed the future
+ *               fence on its way in, and this phone's clock is no judge of it
+ *               now: a clock wound back a week — a flat battery, a date set
+ *               by hand — skipped the last days of the log at start-up, and
+ *               the next save erased them for good. So the fence is off, and
+ *               so is the write-stamp clamp, which would rewrite every recent
+ *               stamp to the wrong "now".
+ */
+export function parseStoredData(value: string, { ownLog = false }: { ownLog?: boolean } = {}): StoredData {
   const parsed: unknown = JSON.parse(value);
   // Only a wrong SHAPE is unrecoverable. A single corrupt row is filtered out and
   // reported — it must never cost a parent their entire history.
@@ -183,10 +198,10 @@ export function parseStoredData(value: string): StoredData {
   // The byte caps on the import and handoff paths bound the work; the blob
   // in storage is bounded by the browser's quota, which persistSnapshot
   // watches and warns about long before it is reached.
-  const now = Date.now();
-  const activities = parsed.activities
-    .filter(isValidActivity)
-    .map((activity) => clampFutureUpdatedAt(activity, now));
+  const now = ownLog ? null : Date.now();
+  // Not .filter(isValidActivity): filter would pass each row's index as the clock.
+  const valid = parsed.activities.filter((activity): activity is Activity => isValidActivity(activity, now));
+  const activities = now === null ? valid : valid.map((activity) => clampFutureUpdatedAt(activity, now));
   const storedProfile = parsed.profile;
   const onboardingComplete = typeof parsed.onboardingComplete === "boolean" ? parsed.onboardingComplete : undefined;
   return {
