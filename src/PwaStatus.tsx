@@ -33,6 +33,15 @@ const UPDATE_CHECK_MS = 60 * 60 * 1000;
     round trip to the server, short enough that nobody has started logging. */
 const JUST_OPENED_MS = 12_000;
 
+/** Something a reload would end: a sound playing (it promises to keep going
+    with the screen off), or a sheet or dialog open — a half-written entry, a
+    photo being picked from it, a sheet a shortcut just opened. The update
+    waits for the next hide or show after that, and "Update now" still works. */
+function inUse(): boolean {
+  const sounding = Array.from(document.querySelectorAll("audio")).some((audio) => !audio.paused);
+  return sounding || document.querySelector('[role="dialog"], [role="alertdialog"]') !== null;
+}
+
 export function PwaStatus() {
   const [offlineReady, setOfflineReady] = useState(false);
   const [needsRefresh, setNeedsRefresh] = useState(false);
@@ -57,7 +66,7 @@ export function PwaStatus() {
         // lands inside the launch they are already waiting through, so it
         // costs nothing and they are current from the first tap rather than
         // from the next visit.
-        if (Date.now() - openedAt.current < JUST_OPENED_MS) {
+        if (Date.now() - openedAt.current < JUST_OPENED_MS && !inUse()) {
           void updateApp.current();
           return;
         }
@@ -77,8 +86,10 @@ export function PwaStatus() {
       const ready = waiting.current || Boolean(registration.current?.waiting);
 
       if (document.visibilityState === "hidden") {
-        // On the way out: apply, so the next open is current.
-        if (ready) {
+        // On the way out: apply, so the next open is current. Not with the
+        // noise on or a sheet open — Android reloads a hidden page too, and
+        // a camera opened for a photo hides it.
+        if (ready && !inUse()) {
           waiting.current = false;
           void updateApp.current();
         }
@@ -87,10 +98,13 @@ export function PwaStatus() {
 
       // Coming back to it. If a version was already waiting, this is the
       // cheapest possible moment to take it — they are opening the app, so a
-      // reload reads as the app opening.
+      // reload reads as the app opening. Unless it is in use: then it keeps
+      // waiting for the next time.
       if (ready) {
-        waiting.current = false;
-        void updateApp.current();
+        if (!inUse()) {
+          waiting.current = false;
+          void updateApp.current();
+        }
         return;
       }
       // Nothing waiting: ask. This is the check that was previously only

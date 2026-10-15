@@ -162,6 +162,15 @@ export async function saveSchedule(
   // so the reminder rings nowhere. Refusing lets the in-page timer, which
   // runs on the same clock that computed the time, keep working.
   if ((body.feedDueAt != null && !feedDueAt) || (body.diaperDueAt != null && !diaperDueAt)) return false;
+  // LEFT OUT means "keep what you have", which is not the same as null
+  // ("this reminder is off"). The phone leaves out a reminder that is already
+  // overdue: it has no new time for it, and the stored one has either rung
+  // (and been cleared) or is about to on the next pass. Sending that past
+  // time used to get the WHOLE request refused, so one overdue nappy
+  // reminder kept a stale feed alarm ringing and lost the new one. Older
+  // builds always send both keys, so nothing changes for them.
+  const keepFeed = body.feedDueAt === undefined ? 1 : 0;
+  const keepDiaper = body.diaperDueAt === undefined ? 1 : 0;
 
   const at = new Date(now).toISOString();
   await ensurePushTable(client);
@@ -171,8 +180,8 @@ export async function saveSchedule(
           ON CONFLICT(endpoint) DO UPDATE SET
             p256dh = excluded.p256dh,
             auth = excluded.auth,
-            feed_due_at = excluded.feed_due_at,
-            diaper_due_at = excluded.diaper_due_at,
+            feed_due_at = CASE WHEN ? THEN push_subscriptions.feed_due_at ELSE excluded.feed_due_at END,
+            diaper_due_at = CASE WHEN ? THEN push_subscriptions.diaper_due_at ELSE excluded.diaper_due_at END,
             updated_at = excluded.updated_at,
             failures = 0,
             -- Written every time, INCLUDING to null.
@@ -193,7 +202,7 @@ export async function saveSchedule(
             -- write; keeping a stale one is a household's notifications
             -- going to a phone that left it.
             family_id = excluded.family_id`,
-    args: [endpoint, p256dh, auth, feedDueAt, diaperDueAt, at, at, familyId],
+    args: [endpoint, p256dh, auth, feedDueAt, diaperDueAt, at, at, familyId, keepFeed, keepDiaper],
   });
   return true;
 }

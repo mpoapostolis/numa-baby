@@ -11,6 +11,8 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
+      // Written by vite-plugin-pwa at build time; tests get a stand-in.
+      "virtual:pwa-register": fileURLToPath(new URL("./tests/unit/pwaRegisterStub.ts", import.meta.url)),
     },
   },
   test: {

@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { webcrypto as crypto } from "node:crypto";
+import { DatabaseSync, type SQLInputValue } from "node:sqlite";
 import { buildPushPayload } from "@block65/webcrypto-web-push";
-import { REMINDERS, dueAt, isPushEndpoint, saveSchedule, sendDue } from "../../worker/push";
+import { REMINDERS, type ScheduleBody, dueAt, isPushEndpoint, saveSchedule, sendDue } from "../../worker/push";
+import { type Schedule, scheduleFor } from "../../src/domain/pushClient";
 
 // A push nobody can decrypt is a reminder that never rings, and the failure
 // is silent — the push service accepts the bytes and the phone drops them.
@@ -329,10 +331,14 @@ describe("an alarm the server accepts is an alarm the server keeps", () => {
           return { rows: [] };
         }
         if (sql.startsWith("INSERT INTO push_subscriptions")) {
-          const [endpoint, p256dh, auth, feed, diaper, created, updated, family] = args as string[];
+          const [endpoint, p256dh, auth, feed, diaper, created, updated, family, keepFeed, keepDiaper] = args as string[];
           const existing = rows.get(endpoint);
           rows.set(endpoint, {
-            endpoint, p256dh, auth, feed_due_at: feed, diaper_due_at: diaper,
+            endpoint, p256dh, auth,
+            // CASE WHEN ? THEN the stored time ELSE the new one (the real
+            // statement is checked on a real SQLite further down).
+            feed_due_at: keepFeed ? (existing?.feed_due_at ?? null) : feed,
+            diaper_due_at: keepDiaper ? (existing?.diaper_due_at ?? null) : diaper,
             created_at: existing?.created_at ?? created, updated_at: updated,
             failures: 0, family_id: family,
           });
@@ -452,6 +458,70 @@ describe("an alarm the server accepts is an alarm the server keeps", () => {
     // Turning both off is not a refusal — it is how a phone says "stop".
     expect(await saveSchedule(client, { ...who, feedDueAt: null, diaperDueAt: null }, now)).toBe(true);
     expect(rows.get(who.endpoint)?.feed_due_at).toBeNull();
+  });
+
+  // Both reminders on, and the nappy one overdue — which with a two-hour
+  // interval is most of the time. The phone sent that past time along with
+  // every update, and the server refused the WHOLE schedule over it: the old
+  // feed alarm rang twenty minutes after a feed, the new one was never
+  // stored, and turning feed reminders off did not stop them.
+  const at = (time: string) => Date.parse(`2026-09-05T${time}:00.000Z`);
+  /** Through JSON, as it travels: a time left out is not there at all. */
+  const wire = (who: object, schedule: Schedule) => JSON.parse(JSON.stringify({ ...who, ...schedule })) as ScheduleBody;
+
+  it("does not let an overdue reminder cost the new one", async () => {
+    const { client, rows } = alarmDb();
+    const who = await subscriber();
+    vi.stubGlobal("fetch", async () => ({ status: 201 }) as Response);
+
+    // Fed at 00:30, changed at 01:00: feed due 03:30, nappy due 03:00.
+    expect(await saveSchedule(client, wire(who, scheduleFor({ feed: at("03:30"), diaper: at("03:00") }, at("01:00"))), at("01:00"))).toBe(true);
+    expect((await sendDue(client, {}, at("03:01"))).sent).toBe(1);
+
+    // 03:10: fed again, before getting round to logging the nappy.
+    expect(await saveSchedule(client, wire(who, scheduleFor({ feed: at("06:10"), diaper: at("03:00") }, at("03:10"))), at("03:10"))).toBe(true);
+    expect(rows.get(who.endpoint)?.feed_due_at).toBe("2026-09-05T06:10:00.000Z");
+    // No stale feed reminder twenty minutes after the feed.
+    expect((await sendDue(client, {}, at("03:31"))).attempted).toBe(0);
+
+    // Feed reminders turned off while the nappy is still overdue.
+    expect(await saveSchedule(client, wire(who, scheduleFor({ feed: null, diaper: at("03:00") }, at("03:40"))), at("03:40"))).toBe(true);
+    expect(rows.get(who.endpoint)?.feed_due_at).toBeNull();
+  });
+
+  it("still rings an overdue reminder the server has not got to yet", async () => {
+    const { client, rows } = alarmDb();
+    const who = await subscriber();
+    vi.stubGlobal("fetch", async () => ({ status: 201 }) as Response);
+    await saveSchedule(client, wire(who, scheduleFor({ feed: at("03:30"), diaper: at("03:00") }, at("01:00"))), at("01:00"));
+
+    // A feed logged at 03:02, before the five-minute pass reaches the nappy
+    // reminder that fell due at 03:00. Sending null for it would cancel it.
+    await saveSchedule(client, wire(who, scheduleFor({ feed: at("06:02"), diaper: at("03:00") }, at("03:02"))), at("03:02"));
+    expect(rows.get(who.endpoint)?.diaper_due_at).toBe("2026-09-05T03:00:00.000Z");
+    expect((await sendDue(client, {}, at("03:05"))).sent).toBe(1);
+  });
+
+  it("keeps a left-out time in the real statement, and clears a null one", async () => {
+    // The fake above can only agree with itself; the upsert runs here on a
+    // real SQLite. A fresh module, because the table is created once per isolate.
+    const push = await freshPush();
+    const db = new DatabaseSync(":memory:");
+    const client = {
+      execute: async (query: string | { sql: string; args?: SQLInputValue[] }) => {
+        const statement = db.prepare(typeof query === "string" ? query : query.sql);
+        statement.run(...(typeof query === "string" ? [] : (query.args ?? [])));
+        return { rows: [] };
+      },
+    } as never;
+    const stored = () => ({ ...db.prepare("SELECT feed_due_at, diaper_due_at FROM push_subscriptions").get() });
+    const who = await subscriber();
+
+    await push.saveSchedule(client, { ...who, feedDueAt: "2026-09-05T03:30:00.000Z", diaperDueAt: "2026-09-05T03:00:00.000Z" }, at("01:00"));
+    await push.saveSchedule(client, { ...who, feedDueAt: "2026-09-05T06:10:00.000Z" }, at("03:10"));
+    expect(stored()).toEqual({ feed_due_at: "2026-09-05T06:10:00.000Z", diaper_due_at: "2026-09-05T03:00:00.000Z" });
+    await push.saveSchedule(client, { ...who, feedDueAt: null }, at("03:20"));
+    expect(stored()).toEqual({ feed_due_at: null, diaper_due_at: "2026-09-05T03:00:00.000Z" });
   });
 
   it("lets go of a family the phone has left", async () => {
