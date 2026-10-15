@@ -9,7 +9,7 @@ import { useState } from "react";
 import { track } from "../domain/analytics";
 import { humanDuration } from "../domain/time";
 import { mlToOz, useUnits } from "../domain/units";
-import { DaySummary } from "../domain/daySummary";
+import { DaySummary, hasRoutineCare } from "../domain/daySummary";
 
 type Series = {
   key: string;
@@ -82,8 +82,10 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
   // Days before anything was ever logged are not zero-milk days — they are
   // days this app was not being used. Plotting them as zero would draw a
   // cliff that reads as "she ate nothing", so the line starts where the
-  // record starts.
-  const firstLogged = allDays.findIndex((day) => !day.isEmpty);
+  // record starts. "Logged" means feeds, nappies or sleep — the same rule as
+  // the visit summary: a day holding only a weigh-in or a solids entry says
+  // nothing about milk or nappies, and its zeros are not zeros.
+  const firstLogged = allDays.findIndex(hasRoutineCare);
   const days = firstLogged <= 0 ? allDays : allDays.slice(firstLogged);
 
   const values = days.map(series.value);
@@ -95,9 +97,13 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
   // Averaged over the days that were LOGGED, not the days that happened to be
   // non-zero. A day with feeds but no dirty nappy is a real zero and belongs
   // in the denominator; leaving it out quietly inflates every average.
-  const loggedDays = days.filter((day) => !day.isEmpty);
-  const total = loggedDays.reduce((sum, day) => sum + series.value(day), 0);
-  const trackedDays = loggedDays.length;
+  const loggedDays = days.filter(hasRoutineCare);
+  // Today is half-lived: its morning averaged in as a whole day pulls every
+  // average down. It counts only while it is the only day there is.
+  const completeDays = loggedDays.filter((day) => !day.isToday);
+  const averaged = completeDays.length > 0 ? completeDays : loggedDays;
+  const total = averaged.reduce((sum, day) => sum + series.value(day), 0);
+  const trackedDays = averaged.length;
   const average = trackedDays > 0 ? Math.round(total / trackedDays) : 0;
 
   // Which day the readout is about, if any. Asked for from the feedback box:
@@ -121,8 +127,8 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
           <span className="t-label">Last {days.length} days</span>
           <p className="trend-average" aria-live="polite">
             {shown ? (
-              shown.isEmpty ? (
-                <span>Nothing logged on {pickedDayFormat.format(shown.date)}</span>
+              !hasRoutineCare(shown) ? (
+                <span>No feeds, nappies or sleep logged on {pickedDayFormat.format(shown.date)}</span>
               ) : (
                 <>
                   <strong className="figure">{fmt(series.value(shown))}{unitLabel && <span className="unit">{unitLabel}</span>}</strong>
@@ -181,7 +187,7 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
               type="button"
               className={`trend-bar${index === todayIndex ? " is-today" : ""}${index === shownIndex ? " is-picked" : ""}`}
               key={days[index].date.toISOString()}
-              aria-label={`${fullDayFormat.format(days[index].date)}: ${days[index].isEmpty ? "not logged" : withUnit(value)}`}
+              aria-label={`${fullDayFormat.format(days[index].date)}: ${hasRoutineCare(days[index]) ? withUnit(value) : "not logged"}`}
               aria-pressed={pinned === at}
               onClick={() => {
                 if (pinned !== at) track("trend_day_picked", { series: series.key });
@@ -192,8 +198,8 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
             >
               {/* Three distinct states, because a day nobody logged is not a
                   day with none: a bar, a hairline for a logged zero, and
-                  nothing at all for a day with no entries. */}
-              {days[index].isEmpty ? null : (
+                  nothing at all for a day with no feeds, nappies or sleep. */}
+              {!hasRoutineCare(days[index]) ? null : (
                 <span
                   className={value > 0 ? "trend-fill" : "trend-fill is-zero"}
                   style={{ height: value > 0 ? `${Math.max(3, (value / scaleMax) * 100)}%` : "2px" }}

@@ -1165,6 +1165,7 @@ export default function HomePage() {
                 reminders={reminders}
                 notificationPermission={notificationPermission}
                 feedReminderTargetAt={feedReminderTargetAt}
+                pushArmed={pushArmed}
                 minuteClock={minuteClock}
                 onThemeChange={changeTheme}
                 onFeedRemindersChange={changeFeedReminders}

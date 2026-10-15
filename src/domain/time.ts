@@ -221,6 +221,16 @@ export function ageInMonths(birthDate: string, now: number = Date.now()) {
   return Math.max(0, months);
 }
 
+/** Fractional months (days / 30.4375) at `at`, for the interpolated WHO band:
+    whole months would show a 3-week-old the birth-day range, which parks a
+    healthy weight at the P97 edge. Also answers "how old was she when this
+    was weighed", given the weigh-in's time. */
+export function exactAgeInMonths(birthDate: string, at: number = Date.now()): number | null {
+  const birth = new Date(`${birthDate}T12:00:00`);
+  if (!Number.isFinite(birth.getTime()) || !Number.isFinite(at)) return null;
+  return Math.max(0, (at - birth.getTime()) / 86_400_000) / 30.4375;
+}
+
 export function timeAgo(value?: string, now = Date.now()) {
   if (!value) return "No entries yet";
   const minutes = Math.max(0, Math.round((now - new Date(value).getTime()) / 60_000));

@@ -101,6 +101,15 @@ export function formatWeight(grams: number, units: UnitSystem): string {
   return `${lb} lb ${oz} oz`;
 }
 
+/** A weight change, sign kept: "400 g" / "14.1 oz", and "1 lb 2 oz" once it
+    passes a pound — the small unit each audience weighs a gain in. */
+export function formatGrams(grams: number, units: UnitSystem): string {
+  if (units === "metric") return `${Math.round(grams)} g`;
+  const oz = Math.round((grams / (LB_IN_G / 16)) * 10) / 10;
+  if (Math.abs(oz) < 16) return `${trimmed(oz)} oz`;
+  return `${grams < 0 ? "-" : ""}${formatWeight(Math.abs(grams), units)}`;
+}
+
 /** Figure-block form: decimal, single unit. */
 export function weightParts(grams: number, units: UnitSystem): { value: string; unit: string } {
   if (units === "metric") return { value: (grams / 1_000).toFixed(2), unit: "kg" };

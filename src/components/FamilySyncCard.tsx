@@ -275,9 +275,13 @@ export function FamilySyncCard({
               <Button variant="outline" disabled={busy} onClick={() => void handleNewCode()}>
                 <Copy size={15} /> New code
               </Button>
-              {partnerJoined && (
-                <Button variant="ghost" onClick={() => { setView("closed"); setInvite(null); }}>Done</Button>
-              )}
+              {/* Always a way out. A family of one — the cloud-backup case —
+                  never sees a partner join, and without this the code stayed
+                  up with Sync now and Leave family gone. The code already
+                  given out still works until it expires. */}
+              <Button variant="ghost" onClick={() => { setView("closed"); setInvite(null); }}>
+                {partnerJoined ? "Done" : "Back"}
+              </Button>
             </div>
           </div>
         )}

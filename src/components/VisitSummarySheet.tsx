@@ -21,7 +21,7 @@ import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
 import { track } from "../domain/analytics";
 import { expectedWeightRange, typicalWeeklyGain } from "../domain/growthReference";
-import { formatBabyAge } from "../domain/time";
+import { exactAgeInMonths, formatBabyAge } from "../domain/time";
 import { Profile } from "../domain/types";
 import { useUnits } from "../domain/units";
 
@@ -81,7 +81,10 @@ export function VisitSummarySheet({ open, onOpenChange, summary, profile, ageMon
   const units = useUnits();
   const name = profile.name.trim() || "Baby";
   const age = formatBabyAge(profile.birthDate, now);
-  const band = ageMonths === null ? null : expectedWeightRange(ageMonths, profile.sex);
+  // The band from fractional age, as the Guide draws it: whole months showed
+  // a 26-day-old the birth-day range, and a median weight read as P97.
+  const exactMonths = ageMonths === null ? null : exactAgeInMonths(profile.birthDate, now);
+  const band = exactMonths === null ? null : expectedWeightRange(exactMonths, profile.sex);
   const gainBand = ageMonths === null ? null : typicalWeeklyGain(ageMonths);
   const doc = visitDocument(summary, name, age, units, band, gainBand, now);
   // Label the button by what the phone can do, so nobody taps "Share" on a
