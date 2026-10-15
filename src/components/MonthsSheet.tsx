@@ -100,9 +100,16 @@ function MonthEditor({
   const [photoBusy, setPhotoBusy] = useState(false);
   // The photo this page opened with; the live one may change while it is open.
   const [openedPhoto] = useState(entry?.photo);
+  // The note too. Compared with the live one instead, a note the other
+  // parent wrote meanwhile turned Done into Save, and Save wrote this
+  // page's empty note over theirs.
+  const [openedNote] = useState((entry?.note ?? "").trim());
+  const noteTouched = note.trim() !== openedNote;
 
   function save() {
-    const trimmed = note.trim().slice(0, NOTE_MAX_LENGTH);
+    // Untouched, the note stays whatever it is now (the other parent may
+    // have just written one).
+    const trimmed = (noteTouched ? note.trim() : entry?.note ?? "").slice(0, NOTE_MAX_LENGTH);
     // Untouched, the photo stays whatever it is now (the other parent may
     // have just added one); changed, only the replaced one is let go of.
     const plan = resolvePhotoSave({ opened: openedPhoto, draft: photo, live: entry?.photo });
@@ -160,7 +167,7 @@ function MonthEditor({
         <Button type="button" variant="ghost" className="sheet-cancel" onClick={onDone}>Back</Button>
         {/* Looking back through the album is not editing it: nothing
             changed, nothing to save. */}
-        {note.trim() === (entry?.note ?? "") && photo === openedPhoto ? (
+        {!noteTouched && photo === openedPhoto ? (
           <Button type="button" className="primary-button sheet-primary" disabled={photoBusy} onClick={onDone}>Done</Button>
         ) : (
           <Button type="submit" className="primary-button sheet-primary" disabled={photoBusy}>Save</Button>

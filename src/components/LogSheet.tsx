@@ -51,8 +51,10 @@ import {
 
 
 // A failed save carries the field it belongs to, so only that field is
-// painted invalid and receives focus.
-type SheetError = { message: string; field: DraftErrorField };
+// painted invalid and receives focus. "name" is the sheet's own — what was
+// given, eaten or done — which the shared validator never sees.
+type SheetErrorField = DraftErrorField | "name";
+type SheetError = { message: string; field: SheetErrorField };
 
 // Every value a sheet form can edit, owned by LogSheet itself. The component
 // is mounted with a key per open, so these initialisers re-run every time a
@@ -262,6 +264,19 @@ export function LogSheet({
   const [draft, setDraft] = useState<SheetDraft>(() =>
     initialSheetDraft(sheet, editing, initialNursingMode, lastBottle, units),
   );
+  // The end as the live row has it now: the other parent may stop (or
+  // resume) this timer while the sheet is open. Until this parent types in
+  // Ended, the field follows the live row rather than the copy the sheet
+  // opened with — or Save would restart a timer the other phone had stopped.
+  // A row deleted meanwhile keeps the end it opened with.
+  const liveRow = editing ? activities.find((activity) => activity.id === editing.id) : undefined;
+  const liveEnd = liveRow ? liveRow.endedAt : editing?.endedAt;
+  const [seenEnd, setSeenEnd] = useState(liveEnd);
+  if (liveEnd !== seenEnd) {
+    const shown = (end: string | undefined) => (end ? localDateInput(new Date(end)) : "");
+    setSeenEnd(liveEnd);
+    setDraft((current) => (current.endTime === shown(seenEnd) ? { ...current, endTime: shown(liveEnd) } : current));
+  }
   const [formError, setFormError] = useState<SheetError | null>(null);
   // One ref per failable field, so the error can land focus on the exact
   // input it names instead of whichever field happened to hold the ref.
@@ -272,6 +287,12 @@ export function LogSheet({
   const lengthRef = useRef<HTMLInputElement>(null);
   const headRef = useRef<HTMLInputElement>(null);
   const temperatureRef = useRef<HTMLInputElement>(null);
+  // The medicine, food or routine name. Only one of those fields is ever on
+  // screen, so one ref serves them all.
+  const nameRef = useRef<HTMLInputElement>(null);
+  // The amount the last tapped medicine filled in, so tapping another one
+  // can take it back instead of leaving it on the wrong medicine.
+  const presetDose = useRef<string | undefined>(undefined);
   const isTimed = editing
     ? editing.type === "nursing" || editing.type === "burp" || editing.type === "sleep" || editing.type === "tummy"
     : false;
@@ -282,7 +303,8 @@ export function LogSheet({
 
   function showFormError(error: SheetError) {
     setFormError(error);
-    const refs: Record<DraftErrorField, React.RefObject<HTMLInputElement | null>> = {
+    const refs: Record<SheetErrorField, React.RefObject<HTMLInputElement | null>> = {
+      name: nameRef,
       start: startRef,
       end: endRef,
       amount: amountRef,
@@ -414,7 +436,7 @@ export function LogSheet({
   function saveMedicine() {
     const name = draft.medicineName.trim();
     if (!name) {
-      showFormError({ message: "Which medicine was it?", field: "start" });
+      showFormError({ message: "Which medicine was it?", field: "name" });
       return;
     }
     const outcome = validateDraft({ type: "medicine", start: draft.logTime, note: draft.note });
@@ -436,7 +458,7 @@ export function LogSheet({
   function saveSolid() {
     const food = draft.foodText.trim();
     if (!food) {
-      showFormError({ message: "What did they eat?", field: "start" });
+      showFormError({ message: "What did they eat?", field: "name" });
       return;
     }
     const outcome = validateDraft({ type: "solid", start: draft.logTime, note: draft.note });
@@ -537,7 +559,11 @@ export function LogSheet({
     const next: Activity = {
       ...editing,
       startedAt: outcome.value.startedAt,
-      endedAt: timed ? outcome.value.endedAt : undefined,
+      // An end this sheet did not show is kept, not erased. A type from a
+      // newer build (tummy time was one, once) can be timed without this
+      // build knowing it, and dropping its end made a finished session
+      // come back as a running timer on the other phone.
+      endedAt: timed ? outcome.value.endedAt : liveEnd,
       note: outcome.value.note,
     };
 
@@ -562,7 +588,7 @@ export function LogSheet({
     const photoPlan = resolvePhotoSave({
       opened: editing.photo,
       draft: draft.photo,
-      live: activities.find((activity) => activity.id === editing.id)?.photo,
+      live: liveRow?.photo,
     });
     if (next.type === "diaper") {
       next.diaperKind = draft.diaperKind;
@@ -578,7 +604,7 @@ export function LogSheet({
     if (next.type === "medicine") {
       const medicine = draft.medicineName.trim();
       if (!medicine) {
-        showFormError({ message: "Which medicine was it?", field: "start" });
+        showFormError({ message: "Which medicine was it?", field: "name" });
         return;
       }
       next.medicine = medicine.slice(0, NOTE_MAX_LENGTH);
@@ -589,10 +615,17 @@ export function LogSheet({
     if (next.type === "solid") {
       const food = draft.foodText.trim();
       if (!food) {
-        showFormError({ message: "What did they eat?", field: "start" });
+        showFormError({ message: "What did they eat?", field: "name" });
         return;
       }
       next.food = food.slice(0, NOTE_MAX_LENGTH);
+    }
+    // A routine tick carries its name in the note (activityTitle), so here
+    // the note is the name, and an empty one would leave "Daily routine"
+    // with nothing to say what was given.
+    if (next.type === "routine" && !next.note) {
+      showFormError({ message: "What was done?", field: "name" });
+      return;
     }
 
     if (!onUpdate(next)) return;
@@ -776,7 +809,16 @@ export function LogSheet({
                   data-initial-focus={index === 0 ? "" : undefined}
                   className={draft.medicineName.trim().toLowerCase() === m.name.toLowerCase() ? "medicine-preset is-active" : "medicine-preset"}
                   onClick={() => {
-                    patch({ medicineName: m.name, ...(m.dose ? { doseText: m.dose } : {}) });
+                    // A medicine brings its own last amount. One logged
+                    // without an amount takes back the one the previous tap
+                    // filled in — that was the other medicine's dose — but
+                    // an amount typed by hand stays.
+                    const filledByTap = draft.doseText !== "" && draft.doseText === presetDose.current;
+                    patch({
+                      medicineName: m.name,
+                      ...(m.dose ? { doseText: m.dose } : filledByTap ? { doseText: "" } : {}),
+                    });
+                    presetDose.current = m.dose;
                     setFormError(null);
                   }}
                 >
@@ -786,7 +828,7 @@ export function LogSheet({
               ))}
             </div>
           )}
-          <Field className="medicine-field">
+          <Field className="medicine-field" data-invalid={formError?.field === "name" || undefined}>
             <FieldLabel htmlFor="medicine-name">{savedMedicines.length > 0 ? "Or type a new one" : "What was given"}</FieldLabel>
             <InputGroup>
               {/* Focus lands on the first preset when there are any — the
@@ -796,8 +838,11 @@ export function LogSheet({
                   to tap a name rather than type one. */}
               <InputGroupInput
                 id="medicine-name"
+                ref={nameRef}
                 autoFocus={savedMedicines.length === 0}
                 data-initial-focus={savedMedicines.length === 0 ? "" : undefined}
+                aria-invalid={formError?.field === "name"}
+                aria-describedby={formError?.field === "name" ? "sheet-error" : undefined}
                 value={draft.medicineName}
                 maxLength={NOTE_MAX_LENGTH}
                 placeholder="Vitamin D drops, paracetamol…"
@@ -813,7 +858,7 @@ export function LogSheet({
                 value={draft.doseText}
                 maxLength={NOTE_MAX_LENGTH}
                 placeholder="2.5 ml, one drop…"
-                onChange={(event) => patch({ doseText: event.target.value })}
+                onChange={(event) => { presetDose.current = undefined; patch({ doseText: event.target.value }); }}
               />
             </InputGroup>
             <FieldDescription>
@@ -837,13 +882,16 @@ export function LogSheet({
             title="Log a food"
             description="What went in, and roughly when — tastes count."
           />
-          <Field className="medicine-field">
+          <Field className="medicine-field" data-invalid={formError?.field === "name" || undefined}>
             <FieldLabel htmlFor="solid-food">What did they eat?</FieldLabel>
             <InputGroup>
               <InputGroupInput
                 id="solid-food"
+                ref={nameRef}
                 autoFocus
                 data-initial-focus
+                aria-invalid={formError?.field === "name"}
+                aria-describedby={formError?.field === "name" ? "sheet-error" : undefined}
                 value={draft.foodText}
                 maxLength={NOTE_MAX_LENGTH}
                 placeholder="Banana, carrot purée, rice cereal…"
@@ -982,11 +1030,14 @@ export function LogSheet({
               for either — only the time and a note. */}
           {editing.type === "medicine" && (
             <>
-              <Field className="medicine-field">
+              <Field className="medicine-field" data-invalid={formError?.field === "name" || undefined}>
                 <FieldLabel htmlFor="edit-medicine-name">What was given</FieldLabel>
                 <InputGroup>
                   <InputGroupInput
                     id="edit-medicine-name"
+                    ref={nameRef}
+                    aria-invalid={formError?.field === "name"}
+                    aria-describedby={formError?.field === "name" ? "sheet-error" : undefined}
                     value={draft.medicineName}
                     maxLength={NOTE_MAX_LENGTH}
                     onChange={(event) => { patch({ medicineName: event.target.value }); setFormError(null); }}
@@ -1010,14 +1061,37 @@ export function LogSheet({
           )}
 
           {editing.type === "solid" && (
-            <Field className="medicine-field">
+            <Field className="medicine-field" data-invalid={formError?.field === "name" || undefined}>
               <FieldLabel htmlFor="edit-solid-food">What did they eat?</FieldLabel>
               <InputGroup>
                 <InputGroupInput
                   id="edit-solid-food"
+                  ref={nameRef}
+                  aria-invalid={formError?.field === "name"}
+                  aria-describedby={formError?.field === "name" ? "sheet-error" : undefined}
                   value={draft.foodText}
                   maxLength={NOTE_MAX_LENGTH}
                   onChange={(event) => { patch({ foodText: event.target.value }); setFormError(null); }}
+                />
+              </InputGroup>
+            </Field>
+          )}
+
+          {/* A routine tick's note IS its name ("Vitamin D"). Shown as an
+              optional note, a note typed into it replaced the name, and the
+              log no longer said what was given. */}
+          {editing.type === "routine" && (
+            <Field className="medicine-field" data-invalid={formError?.field === "name" || undefined}>
+              <FieldLabel htmlFor="edit-routine-label">What was done</FieldLabel>
+              <InputGroup>
+                <InputGroupInput
+                  id="edit-routine-label"
+                  ref={nameRef}
+                  aria-invalid={formError?.field === "name"}
+                  aria-describedby={formError?.field === "name" ? "sheet-error" : undefined}
+                  value={draft.note}
+                  maxLength={NOTE_MAX_LENGTH}
+                  onChange={(event) => { patch({ note: event.target.value }); setFormError(null); }}
                 />
               </InputGroup>
             </Field>
@@ -1048,7 +1122,9 @@ export function LogSheet({
             <TimeField value={draft.logTime} label={isTimed ? "Started" : "When"} autoFocus={editing.type === "sleep"} inputRef={startRef} error={formError?.field === "start"} onChange={(value) => { patch({ logTime: value }); setFormError(null); }} />
             {isTimed && <TimeField value={draft.endTime} label="Ended" description="Leave empty if still going." inputRef={endRef} error={formError?.field === "end"} onChange={(value) => { patch({ endTime: value }); setFormError(null); }} />}
           </div>
-          <NoteField value={draft.note} onChange={(value) => { patch({ note: value }); setFormError(null); }} />
+          {editing.type !== "routine" && (
+            <NoteField value={draft.note} onChange={(value) => { patch({ note: value }); setFormError(null); }} />
+          )}
           <FormError message={formError?.message ?? null} />
 
           {/* One tap. The confirm dialog that used to sit here asked a tired

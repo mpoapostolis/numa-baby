@@ -111,6 +111,9 @@ function VaccineForm({
     // the health center because that was last time is the mistake to avoid.
     isPlace(editing?.place) ? editing.place : mode.seed?.place,
   );
+  // The place the last "Next dose of" chip filled in, so the next chip can
+  // take it back.
+  const chipPlace = useRef<Place | undefined>(undefined);
   // Recorded by the day, as the card does. Marking a planned dose as given
   // starts from today, not from its due date.
   const [given, setGiven] = useState(dayInput(new Date(editing && !editing.planned ? editing.startedAt : now)));
@@ -227,7 +230,13 @@ function VaccineForm({
                 onClick={() => {
                   setName(v.vaccine!);
                   setDose(nextDose(v.dose));
-                  if (isPlace(v.place)) setPlace(v.place);
+                  // Its place comes with the chip. A chip with none takes
+                  // back the place the previous chip filled in — that was the
+                  // other vaccine's — but a place chosen by hand stays.
+                  const from = isPlace(v.place) ? v.place : undefined;
+                  if (from) setPlace(from);
+                  else if (place !== undefined && place === chipPlace.current) setPlace(undefined);
+                  chipPlace.current = from;
                   setError(null);
                 }}
               >
@@ -317,7 +326,7 @@ function VaccineForm({
           value={place ?? ""}
           className="segmented"
           aria-labelledby={whereId}
-          onValueChange={(value) => setPlace(isPlace(value) ? value : undefined)}
+          onValueChange={(value) => { chipPlace.current = undefined; setPlace(isPlace(value) ? value : undefined); }}
         >
           {PLACES.map((option) => (
             <ToggleGroupItem key={option.key} value={option.key} aria-label={option.label}>

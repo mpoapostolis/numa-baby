@@ -97,3 +97,43 @@ test("a month opened and left as it was offers Done, and saves nothing", () => {
   expect(onUpsert).not.toHaveBeenCalled();
   expect(card()).toBeTruthy();
 });
+
+// Two phones, one month: the other parent's note arriving while this page
+// is open is not an edit made here, and must not be written over.
+test("a note that arrives from the other phone while a month is open is kept", () => {
+  const onUpsert = vi.fn((activity: Activity) => Boolean(activity));
+  const sheet = (months: Activity[]) => (
+    <Dialog open>
+      <DialogContent>
+        <MonthsSheet profile={profile} months={months} now={NOW} onUpsert={onUpsert} />
+      </DialogContent>
+    </Dialog>
+  );
+  const view = render(sheet([]));
+  fireEvent.click(card());
+  expect(screen.getByRole("button", { name: "Done" })).toBeTruthy();
+
+  view.rerender(sheet([{ id: "month-4", type: "month", month: 4, startedAt: new Date(NOW).toISOString(), note: "First laugh" }]));
+  fireEvent.click(screen.getByRole("button", { name: "Done" }));
+  expect(onUpsert).not.toHaveBeenCalled();
+});
+
+test("a photo removed here keeps the note the other phone wrote meanwhile", () => {
+  const onUpsert = vi.fn((activity: Activity) => Boolean(activity));
+  const sheet = (months: Activity[]) => (
+    <Dialog open>
+      <DialogContent>
+        <MonthsSheet profile={profile} months={months} now={NOW} onUpsert={onUpsert} />
+      </DialogContent>
+    </Dialog>
+  );
+  const opened: Activity = { id: "month-4", type: "month", month: 4, startedAt: new Date(NOW).toISOString(), photo: "a".repeat(32) };
+  const view = render(sheet([opened]));
+  fireEvent.click(card());
+  view.rerender(sheet([{ ...opened, note: "First laugh" }]));
+  // The photo is changed here; the note is not.
+  fireEvent.click(screen.getByRole("button", { name: "Remove photo" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  expect(onUpsert.mock.calls[0][0]).toMatchObject({ id: "month-4", note: "First laugh" });
+  expect(onUpsert.mock.calls[0][0].photo).toBeUndefined();
+});

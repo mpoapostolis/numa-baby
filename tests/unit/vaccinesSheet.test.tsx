@@ -181,3 +181,30 @@ test("where it was given starts unchosen", () => {
   fireEvent.click(screen.getByRole("button", { name: "Save vaccine" }));
   expect(onAdd.mock.calls[0][0].place).toBeUndefined();
 });
+
+// A chip fills in its own place — and a chip with none must not leave the
+// previous chip's clinic on a different vaccine.
+test("switching 'Next dose of' chips does not carry the other vaccine's place", () => {
+  const { onAdd } = setup([
+    { id: "pcv1", type: "vaccine", vaccine: "PCV", dose: "1st dose", place: "private", startedAt: stamped },
+    { id: "pen1", type: "vaccine", vaccine: "Pentavalent", dose: "1st dose", startedAt: stamped },
+  ]);
+  fireEvent.click(screen.getByRole("button", { name: "Record a vaccine" }));
+  fireEvent.click(screen.getByRole("button", { name: /^PCV/ }));
+  expect(screen.getByRole("radio", { name: /Private clinic/ }).getAttribute("aria-checked")).toBe("true");
+  fireEvent.click(screen.getByRole("button", { name: /^Pentavalent/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Save vaccine" }));
+
+  const saved = onAdd.mock.calls[0][0];
+  expect(saved).toMatchObject({ vaccine: "Pentavalent", dose: "2nd dose" });
+  expect(saved.place).toBeUndefined();
+});
+
+test("a place chosen by hand stays when a chip without one is tapped", () => {
+  const { onAdd } = setup([{ id: "pen1", type: "vaccine", vaccine: "Pentavalent", dose: "1st dose", startedAt: stamped }]);
+  fireEvent.click(screen.getByRole("button", { name: "Record a vaccine" }));
+  fireEvent.click(screen.getByRole("radio", { name: /Public health center/ }));
+  fireEvent.click(screen.getByRole("button", { name: /^Pentavalent/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Save vaccine" }));
+  expect(onAdd.mock.calls[0][0]).toMatchObject({ vaccine: "Pentavalent", place: "public" });
+});
