@@ -18,6 +18,7 @@ import { EmptyState } from "../components/EmptyState";
 import { LittleBottle } from "../components/illustrations";
 import { BabyCompanion, CompanionMood } from "../components/BabyCompanion";
 import { mlBucket, track } from "../domain/analytics";
+import { detailReadsClock } from "../domain/activityDisplay";
 import { summarizeDay } from "../domain/daySummary";
 import { makeId } from "../domain/id";
 import {
@@ -82,10 +83,14 @@ function lastFeedSummary(feed: Activity, units: UnitSystem) {
   if (feed.type === "bottle") {
     return `Bottle · ${formatVolume(feed.amount ?? 0, units)}`;
   }
-  const side = feed.side === "left" ? "left" : "right";
-  return feed.endedAt
-    ? `Nursing · ${side} · ${humanDuration(minutesBetween(feed.startedAt, feed.endedAt))}`
-    : `Nursing · ${side}`;
+  // A mum picks the next side from this line, so it never guesses one: a
+  // "both" session says so, and a nursing saved without a side names none.
+  const side = feed.side === "both" ? "both sides" : feed.side === "left" ? "left" : feed.side === "right" ? "right" : null;
+  return [
+    "Nursing",
+    side,
+    feed.endedAt ? humanDuration(minutesBetween(feed.startedAt, feed.endedAt)) : null,
+  ].filter(Boolean).join(" · ");
 }
 
 // Display figure with unit demotion: digits speak, units recede.
@@ -573,9 +578,13 @@ function TodayScreen({
     const entry: Activity = { id: makeId(), type: "tummy", startedAt: new Date().toISOString() };
     if (onAdd(entry, "Tummy time started")) track("tummy_started");
   }
-  const tummyToday = sortedActivities
-    .filter((activity) => activity.type === "tummy" && activity.endedAt && isSameDay(activity.startedAt, new Date(minuteClock)))
-    .reduce((total, activity) => total + minutesBetween(activity.startedAt, activity.endedAt!), 0);
+  // Added up to the second and rounded once: a newborn's goes are often under
+  // a minute each, and rounding every one first turned three of them into 0m.
+  const tummyToday = Math.round(
+    sortedActivities
+      .filter((activity) => activity.type === "tummy" && activity.endedAt && isSameDay(activity.startedAt, new Date(minuteClock)))
+      .reduce((total, activity) => total + Math.max(0, new Date(activity.endedAt!).getTime() - new Date(activity.startedAt).getTime()), 0) / 60_000,
+  );
 
   function toggleBurp() {
     if (activeBurp) {
@@ -594,10 +603,19 @@ function TodayScreen({
   const selectedDay = new Date(minuteClock);
   selectedDay.setHours(12, 0, 0, 0);
   selectedDay.setDate(selectedDay.getDate() - dayOffset);
+  // Calendar days back to the first entry, counted noon to noon like
+  // selectedDay — not elapsed 24-hour spans, which left a first entry at 23:59
+  // out of reach until the clock passed 23:59 again. Rounded, so a 23- or
+  // 25-hour clock-change day still counts as one.
   const oldestActivity = sortedActivities[sortedActivities.length - 1];
-  const maxDayOffset = oldestActivity
-    ? Math.max(0, Math.floor((minuteClock - new Date(oldestActivity.startedAt).getTime()) / 86_400_000))
-    : 0;
+  let maxDayOffset = 0;
+  if (oldestActivity) {
+    const todayNoon = new Date(minuteClock);
+    todayNoon.setHours(12, 0, 0, 0);
+    const firstNoon = new Date(oldestActivity.startedAt);
+    firstNoon.setHours(12, 0, 0, 0);
+    maxDayOffset = Math.max(0, Math.round((todayNoon.getTime() - firstNoon.getTime()) / 86_400_000));
+  }
   const daySummary = dayOffset === 0
     ? today
     : summarizeDay(sortedActivities, selectedDay, minuteClock);
@@ -827,7 +845,7 @@ function TodayScreen({
                     {sortedActivities.slice(0, 6).map((activity, index) => (
                       <div role="listitem" key={activity.id}>
                         {index > 0 && <ItemSeparator />}
-                        <ActivityRow activity={activity} onEdit={onEdit} />
+                        <ActivityRow activity={activity} onEdit={onEdit} now={detailReadsClock(activity) ? minuteClock : undefined} />
                       </div>
                     ))}
                   </ItemGroup>

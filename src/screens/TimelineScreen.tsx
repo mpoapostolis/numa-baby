@@ -9,6 +9,7 @@ import { ToggleGroup, ToggleGroupItem } from "../components/ui/toggle-group";
 import { ActivityRow } from "../components/ActivityRow";
 import { DayRecapLine } from "../components/DayRecap";
 import { EmptyState } from "../components/EmptyState";
+import { detailReadsClock } from "../domain/activityDisplay";
 import { bucketByDay, dayKey, summarizeDay } from "../domain/daySummary";
 import { formatTimelineDay } from "../domain/time";
 import { Activity, ActivityType } from "../domain/types";
@@ -123,7 +124,7 @@ export default function TimelineScreen({
                   {group.map((activity, index) => (
                     <div role="listitem" key={activity.id}>
                       {index > 0 && <ItemSeparator />}
-                      <ActivityRow activity={activity} onEdit={onEdit} />
+                      <ActivityRow activity={activity} onEdit={onEdit} now={detailReadsClock(activity) ? minuteClock : undefined} />
                     </div>
                   ))}
                 </ItemGroup>

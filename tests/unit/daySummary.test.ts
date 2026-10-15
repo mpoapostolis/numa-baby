@@ -174,7 +174,7 @@ describe("summarizeDay", () => {
     expect(started.feeds).toBe(1);
     expect(started.nursingMinutes).toBe(0);
     expect(started.hasStaleTimer).toBe(true);
-    expect(started.hasRunningTimer).toBe(false);
+    expect(started.hasRunningNursing).toBe(false);
     expect(crossed.isEmpty).toBe(true);
   });
 
@@ -186,7 +186,7 @@ describe("summarizeDay", () => {
       now,
     );
     expect(summary.nursingMinutes).toBeGreaterThan(0);
-    expect(summary.hasRunningTimer).toBe(true);
+    expect(summary.hasRunningNursing).toBe(true);
     expect(summary.hasStaleTimer).toBe(false);
   });
 
@@ -248,7 +248,7 @@ describe("summarizeDay", () => {
     );
     expect(summary.feeds).toBe(1);
     expect(summary.nursingMinutes).toBe(20);
-    expect(summary.hasRunningTimer).toBe(true);
+    expect(summary.hasRunningNursing).toBe(true);
   });
 
   it("counts growth and health entries without touching the care figures", () => {

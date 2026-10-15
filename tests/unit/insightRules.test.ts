@@ -21,7 +21,7 @@ function day(offsetFromToday: number, fields: Partial<DaySummary> = {}): DaySumm
   return {
     date,
     isToday: offsetFromToday === 0,
-    hasRunningTimer: false,
+    hasRunningNursing: false,
     hasStaleTimer: false,
     feeds: 0,
     bottles: 0,
@@ -38,6 +38,7 @@ function day(offsetFromToday: number, fields: Partial<DaySummary> = {}): DaySumm
     growthEntries: 0,
     healthEntries: 0,
     solids: 0,
+    otherEntries: 0,
     isEmpty: false,
     ...fields,
   };

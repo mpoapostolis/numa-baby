@@ -17,8 +17,10 @@ export type DaySummary = {
   date: Date;
   /** True while this day is still being lived — figures are "so far". */
   isToday: boolean;
-  /** A timer (nursing or sleep) was still running when this was computed. */
-  hasRunningTimer: boolean;
+  /** A nursing session was still running when this was computed — only
+      nursing, so a sleep or tummy timer never reads as "one still going"
+      under the Nursed figure. */
+  hasRunningNursing: boolean;
   /** A timer left open far longer than any real session was excluded from the
       minute figures — it is a forgotten stopwatch, not twenty hours of sleep. */
   hasStaleTimer: boolean;
@@ -53,7 +55,11 @@ export type DaySummary = {
   growthEntries: number;
   healthEntries: number;
   solids: number;
-  /** Anything at all logged on this day. */
+  /** Entries the recap has no figure for: medicine, burping, tummy time,
+      routine ticks, vaccines, month notes. */
+  otherEntries: number;
+  /** No feed, change, sleep, growth, health or solids entry on this day.
+      Other entries can still be there — see otherEntries. */
   isEmpty: boolean;
 };
 
@@ -79,6 +85,7 @@ const EMPTY = {
   growthEntries: 0,
   healthEntries: 0,
   solids: 0,
+  otherEntries: 0,
 };
 
 /**
@@ -105,7 +112,7 @@ export function summarizeDay(activities: Activity[], day: Date, now: number): Da
     ...EMPTY,
     date,
     isToday,
-    hasRunningTimer: false,
+    hasRunningNursing: false,
     hasStaleTimer: false,
     isEmpty: true,
   };
@@ -130,7 +137,7 @@ export function summarizeDay(activities: Activity[], day: Date, now: number): Da
       isOpen &&
       now - new Date(activity.startedAt).getTime() > STALE_OPEN_SPAN_MINUTES * 60_000;
     if (isStale) summary.hasStaleTimer = true;
-    else if (isOpen) summary.hasRunningTimer = true;
+    else if (isOpen && activity.type === "nursing") summary.hasRunningNursing = true;
 
     switch (activity.type) {
       case "bottle":
@@ -202,6 +209,9 @@ export function summarizeDay(activities: Activity[], day: Date, now: number): Da
         break;
       case "solid":
         summary.solids += 1;
+        break;
+      default:
+        summary.otherEntries += 1;
         break;
     }
   }
