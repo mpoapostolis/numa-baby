@@ -18,7 +18,7 @@ import { EmptyState } from "../components/EmptyState";
 import { LittleBottle } from "../components/illustrations";
 import { BabyCompanion, CompanionMood } from "../components/BabyCompanion";
 import { mlBucket, track } from "../domain/analytics";
-import { summarizeDay } from "../domain/daySummary";
+import { hasRoutineCare, summarizeDay } from "../domain/daySummary";
 import { makeId } from "../domain/id";
 import {
   ageInMonths,
@@ -797,7 +797,7 @@ function TodayScreen({
 
           {/* Day-by-day totals: the question a single day cannot answer. Shown
               once there is more than one day of history to compare. */}
-          {recentDays.filter((day) => !day.isEmpty).length > 1 && (
+          {recentDays.filter(hasRoutineCare).length > 1 && (
             <TrendChart days={recentDays} />
           )}
 

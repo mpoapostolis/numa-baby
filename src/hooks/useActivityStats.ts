@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { dayKey, summarizeDay, summarizeDays } from "../domain/daySummary";
+import { dayKey, hasRoutineCare, summarizeDay, summarizeDays } from "../domain/daySummary";
 import {
   DIAPER_BOUNDS,
   FEED_BOUNDS,
@@ -195,14 +195,19 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
     }));
     const maxMl = Math.max(...weekly.map((day) => day.ml), 1);
 
-    // Average over days actually tracked, not a fixed 7 — a two-day-old install
-    // showing "Feeds / day: 0" beside "3 feeds today" contradicts itself.
-    const oldestActivity = sortedActivities[sortedActivities.length - 1];
-    const trackedDays = oldestActivity
-      ? Math.max(1, Math.min(7, Math.floor((minuteClock - new Date(oldestActivity.startedAt).getTime()) / 86_400_000) + 1))
-      : 0;
+    // Average over the days of this week that were actually logged, the same
+    // rule as the visit summary — not calendar days since the oldest entry,
+    // which a backdated birth weight or a week off would stretch, counting
+    // days nobody logged as days with no feeds. Today is still being lived:
+    // two feeds by 7am averaged in as a whole day pull the figure down, so it
+    // counts only while it is the only day there is. That keeps a two-day-old
+    // install from showing "Feeds / day: 0" beside "3 feeds today".
+    const loggedWeek = weekDays.filter(hasRoutineCare);
+    const completeWeek = loggedWeek.filter((day) => !day.isToday);
+    const counted = completeWeek.length > 0 ? completeWeek : loggedWeek;
+    const trackedDays = counted.length;
     const averageFeeds = trackedDays > 0
-      ? Math.round((weekly.reduce((sum, day) => sum + day.feeds.length, 0) / trackedDays) * 10) / 10
+      ? Math.round((counted.reduce((sum, day) => sum + day.feeds, 0) / trackedDays) * 10) / 10
       : null;
 
     return {

@@ -3,7 +3,7 @@ import { Button } from "./ui/button";
 import { EmptyState } from "./EmptyState";
 import { SproutChart } from "./illustrations";
 import { Activity } from "../domain/types";
-import { formatLength, formatWeight, useUnits, weightParts } from "../domain/units";
+import { formatGrams, formatLength, formatWeight, useUnits, weightParts } from "../domain/units";
 
 // Hoisted like the formatters in domain/time.ts — constructing Intl per point
 // per render is the expensive path the extraction was meant to remove.
@@ -45,9 +45,9 @@ export function GrowthChart({
     : activities.length < 2
       ? `${formatWeight(latest.weightGrams ?? 0, units)} at the first check.`
       : change > 0
-        ? `Up ${change} g since the last check.`
+        ? `Up ${formatGrams(change, units)} since the last check.`
         : change < 0
-          ? `Down ${Math.abs(change)} g since the last check.`
+          ? `Down ${formatGrams(Math.abs(change), units)} since the last check.`
           : "Steady since the last check.";
 
   return (
@@ -75,7 +75,7 @@ export function GrowthChart({
             <div>
               <span>Since last check</span>
               <strong className={change < 0 ? "is-negative" : ""}>
-                {activities.length < 2 ? "First check" : `${change > 0 ? "+" : ""}${change} g`}
+                {activities.length < 2 ? "First check" : `${change > 0 ? "+" : ""}${formatGrams(change, units)}`}
               </strong>
             </div>
             <div>

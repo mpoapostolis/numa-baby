@@ -11,6 +11,7 @@ import { GrowthChart } from "../components/GrowthChart";
 import { TrendChart } from "../components/TrendChart";
 import { LittleBottle } from "../components/illustrations";
 import { activityTitle } from "../domain/activityDisplay";
+import { hasRoutineCare } from "../domain/daySummary";
 import { formatVolume, formatWeight, useUnits, volumeParts, weightParts } from "../domain/units";
 import { formatShortDay, formatTime, humanDuration, median } from "../domain/time";
 import { track } from "../domain/analytics";
@@ -89,8 +90,9 @@ export default function InsightsScreen({
 }: InsightsScreenProps) {
   const units = useUnits();
   // Milk against this baby's own weight, rather than a stranger's average.
+  // Complete days only: this morning's two bottles are not a typical day.
   const intake = useMemo(() => {
-    const bottleDays = stats.recentDays.filter((day) => day.ml > 0);
+    const bottleDays = stats.recentDays.filter((day) => !day.isToday && day.ml > 0);
     return guidanceFor(
       stats.latestGrowth?.weightGrams,
       median(bottleDays.map((day) => day.ml)),
@@ -138,8 +140,12 @@ export default function InsightsScreen({
     (sum, day) => sum + day.feeds.filter((feed) => feed.type === "bottle").length,
     0,
   );
-  const medianMl = median(weekly.filter((day) => day.ml > 0).map((day) => day.ml));
   const todayIndex = weekly.length - 1;
+  // Today is half-lived: its morning bottles counted as a whole day drag
+  // "most days" down. It counts only while it is the only bottle day.
+  const bottleDays = weekly.filter((day) => day.ml > 0);
+  const completeBottleDays = bottleDays.filter((day) => day !== weekly[todayIndex]);
+  const medianMl = median((completeBottleDays.length > 0 ? completeBottleDays : bottleDays).map((day) => day.ml));
   // "a, b and c" — an Oxford-comma-free list, because this is a sentence a
   // person reads, not a data dump.
   const listOf = (items: string[]) =>
@@ -352,7 +358,7 @@ export default function InsightsScreen({
           track in the insights page, for example, sleep". The same chart as
           Today's, and the same remembered choice — pick Sleep on either and
           both open on Sleep. Shown once there are two days to compare. */}
-      {stats.recentDays.filter((day) => !day.isEmpty).length > 1 && (
+      {stats.recentDays.filter(hasRoutineCare).length > 1 && (
         <TrendChart days={stats.recentDays} />
       )}
 

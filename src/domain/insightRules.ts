@@ -35,7 +35,7 @@ import {
   NHS_WEIGHT,
 } from "./sources";
 import { Activity, FeedingMode } from "./types";
-import { UnitSystem, formatVolume } from "./units";
+import { UnitSystem, formatGrams, formatTemperature, formatVolume, gramsToLb } from "./units";
 
 export type InsightTone = "seek-care" | "suggest" | "reassure";
 
@@ -115,6 +115,21 @@ function round(value: number): number {
   return Math.round(value);
 }
 
+// The card bodies speak the phone's units; the thresholds stay metric. A
+// parent who typed 100.8 °F must not be read back a number they never typed.
+
+/** A source's round threshold in the parent's own degrees: "38 °C" / "100.4 °F". */
+function degrees(c: number, units: UnitSystem): string {
+  return units === "metric" ? `${c} °C` : formatTemperature(c, units);
+}
+
+/** A whole weight as logged: "3300 g" / "7.28 lb". Decimal pounds, not
+    "7 lb 4 oz" — whole ounces would print 3400 g and 3390 g the same, on a
+    card about one being under the other. */
+function loggedWeight(grams: number, units: UnitSystem): string {
+  return units === "metric" ? `${grams} g` : `${gramsToLb(grams).toFixed(2)} lb`;
+}
+
 type Rule = {
   id: string;
   tone: InsightTone;
@@ -175,18 +190,17 @@ const RULES: Rule[] = [
     tone: "seek-care",
     priority: 190,
     sources: [AAP_FEVER, NHS_URGENT_HELP],
-    evaluate: ({ latestTemperatureC, latestTemperatureAt, ageDays, now }) => {
+    evaluate: ({ latestTemperatureC, latestTemperatureAt, ageDays, now, units }) => {
       const hours = hoursSince(latestTemperatureAt, now);
       if (latestTemperatureC === undefined || hours === null || hours > 24) return null;
       // The upper guard rejects a mistyped value rather than shouting about it.
       if (latestTemperatureC < feverThresholdC(ageDays) || latestTemperatureC >= 43) return null;
-      const threshold = feverThresholdC(ageDays).toFixed(1);
       return {
         title: "That temperature is worth a phone call",
-        body: `You logged ${latestTemperatureC.toFixed(1)} °C. AAP's call-the-doctor threshold changes with age and is ${threshold} °C for yours.`,
+        body: `You logged ${formatTemperature(latestTemperatureC, units)}. AAP's call-the-doctor threshold changes with age and is ${formatTemperature(feverThresholdC(ageDays), units)} for yours.`,
         advice:
           ageDays !== null && ageDays < 90
-            ? "Call your paediatrician now, even if your baby otherwise seems fine. NHS lists 38 °C or more in a baby under 3 months as a reason to seek urgent help."
+            ? `Call your paediatrician now, even if your baby otherwise seems fine. NHS lists ${degrees(38, units)} or more in a baby under 3 months as a reason to seek urgent help.`
             : "Call your paediatrician today and describe how your baby is behaving, not just the number.",
       };
     },
@@ -196,7 +210,7 @@ const RULES: Rule[] = [
     tone: "seek-care",
     priority: 186,
     sources: [NHS_URGENT_HELP],
-    evaluate: ({ latestTemperatureC, latestTemperatureAt, ageDays, now }) => {
+    evaluate: ({ latestTemperatureC, latestTemperatureAt, ageDays, now, units }) => {
       const hours = hoursSince(latestTemperatureAt, now);
       if (latestTemperatureC === undefined || hours === null || hours > 24) return null;
       // Above 30 rejects a mistyped 3.6; unknown age fails safe and fires.
@@ -204,7 +218,7 @@ const RULES: Rule[] = [
       if (ageDays !== null && ageDays > 90) return null;
       return {
         title: "A low temperature matters as much as a fever",
-        body: `You logged ${latestTemperatureC.toFixed(1)} °C. NHS lists a temperature of 36 °C or below in a young baby alongside 38 °C or above as a reason to get urgent help.`,
+        body: `You logged ${formatTemperature(latestTemperatureC, units)}. NHS lists a temperature of ${degrees(36, units)} or below in a young baby alongside ${degrees(38, units)} or above as a reason to get urgent help.`,
         advice:
           "Get urgent advice now — especially if your baby also feels cold to the touch, is sleepier than usual, or is not feeding.",
       };
@@ -252,7 +266,7 @@ const RULES: Rule[] = [
     tone: "seek-care",
     priority: 164,
     sources: [NHS_WEIGHT],
-    evaluate: ({ ageDays, weights, now }) => {
+    evaluate: ({ ageDays, weights, now, units }) => {
       if (ageDays === null || ageDays < 21 || weights.length < 2) return null;
       const first = weights[0];
       const last = weights.at(-1)!;
@@ -261,7 +275,7 @@ const RULES: Rule[] = [
       if (last.weightGrams >= first.weightGrams) return null;
       return {
         title: "Still under the first weight you logged",
-        body: `You logged ${first.weightGrams} g first and ${last.weightGrams} g most recently. NHS: most babies are at, or above, their birthweight by 3 weeks.`,
+        body: `You logged ${loggedWeight(first.weightGrams, units)} first and ${loggedWeight(last.weightGrams, units)} most recently. NHS: most babies are at, or above, their birthweight by 3 weeks.`,
         advice:
           "Home scales drift. Ask your midwife, health visitor or paediatrician to weigh your baby on theirs — do not change how you feed on the strength of this alone.",
       };
@@ -272,7 +286,7 @@ const RULES: Rule[] = [
     tone: "seek-care",
     priority: 158,
     sources: [AAP_ENOUGH_MILK, NHS_WEIGHT],
-    evaluate: ({ ageDays, weights, now }) => {
+    evaluate: ({ ageDays, weights, now, units }) => {
       if (ageDays === null || ageDays < 21 || weights.length < 2) return null;
       const previous = weights.at(-2)!;
       const last = weights.at(-1)!;
@@ -283,7 +297,7 @@ const RULES: Rule[] = [
       if (gain === null || gain >= 100) return null;
       return {
         title: "Weight gain looks slower than the usual range",
-        body: `About ${round(gain)} g a week between your last two weights, ${round(span)} days apart. AAP treats a baby not gaining steadily as a reason to get weighed properly.`,
+        body: `About ${formatGrams(gain, units)} a week between your last two weights, ${round(span)} days apart. AAP treats a baby not gaining steadily as a reason to get weighed properly.`,
         advice:
           "Ask your health visitor or paediatrician for a weigh-in on their scales before you change anything.",
       };
@@ -452,7 +466,7 @@ const RULES: Rule[] = [
     tone: "reassure",
     priority: 34,
     sources: [AAP_FIRST_MONTH],
-    evaluate: ({ ageMonths, weights, now }) => {
+    evaluate: ({ ageMonths, weights, now, units }) => {
       if (ageMonths === null || weights.length < 2) return null;
       const previous = weights.at(-2)!;
       const last = weights.at(-1)!;
@@ -464,7 +478,11 @@ const RULES: Rule[] = [
       if (gain === null || band === null || gain < band.minGramsPerWeek * 0.8) return null;
       return {
         title: "Weight is climbing at the usual rate",
-        body: `About ${round(gain)} g a week between your last two weights. The typical band at this age is ${band.minGramsPerWeek}–${band.maxGramsPerWeek} g a week.`,
+        body: `About ${formatGrams(gain, units)} a week between your last two weights. The typical band at this age is ${
+          units === "metric"
+            ? `${band.minGramsPerWeek}–${band.maxGramsPerWeek} g`
+            : `${formatGrams(band.minGramsPerWeek, units)}–${formatGrams(band.maxGramsPerWeek, units)}`
+        } a week.`,
         advice: "Nothing to do. Under 6 months, one weight a month is enough for this to stay meaningful.",
       };
     },

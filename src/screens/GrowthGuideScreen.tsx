@@ -10,7 +10,7 @@ import { OutingChecklist } from "../components/OutingChecklist";
 import { CareCard, WATCH_FOR, careForAge } from "../domain/careGuidance";
 import { playForAge } from "../domain/playIdeas";
 import { PlaySection } from "../components/PlaySection";
-import { ageInDays } from "../domain/time";
+import { ageInDays, exactAgeInMonths } from "../domain/time";
 import {
   MAX_REFERENCE_MONTHS,
   WEEKLY_GAIN_BANDS,
@@ -74,13 +74,25 @@ function CareCardView({ card }: { card: CareCard }) {
   );
 }
 
-// Fractional age drives the interpolated band — a 24-day-old must not be
-// shown the birth-day range, which parks a healthy weight at the P97 edge.
-function fractionalAgeMonths(birthDate: string): number | null {
-  const birth = new Date(`${birthDate}T12:00:00`);
-  if (!Number.isFinite(birth.getTime())) return null;
-  const days = Math.max(0, (Date.now() - birth.getTime()) / 86_400_000);
-  return days / 30.4375;
+const PERCENTILES = ["p3", "p15", "p50", "p85", "p97"] as const;
+
+// A weight taken a month ago is a month behind today's band: 5.1 kg on the
+// P50 line at 2 months sits near P3 on the 3-month bar. So the dot goes where
+// the weight sat among the lines for the age it was weighed at — the same
+// spot between the same two lines on today's band. Beyond P3 or P97 it keeps
+// its distance in kilograms. Weighed today, nothing moves.
+function projectToBand(kg: number, from: WeightPercentiles, to: WeightPercentiles): number {
+  if (kg <= from.p3) return to.p3 - (from.p3 - kg);
+  if (kg >= from.p97) return to.p97 + (kg - from.p97);
+  for (let index = 0; index < PERCENTILES.length - 1; index++) {
+    const lower = PERCENTILES[index];
+    const upper = PERCENTILES[index + 1];
+    if (kg <= from[upper]) {
+      const share = (kg - from[lower]) / (from[upper] - from[lower]);
+      return to[lower] + share * (to[upper] - to[lower]);
+    }
+  }
+  return kg;
 }
 
 function ageHeading(months: number) {
@@ -95,21 +107,28 @@ function ageHeading(months: number) {
 
 // P3–P97 as a horizontal band on a hairline, P50 as a tick, the baby's latest
 // weight as the only --signal element. Pure CSS on a padded linear scale.
-function RangeBar({ range, weightKg }: { range: WeightPercentiles; weightKg?: number }) {
+// The dot sits at `markerKg`, the weight carried onto today's band, while
+// every word still quotes the weight as it was logged, and when.
+function RangeBar({ range, weightKg, markerKg, weighedOn }: {
+  range: WeightPercentiles;
+  weightKg?: number;
+  markerKg?: number;
+  weighedOn?: string;
+}) {
   const { kg, unitWord, longUnit } = useKgLabel();
   const pad = Math.max(0.4, (range.p97 - range.p3) * 0.14);
   const lo = range.p3 - pad;
   const hi = range.p97 + pad;
   const at = (value: number) => `${Math.min(100, Math.max(0, ((value - lo) / (hi - lo)) * 100))}%`;
   const description = `Reference band from ${kg(range.p3)} to ${kg(range.p97)} ${longUnit}, middle of the range ${kg(range.p50)} ${longUnit}${
-    weightKg === undefined ? "" : `. Latest logged weight ${kg(weightKg)} ${longUnit}`
+    weightKg === undefined ? "" : `. Latest logged weight ${kg(weightKg)} ${longUnit}${weighedOn ? ` on ${weighedOn}, placed where it sat for the age then` : ""}`
   }.`;
   return (
     <div className="range-bar" role="img" aria-label={description}>
       <div className="range-track">
         <div className="range-band" style={{ left: at(range.p3), width: `calc(${at(range.p97)} - ${at(range.p3)})` }} />
         <span className="range-median" style={{ left: at(range.p50) }} />
-        {weightKg !== undefined && <span className="range-marker" style={{ left: at(weightKg) }} />}
+        {weightKg !== undefined && <span className="range-marker" style={{ left: at(markerKg ?? weightKg) }} />}
       </div>
       <div className="range-scale">
         <span style={{ left: at(range.p3) }}><em>P3</em>{kg(range.p3)}</span>
@@ -165,10 +184,19 @@ export default function GrowthGuideScreen({
   const careDays = ageInDays(profile.birthDate, minuteClock);
   const care = careDays === null ? null : careForAge(careDays);
   const play = careDays === null ? null : playForAge(careDays);
-  const exactAge = fractionalAgeMonths(profile.birthDate);
+  // Fractional age drives the interpolated band — a 24-day-old must not be
+  // shown the birth-day range, which parks a healthy weight at the P97 edge.
+  const exactAge = exactAgeInMonths(profile.birthDate, minuteClock);
   const age = exactAge === null ? null : Math.min(exactAge, MAX_REFERENCE_MONTHS);
   const range = age === null ? null : expectedWeightRange(age, profile.sex);
   const latestKg = latestGrowth?.weightGrams ? latestGrowth.weightGrams / 1_000 : undefined;
+  const weighedAt = latestGrowth ? new Date(latestGrowth.startedAt).getTime() : NaN;
+  const weighedAge = exactAgeInMonths(profile.birthDate, weighedAt);
+  const markerKg = latestKg !== undefined && range && weighedAge !== null
+    ? projectToBand(latestKg, expectedWeightRange(Math.min(weighedAge, MAX_REFERENCE_MONTHS), profile.sex), range)
+    : latestKg;
+  // Said only when the dot visibly sits away from the number printed under it.
+  const carried = latestKg !== undefined && markerKg !== undefined && Math.abs(markerKg - latestKg) >= 0.05;
   const tableMonths = WHO_WEIGHT_FOR_AGE.boys.map((row) => row.month);
 
   return (
@@ -258,12 +286,20 @@ export default function GrowthGuideScreen({
           {exactAge !== null && exactAge > MAX_REFERENCE_MONTHS && (
             <p className="t-meta">The WHO table covers the first 24 months, shown here at 24 months.</p>
           )}
-          <RangeBar range={range} weightKg={latestKg} />
+          <RangeBar
+            range={range}
+            weightKg={latestKg}
+            markerKg={markerKg}
+            weighedOn={carried && latestGrowth ? latestDateFormat.format(new Date(latestGrowth.startedAt)) : undefined}
+          />
           {latestGrowth && latestKg !== undefined && (
             <p className="guide-latest">
               <span className="guide-latest-dot" aria-hidden="true" />
               {name}’s latest: <span className="guide-latest-value">{kg(latestKg)} {unitWord}</span> ({latestDateFormat.format(new Date(latestGrowth.startedAt))})
             </p>
+          )}
+          {carried && (
+            <p className="t-meta">The dot shows where that weight sat for {name}’s age on the day it was taken.</p>
           )}
           {!profile.sex && <p className="t-meta">Range shown covers girls and boys.</p>}
         </div>

@@ -48,6 +48,8 @@ type SettingsScreenProps = {
   notificationPermission: NotificationPermission | "unsupported";
   feedReminderTargetAt: number | null;
   diaperReminderTargetAt: number | null;
+  /** The server holds this phone's reminders, so they ring with the app closed. */
+  pushArmed: boolean;
   minuteClock: number;
   onThemeChange: (choice: ThemeChoice) => void;
   onFeedRemindersChange: (enabled: boolean) => Promise<void>;
@@ -159,6 +161,7 @@ export default function SettingsScreen({
   notificationPermission,
   feedReminderTargetAt,
   diaperReminderTargetAt,
+  pushArmed,
   minuteClock,
   onThemeChange,
   onFeedRemindersChange,
@@ -184,6 +187,10 @@ export default function SettingsScreen({
   // The floating banner answers the same question — mirror it here live.
   useEffect(() => onConsentChange(setConsent), []);
   const [shareOpen, setShareOpen] = useState(false);
+  // Only the in-page fallback needs the app left open; once the server holds
+  // the alarm, saying so would keep a parent's screen on all night for nothing.
+  const reminderAround = (targetAt: number) =>
+    `Around ${formatTime(new Date(targetAt).toISOString())}${pushArmed ? "" : ", if this app is still open"}`;
   const feedingModeLabel = {
     breast: "Breastfeeding",
     bottle: "Bottle feeding",
@@ -286,7 +293,7 @@ export default function SettingsScreen({
                     : notificationPermission === "denied"
                       ? "Blocked in browser settings"
                       : reminders.feedEnabled && feedReminderTargetAt && feedReminderTargetAt > minuteClock
-                        ? `Around ${formatTime(new Date(feedReminderTargetAt).toISOString())}, if this app is still open`
+                        ? reminderAround(feedReminderTargetAt)
                         : "Prompt after the next feed you log"}
                 </ItemDescription>
               </ItemContent>
@@ -336,7 +343,7 @@ export default function SettingsScreen({
                     : notificationPermission === "denied"
                       ? "Blocked in browser settings"
                       : reminders.diaperEnabled && diaperReminderTargetAt && diaperReminderTargetAt > minuteClock
-                        ? `Around ${formatTime(new Date(diaperReminderTargetAt).toISOString())}, if this app is still open`
+                        ? reminderAround(diaperReminderTargetAt)
                         : "Prompt after the next change you log"}
                 </ItemDescription>
               </ItemContent>
