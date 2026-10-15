@@ -1,28 +1,105 @@
-// "Need anything?" — the only way a parent can reach the author.
+// "Need anything?" — the only way a parent can reach the author, and now
+// the way the answer comes back.
 //
 // Kept to one box and one optional line. Someone typing this is usually
 // annoyed, often tired, and frequently one-handed: asking them for a name, an
-// email and a category first is how you get no messages at all. The contact
-// field says plainly that leaving it empty is fine, because a bug report is
-// worth having even with no way to reply.
+// email and a category first is how you get no messages at all. The first
+// message makes this phone a conversation (see domain/feedbackInbox): what
+// was said and what was answered sit above the box, like any chat.
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { MessageCircle } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { track } from "../domain/analytics";
+import {
+  addSent,
+  getInbox,
+  inboxKey,
+  markInboxSeen,
+  refreshInbox,
+  subscribeInbox,
+  unreadReplies,
+  type ThreadMessage,
+} from "../domain/feedbackInbox";
 
 type State = "idle" | "sending" | "sent" | "failed";
+
+const stampFormat = new Intl.DateTimeFormat("en", {
+  day: "numeric",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+function stamp(at: string): string {
+  const date = new Date(at);
+  return Number.isNaN(date.getTime()) ? "" : stampFormat.format(date);
+}
+
+function Thread({ thread }: { thread: ThreadMessage[] }) {
+  const listRef = useRef<HTMLOListElement>(null);
+  const unread = unreadReplies(getInbox());
+
+  // The newest is what matters: open at the bottom, like any conversation.
+  useEffect(() => {
+    const list = listRef.current;
+    if (list) list.scrollTop = list.scrollHeight;
+  }, [thread.length]);
+
+  // An answer counts as read once it is on screen — not merely because
+  // Settings was opened with the conversation far below the fold.
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list || !unread) return;
+    const last = list.lastElementChild;
+    if (!last || typeof IntersectionObserver === "undefined") {
+      markInboxSeen();
+      return;
+    }
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) markInboxSeen();
+    });
+    observer.observe(last);
+    return () => observer.disconnect();
+  }, [unread, thread.length]);
+
+  return (
+    <ol className="feedback-thread" ref={listRef} aria-label="Your messages and the replies">
+      {thread.map((message) => (
+        <li key={message.id} className={message.from === "dev" ? "feedback-said dev" : "feedback-said you"}>
+          <span className="feedback-who">
+            {message.from === "dev" ? "Apostolis" : "You"} · {stamp(message.at)}
+          </span>
+          <p>{message.text}</p>
+        </li>
+      ))}
+    </ol>
+  );
+}
 
 export function FeedbackForm({ onSent }: { onSent?: () => void } = {}) {
   const [message, setMessage] = useState("");
   const [contact, setContact] = useState("");
   const [state, setState] = useState<State>("idle");
+  // What the server said when it refused (too many messages from one
+  // connection) — "you may be offline" would send a parent to the wrong fix.
+  const [refusal, setRefusal] = useState<string | null>(null);
+  const inbox = useSyncExternalStore(subscribeInbox, getInbox, () => null);
+  const thread = inbox?.thread ?? [];
+  const talking = thread.length > 0;
+
+  // Opening it is asking: the answer may have arrived a minute ago.
+  useEffect(() => {
+    void refreshInbox(true);
+  }, []);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (message.trim().length < 3 || state === "sending") return;
     setState("sending");
+    setRefusal(null);
     try {
       const response = await fetch("/api/feedback", {
         method: "POST",
@@ -31,10 +108,17 @@ export function FeedbackForm({ onSent }: { onSent?: () => void } = {}) {
           message: message.trim(),
           contact: contact.trim(),
           appVersion: __APP_VERSION__,
+          key: inboxKey(),
         }),
       });
-      if (!response.ok) throw new Error("rejected");
-      track("feedback_sent", { withContact: contact.trim().length > 0 });
+      if (!response.ok) {
+        const refused = (await response.json().catch(() => ({}))) as { error?: unknown };
+        if (response.status < 500 && typeof refused.error === "string") setRefusal(refused.error);
+        throw new Error("rejected");
+      }
+      const body = (await response.json().catch(() => ({}))) as { message?: ThreadMessage };
+      if (body.message) addSent(body.message);
+      track("feedback_sent", { withContact: contact.trim().length > 0, inThread: talking });
       setState("sent");
       setMessage("");
       setContact("");
@@ -47,26 +131,27 @@ export function FeedbackForm({ onSent }: { onSent?: () => void } = {}) {
 
   return (
     <>
-      {state === "sent" ? (
-          <p className="feedback-thanks" role="status">
-            Sent — thank you. Genuinely. Most messages arrive without a way to
-            reply, so the answer comes as an update: keep an eye on News
-            (the 📰 up top) to see what happened with yours.
-          </p>
-      ) : (
-        <form className="feedback-form" onSubmit={(event) => void submit(event)}>
-            <label className="sr-only" htmlFor="feedback-message">Your message</label>
-            <textarea
-              id="feedback-message"
-              className="feedback-input"
-              rows={4}
-              maxLength={2000}
-              placeholder="What would make this better?"
-              value={message}
-              onChange={(event) => setMessage(event.target.value)}
-            />
+      {talking && <Thread thread={thread} />}
+      <form className="feedback-form" onSubmit={(event) => void submit(event)}>
+        <label className="sr-only" htmlFor="feedback-message">{talking ? "Your reply" : "Your message"}</label>
+        <textarea
+          id="feedback-message"
+          className="feedback-input"
+          rows={talking ? 3 : 4}
+          maxLength={2000}
+          placeholder={talking ? "Write a message…" : "What would make this better?"}
+          value={message}
+          onChange={(event) => {
+            setMessage(event.target.value);
+            if (state === "sent" || state === "failed") setState("idle");
+          }}
+        />
+        {/* Asked once. After the first message the answer comes here anyway,
+            and an address given then is used for every reply. */}
+        {!talking && (
+          <>
             <label className="t-label" htmlFor="feedback-contact">
-              Email <span className="feedback-optional">only if you want a reply</span>
+              Email <span className="feedback-optional">optional — replies show up here too</span>
             </label>
             <input
               id="feedback-contact"
@@ -74,21 +159,30 @@ export function FeedbackForm({ onSent }: { onSent?: () => void } = {}) {
               type="text"
               maxLength={200}
               autoComplete="email"
-              placeholder="optional"
+              placeholder="only if you also want them by email"
               value={contact}
               onChange={(event) => setContact(event.target.value)}
             />
-            {state === "failed" && (
-              <p className="feedback-error" role="alert">
-                That did not send — you may be offline. Your text is still here, try again.
-              </p>
-            )}
-            <Button type="submit" disabled={message.trim().length < 3 || state === "sending"}>
-              <MessageCircle size={16} aria-hidden="true" />
-              {state === "sending" ? "Sending…" : "Send"}
-            </Button>
-        </form>
-      )}
+          </>
+        )}
+        {state === "sent" && (
+          <p className="feedback-thanks" role="status">
+            Sent — thank you. The answer will show up right here, and the
+            speech bubble gets a dot when it does.
+          </p>
+        )}
+        {state === "failed" && (
+          <p className="feedback-error" role="alert">
+            {refusal
+              ? `That did not send: ${refusal} Your text is still here.`
+              : "That did not send — you may be offline. Your text is still here, try again."}
+          </p>
+        )}
+        <Button type="submit" disabled={message.trim().length < 3 || state === "sending"}>
+          <MessageCircle size={16} aria-hidden="true" />
+          {state === "sending" ? "Sending…" : "Send"}
+        </Button>
+      </form>
     </>
   );
 }

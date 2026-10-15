@@ -19,6 +19,7 @@ import { WORKER_BUILD } from "./buildInfo";
 import type { Client } from "@libsql/client/web";
 import { storedVapid } from "./push";
 import { broadcastHistory } from "./broadcast";
+import { ensureFeedbackTables } from "./feedback";
 
 /** An ISO stamp `n` days ago, in exactly the format the tables store — the
     shorter `datetime()` returns a space where the rows have a T, which
@@ -366,11 +367,32 @@ export async function collectStats(client: Client, now: number) {
   // The live half stays live: messages must be markable and the security
   // panels must tell the truth of this minute. All of these are small,
   // indexed reads.
-  const [feedback, auditLog, lockouts, sessions, knownBrowsers, push] = await Promise.all([
+  //
+  // The messages read a column replies added, so the tables are brought up to
+  // date first: a database nobody has written to since would otherwise fail
+  // the read, and `safe` would quietly show no messages at all.
+  await ensureFeedbackTables(client).catch(() => undefined);
+  const [feedback, replies, auditLog, lockouts, sessions, knownBrowsers, push] = await Promise.all([
+    // `thread` is the start of a hash of a key only the phone holds: it says
+    // which messages came from the same phone, and nothing about whose.
     safe(
       client,
-      `select id, substr(created_at, 1, 16) as sent, message, contact, app_version, handled
+      // thread_contact: the address that phone last left, wherever in the
+      // conversation — the form asks for it only once, so it is often on a
+      // message older than the two hundred shown.
+      `select id, created_at as at, substr(created_at, 1, 16) as sent, message, contact, app_version, handled,
+              substr(reader, 1, 16) as thread,
+              case when reader is null then null else (
+                select f2.contact from feedback f2
+                where f2.reader = feedback.reader and f2.contact like '%_@_%._%'
+                order by f2.created_at desc limit 1) end as thread_contact
        from feedback order by created_at desc limit 200`,
+    ),
+    safe(
+      client,
+      `select id, feedback_id, created_at as at, substr(created_at, 1, 16) as sent, body, emailed_to,
+              substr(reader, 1, 16) as thread
+       from feedback_replies order by created_at desc limit 400`,
     ),
     safe(
       client,
@@ -434,6 +456,7 @@ export async function collectStats(client: Client, now: number) {
     heavyComputedAt: heavyAt,
     previous,
     feedback,
+    replies,
     auditLog,
     lockouts,
     sessions,

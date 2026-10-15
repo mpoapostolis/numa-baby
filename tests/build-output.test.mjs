@@ -121,7 +121,14 @@ const BUDGET_GZIP = {
   // fast-clock entry taking the server's time once it is sent, one ring per
   // reminder, the recovery screen leaving reminders alone, a cursor left
   // ahead by a fast clock sending the log once more): 120.95 kB.
-  "index-*.js": 120_950,
+  // 120_950 → 121_350 the same evening, for answers to the feedback box: the
+  // bubble is on the boot path, and it is where an answer has to show — a
+  // dot with the count, the dialog titled Messages, the bubble starting to
+  // look the moment a first message goes from anywhere, and nothing
+  // announced over a log sheet. Checking for answers, the conversation and
+  // the form load only on a phone that has written, after the first paint.
+  // Measured after: 121.34 kB.
+  "index-*.js": 121_350,
   "index-*.css": 29_000,
 };
 const LAZY_SCREENS = ["SettingsScreen", "GrowthGuideScreen", "InsightsScreen", "TimelineScreen", "LogSheet", "OnboardingScreen", "sonner", "FactOfTheDay"];

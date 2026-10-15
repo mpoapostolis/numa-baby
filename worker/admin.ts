@@ -29,6 +29,8 @@ import {
   type Caller,
 } from "./adminAuth";
 import { adminPageHtml } from "./adminPage";
+import { markFeedback, replyToFeedback } from "./feedback";
+import type { SendEmail } from "./magicLink";
 import { collectStats, refreshStats } from "./adminStats";
 
 export type AdminEnv = {
@@ -41,6 +43,8 @@ export type AdminEnv = {
   VAPID_PUBLIC_KEY?: string;
   VAPID_PRIVATE_KEY?: string;
   VAPID_SUBJECT?: string;
+  /** For a reply to a parent who left an address. */
+  EMAIL?: SendEmail;
 };
 
 const COOKIE_FLAGS = "Path=/; HttpOnly; Secure; SameSite=Strict";
@@ -382,17 +386,25 @@ async function route(
     });
   }
 
-  // The one write the dashboard makes: a message can be ticked off. Nothing
-  // here deletes anything — not a message, and certainly not a family's log.
+  // A conversation can be ticked off. Nothing here deletes anything — not a
+  // message, and certainly not a family's log.
   if (url.pathname === "/api/admin/feedback" && request.method === "POST") {
     const body = await readBody(request);
     const id = typeof body.id === "string" ? body.id : "";
     if (!id) return json({ error: "Which message?" }, 400);
-    await client.execute({
-      sql: "UPDATE feedback SET handled = ? WHERE id = ?",
-      args: [body.handled ? 1 : 0, id],
-    });
+    await markFeedback(client, id, Boolean(body.handled));
     return json({ ok: true });
+  }
+  // And answered. The words go in the audit log like a broadcast's do: "what
+  // did we tell them?" is the question it is there to answer.
+  if (url.pathname === "/api/admin/feedback/reply" && request.method === "POST") {
+    const body = await readBody(request);
+    const result = await replyToFeedback(client, env.EMAIL, body, now);
+    if ("error" in result) return json({ error: result.error }, 400);
+    // After the answer has gone, a failing audit row must not turn it into an
+    // error the operator would answer by sending it again.
+    await audit(client, `feedback reply: ${result.reply.text.slice(0, 60)}`, callerOf(request), now).catch(() => undefined);
+    return json(result);
   }
 
   return notFound();

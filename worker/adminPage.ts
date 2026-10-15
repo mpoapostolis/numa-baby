@@ -141,9 +141,25 @@ export function adminPageHtml(nonce: string): string {
   .meter span:first-child { color:var(--ink-2); }
   .meter u { display:block; height:8px; border-radius:99px; background:var(--signal); opacity:.85; min-width:2px; }
   .track { background:color-mix(in oklab, var(--signal) 12%, transparent); border-radius:99px; }
-  .msg { border-top:1px solid var(--line); padding:12px 0; display:grid; gap:5px; }
+  .msg { border-top:1px solid var(--line); padding:14px 0; display:grid; gap:8px; }
   .msg:first-child { border-top:0; padding-top:0; }
   .msg p { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; }
+  /* A conversation reads like one: theirs on the left, yours on the right. */
+  .bub { max-width:640px; padding:9px 12px; border-radius:14px 14px 14px 4px; display:grid; gap:3px;
+    background:color-mix(in oklab, var(--ink) 6%, transparent); justify-self:start; }
+  .bub.me { justify-self:end; border-radius:14px 14px 4px 14px;
+    background:color-mix(in oklab, var(--signal) 13%, transparent); }
+  .reply { display:grid; gap:8px; margin-top:2px; }
+  textarea { width:100%; min-height:84px; resize:vertical; background:var(--field); color:var(--ink);
+    font:inherit; font-size:16px; border-radius:10px; border:1px solid var(--line); padding:11px 13px; }
+  textarea:focus-visible { outline:2px solid color-mix(in oklab, var(--signal) 55%, transparent);
+    outline-offset:1px; border-color:var(--signal); }
+  .reply .row { justify-content:flex-start; }
+  .reply label { display:inline-flex; gap:7px; align-items:center; font-size:.8125rem; color:var(--ink-2); }
+  .reply input[type=checkbox] { width:18px; height:18px; padding:0; accent-color:var(--signal); }
+  .reply button.send { min-height:40px; padding:8px 16px; }
+  .note-ok { color:var(--good); }
+  .note-bad { color:var(--bad); }
   .pill { display:inline-block; padding:1px 8px; border-radius:99px; font-size:.6875rem;
     border:1px solid var(--line); color:var(--ink-2); }
   .pill.ok { color:var(--good); border-color:color-mix(in oklab, var(--good) 40%, transparent); }
@@ -423,37 +439,131 @@ export function adminPageHtml(nonce: string): string {
       '</div>';
   }
 
+  /* The messages, as conversations. Every message a phone sent since replies
+     existed carries the same thread (the start of a hash of a key only that
+     phone holds), so its messages and the answers to them read as one
+     exchange. An older message is a conversation of one. */
+  // Doubled backslashes: this is inside a template string on the server.
+  var EMAIL_RE = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$/;
+  function conversations(d) {
+    var byKey = {}, order = [], threadOf = {};
+    for (var i = 0; i < d.feedback.length; i++) {
+      var f = d.feedback[i];
+      var key = f.thread ? "t:" + f.thread : "m:" + f.id;
+      threadOf[f.id] = key;
+      var c = byKey[key];
+      if (!c) {
+        // Newest first from the server, so the first row met is the latest:
+        // the one a reply answers and a tick marks.
+        c = byKey[key] = { key: key, items: [], open: false, latest: "", contact: "", email: "",
+          inApp: Boolean(f.thread), lastId: f.id, version: f.app_version };
+        order.push(c);
+      }
+      c.items.push({ me: false, at: String(f.at || f.sent || ""), sent: f.sent, text: f.message });
+      if (!Number(f.handled)) c.open = true;
+      if (!c.contact && f.contact) c.contact = String(f.contact);
+      // The server looks across the whole conversation (thread_contact), as
+      // the reply itself will; this row's own contact covers an older app.
+      var addr = String(f.thread_contact || f.contact || "").trim();
+      if (!c.email && addr && EMAIL_RE.test(addr)) c.email = addr.toLowerCase();
+      if (!c.contact && c.email) c.contact = c.email;
+      if (String(f.at || f.sent || "") > c.latest) c.latest = String(f.at || f.sent || "");
+    }
+    var replies = d.replies || [];
+    for (var r = 0; r < replies.length; r++) {
+      var x = replies[r];
+      var k = x.thread ? "t:" + x.thread : threadOf[x.feedback_id];
+      // An answer to a message older than the two hundred shown.
+      if (!k || !byKey[k]) continue;
+      byKey[k].items.push({ me: true, at: String(x.at || x.sent || ""), sent: x.sent, text: x.body, emailed: x.emailed_to });
+      if (String(x.at || x.sent || "") > byKey[k].latest) byKey[k].latest = String(x.at || x.sent || "");
+    }
+    for (var o = 0; o < order.length; o++) {
+      order[o].items.sort(function (a, b) { return a.at < b.at ? -1 : (a.at > b.at ? 1 : 0); });
+    }
+    // Waiting for an answer first; within each, the latest word first.
+    order.sort(function (a, b) {
+      if (a.open !== b.open) return a.open ? -1 : 1;
+      return a.latest < b.latest ? 1 : (a.latest > b.latest ? -1 : 0);
+    });
+    return order;
+  }
+
+  // What the operator was typing, kept across the re-renders a refresh, a
+  // sort or a tick causes — losing a half-written answer is the worst thing
+  // this page could do. Keyed by the CONVERSATION, which keeps its key when
+  // the parent writes again; the message an answer goes to (data-id) is the
+  // newest one on screen and moves. "sending" keeps a button that is already
+  // on its way from being pressed again on a re-drawn page.
+  var drafts = {}, noMail = {}, notes = {}, sending = {};
+
+  function messagesCard(d) {
+    var list = conversations(d), waiting = 0, html = "";
+    for (var i = 0; i < list.length; i++) {
+      var c = list[i];
+      if (c.open) waiting++;
+      // The triage chip the owner asked for: which build the report came
+      // from, and whether that build predates what is live right now —
+      // "is this already fixed?" answered at a glance.
+      var buildBit = '';
+      if (c.version) {
+        var stale = d.workerBuild && String(c.version) < String(d.workerBuild);
+        buildBit = ' · build ' + esc(c.version) +
+          (stale ? ' <span style="color:#c96">· before current deploy</span>'
+                 : ' <span style="color:#7a6">· current</span>');
+      }
+      var bubbles = '';
+      for (var j = 0; j < c.items.length; j++) {
+        var it = c.items[j];
+        bubbles += '<div class="bub' + (it.me ? ' me' : '') + '"><div class="tiny">' +
+          (it.me ? 'You · ' : '') + esc(String(it.sent || '').replace('T', ' ')) +
+          (it.me && it.emailed ? ' · emailed to ' + esc(it.emailed) : '') +
+          '</div><p>' + esc(it.text) + '</p></div>';
+      }
+      var id = esc(c.lastId), conv = esc(c.key);
+      var mail = Boolean(c.email);
+      var reach;
+      if (c.inApp) {
+        reach = 'They will see it in the app, with a dot on the speech bubble' +
+          (mail ? '' : ' (no email left)') + '.';
+      } else if (mail) {
+        reach = 'Sent from an older version of the app: the answer can only go by email.';
+      } else {
+        reach = '';
+      }
+      var form = (c.inApp || mail)
+        ? '<div class="reply">' +
+            '<textarea class="reply-box" data-conv="' + conv + '" maxlength="4000" placeholder="Reply…"></textarea>' +
+            '<div class="row">' +
+              '<button class="send" data-id="' + id + '" data-conv="' + conv + '">Send reply</button>' +
+              (mail ? '<label><input type="checkbox" class="reply-mail" data-conv="' + conv + '"' +
+                (c.inApp ? '' : ' disabled') + ' checked> Also email ' + esc(c.email) + '</label>' : '') +
+            '</div>' +
+            '<div class="tiny reach">' + esc(reach) + '</div>' +
+            '<div class="tiny reply-note" data-conv="' + conv + '"></div>' +
+          '</div>'
+        : '<div class="tiny">Sent from an older version of the app, with no email: there is no way to answer ' +
+          'this one directly. Answer it in News.</div>';
+      html += '<div class="msg"><div class="tiny">' +
+        '<span class="pill' + (c.open ? ' bad' : ' ok') + '">' + (c.open ? 'Waiting' : 'Handled') + '</span> ' +
+        (c.contact ? '<b>' + esc(c.contact) + '</b>' : 'no contact') +
+        buildBit + '</div>' +
+        bubbles + form +
+        '<div><button class="ghost mark" data-id="' + id + '" data-to="' + (c.open ? 1 : 0) + '">' +
+        (c.open ? 'Mark handled' : 'Handled ✓ — undo') + '</button></div></div>';
+    }
+    return '<div class="card"><h2>Messages · ' + list.length +
+      (waiting ? ' · ' + waiting + ' waiting' : '') + '</h2>' +
+      (d.workerBuild ? '<p class="tiny">Live build: ' + esc(d.workerBuild) + '</p>' : '') +
+      html + '</div>';
+  }
+
   /* The half that is always live: messages must be markable and the security
      panels must tell the truth of this minute. Small, indexed reads — they
      are not part of the nightly computation and never wait for it. */
   function liveSections(d) {
     var parts = [];
-  if (d.feedback.length) {
-    var msgs = "";
-    for (var m = 0; m < d.feedback.length; m++) {
-      var f = d.feedback[m];
-      // The triage chip the owner asked for: which build the report came
-      // from, and whether that build predates what is live right now —
-      // "is this already fixed?" answered at a glance.
-      var buildBit = '';
-      if (f.app_version) {
-        var stale = d.workerBuild && String(f.app_version) < String(d.workerBuild);
-        buildBit = ' · build ' + esc(f.app_version) +
-          (stale ? ' <span style="color:#c96">· before current deploy</span>'
-                 : ' <span style="color:#7a6">· current</span>');
-      }
-      msgs += '<div class="msg"><div class="tiny">' + esc(f.sent) +
-        (f.contact ? ' · <b>' + esc(f.contact) + '</b>' : ' · no contact') +
-        buildBit + '</div>' +
-        '<p>' + esc(f.message) + '</p>' +
-        '<div><button class="ghost mark" data-id="' + esc(f.id) + '" data-to="' +
-        (Number(f.handled) ? 0 : 1) + '">' +
-        (Number(f.handled) ? 'Handled ✓ — undo' : 'Mark handled') + '</button></div></div>';
-    }
-    parts.push('<div class="card"><h2>Messages · ' + d.feedback.length + '</h2>' +
-      (d.workerBuild ? '<p class="tiny">Live build: ' + esc(d.workerBuild) + '</p>' : '') +
-      msgs + '</div>');
-  }
+  if (d.feedback.length) parts.push(messagesCard(d));
   var sec = '<div class="card"><h2>Who has been at this door</h2>';
   if (d.lockouts.length) {
     sec += '<p class="muted" style="margin-bottom:8px">Locked out right now</p>' +
@@ -532,7 +642,19 @@ export function adminPageHtml(nonce: string): string {
     return parts.join("");
   }
 
-  /* The one listener the live half needs. */
+  /* The listeners the live half needs. */
+  function byConv(selector, conv) {
+    var all = document.querySelectorAll(selector);
+    for (var i = 0; i < all.length; i++) if (all[i].getAttribute("data-conv") === conv) return all[i];
+    return null;
+  }
+
+  function showNote(conv, text, kind) {
+    if (kind) notes[conv] = { text: text, kind: kind };
+    var out = byConv(".reply-note", conv);
+    if (out) { out.textContent = text; out.className = "tiny reply-note " + (kind || "note-bad"); }
+  }
+
   function wireLive() {
     var marks = document.querySelectorAll(".mark");
     for (var i = 0; i < marks.length; i++) {
@@ -542,6 +664,80 @@ export function adminPageHtml(nonce: string): string {
           method: "POST", headers: { "content-type": "application/json" },
           body: JSON.stringify({ id: b.getAttribute("data-id"), handled: Number(b.getAttribute("data-to")) })
         }).then(function () { load(); });
+      });
+    }
+
+    var boxes = document.querySelectorAll(".reply-box");
+    for (var j = 0; j < boxes.length; j++) {
+      var key = boxes[j].getAttribute("data-conv");
+      if (drafts[key]) boxes[j].value = drafts[key];
+      boxes[j].addEventListener("input", function (e) {
+        drafts[e.currentTarget.getAttribute("data-conv")] = e.currentTarget.value;
+      });
+    }
+    var mails = document.querySelectorAll(".reply-mail");
+    for (var m = 0; m < mails.length; m++) {
+      if (noMail[mails[m].getAttribute("data-conv")] && !mails[m].disabled) mails[m].checked = false;
+      mails[m].addEventListener("change", function (e) {
+        noMail[e.currentTarget.getAttribute("data-conv")] = !e.currentTarget.checked;
+      });
+    }
+    var shownNotes = document.querySelectorAll(".reply-note");
+    for (var q = 0; q < shownNotes.length; q++) {
+      var note = notes[shownNotes[q].getAttribute("data-conv")];
+      if (note) { shownNotes[q].textContent = note.text; shownNotes[q].className = "tiny reply-note " + note.kind; }
+    }
+
+    var sends = document.querySelectorAll(".reply button.send");
+    for (var k = 0; k < sends.length; k++) {
+      var sendConv = sends[k].getAttribute("data-conv");
+      if (sending[sendConv]) { sends[k].disabled = true; sends[k].textContent = "Sending…"; }
+      sends[k].addEventListener("click", function (e) {
+        var b = e.currentTarget, id = b.getAttribute("data-id"), conv = b.getAttribute("data-conv");
+        if (sending[conv]) return;
+        var area = byConv(".reply-box", conv), tick = byConv(".reply-mail", conv);
+        var text = area ? area.value.trim() : "";
+        if (!text) { showNote(conv, "Write the reply first."); return; }
+        sending[conv] = true;
+        delete notes[conv];
+        b.disabled = true;
+        b.textContent = "Sending…";
+        // Looked up again when the answer comes: the page may have been
+        // redrawn meanwhile, and the old button is no longer on it.
+        function button() { return byConv(".reply button.send", conv); }
+        fetch("/api/admin/feedback/reply", {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ id: id, text: text, email: tick ? tick.checked : false })
+        }).then(function (res) {
+          return res.json().catch(function () { return {}; }).then(function (r) { return { ok: res.ok, r: r }; });
+        }).then(function (x) {
+          delete sending[conv];
+          var again = button();
+          if (!x.ok || !x.r.ok) {
+            if (again) { again.disabled = false; again.textContent = "Send reply"; }
+            showNote(conv, (x.r && x.r.error) || "That did not send.");
+            return;
+          }
+          var r = x.r;
+          var said = r.inApp && r.emailedTo ? "Sent ✓ — in the app and to " + r.emailedTo + "."
+            : r.inApp ? "Sent ✓ — they will see it in the app."
+            : "Sent ✓ — emailed to " + r.emailedTo + ".";
+          if (r.emailError) said = "In the app ✓ — but the email did not go: " + r.emailError;
+          if (r.unticked) said += " It could not be ticked off — tick it by hand.";
+          // Shown and cleared at once, before the reload: if the reload
+          // fails, the page must still say it went, or it invites a resend.
+          delete drafts[conv];
+          var box2 = byConv(".reply-box", conv);
+          if (box2) box2.value = "";
+          if (again) { again.disabled = false; again.textContent = "Send reply"; }
+          showNote(conv, said, r.emailError || r.unticked ? "note-bad" : "note-ok");
+          load();
+        }).catch(function () {
+          delete sending[conv];
+          var again = button();
+          if (again) { again.disabled = false; again.textContent = "Send reply"; }
+          showNote(conv, "That did not send — check the connection, the text is still here.");
+        });
       });
     }
   }
@@ -846,7 +1042,12 @@ export function adminPageHtml(nonce: string): string {
         // Five minutes, and only while the tab is actually looked at. At
         // 60s this dashboard alone was ~1M row-reads per open hour — the
         // operator watching the numbers WAS most of the numbers.
-        if (!timer) timer = setInterval(function () { if (!document.hidden) load(); }, 300000);
+        // Not while an answer is being typed, either: the rebuild would take
+        // the caret out of the box mid-word.
+        if (!timer) timer = setInterval(function () {
+          var typing = document.activeElement && document.activeElement.className === "reply-box";
+          if (!document.hidden && !typing) load();
+        }, 300000);
         return true;
       });
     }).catch(function () { return false; });

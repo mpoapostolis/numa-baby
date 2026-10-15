@@ -1374,6 +1374,27 @@ body:has(.feedback-bubble) .content {
   scale: 0.94;
 }
 
+/* An answer is waiting. The one place the bubble raises its voice: a filled
+   dot with the count, on the corner the eye already knows. */
+.feedback-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 2px solid var(--card);
+  background: var(--signal);
+  color: var(--background);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Desktop keeps the sidebar, so the nav bar is gone and the bubble can sit
    lower without covering anything. */
 @media (width >= 768px) {
@@ -1615,6 +1636,54 @@ body:has(.feedback-bubble) .content {
   margin: 0;
   color: var(--signal);
   font-weight: 500;
+}
+
+/* The conversation: theirs on the right, the answers on the left, like every
+   chat a parent already knows. It scrolls on its own so the box to answer in
+   stays in reach of the thumb. */
+.feedback-thread {
+  list-style: none;
+  margin: 0;
+  padding: 2px 0;
+  display: grid;
+  gap: 10px;
+  max-height: min(46vh, 420px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.feedback-said {
+  max-width: 86%;
+  display: grid;
+  gap: 3px;
+  padding: 9px 12px;
+  border-radius: 16px 16px 16px 5px;
+  background: var(--muted);
+  justify-self: start;
+}
+
+.feedback-said.you {
+  justify-self: end;
+  border-radius: 16px 16px 5px 16px;
+  background: color-mix(in oklab, var(--signal) 14%, var(--card));
+}
+
+.feedback-said p {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.feedback-who {
+  font-size: 0.6875rem;
+  color: var(--ink-3);
+}
+
+.feedback-said.dev .feedback-who {
+  color: var(--signal);
+  font-weight: 600;
 }
 
 .feedback-error {

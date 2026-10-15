@@ -26,7 +26,7 @@ const SENDS_PER_HOUR = 3;
 // retyping an address is a handful; a scan is not.
 const LINK_ASKS_PER_FAMILY_HOUR = 10;
 
-type SendEmail = {
+export type SendEmail = {
   send: (message: {
     to: string;
     from: { email: string; name: string };
@@ -71,7 +71,7 @@ async function ensureTables(client: Client) {
   ready = true;
 }
 
-async function sha256(value: string): Promise<string> {
+export async function sha256(value: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
@@ -82,7 +82,8 @@ function newToken(): string {
   return [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-function normalise(raw: unknown): string | null {
+/** A plausible address, lower-cased, or null. */
+export function normaliseEmail(raw: unknown): string | null {
   const email = String(raw ?? "").trim().toLowerCase();
   if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return null;
   return email;
@@ -138,10 +139,11 @@ export const MAIL_FROM = { email: "no-reply@numalog.app", name: "Numalog" };
  * The branded shell every Numalog email wears: logo, one heading, one
  * message, at most one button. Table layout and inline styles because email
  * clients still live in 2003; the plain-text part remains the real fallback.
- * Nothing user-supplied is interpolated here — headings, bodies and URLs are
- * all our own strings.
+ * Everything passed in is written as HTML, unescaped: headings, bodies and
+ * URLs are our own strings, and the one caller that carries typed text — a
+ * reply to a parent's message, worker/feedback.ts — escapes it first.
  */
-function brandedHtml(options: {
+export function brandedHtml(options: {
   heading: string;
   body: string;
   cta?: { label: string; url: string };
@@ -209,7 +211,7 @@ export async function handleEmailLink(
 ): Promise<Response> {
   if (!email_service) return json({ error: "Email recovery is not configured." }, 501);
   const body = (await request.json().catch(() => ({}))) as { email?: unknown };
-  const email = normalise(body.email);
+  const email = normaliseEmail(body.email);
   if (!email) return json({ error: "That doesn't look like an email address." }, 400);
   await ensureTables(client);
   const now = Date.now();
@@ -271,7 +273,7 @@ export async function handleEmailRecoverRequest(
 ): Promise<Response> {
   if (!email_service) return json({ error: "Email recovery is not configured." }, 501);
   const body = (await request.json().catch(() => ({}))) as { email?: unknown };
-  const email = normalise(body.email);
+  const email = normaliseEmail(body.email);
   if (!email) return json({ error: "That doesn't look like an email address." }, 400);
   await ensureTables(client);
   const now = Date.now();

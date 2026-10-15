@@ -24,6 +24,15 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-10-15.2",
+    title: "Answers to your messages, in the app",
+    items: [
+      "You asked how you would know I had answered. Now you will: when you write with the speech bubble, my answer comes back to the app. The bubble gets a dot with a count, and tapping it shows the whole conversation — what you wrote and what I said. You can write back from there too.",
+      "Leave an email with your first message only if you would also like the answers by email. Either way they show up in the app.",
+      "Messages sent before this update can be answered only by email, if you left one, or here in News — the app could not keep track of them yet.",
+    ],
+  },
+  {
     id: "2026-10-15",
     title: "Tummy time, and a medicine you can correct",
     items: [
