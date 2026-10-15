@@ -73,14 +73,17 @@ type FamilySyncOptions = {
 // sync columns, which the row carries authoritatively. Anything malformed
 // (a buggy or hostile client pushed it) is dropped by the same validator that
 // guards imports — sync can never smuggle in a row a backup couldn't.
-function rowToActivity(row: transport.PulledRow): Activity | null {
+// "Too far in the future" is read against the SERVER's clock: a row dropped
+// here is never pulled again (the cursor moves past it), and this phone's own
+// clock, wound back by a flat battery, threw away a partner's real feeds.
+function rowToActivity(row: transport.PulledRow, serverNow: number): Activity | null {
   const payload = row.payload && typeof row.payload === "object" && !Array.isArray(row.payload) ? row.payload : {};
   const candidate: Record<string, unknown> = { ...payload, id: row.id, updatedAt: row.updatedAt };
   if (row.deleted) candidate.deleted = true;
   else delete candidate.deleted;
   // A partner's far-future write stamp is taken as "arrived now" — kept, but
   // no longer able to win every conflict for ever (see clampFutureUpdatedAt).
-  return isValidActivity(candidate) ? clampFutureUpdatedAt(candidate) : null;
+  return isValidActivity(candidate, serverNow) ? clampFutureUpdatedAt(candidate, serverNow) : null;
 }
 
 // The inverse: strip the sync columns out of the stored payload.
@@ -110,6 +113,10 @@ type LiveSync = {
   // failed push on purpose: a restore that never reached the partner must be
   // retried, not forgotten.
   backfilled: boolean;
+  // Counts the pull cursor's resets to "" for a full re-pull (a merged
+  // backup, below). A pull in flight across one must not advance the cursor
+  // over it, or the full re-pull is never made.
+  pullResets: number;
   // Raised by markFailed, read (and cleared) only by syncNow — the one
   // caller that needs a truthful yes/no rather than a status enum.
   lastSyncFailed: boolean;
@@ -125,7 +132,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
   // Mutable sync internals, mirroring persistedStateRef's pattern: async code
   // reads pairing and in-flight flags from here, never from a render snapshot.
   // Only read inside effects and callbacks — never during render.
-  const live = useRef<LiveSync>({ pairing, pushTimer: 0, pullBusy: false, pushBusy: false, pushAgain: false, revoked: false, backfilled: false, lastSyncFailed: false });
+  const live = useRef<LiveSync>({ pairing, pushTimer: 0, pullBusy: false, pushBusy: false, pushAgain: false, revoked: false, backfilled: false, pullResets: 0, lastSyncFailed: false });
 
   function adoptPairing(next: FamilyPairing | null) {
     live.current.pairing = next;
@@ -184,6 +191,8 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     const before = l.pairing;
     if (!before || debugMode || l.revoked || l.pullBusy) return;
     l.pullBusy = true;
+    const resets = l.pullResets;
+    let again = false;
     // Only a pull somebody can see flips the pill to "Syncing…": the
     // sixty-second heartbeat flipping it there and back re-rendered the whole
     // screen twice a minute for a word nobody was reading.
@@ -200,10 +209,15 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
         // The device count rides open pulls (boot, unlock, Sync now, the
         // invite screen) — polls skip it to spare the server a scan a minute.
         page = await transport.pullSince(before.token, since, before.deviceId, { after, count: open });
+        // Left (or re-paired) while this page was in flight: nothing from the
+        // old family may be merged — not its entries, and not its baby.
+        if (live.current.pairing?.token !== before.token) return;
+        const served = Date.parse(page.serverTime);
+        const serverNow = Number.isFinite(served) ? served : Date.now();
         const rows: Activity[] = [];
         if (Array.isArray(page.activities)) {
           for (const row of page.activities) {
-            const activity = rowToActivity(row);
+            const activity = rowToActivity(row, serverNow);
             if (activity) rows.push(activity);
           }
         }
@@ -233,10 +247,15 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
       const cur = live.current.pairing;
       // Left (or re-paired) while the pull was in flight — drop the result.
       if (!cur || cur.token !== before.token) return;
+      // A backup merged while this pull was in flight reset the cursor to ""
+      // for a full re-pull (the BACKFILL effect below), and that pull was
+      // turned away because this one held the flag. Advancing the cursor now
+      // would bury the request: keep the reset, and pull again once this lands.
+      again = l.pullResets !== resets;
       // A backlog the guard cut short resumes from the last row delivered,
       // not from the server's clock: the rest is still up there.
       const reached = full ? since : page.serverTime;
-      if (allPersisted) advanceCursor({ ...cur, lastSyncAt: reached });
+      if (allPersisted && !again) advanceCursor({ ...cur, lastSyncAt: reached });
       setStatus((s) => {
         const next: SyncStatus = {
           phase: "idle",
@@ -256,6 +275,11 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
       markFailed(error, before.token);
     } finally {
       l.pullBusy = false;
+      // The pulls turned away while this one held the flag: the full re-pull
+      // a merged backup asked for, or the new family's first pull after a
+      // switch — without it, "your log is on its way" waited for the next poll.
+      const now = live.current.pairing;
+      if (again || (now && now.token !== before.token)) window.setTimeout(() => void runPull(true), 0);
     }
   }
 
@@ -440,6 +464,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
       // the whole log is idempotent and a family's log is small — the cost
       // is a few reads, the alternative is a ghost entry nobody can kill.
       adoptPairing({ ...p, lastPushedAt: rewound ?? p.lastPushedAt, lastSyncAt: "" });
+      live.current.pullResets += 1;
       if (bootState === "ready") window.setTimeout(() => void runPull(true), 0);
     }
     // No schedulePush here: the same merge persists, so persistVersion bumps

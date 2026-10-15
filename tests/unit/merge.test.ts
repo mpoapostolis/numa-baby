@@ -167,7 +167,16 @@ test("summarizeMerge counts new, updated and unchanged rows", () => {
   const local = [entry("kept", { updatedAt: at(1) }), entry("edited", { note: "old", updatedAt: at(1) })];
   const incoming = [entry("edited", { note: "new", updatedAt: at(2) }), entry("arrived", { updatedAt: at(1) })];
   const merged = mergeActivities(local, incoming);
-  expect(summarizeMerge(local, merged)).toStrictEqual({ added: 1, updated: 1, unchanged: 1 });
+  expect(summarizeMerge(local, merged)).toStrictEqual({ added: 1, updated: 1, unchanged: 1, deletions: 0 });
+});
+
+// A restored partner's file carries their deletions too. Those are not new
+// entries, but the merge still has to know about them so they travel.
+test("summarizeMerge counts a tombstone for a row never held here as a deletion, not as new", () => {
+  const local = [entry("kept", { updatedAt: at(1) })];
+  const incoming = [entry("gone", { deleted: true, updatedAt: at(2) }), entry("arrived", { updatedAt: at(3) })];
+  const merged = mergeActivities(local, incoming);
+  expect(summarizeMerge(local, merged)).toStrictEqual({ added: 1, updated: 0, unchanged: 1, deletions: 1 });
 });
 
 test("re-importing your own backup reports every row unchanged", () => {
@@ -175,7 +184,7 @@ test("re-importing your own backup reports every row unchanged", () => {
   // A backup round-trips through JSON: equal content, different objects.
   const roundTripped = JSON.parse(JSON.stringify(local)) as Activity[];
   const merged = mergeActivities(local, roundTripped);
-  expect(summarizeMerge(local, merged)).toStrictEqual({ added: 0, updated: 0, unchanged: 3 });
+  expect(summarizeMerge(local, merged)).toStrictEqual({ added: 0, updated: 0, unchanged: 3, deletions: 0 });
 });
 
 const DEVICE_PREFS = { nightMode: false, reminders: { feedEnabled: false, feedIntervalMinutes: 180 } };
@@ -241,6 +250,16 @@ test("applyRemote: unknown rows are added in front, duplicates within a page fol
   expect(result.activities.map((item) => item.id)).toEqual(["c", "b", "a"]);
   expect(result.activities[0].note).toBe("second");
   expect(result).toMatchObject({ added: 2, updated: 0 });
+});
+
+// A partner logs by mistake and taps Undo: this phone may only ever see the
+// tombstone. It is stored, so the deletion holds, but it is not "new".
+test("applyRemote: a tombstone for an unknown row is kept but not counted as added", () => {
+  const local = [entry("a", { updatedAt: at(5) })];
+  const result = applyRemote(local, [entry("oops", { deleted: true, updatedAt: at(6) })]);
+  expect(result.activities).not.toBe(local);
+  expect(result.activities.find((item) => item.id === "oops")?.deleted).toBe(true);
+  expect(result).toMatchObject({ added: 0, updated: 0 });
 });
 
 test("applyRemote: a tombstone beats a live copy on a tie and the deletion sticks", () => {

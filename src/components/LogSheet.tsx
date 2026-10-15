@@ -1099,7 +1099,9 @@ function ProfileForm({ profile, onChange, onDone }: { profile: Profile; onChange
       const untouched = (draft.photo || undefined) === (openedPhoto || undefined);
       const plan = resolvePhotoSave({ opened: openedPhoto || undefined, draft: draft.photo || undefined, live: profile.photo || undefined });
       const photo = untouched ? profile.photo : plan.photo ?? "";
-      if (!onChange({ ...draft, photo, name: draft.name.trim() || "Baby" })) return;
+      // The routines are not edited here, so the draft's copy can only be out
+      // of date: the live list, which the other parent may have just changed.
+      if (!onChange({ ...draft, routines: profile.routines, photo, name: draft.name.trim() || "Baby" })) return;
       if (plan.share) void sharePhoto(plan.share);
       if (plan.forget) void forgetPhoto(plan.forget);
       onDone();

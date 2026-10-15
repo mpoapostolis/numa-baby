@@ -393,7 +393,7 @@ export default function SettingsScreen({
             <ItemSeparator />
             <SettingsAction title="Share with partner" description="Sends your whole log as a file — their app merges it, nothing gets replaced" icon={<Share2 />} onClick={() => { track("data_shared"); onShare(); }} />
             <ItemSeparator />
-            <SettingsAction title="Download backup" description="Saves a file with all your entries — keep it in a synced folder to be safe" icon={<Download />} onClick={() => { track("backup_downloaded"); onExport(); }} />
+            <SettingsAction title="Download backup" description="Saves a file with all your entries (not photos) — keep it in a synced folder to be safe" icon={<Download />} onClick={() => { track("backup_downloaded"); onExport(); }} />
             <ItemSeparator />
             <SettingsAction title="Restore a backup" description="Merges a backup file from any device" icon={<Upload />} onClick={() => { track("backup_restore_opened"); importRef.current?.click(); }} />
             <ItemSeparator />
@@ -429,7 +429,7 @@ export default function SettingsScreen({
             <SettingsAction
               className="settings-action-danger"
               title="Erase everything and start over"
-              description="Deletes every entry on this device — download a backup first"
+              description="Deletes every entry and photo on this device — a backup keeps entries, not photos"
               icon={<Trash2 />}
               onClick={() => { track("erase_all_opened"); onEraseAll(); }}
             />

@@ -107,23 +107,31 @@ export function applyRemote(
     updated += 1;
   }
   if (!fresh.size && !next) return { activities: local, added: 0, updated: 0 };
-  return { activities: [...fresh.values(), ...(next ?? local)], added: fresh.size, updated };
+  // "added" is what the toast calls new from your partner, so only live rows
+  // count. A tombstone for an entry this phone never held (a partner's log
+  // then Undo) is still kept, so the deletion is stored, but it is not news.
+  let added = 0;
+  for (const row of fresh.values()) if (!row.deleted) added += 1;
+  return { activities: [...fresh.values(), ...(next ?? local)], added, updated };
 }
 
-export type MergeSummary = { added: number; updated: number; unchanged: number };
+export type MergeSummary = { added: number; updated: number; unchanged: number; deletions: number };
 
 // The import toast's numbers, from the local timeline's point of view, counted
 // over stored rows (tombstones included — a deletion arriving from another
 // device is an update to the row it kills). "updated" is content-based, not
 // winner-based: re-importing your own backup reports every row unchanged even
-// though no local copy "won" anything.
+// though no local copy "won" anything. A tombstone for a row this phone never
+// held is a deletion, not something new: it is kept, but not shown as "new".
 export function summarizeMerge(local: Activity[], merged: Activity[]): MergeSummary {
   const localById = new Map(local.map((activity) => [activity.id, activity]));
-  const summary: MergeSummary = { added: 0, updated: 0, unchanged: 0 };
+  const summary: MergeSummary = { added: 0, updated: 0, unchanged: 0, deletions: 0 };
   for (const activity of merged) {
     const mine = localById.get(activity.id);
-    if (!mine) summary.added += 1;
-    else if (canonical(mine) === canonical(activity)) summary.unchanged += 1;
+    if (!mine) {
+      if (activity.deleted) summary.deletions += 1;
+      else summary.added += 1;
+    } else if (canonical(mine) === canonical(activity)) summary.unchanged += 1;
     else summary.updated += 1;
   }
   return summary;
