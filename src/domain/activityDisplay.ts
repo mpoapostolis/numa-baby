@@ -29,7 +29,13 @@ function includeNote(detail: string, note?: string) {
   return note?.trim() ? `${detail} · ${note.trim()}` : detail;
 }
 
-export function activityDetail(activity: Activity, units: UnitSystem = "metric") {
+/** A running sleep, burp or tummy timer: its detail says how long ago it
+    started, so its row has to be handed the minute clock to stay true. */
+export function detailReadsClock(activity: Activity) {
+  return !activity.endedAt && (activity.type === "sleep" || activity.type === "burp" || activity.type === "tummy");
+}
+
+export function activityDetail(activity: Activity, units: UnitSystem = "metric", now = Date.now()) {
   if (activity.type === "bottle") {
     return includeNote(
       `${formatVolume(activity.amount ?? 0, units)} · ${activity.milkType === "expressed" ? "breast milk" : "formula"}`,
@@ -46,13 +52,13 @@ export function activityDetail(activity: Activity, units: UnitSystem = "metric")
   if (activity.type === "sleep") {
     const detail = activity.endedAt
       ? `${formatTime(activity.startedAt)}–${formatTime(activity.endedAt)} · ${humanDuration(minutesBetween(activity.startedAt, activity.endedAt))}`
-      : `Started ${formatTime(activity.startedAt)} · ${timeAgo(activity.startedAt)}`;
+      : `Started ${formatTime(activity.startedAt)} · ${timeAgo(activity.startedAt, now)}`;
     return includeNote(detail, activity.note);
   }
   if (activity.type === "burp" || activity.type === "tummy") {
     const detail = activity.endedAt
       ? `${formatTime(activity.startedAt)}–${formatTime(activity.endedAt)} · ${humanDuration(minutesBetween(activity.startedAt, activity.endedAt))}`
-      : `Started ${formatTime(activity.startedAt)} · ${timeAgo(activity.startedAt)}`;
+      : `Started ${formatTime(activity.startedAt)} · ${timeAgo(activity.startedAt, now)}`;
     return includeNote(detail, activity.note);
   }
   if (activity.type === "medicine") {

@@ -89,7 +89,7 @@ function milkSub(summary: DaySummary) {
 
 function nursedSub(summary: DaySummary) {
   const sessions = `${summary.nursings} ${summary.nursings === 1 ? "session" : "sessions"}`;
-  return summary.hasRunningTimer ? `${sessions} · one still going` : sessions;
+  return summary.hasRunningNursing ? `${sessions} · one still going` : sessions;
 }
 
 type DayRecapProps = {
@@ -170,7 +170,11 @@ export function DayRecap({ summary, title, name = "", stepper }: DayRecapProps) 
       </header>
       {summary.isEmpty ? (
         <p className="recap-empty">
-          {summary.isToday ? "Nothing logged yet today." : "Nothing logged on this day."}
+          {/* Only tummy time or a medicine so far is still something logged —
+              Recent lists it just below, so "nothing" would contradict it. */}
+          {summary.otherEntries > 0
+            ? summary.isToday ? "No feeds, changes or sleep logged yet today." : "No feeds, changes or sleep logged on this day."
+            : summary.isToday ? "Nothing logged yet today." : "Nothing logged on this day."}
         </p>
       ) : (
       <div className="recap-grid">

@@ -16,14 +16,18 @@ import { ActivityGlyph } from "./ActivityGlyph";
 
 // Memoised: 80 timeline rows must not re-render on every minute tick. The
 // onEdit callback is stabilised with useCallback where the rows are rendered.
+// Only a running timer's row is handed `now` (see detailReadsClock) — its
+// "Started 13:58 · 45m ago" has to move with the clock; the rest never do.
 export const ActivityRow = memo(function ActivityRow({
   activity,
   onEdit,
+  now,
 }: {
   activity: Activity;
   onEdit: (activity: Activity) => void;
+  now?: number;
 }) {
-  const detail = activityDetail(activity, useUnits());
+  const detail = activityDetail(activity, useUnits(), now);
   return (
     <Item asChild size="sm" className="activity-row">
       <Button variant="ghost" className="activity-open" onClick={() => onEdit(activity)}>

@@ -52,11 +52,17 @@ export const SCORED_WINDOW = 12;
 export function rhythmRecord(kind: ForecastKind, steps: RhythmStep[], bounds: ForecastBounds, keep = 5): RhythmRecord {
   const gaps = steps.map((step) => Math.round((step.to - step.from) / 60_000));
   const calls: RhythmCall[] = [];
+  // A top-up bottle ten minutes after nursing, or a double-tap, is not a feed
+  // the app was calling — forecast() throws those gaps away too (minGap). So
+  // they are never scored as a miss, and never use up the window either.
+  const scorable: number[] = [];
+  for (let index = bounds.minSamples; index < steps.length; index += 1) {
+    if (gaps[index] >= bounds.minGap) scorable.push(index);
+  }
   // Only the recent stretch is scored. A run of forty is not a better claim
   // than a run of twelve — it is a claim about a baby who has since changed,
   // and "right 38 of the last 41" reads as arithmetic rather than as help.
-  const from = Math.max(bounds.minSamples, steps.length - SCORED_WINDOW);
-  for (let index = from; index < steps.length; index += 1) {
+  for (const index of scorable.slice(-SCORED_WINDOW)) {
     // Exactly the call the app would have made standing at steps[index].from.
     const guess: Forecast = forecast(kind, gaps.slice(0, index), steps[index].from, steps[index].from, bounds);
     if (guess.at === null) continue;
