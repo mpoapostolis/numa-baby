@@ -528,17 +528,19 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
   }
 
 // What a running timer is called, so stopping a burp no longer reports a
-// nursing session. Three timers exist; the fallbacks cover a fourth arriving
+// nursing session. Four timers exist; the fallbacks cover a fifth arriving
 // without this file being updated.
 const TIMER_LABEL: Partial<Record<Activity["type"], string>> = {
   nursing: "Nursing session",
   sleep: "Sleep",
   burp: "Burping",
+  tummy: "Tummy time",
 };
 const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
   nursing: "nursing timer",
   sleep: "sleep timer",
   burp: "burping timer",
+  tummy: "tummy time timer",
 };
 
   function stopTimer(id: string) {

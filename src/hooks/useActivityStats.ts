@@ -32,6 +32,7 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
     let lastBottle: Activity | undefined;
     let activeNursing: Activity | undefined;
     let activeBurp: Activity | undefined;
+    let activeTummy: Activity | undefined;
     let activeSleep: Activity | undefined;
     const completedSleeps: Activity[] = [];
     const activeTimers: Activity[] = [];
@@ -49,7 +50,7 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
         lastBottle = activity;
       }
       if (
-        (activity.type === "nursing" || activity.type === "burp" || activity.type === "sleep") &&
+        (activity.type === "nursing" || activity.type === "burp" || activity.type === "sleep" || activity.type === "tummy") &&
         !activity.endedAt
       ) {
         // Every open session, not just nursing — a sleep timer left running by
@@ -57,6 +58,7 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
         activeTimers.push(activity);
         if (!activeNursing && activity.type === "nursing") activeNursing = activity;
         if (!activeBurp && activity.type === "burp") activeBurp = activity;
+        if (!activeTummy && activity.type === "tummy") activeTummy = activity;
         if (!activeSleep && activity.type === "sleep") activeSleep = activity;
       }
       if (activity.type === "sleep" && activity.endedAt && completedSleeps.length < 24) {
@@ -140,6 +142,7 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
       lastBottle,
       activeNursing,
       activeBurp,
+      activeTummy,
       activeSleep,
       lastDiaper,
       activeTimers,

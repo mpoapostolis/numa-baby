@@ -6,6 +6,7 @@ export function activityTitle(activity: Activity) {
   if (activity.type === "bottle") return "Bottle";
   if (activity.type === "nursing") return "Nursing";
   if (activity.type === "burp") return activity.endedAt ? "Burping" : "Burping now";
+  if (activity.type === "tummy") return activity.endedAt ? "Tummy time" : "Tummy time now";
   if (activity.type === "sleep") return activity.endedAt ? "Sleep" : "Sleeping now";
   if (activity.type === "growth") return "Growth check";
   if (activity.type === "health") return activity.temperatureC ? "Temperature" : "Health note";
@@ -48,7 +49,7 @@ export function activityDetail(activity: Activity, units: UnitSystem = "metric")
       : `Started ${formatTime(activity.startedAt)} · ${timeAgo(activity.startedAt)}`;
     return includeNote(detail, activity.note);
   }
-  if (activity.type === "burp") {
+  if (activity.type === "burp" || activity.type === "tummy") {
     const detail = activity.endedAt
       ? `${formatTime(activity.startedAt)}–${formatTime(activity.endedAt)} · ${humanDuration(minutesBetween(activity.startedAt, activity.endedAt))}`
       : `Started ${formatTime(activity.startedAt)} · ${timeAgo(activity.startedAt)}`;

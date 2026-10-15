@@ -1,5 +1,5 @@
 import { Suspense, lazy, memo, useState } from "react";
-import { Camera, ChevronRight, Cloud, CloudOff, Gift, History, Images, Milk, Pill, ShieldCheck, Square, Syringe, Thermometer, Utensils, Waves, Weight } from "lucide-react";
+import { Camera, ChevronRight, Cloud, CloudOff, Gift, History, Images, Milk, Pill, ShieldCheck, Smile, Square, Syringe, Thermometer, Utensils, Waves, Weight } from "lucide-react";
 
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -28,6 +28,7 @@ import {
   formatTimelineDay,
   greeting,
   humanDuration,
+  isSameDay,
   liveDuration,
   minutesBetween,
 } from "../domain/time";
@@ -196,6 +197,25 @@ function LiveClock({ startedAt }: { startedAt: string }) {
   return <span className="timer-clock t-numeral">{liveDuration(startedAt, now)}</span>;
 }
 
+/**
+ * Tummy time while it runs, in the row that started it: the seconds where
+ * the subtitle was (the start time is the way to correct it), and Done.
+ */
+function TummyRunning({ activity, onStop, onEdit }: { activity: Activity; onStop: () => void; onEdit: (activity: Activity) => void }) {
+  return (
+    <div className="log-row log-row-secondary tummy-running">
+      <span className="action-icon" aria-hidden="true"><Smile /></span>
+      <button type="button" className="log-copy tummy-running-copy" onClick={() => onEdit(activity)}>
+        <strong>Tummy time</strong>
+        <small><LiveClock startedAt={activity.startedAt} /> · <span className="tile-started-edit">Edit</span></small>
+      </button>
+      <Button className="tummy-done" onClick={onStop} aria-label="Done — stop tummy time timer">
+        <Square size={14} fill="currentColor" aria-hidden="true" /> Done
+      </Button>
+    </div>
+  );
+}
+
 /** "Both" is a real answer for a nursing session, not a missing one. */
 function sideLabel(side: Activity["side"]) {
   return side === "both" ? "Both" : side === "left" ? "Left" : "Right";
@@ -355,6 +375,7 @@ function TodayScreen({
     lastBottle,
     activeNursing,
     activeBurp,
+    activeTummy,
     activeSleep,
     activeTimers,
     typicalGap,
@@ -385,7 +406,7 @@ function TodayScreen({
   const lastSolid = sortedActivities.find((activity) => activity.type === "solid");
   const nursingTileShown = profile.feedingMode !== "bottle";
   const homelessTimers = activeTimers.filter((timer) =>
-    timer.type === "nursing" ? !nursingTileShown : timer.type !== "sleep" && timer.type !== "burp",
+    timer.type === "nursing" ? !nursingTileShown : timer.type !== "sleep" && timer.type !== "burp" && timer.type !== "tummy",
   );
   const gapElapsed = lastFeed
     ? minutesBetween(lastFeed.startedAt, new Date(minuteClock).toISOString())
@@ -544,6 +565,17 @@ function TodayScreen({
     };
     if (onAdd(entry, "Sleep timer started")) track("sleep_started");
   }
+
+  // Asked for from the feedback box by a mum timing tummy time with the burp
+  // timer: its own timer, and today's total under it — the guidance is a
+  // daily amount, built up in short goes.
+  function startTummy() {
+    const entry: Activity = { id: makeId(), type: "tummy", startedAt: new Date().toISOString() };
+    if (onAdd(entry, "Tummy time started")) track("tummy_started");
+  }
+  const tummyToday = sortedActivities
+    .filter((activity) => activity.type === "tummy" && activity.endedAt && isSameDay(activity.startedAt, new Date(minuteClock)))
+    .reduce((total, activity) => total + minutesBetween(activity.startedAt, activity.endedAt!), 0);
 
   function toggleBurp() {
     if (activeBurp) {
@@ -1007,6 +1039,22 @@ function TodayScreen({
             onShareRecord={shareRhythm}
           />
 
+          {activeTummy ? (
+            <TummyRunning
+              activity={activeTummy}
+              onStop={() => { track("tummy_stopped"); onStopTimer(activeTummy.id); }}
+              onEdit={onEdit}
+            />
+          ) : (
+            <Button variant="ghost" className="log-row log-row-secondary action-tummy" onClick={startTummy}>
+              <span className="action-icon" aria-hidden="true"><Smile /></span>
+              <span className="log-copy">
+                <strong>Tummy time</strong>
+                <small>{tummyToday > 0 ? `${humanDuration(tummyToday)} today · start the timer` : "Start the timer — awake, and watched"}</small>
+              </span>
+              <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             className="log-row log-row-secondary action-growth"

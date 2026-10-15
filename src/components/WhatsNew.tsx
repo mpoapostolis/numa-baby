@@ -66,9 +66,10 @@ export function WhatsNew({ releaseIds, onDismiss, onAction }: WhatsNewProps) {
             {items.map((item) => <li key={item}>{item}</li>)}
           </ul>
         )}
-        {/* The newest release's buttons are part of its headline: closed,
-            the card is the news and the way to it. */}
-        <ReleaseActions actions={releases[0].actions} from="card" onAction={onAction} />
+        {/* A release's buttons are part of its headline: closed, the card is
+            the news and the way to it — from whichever unseen release has
+            them, so a newer one without buttons does not hide them. */}
+        <ReleaseActions actions={releases.find((release) => release.actions?.length)?.actions} from="card" onAction={onAction} />
       </div>
       <Button
         variant="ghost"

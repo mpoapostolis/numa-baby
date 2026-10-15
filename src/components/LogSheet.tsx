@@ -273,7 +273,7 @@ export function LogSheet({
   const headRef = useRef<HTMLInputElement>(null);
   const temperatureRef = useRef<HTMLInputElement>(null);
   const isTimed = editing
-    ? editing.type === "nursing" || editing.type === "burp" || editing.type === "sleep"
+    ? editing.type === "nursing" || editing.type === "burp" || editing.type === "sleep" || editing.type === "tummy"
     : false;
 
   function patch(partial: Partial<SheetDraft>) {
@@ -516,7 +516,7 @@ export function LogSheet({
   function saveEditedActivity() {
     if (!editing) return;
     const timed =
-      editing.type === "sleep" || editing.type === "nursing" || editing.type === "burp";
+      editing.type === "sleep" || editing.type === "nursing" || editing.type === "burp" || editing.type === "tummy";
     const outcome = validateDraft(
       {
         type: editing.type,
@@ -542,7 +542,7 @@ export function LogSheet({
     };
 
     if (
-      (next.type === "nursing" || next.type === "burp" || next.type === "sleep") &&
+      (next.type === "nursing" || next.type === "burp" || next.type === "sleep" || next.type === "tummy") &&
       !next.endedAt &&
       activities.some(
         (activity) => activity.type === next.type && !activity.endedAt && activity.id !== next.id,
@@ -575,6 +575,17 @@ export function LogSheet({
       next.headCm = outcome.value.headCm;
     }
     if (next.type === "health") next.temperatureC = outcome.value.temperatureC;
+    if (next.type === "medicine") {
+      const medicine = draft.medicineName.trim();
+      if (!medicine) {
+        showFormError({ message: "Which medicine was it?", field: "start" });
+        return;
+      }
+      next.medicine = medicine.slice(0, NOTE_MAX_LENGTH);
+      const dose = draft.doseText.trim().slice(0, NOTE_MAX_LENGTH);
+      if (dose) next.dose = dose;
+      else delete next.dose;
+    }
     if (next.type === "solid") {
       const food = draft.foodText.trim();
       if (!food) {
@@ -964,6 +975,38 @@ export function LogSheet({
                 <ToggleGroupItem value="both"><span className="both-icon" aria-hidden="true"><Droplet size={18} />●</span><strong>Both</strong><Check className="choice-check" /></ToggleGroupItem>
               </ToggleGroup>
             </Field>
+          )}
+
+          {/* Reported from the feedback box: "I logged the wrong amount of
+              vitamin D and I couldn't change it." The edit sheet had no field
+              for either — only the time and a note. */}
+          {editing.type === "medicine" && (
+            <>
+              <Field className="medicine-field">
+                <FieldLabel htmlFor="edit-medicine-name">What was given</FieldLabel>
+                <InputGroup>
+                  <InputGroupInput
+                    id="edit-medicine-name"
+                    value={draft.medicineName}
+                    maxLength={NOTE_MAX_LENGTH}
+                    onChange={(event) => { patch({ medicineName: event.target.value }); setFormError(null); }}
+                  />
+                </InputGroup>
+              </Field>
+              <Field className="medicine-field">
+                <FieldLabel htmlFor="edit-medicine-dose">How much <span className="optional-label">Optional</span></FieldLabel>
+                <InputGroup>
+                  <InputGroupInput
+                    id="edit-medicine-dose"
+                    value={draft.doseText}
+                    maxLength={NOTE_MAX_LENGTH}
+                    placeholder="2.5 ml, one drop…"
+                    autoFocus
+                    onChange={(event) => patch({ doseText: event.target.value })}
+                  />
+                </InputGroup>
+              </Field>
+            </>
           )}
 
           {editing.type === "solid" && (

@@ -22,3 +22,10 @@ test("an older release with nothing to open stays a single line", () => {
   render(<WhatsNew releaseIds={["2026-10-11.2"]} onDismiss={() => {}} onAction={() => {}} />);
   expect(document.querySelector(".release-actions")).toBeNull();
 });
+
+test("a newer release without buttons does not hide an older unseen one's", () => {
+  const onAction = vi.fn();
+  render(<WhatsNew releaseIds={["2026-10-15", "2026-10-14"]} onDismiss={() => {}} onAction={onAction} />);
+  fireEvent.click(screen.getByRole("button", { name: "Monthly photos" }));
+  expect(onAction).toHaveBeenCalledWith("months");
+});

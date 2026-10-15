@@ -125,7 +125,7 @@ export function summarizeDay(activities: Activity[], day: Date, now: number): Da
     if (!startedToday && !(isSleep && sleepMinutesHere > 0)) continue;
 
     const isOpen =
-      (activity.type === "nursing" || activity.type === "burp" || isSleep) && !activity.endedAt;
+      (activity.type === "nursing" || activity.type === "burp" || activity.type === "tummy" || isSleep) && !activity.endedAt;
     const isStale =
       isOpen &&
       now - new Date(activity.startedAt).getTime() > STALE_OPEN_SPAN_MINUTES * 60_000;

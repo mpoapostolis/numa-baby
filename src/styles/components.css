@@ -132,6 +132,13 @@
   color: var(--glyph-burp);
 }
 
+/* Tummy time is growing: the honey of growth. */
+.glyph-tummy,
+.action-tummy .action-icon {
+  background: color-mix(in oklab, var(--glyph-growth) var(--glyph-wash), var(--card));
+  color: var(--glyph-growth);
+}
+
 .glyph-sleep {
   background: color-mix(in oklab, var(--glyph-sleep) var(--glyph-wash), var(--card));
   color: var(--glyph-sleep);

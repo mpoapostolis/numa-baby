@@ -24,6 +24,14 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-10-15",
+    title: "Tummy time, and a medicine you can correct",
+    items: [
+      "Tummy time has its own timer now, on Today, with today’s total under it — it adds up the short goes, which is how the advice counts it. Asked for by a mum who was timing it with the burping timer.",
+      "Logged the wrong amount of a medicine? Open it from Today or the Timeline and change how much — or the name. Until now only the time and the note could be changed.",
+    ],
+  },
+  {
     id: "2026-10-14",
     title: "Monthly photos and vaccines",
     items: [

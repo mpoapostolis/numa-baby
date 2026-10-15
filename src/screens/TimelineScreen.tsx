@@ -57,7 +57,7 @@ export default function TimelineScreen({
   // 03:14 as at 03:15 — so the clock these memos see moves once a day, and
   // the per-minute recompute (all of history, for every visible day) goes.
   const hasOpenTimer = useMemo(
-    () => activities.some((activity) => !activity.endedAt && (activity.type === "sleep" || activity.type === "nursing" || activity.type === "burp")),
+    () => activities.some((activity) => !activity.endedAt && (activity.type === "sleep" || activity.type === "nursing" || activity.type === "burp" || activity.type === "tummy")),
     [activities],
   );
   const summaryClock = hasOpenTimer ? minuteClock : new Date(minuteClock).setHours(0, 0, 0, 0);
@@ -93,13 +93,13 @@ export default function TimelineScreen({
             onFilterChange(value as TimelineFilter);
           }}
         >
-          {(["all", "photos", "bottle", "nursing", "diaper", "burp", "sleep", "solid", "medicine", "growth", "health"] as const).map((option) => (
+          {(["all", "photos", "bottle", "nursing", "diaper", "burp", "tummy", "sleep", "solid", "medicine", "growth", "health"] as const).map((option) => (
             <ToggleGroupItem
               key={option}
               value={option}
-              aria-label={option === "photos" ? "Show entries with a photo" : `Show ${option} logs`}
+              aria-label={option === "photos" ? "Show entries with a photo" : `Show ${option === "tummy" ? "tummy time" : option} logs`}
             >
-              {option === "all" ? "All" : option === "solid" ? "Solids" : option[0].toUpperCase() + option.slice(1)}
+              {option === "all" ? "All" : option === "solid" ? "Solids" : option === "tummy" ? "Tummy time" : option[0].toUpperCase() + option.slice(1)}
             </ToggleGroupItem>
           ))}
         </ToggleGroup>

@@ -108,7 +108,11 @@ const BUDGET_GZIP = {
   // card right after Dirty. Everything else that changed with it is in lazy
   // sheets, and the month-birthday maths stayed there. Measured after:
   // 119.72 kB.
-  "index-*.js": 119_750,
+  // 119_750 → 120_100 on 2026-10-15 for tummy time, asked for from the
+  // feedback box: a timer of its own on Today, with today's total — Today is
+  // the boot path, and the timer is the existing one, taught a fourth kind.
+  // Measured after: 120.09 kB.
+  "index-*.js": 120_100,
   "index-*.css": 29_000,
 };
 const LAZY_SCREENS = ["SettingsScreen", "GrowthGuideScreen", "InsightsScreen", "TimelineScreen", "LogSheet", "OnboardingScreen", "sonner", "FactOfTheDay"];

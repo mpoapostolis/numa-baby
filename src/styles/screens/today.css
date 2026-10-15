@@ -752,6 +752,53 @@
   border-color: color-mix(in oklab, var(--signal) 35%, var(--border));
 }
 
+/* Tummy time running, in its own row: obviously live, the seconds big
+   enough to read from the floor beside the mat, and Done in thumb's reach. */
+.tummy-running {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-color: color-mix(in oklab, var(--glyph-growth) 45%, var(--border));
+  background: color-mix(in oklab, var(--glyph-growth) 6%, var(--card));
+}
+
+.tummy-running .action-icon {
+  background: color-mix(in oklab, var(--glyph-growth) var(--glyph-wash), var(--card));
+  color: var(--glyph-growth);
+}
+
+.tummy-running-copy {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tummy-running-copy small {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.tummy-running-copy .timer-clock {
+  margin-left: 0;
+  padding-right: 0;
+  color: var(--ink-1);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.tummy-done {
+  flex: 0 0 auto;
+  min-height: 44px;
+  font-weight: 600;
+}
+
 /* Growth + health: 44px secondary rows, whole row tappable. */
 .log-row-secondary {
   width: 100%;
