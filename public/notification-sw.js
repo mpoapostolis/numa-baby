@@ -40,13 +40,22 @@ self.addEventListener("push", (event) => {
   const decide = Promise.resolve()
     .then(() => self.registration.getNotifications({ tag }))
     .then((open) => {
-      if (due && open.some((notification) => notification.data?.due === due)) return false;
+      if (due && open.some((notification) => sameReminder(notification, due))) return false;
       open.forEach((notification) => notification.close());
       return true;
     })
     .catch(() => true);
   event.waitUntil(decide.then(show));
 });
+
+/** The same reminder as `due`: the same due time — or, for one shown by an
+    older version of the app (which kept no due time), shown within the last
+    hour, under the shortest reminder interval. */
+function sameReminder(notification, due) {
+  const data = notification.data || {};
+  if ("due" in data) return data.due === due;
+  return Date.now() - (notification.timestamp || 0) < 60 * 60_000;
+}
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();

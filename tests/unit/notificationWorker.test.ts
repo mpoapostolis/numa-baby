@@ -11,11 +11,14 @@ const source = readFileSync(new URL("../../public/notification-sw.js", import.me
 type Listener = (event: Record<string, unknown>) => void;
 type Shown = { title: string; options: Record<string, unknown> };
 
-function serviceWorker({ openAt = "https://numalog.app/", hasGetNotifications = true, openDue = null as string | null } = {}) {
+function serviceWorker({ openAt = "https://numalog.app/", hasGetNotifications = true, openDue = null as string | null, legacyShownAgoMs = null as number | null } = {}) {
   const listeners: Record<string, Listener> = {};
   const calls: string[] = [];
   const shown: Shown[] = [];
-  const open = [{ tag: "feed-reminder", data: { due: openDue }, close: () => calls.push("close feed-reminder") }];
+  const open = [legacyShownAgoMs === null
+    ? { tag: "feed-reminder", data: { due: openDue }, close: () => calls.push("close feed-reminder") }
+    // Shown by an older version of the app, which kept no due time.
+    : { tag: "feed-reminder", data: { url: "/" }, timestamp: Date.now() - legacyShownAgoMs, close: () => calls.push("close feed-reminder") }];
   const client = {
     url: openAt,
     focus: async () => { calls.push("focus"); return client; },
@@ -118,4 +121,18 @@ test("a different reminder rings, however soon after the last", async () => {
   await sw.push({ ...feed, due: "2026-10-15T06:40:00.000Z" });
   expect(sw.shown[0].options).toMatchObject({ renotify: true });
   expect(sw.calls).toEqual(["close feed-reminder", "show feed-reminder"]);
+});
+
+// Right after the update, the reminder in the shade was shown by the older
+// version, which kept no due time. Shown minutes ago, it is this reminder;
+// hours ago, an earlier one.
+test("a reminder shown by the older app minutes ago is not rung twice; hours ago it is replaced with a ring", async () => {
+  const recent = serviceWorker({ legacyShownAgoMs: 3 * 60_000 });
+  await recent.push({ ...feed, due: "2026-10-15T06:10:00.000Z" });
+  expect(recent.shown[0].options).toMatchObject({ renotify: false });
+
+  const older = serviceWorker({ legacyShownAgoMs: 3 * 60 * 60_000 });
+  await older.push({ ...feed, due: "2026-10-15T06:10:00.000Z" });
+  expect(older.shown[0].options).toMatchObject({ renotify: true });
+  expect(older.calls).toEqual(["close feed-reminder", "show feed-reminder"]);
 });

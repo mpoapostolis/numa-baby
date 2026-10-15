@@ -140,7 +140,13 @@ function ringReminder(title: string, body: string, tag: string, due: string) {
   void navigator.serviceWorker.ready
     .then(async (registration) => {
       const open = await registration.getNotifications({ tag }).catch(() => [] as Notification[]);
-      const same = open.some((notification) => notification.data?.due === due);
+      // An older version of the app kept no due time: one of its notifications
+      // shown within the last hour is taken to be this reminder.
+      const same = open.some((notification) =>
+        notification.data && "due" in notification.data
+          ? notification.data.due === due
+          : Date.now() - ((notification as Notification & { timestamp?: number }).timestamp ?? 0) < 60 * 60_000,
+      );
       if (!same) open.forEach((notification) => notification.close());
       // renotify: replacing a same-tag notification is otherwise silent.
       // TypeScript's NotificationOptions leaves it out, hence the cast.

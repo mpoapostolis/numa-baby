@@ -175,3 +175,33 @@ test("a fast-clock entry is sent, then takes the server's time", async () => {
   await waitFor(() => expect(Date.parse(blob().activities.find((a) => a.id === "fast")!.updatedAt!)).toBeLessThanOrEqual(Date.now()));
   expect(blob().activities.find((a) => a.id === "fast")).toMatchObject({ amount: 90 });
 }, 12_000);
+
+// The cursor was set while this phone's clock ran fast; the clock has since
+// been corrected. Entries logged since sit below the cursor — and used never
+// to be sent, while Sync now said all was well.
+test("a cursor left ahead by a fast clock does not keep new entries from the partner", async () => {
+  const now = Date.now();
+  seedLog([{ id: "new", type: "bottle", amount: 90, startedAt: new Date(now - 60_000).toISOString(), updatedAt: new Date(now - 60_000).toISOString() }]);
+  const ahead = new Date(now + 5 * 86_400_000).toISOString();
+  window.localStorage.setItem(FAMILY_KEY, JSON.stringify({
+    familyId: "tok", token: "tok", deviceId: "d", deviceLabel: "x", lastSyncAt: new Date(now - 60_000).toISOString(), lastPushedAt: ahead, lastPushedProfileAt: "",
+  }));
+  const pushed: string[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+    const served = new Date().toISOString();
+    if (String(url).startsWith("/api/sync/pull")) {
+      return new Response(JSON.stringify({ activities: [], profile: null, profileUpdatedAt: null, deviceCount: 2, serverTime: served }), { status: 200 });
+    }
+    if (String(url).startsWith("/api/sync/push")) {
+      const body = JSON.parse(String(init?.body ?? "{}")) as { activities?: Array<{ id: string }> };
+      pushed.push(...(body.activities ?? []).map((row) => row.id));
+      return new Response(JSON.stringify({ accepted: body.activities?.length ?? 0, serverTime: served }), { status: 200 });
+    }
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+  }));
+
+  renderHook(() => useBoth());
+  await waitFor(() => expect(pushed).toContain("new"), { timeout: 8_000 });
+  // And the cursor is back on this phone's clock.
+  await waitFor(() => expect(JSON.parse(window.localStorage.getItem(FAMILY_KEY)!).lastPushedAt <= new Date().toISOString()).toBe(true));
+}, 12_000);

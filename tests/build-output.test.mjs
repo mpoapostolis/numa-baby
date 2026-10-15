@@ -119,7 +119,8 @@ const BUDGET_GZIP = {
   // that waits for the sounds and the open form, and Today's figures. Only
   // their lazy halves load later. With the two reviews that followed (a
   // fast-clock entry taking the server's time once it is sent, one ring per
-  // reminder, the recovery screen leaving reminders alone): 120.92 kB.
+  // reminder, the recovery screen leaving reminders alone, a cursor left
+  // ahead by a fast clock sending the log once more): 120.95 kB.
   "index-*.js": 120_950,
   "index-*.css": 29_000,
 };

@@ -307,19 +307,18 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     // below the cursor. See domain/syncCursor.ts for why that is the safe
     // direction to be wrong in.
     const backfilled = l.backfilled;
-    const delta = selectPushDelta(activities, before.lastPushedAt, backfilled);
+    // A cursor ahead of this phone's clock was set while the clock ran fast;
+    // everything logged since the clock came back sits below it and would
+    // never be sent. Send the whole log once — the server keeps the newer
+    // copy of each row — and the cursor comes back to this clock below.
+    const cursorAhead = before.lastPushedAt > now;
+    const delta = selectPushDelta(activities, before.lastPushedAt, backfilled || cursorAhead);
     const sendProfile = Boolean(profileUpdatedAt) && profileUpdatedAt !== before.lastPushedProfileAt;
     if (!delta.length && !sendProfile) return;
     l.pushBusy = true;
     setStatus((s) => (s.phase === "syncing" ? s : { ...s, phase: "syncing" }));
     try {
       let maxStamp = before.lastPushedAt;
-      // Rows written while this phone's clock ran fast, which the server has
-      // stored as "received now" (worker/index.ts). Left with their future
-      // stamps here, they would win every conflict against the other
-      // parent's later edits, and go out again on every push.
-      const settled: Array<{ id: string; updatedAt: string }> = [];
-      let settledAt = Number.NaN;
       // Chunked to the server's batch cap; Math.max keeps one iteration for a
       // profile-only save.
       for (let index = 0; index < Math.max(delta.length, 1); index += PUSH_CHUNK) {
@@ -338,17 +337,21 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
           // The profile rides the first chunk only — one stamp, one winner.
           ...(index === 0 && sendProfile ? { profile, profileUpdatedAt } : {}),
         });
+        // Rows written while this phone's clock ran fast, which the server
+        // has just stored as "received now" (worker/index.ts). Left with
+        // their future stamps here, they would win every conflict against
+        // the other parent's later edits, and go out again on every push.
+        // Settled chunk by chunk, as each is answered, and no later than the
+        // clock the cursor is held to, so they are not sent again.
         const served = Date.parse(result?.serverTime ?? "");
+        const settled: Array<{ id: string; updatedAt: string }> = [];
         for (const activity of chunk) {
           const stamp = activityUpdatedAt(activity);
           if (stamp > maxStamp) maxStamp = stamp;
-          if (Number.isFinite(served) && tooFarInFuture(stamp, served)) {
-            settled.push({ id: activity.id, updatedAt: stamp });
-            settledAt = served;
-          }
+          if (Number.isFinite(served) && tooFarInFuture(stamp, served)) settled.push({ id: activity.id, updatedAt: stamp });
         }
+        if (settled.length) settlePushedStamps(settled, Math.min(served, Date.parse(now)));
       }
-      if (settled.length) settlePushedStamps(settled, settledAt);
       // Clamp the cursor to this device's clock: a partner's future-skewed
       // stamp we merged and echoed must never freeze our own future pushes.
       if (maxStamp > now) maxStamp = now;
