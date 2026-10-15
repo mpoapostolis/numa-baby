@@ -10,6 +10,7 @@ import {
 } from "../domain/forecast";
 import { rhythmRecord, stepsFromMoments } from "../domain/rhythm";
 import { ageInMonths } from "../domain/time";
+import { isTimedType } from "../domain/timers";
 import { Activity, Profile } from "../domain/types";
 
 // Every derived figure the screens read, split into two memos: one pass over
@@ -49,10 +50,7 @@ export function useActivityStats(activities: Activity[], profile: Profile, minut
       if (!lastBottle && activity.type === "bottle" && activity.amount && activity.milkType) {
         lastBottle = activity;
       }
-      if (
-        (activity.type === "nursing" || activity.type === "burp" || activity.type === "sleep" || activity.type === "tummy") &&
-        !activity.endedAt
-      ) {
+      if (isTimedType(activity.type) && !activity.endedAt) {
         // Every open session, not just nursing — a sleep timer left running by
         // an older version must stay visible and individually stoppable.
         activeTimers.push(activity);

@@ -4,11 +4,11 @@
 // archive.
 
 import "../styles/screens/news-actions.css";
-import { Camera, Images, Syringe } from "lucide-react";
+import { Camera, Droplets, Images, Syringe } from "lucide-react";
 import type { ReleaseAction } from "../domain/changelog";
 import { track } from "../domain/analytics";
 
-const ICON = { months: Images, vaccines: Syringe, profile: Camera } as const;
+const ICON = { months: Images, vaccines: Syringe, profile: Camera, pump: Droplets } as const;
 
 export function ReleaseActions({
   actions,

@@ -135,7 +135,13 @@ const BUDGET_GZIP = {
   // developer along (one lazy import, run only on erase) and the tummy line
   // judged on seconds. 121.55 kB measured — and the build stamp alone moves
   // it by a few bytes, so the line keeps some room.
-  "index-*.js": 121_600,
+  // 121_600 → 122_000 on 2026-10-15 for pumping, asked for from the feedback
+  // box: a row on Today with the time since the last pump. The split rule was
+  // honoured: the sheet, the edit fields and the Timeline filter are lazy; on
+  // the boot path are the row, the pump's name, detail and glyph, and the
+  // amount check every save passes — partly paid for by folding the six
+  // copies of the timed-types list into one. Measured after: 121.95 kB.
+  "index-*.js": 122_000,
   "index-*.css": 29_000,
 };
 const LAZY_SCREENS = ["SettingsScreen", "GrowthGuideScreen", "InsightsScreen", "TimelineScreen", "LogSheet", "OnboardingScreen", "sonner", "FactOfTheDay"];

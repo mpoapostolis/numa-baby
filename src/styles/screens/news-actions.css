@@ -1,7 +1,8 @@
 /* The buttons under a release note (ReleaseActions.tsx), on the card on
    Today and in the News archive. Lazy, with those two: never on the boot
    path. Each wears the hue of the row it opens — honey for Months, the
-   health coral for Vaccines, the nursing rose of the baby's face. */
+   health coral for Vaccines, the nursing rose of the baby's face and of
+   Pumping. */
 .release-actions {
   display: flex;
   flex-wrap: wrap;
@@ -35,7 +36,8 @@
   --tone: var(--glyph-health);
 }
 
-.release-action.is-profile {
+.release-action.is-profile,
+.release-action.is-pump {
   --tone: var(--glyph-nursing);
 }
 

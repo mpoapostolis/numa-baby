@@ -10,6 +10,7 @@
 //      actually happened, not a promise about the rest of the session.
 
 import { isSameDay, minutesBetween, minutesOnDay } from "./time";
+import { isTimedType } from "./timers";
 import { Activity } from "./types";
 
 export type DaySummary = {
@@ -131,8 +132,7 @@ export function summarizeDay(activities: Activity[], day: Date, now: number): Da
     const sleepMinutesHere = isSleep ? minutesOnDay(activity, date, now) : 0;
     if (!startedToday && !(isSleep && sleepMinutesHere > 0)) continue;
 
-    const isOpen =
-      (activity.type === "nursing" || activity.type === "burp" || activity.type === "tummy" || isSleep) && !activity.endedAt;
+    const isOpen = isTimedType(activity.type) && !activity.endedAt;
     const isStale =
       isOpen &&
       now - new Date(activity.startedAt).getTime() > STALE_OPEN_SPAN_MINUTES * 60_000;

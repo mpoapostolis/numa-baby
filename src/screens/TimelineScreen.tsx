@@ -12,6 +12,7 @@ import { EmptyState } from "../components/EmptyState";
 import { detailReadsClock } from "../domain/activityDisplay";
 import { bucketByDay, dayKey, summarizeDay } from "../domain/daySummary";
 import { formatTimelineDay } from "../domain/time";
+import { isTimedType } from "../domain/timers";
 import { Activity, ActivityType } from "../domain/types";
 
 /** Every entry, one kind, or — asked for alongside nappy photos — the
@@ -58,7 +59,7 @@ export default function TimelineScreen({
   // 03:14 as at 03:15 — so the clock these memos see moves once a day, and
   // the per-minute recompute (all of history, for every visible day) goes.
   const hasOpenTimer = useMemo(
-    () => activities.some((activity) => !activity.endedAt && (activity.type === "sleep" || activity.type === "nursing" || activity.type === "burp" || activity.type === "tummy")),
+    () => activities.some((activity) => !activity.endedAt && isTimedType(activity.type)),
     [activities],
   );
   const summaryClock = hasOpenTimer ? minuteClock : new Date(minuteClock).setHours(0, 0, 0, 0);
@@ -94,13 +95,13 @@ export default function TimelineScreen({
             onFilterChange(value as TimelineFilter);
           }}
         >
-          {(["all", "photos", "bottle", "nursing", "diaper", "burp", "tummy", "sleep", "solid", "medicine", "growth", "health"] as const).map((option) => (
+          {(["all", "photos", "bottle", "nursing", "pump", "diaper", "burp", "tummy", "sleep", "solid", "medicine", "growth", "health"] as const).map((option) => (
             <ToggleGroupItem
               key={option}
               value={option}
-              aria-label={option === "photos" ? "Show entries with a photo" : `Show ${option === "tummy" ? "tummy time" : option} logs`}
+              aria-label={option === "photos" ? "Show entries with a photo" : `Show ${option === "tummy" ? "tummy time" : option === "pump" ? "pumping" : option} logs`}
             >
-              {option === "all" ? "All" : option === "solid" ? "Solids" : option === "tummy" ? "Tummy time" : option[0].toUpperCase() + option.slice(1)}
+              {option === "all" ? "All" : option === "solid" ? "Solids" : option === "tummy" ? "Tummy time" : option === "pump" ? "Pumping" : option[0].toUpperCase() + option.slice(1)}
             </ToggleGroupItem>
           ))}
         </ToggleGroup>

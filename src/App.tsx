@@ -825,7 +825,7 @@ export default function HomePage() {
   const onManualNursing = useStableCallback(() => openSheet("nursing", "manual"));
   const onSeeTimeline = useStableCallback(() => navigateTo("timeline"));
   // A release note's buttons: the feature it announces, opened.
-  const onReleaseAction = useStableCallback((to: "months" | "vaccines" | "profile") => openSheet(to));
+  const onReleaseAction = useStableCallback((to: "months" | "vaccines" | "profile" | "pump") => openSheet(to));
   const onOpenMonth = useStableCallback((month: number) => {
     openSheet("months");
     setMonthToOpen(month);

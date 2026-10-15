@@ -115,7 +115,8 @@
 }
 
 .action-nurse .action-icon,
-.glyph-nursing {
+.glyph-nursing,
+.glyph-pump {
   background: color-mix(in oklab, var(--glyph-nursing) var(--glyph-wash), var(--card));
   color: var(--glyph-nursing);
 }

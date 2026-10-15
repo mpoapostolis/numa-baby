@@ -61,7 +61,7 @@ type SettingsScreenProps = {
   onImport: (event: ChangeEvent<HTMLInputElement>) => void;
   onOpenProfile: () => void;
   /** Open what a release note in the News archive is about. */
-  onOpenSheet: (sheet: "months" | "vaccines" | "profile") => void;
+  onOpenSheet: (sheet: "months" | "vaccines" | "profile" | "pump") => void;
   onRoutinesChange: (routines: Routine[]) => void;
   onEraseAll: () => void;
   familySync: FamilySync;

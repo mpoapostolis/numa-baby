@@ -163,6 +163,21 @@ test("fuzz: merge(a, b) deep-equals merge(b, a) across 200 randomized entries", 
   expect(mergeActivities(ab, incoming)).toStrictEqual(ab);
 });
 
+// A pump from a newer build, through either path a phone one build behind
+// would take it: every field it carries arrives, and its end above all — a
+// pump that lost its end would be an open entry nobody can stop.
+test("a pump keeps its amount, side and end through the import merge and the sync", () => {
+  const pumped = entry("p", { type: "pump", side: "left", amount: 110, startedAt: at(0), endedAt: at(18), updatedAt: at(19) });
+  delete pumped.diaperKind;
+  const merged = mergeActivities([entry("a")], [pumped]);
+  expect(merged.find((item) => item.id === "p")).toStrictEqual(pumped);
+  const synced = applyRemote([entry("a")], [pumped]);
+  expect(synced.activities.find((item) => item.id === "p")).toStrictEqual(pumped);
+  // An edit from the other phone, newer, replaces it whole.
+  const edited = { ...pumped, amount: 120, updatedAt: at(30) };
+  expect(mergeActivities([pumped], [edited])).toStrictEqual([edited]);
+});
+
 test("summarizeMerge counts new, updated and unchanged rows", () => {
   const local = [entry("kept", { updatedAt: at(1) }), entry("edited", { note: "old", updatedAt: at(1) })];
   const incoming = [entry("edited", { note: "new", updatedAt: at(2) }), entry("arrived", { updatedAt: at(1) })];

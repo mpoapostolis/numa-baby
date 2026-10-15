@@ -32,6 +32,7 @@ import {
   isSameDay,
   liveDuration,
   minutesBetween,
+  timeAgo,
 } from "../domain/time";
 import { dueLabel, dueSoon, vaccineLabel } from "../domain/vaccines";
 import { MONTHS_KEPT } from "../domain/keepsakes";
@@ -442,6 +443,16 @@ function TodayScreen({
   const homelessTimers = activeTimers.filter((timer) =>
     timer.type === "nursing" ? !nursingTileShown : timer.type !== "sleep" && timer.type !== "burp" && timer.type !== "tummy",
   );
+  // Pumping, asked for from the feedback box. Logged when it is done, never
+  // timed: a pump keeps its own time (see domain/timers.ts). "Pumped … ago"
+  // is start to start, like Since last feed.
+  const lastPump = sortedActivities.find((activity) => activity.type === "pump");
+  // Bottle-only: only a family that pumps or gives breast milk (last 14
+  // days), so a formula-only home is never asked about pumping, and the row
+  // does not come and go with each formula bottle.
+  const lastBreastMilk = sortedActivities.find((activity) => activity.type === "pump" || activity.milkType === "expressed");
+  const showPumping = profile.feedingMode !== "bottle"
+    || (!!lastBreastMilk && minuteClock - Date.parse(lastBreastMilk.startedAt) < 14 * 86_400_000);
   const gapElapsed = lastFeed
     ? minutesBetween(lastFeed.startedAt, new Date(minuteClock).toISOString())
     : 0;
@@ -765,7 +776,7 @@ function TodayScreen({
           only when the night holds something. */}
       {lastNight && <LastNight night={lastNight} name={profile.name} />}
 
-      <div className={`today-dashboard${activeTimers.length > 0 ? " has-live" : ""}`}>
+      <div className="today-dashboard">
         <div className="today-main">
           {/* The fact rides in today-main: on mobile the tap tiles order
               first, so the reading material sits just after the buttons —
@@ -1072,6 +1083,23 @@ function TodayScreen({
               </div>
             )}
           </div>
+
+          {/* Right under the tiles, and there while a nursing timer runs:
+              "pumps with the feed" usually means during it or just after. */}
+          {showPumping && (
+            <Button variant="ghost" className="log-row log-row-secondary action-nurse" onClick={() => onOpenSheet("pump")}>
+              <span className="action-icon" aria-hidden="true"><ActivityGlyph type="pump" /></span>
+              <span className="log-copy">
+                <strong>Pumping</strong>
+                <small>
+                  {lastPump
+                    ? `Pumped ${timeAgo(lastPump.startedAt, minuteClock)}${lastPump.amount ? ` · ${formatVolume(lastPump.amount, units)}` : ""}`
+                    : "When, how long, how much"}
+                </small>
+              </span>
+              <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
+            </Button>
+          )}
 
           {/* What is probably next, and how often the app has been right —
               directly under the taps it forecasts. It used to sit in the

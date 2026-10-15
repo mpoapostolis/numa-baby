@@ -314,6 +314,42 @@ describe("solid food entries", () => {
   });
 });
 
+describe("a pumping session", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-07T12:00:00"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // Inside the bounds older builds already enforce, so a partner phone one
+  // build behind keeps the row whole instead of dropping it.
+  it("is a row every build keeps: a side, an amount, always an end", () => {
+    const pumped = {
+      id: "p1",
+      type: "pump",
+      side: "both",
+      amount: 90,
+      startedAt: "2026-08-07T10:00:00.000Z",
+      endedAt: "2026-08-07T10:15:00.000Z",
+    };
+    expect(isValidActivity(pumped)).toBe(true);
+  });
+
+  it("takes an amount or none, and holds one to the bottle's bounds", () => {
+    const draft = { type: "pump" as const, start: "2026-08-07T10:00", end: "2026-08-07T10:15", note: "" };
+    const unmeasured = validateDraft(draft, { requireEnd: true });
+    expect(unmeasured.ok && unmeasured.value).toMatchObject({ endedAt: new Date("2026-08-07T10:15").toISOString() });
+    expect(unmeasured.ok && unmeasured.value.amount).toBeUndefined();
+    expect(validateDraft({ ...draft, amount: 1001 }, { requireEnd: true }))
+      .toEqual({ ok: false, message: numericFieldError("amount"), field: "amount" });
+    const rounded = validateDraft({ ...draft, amount: 62.4 }, { requireEnd: true });
+    expect(rounded.ok && rounded.value.amount).toBe(62);
+  });
+});
+
 describe("activity types from newer builds", () => {
   // The version-skew rule: a partner phone one build behind must KEEP rows of
   // a type it does not know yet, or a family's shared history grows silent

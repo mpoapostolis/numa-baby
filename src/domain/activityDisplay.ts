@@ -5,6 +5,7 @@ import { UnitSystem, formatLength, formatTemperature, formatVolume, formatWeight
 export function activityTitle(activity: Activity) {
   if (activity.type === "bottle") return "Bottle";
   if (activity.type === "nursing") return "Nursing";
+  if (activity.type === "pump") return "Pumping";
   if (activity.type === "burp") return activity.endedAt ? "Burping" : "Burping now";
   if (activity.type === "tummy") return activity.endedAt ? "Tummy time" : "Tummy time now";
   if (activity.type === "sleep") return activity.endedAt ? "Sleep" : "Sleeping now";
@@ -25,6 +26,10 @@ export function activityTitle(activity: Activity) {
   return "Entry";
 }
 
+/** One wording for a side, nursing or pumping. No side saved is no side
+    shown — not a guess of "Right". */
+const SIDE_LABEL = { left: "Left side", right: "Right side", both: "Both sides" } as const;
+
 function includeNote(detail: string, note?: string) {
   return note?.trim() ? `${detail} · ${note.trim()}` : detail;
 }
@@ -43,12 +48,27 @@ export function activityDetail(activity: Activity, units: UnitSystem = "metric",
     );
   }
   if (activity.type === "nursing") {
-    // No side saved is no side shown — not a guess of "Right".
-    const side = activity.side === "both" ? "Both sides" : activity.side === "left" ? "Left side" : activity.side === "right" ? "Right side" : null;
+    const side = activity.side ? SIDE_LABEL[activity.side] : null;
     const detail = activity.endedAt
       ? [side, `${formatTime(activity.startedAt)}–${formatTime(activity.endedAt)}`, humanDuration(minutesBetween(activity.startedAt, activity.endedAt))].filter(Boolean).join(" · ")
       : side ? `${side} · started ${formatTime(activity.startedAt)}` : `Started ${formatTime(activity.startedAt)}`;
     return includeNote(detail, activity.note);
+  }
+  // The amount leads, as on a bottle: it is the figure a mum who pumps comes
+  // back for, and this line is cut short on a phone. At the end, "120 ml"
+  // was the part that became "…". No start–end span: the row shows the time
+  // beside it (as for medicine), and the span was what pushed the rest off.
+  //
+  // Each part only when it is there. A build from before pumping drops a
+  // pump's end when it edits one; once that syncs here, the side and the
+  // amount must still read — only the length is lost.
+  if (activity.type === "pump") {
+    return [
+      activity.amount && formatVolume(activity.amount, units),
+      activity.side && SIDE_LABEL[activity.side],
+      activity.endedAt && humanDuration(minutesBetween(activity.startedAt, activity.endedAt)),
+      activity.note?.trim(),
+    ].filter(Boolean).join(" · ");
   }
   if (activity.type === "sleep") {
     const detail = activity.endedAt

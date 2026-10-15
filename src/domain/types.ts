@@ -4,7 +4,13 @@
 
 import type { Routine } from "./routines";
 
-export type ActivityType = "bottle" | "nursing" | "diaper" | "burp" | "sleep" | "growth" | "health" | "medicine" | "solid" | "routine" | "month" | "vaccine" | "tummy";
+/** "pump" is a pumping session, and it is logged after it ends: this build
+    always sets endedAt (a pump is never open — see timers.ts) and side, and
+    amount is the total in ml, absent when it was not measured. A build from
+    before pumping drops the end when it edits one, so nothing may rely on
+    it being there. It is never a feed: nothing that counts or forecasts
+    feeds lists it. */
+export type ActivityType = "bottle" | "nursing" | "diaper" | "burp" | "sleep" | "growth" | "health" | "medicine" | "solid" | "routine" | "month" | "vaccine" | "tummy" | "pump";
 export type DiaperKind = "wet" | "dirty" | "both";
 export type FeedingMode = "mixed" | "breast" | "bottle";
 export type Tab = "today" | "timeline" | "insights" | "guide" | "more";
@@ -100,6 +106,7 @@ export type Sheet =
   | null
   | "bottle"
   | "nursing"
+  | "pump"
   | "diaper"
   | "sleep"
   | "medicine"

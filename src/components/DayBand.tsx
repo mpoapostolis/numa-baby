@@ -1,4 +1,5 @@
 import { Droplet, Milk, Moon, Stethoscope, Wind } from "lucide-react";
+import { activityTitle } from "../domain/activityDisplay";
 import { formatTime, humanDuration, isSameDay, minutesOnDay } from "../domain/time";
 import { Activity } from "../domain/types";
 
@@ -234,11 +235,14 @@ export function DayBand({
               <div className="band-lane lane-mark">
                 <span className="band-lane-icon" title="Measurements and notes"><Stethoscope size={14} /></span>
                 <div className="band-track">
+                  {/* Named as its row is named: everything that is not a
+                      growth check used to say "Health" here — tummy time,
+                      a medicine, a pump. */}
                   {marks.map((activity) => (
                     <span
                       key={activity.id}
                       className={`band-mark${isFresh(activity.startedAt) ? " is-new" : ""}`}
-                      title={`${activity.type === "growth" ? "Growth" : "Health"} · ${formatTime(activity.startedAt)}`}
+                      title={`${activityTitle(activity)} · ${formatTime(activity.startedAt)}`}
                       style={{ left: `${pct(new Date(activity.startedAt).getTime())}%` }}
                     />
                   ))}

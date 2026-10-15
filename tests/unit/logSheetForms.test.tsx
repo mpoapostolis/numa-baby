@@ -7,6 +7,7 @@ import { LogSheet } from "@/components/LogSheet";
 import { TimeField } from "@/components/fields";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { localDateInput } from "@/domain/time";
+import { setUnits } from "@/domain/units";
 import { Activity, ActivityType } from "@/domain/types";
 
 // The log sheets' own forms: what a tap fills in, what an edit keeps, and
@@ -169,6 +170,57 @@ test("an end typed by this parent wins over one arriving from the other phone", 
   expect(input("Ended").value).toBe(typed);
   fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
   expect(onUpdate.mock.calls[0][0].endedAt).toBe(new Date(typed).toISOString());
+});
+
+// --- A pump's edit -------------------------------------------------------------
+
+const pumped: Activity = { id: "p", type: "pump", side: "both", amount: 120, startedAt: minutesAgo(40), endedAt: minutesAgo(22) };
+const checked = (name: RegExp) => screen.getByRole("radio", { name }).getAttribute("aria-checked") === "true";
+
+test("a pump's edit has its side, its amount, and a start and an end it must keep", () => {
+  const { onUpdate } = renderSheet({ editingActivity: pumped, activities: [pumped] });
+  expect(checked(/Both/)).toBe(true);
+  expect(input(/^Amount/).value).toBe("120");
+  expect(input("Started").value).toBe(localDateInput(new Date(pumped.startedAt)));
+  expect(input("Ended").value).toBe(localDateInput(new Date(pumped.endedAt!)));
+  // A span, never a timer: it cannot be left running.
+  expect(screen.queryByText("Leave empty if still going.")).toBeNull();
+
+  fireEvent.change(input("Ended"), { target: { value: "" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+  expect(onUpdate).not.toHaveBeenCalled();
+  expect(screen.getByText("The end time must be after the start and not in the future.")).toBeTruthy();
+  expect(input("Ended").getAttribute("aria-invalid")).toBe("true");
+});
+
+test("an amount cleared from a pump goes, and a new side is kept", () => {
+  const showToast = vi.fn();
+  const { onUpdate } = renderSheet({ editingActivity: pumped, activities: [pumped], showToast });
+  fireEvent.change(input(/^Amount/), { target: { value: "" } });
+  fireEvent.click(screen.getByRole("radio", { name: /Left/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+  const saved = onUpdate.mock.calls[0][0];
+  expect(saved).toMatchObject({ id: "p", type: "pump", side: "left" });
+  expect(saved.endedAt).toBe(new Date(localDateInput(new Date(pumped.endedAt!))).toISOString());
+  // Not measured is no key at all, never 0.
+  expect("amount" in saved).toBe(false);
+  expect(showToast).toHaveBeenCalledWith("Pumping updated");
+});
+
+test("a note-only edit on US units keeps a pump's amount exact", () => {
+  // 120 ml shows as 4.1 oz, and 4.1 oz is 121 ml: the untouched amount must
+  // not make that round trip.
+  setUnits("us");
+  try {
+    const { onUpdate } = renderSheet({ editingActivity: pumped, activities: [pumped] });
+    expect(input(/^Amount/).value).toBe("4.1");
+    fireEvent.change(screen.getByLabelText(/^Note/), { target: { value: "Evening, after the feed" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(onUpdate.mock.calls[0][0]).toMatchObject({ amount: 120, note: "Evening, after the feed" });
+  } finally {
+    setUnits("metric");
+  }
 });
 
 // --- The quick time chips -------------------------------------------------------

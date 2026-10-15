@@ -10,7 +10,7 @@
 
 /** A place a release note can take the parent to — the thing it is about,
     one tap away, instead of directions to it. */
-export type ReleaseAction = { label: string; to: "months" | "vaccines" | "profile" };
+export type ReleaseAction = { label: string; to: "months" | "vaccines" | "profile" | "pump" };
 
 export type Release = {
   /** ISO date, and the marker stored once this entry has been read. A second
@@ -23,6 +23,17 @@ export type Release = {
 };
 
 export const RELEASES: Release[] = [
+  {
+    id: "2026-10-15.4",
+    title: "Pumping, and how long since the last one",
+    items: [
+      "Asked for by a mum who pumps with most feeds, but not all of them: Pumping has its own row on Today, right under the big buttons. It shows how long it has been since the last one — “Pumped 2h 10m ago” — counted from when that one started, the same way as the time since the last feed.",
+      "Tap it when you finish: when you finished, how long, which side, and how much if you measured. Last time’s length and side are already filled in, so most of the time it is one more tap to save.",
+      "There is nothing to start or stop. Your pump keeps its own time, so the app doesn’t add another timer to keep an eye on. Pumping is never counted as a feed. Update the app on both phones: until it is updated, the other phone shows a pump as “Entry”, and changing one there loses how long it took.",
+      "Only giving bottles? The row appears once you log a bottle of breast milk — or log your first pump with the button below.",
+    ],
+    actions: [{ label: "Log a pump", to: "pump" }],
+  },
   {
     id: "2026-10-15.3",
     title: "Tummy time: what is left for today",

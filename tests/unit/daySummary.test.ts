@@ -84,6 +84,27 @@ describe("summarizeDay", () => {
     expect(summary.nursingMinutes).toBe(0);
   });
 
+  it("keeps a pump out of the feeds: it is never one, and never an open timer", () => {
+    const summary = summarizeDay(
+      [
+        make({ type: "bottle", startedAt: "2026-08-12T08:00:00", amount: 120, milkType: "expressed" }),
+        make({ type: "pump", startedAt: "2026-08-12T09:00:00", endedAt: "2026-08-12T09:15:00", side: "both", amount: 90 }),
+        // Malformed (a pump always has its end) and 19 hours old: an open
+        // timer would be stale by now. A pump is not one, so nothing is.
+        make({ type: "pump", startedAt: "2026-08-12T01:00:00", side: "left" }),
+      ],
+      day,
+      now,
+    );
+    expect(summary.feeds).toBe(1);
+    expect(summary.bottles).toBe(1);
+    expect(summary.nursings).toBe(0);
+    expect(summary.ml).toBe(120);
+    expect(summary.otherEntries).toBe(2);
+    expect(summary.hasStaleTimer).toBe(false);
+    expect(summary.hasRunningNursing).toBe(false);
+  });
+
   it("counts sleep, and splits an overnight across both dates", () => {
     // Restored after two users asked for it back within hours of removal.
     const nap = make({

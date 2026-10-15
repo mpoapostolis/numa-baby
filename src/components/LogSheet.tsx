@@ -1,4 +1,4 @@
-import { Baby, Check, Droplet, Heart, Milk, Minus, Moon, Pill, Plus, Thermometer, Trash2, Utensils, Weight } from "lucide-react";
+import { Baby, Check, Droplet, Droplets, Heart, Milk, Minus, Moon, Pill, Plus, Thermometer, Trash2, Utensils, Weight } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "./ui/button";
 import { ButtonGroup, ButtonGroupText } from "./ui/button-group";
@@ -28,7 +28,9 @@ import {
   useUnits,
 } from "../domain/units";
 import { makeId } from "../domain/id";
-import { formatTime, formatTimelineDay, localDateInput } from "../domain/time";
+import { minuteBucket, mlBucket, track } from "../domain/analytics";
+import { formatTime, formatTimelineDay, humanDuration, localDateInput, minutesBetween } from "../domain/time";
+import { isTimedType } from "../domain/timers";
 import { DraftErrorField, validateDraft } from "../domain/validate";
 import { NOTE_MAX_LENGTH } from "../domain/activitySchema";
 import { Activity, DiaperKind, FeedingMode, Profile, Sheet } from "../domain/types";
@@ -77,6 +79,11 @@ type SheetDraft = {
   diaperKind: DiaperKind;
   /** A photo on a nappy entry, kept on this phone until Save (PhotoField). */
   photo?: string;
+  /** A pump's length. Finished is logTime and the side is nursingSide; the
+      start is worked back from these two on Save. */
+  pumpMinutes: number;
+  /** In display units, like bottleAmount. "" is "not measured", never 0. */
+  pumpAmount: string;
 };
 
 function sheetOpenedAt() {
@@ -91,6 +98,7 @@ function initialSheetDraft(
   nursingMode: "timer" | "manual",
   lastBottle: Activity | undefined,
   units: ReturnType<typeof useUnits>,
+  lastPump: Activity | undefined,
 ): SheetDraft {
   const now = new Date();
   const base: SheetDraft = {
@@ -112,6 +120,8 @@ function initialSheetDraft(
     foodText: "",
     nursingEntryMode: "timer",
     diaperKind: "wet",
+    pumpMinutes: 15,
+    pumpAmount: "",
   };
   if (editing) {
     return {
@@ -127,12 +137,27 @@ function initialSheetDraft(
       temperatureC: editing.temperatureC ? metricToMeasurementDraft("temperatureC", editing.temperatureC, units) : "",
       logTime: localDateInput(new Date(editing.startedAt)),
       endTime: editing.endedAt ? localDateInput(new Date(editing.endedAt)) : "",
-      nursingSide: editing.side ?? "left",
+      // A pump always has its side; one without is shown as Both, its default.
+      nursingSide: editing.side ?? (editing.type === "pump" ? "both" : "left"),
       medicineName: editing.medicine ?? "",
       foodText: editing.food ?? "",
       doseText: editing.dose ?? "",
       diaperKind: editing.diaperKind ?? "wet",
       photo: editing.photo,
+      pumpAmount: editing.type === "pump" && editing.amount ? mlToBottleDraft(editing.amount, units) : "",
+    };
+  }
+  if (sheet === "pump") {
+    // Logged when it is done, so Finished is now; the length and the side are
+    // the last pump's, because most pumps go the way the last one did, and
+    // then Save is the only other tap. A length no pump runs to (a slip of
+    // the clock) falls back to 15 minutes. The amount is never filled in:
+    // "not measured" is an answer, and a guessed number would be a wrong one.
+    const length = lastPump?.endedAt ? minutesBetween(lastPump.startedAt, lastPump.endedAt) : 0;
+    return {
+      ...base,
+      pumpMinutes: length >= 1 && length <= 180 ? length : 15,
+      nursingSide: lastPump?.side ?? "both",
     };
   }
   if (sheet === "sleep") {
@@ -255,15 +280,47 @@ export function LogSheet({
     }
     return bottleDraftToMl(draft.bottleAmount, units);
   }
+  // And for a pump's, which may be left empty: undefined is "not measured".
+  function pumpAmountMl(): number | undefined {
+    if (!draft.pumpAmount.trim()) return undefined;
+    if (editing?.type === "pump" && editing.amount !== undefined
+        && draft.pumpAmount === mlToBottleDraft(editing.amount, units)) {
+      return editing.amount;
+    }
+    return bottleDraftToMl(draft.pumpAmount, units);
+  }
   function localiseError(outcome: SheetError) {
     if (units === "us" && (outcome.field === "weightGrams" || outcome.field === "lengthCm" || outcome.field === "headCm")) {
       return { ...outcome, message: usMeasurementError(outcome.field) };
     }
+    // A pump's amount is not a bottle's, and it can be left out — the refusal
+    // says both. In ounces the floor is 0.03, which helps nobody: just the cap.
+    if (outcome.field === "amount" && (sheet === "pump" || editing?.type === "pump")) {
+      return {
+        ...outcome,
+        message: units === "us"
+          ? "Enter an amount up to 33.8 oz, or leave it empty."
+          : "Enter an amount between 1 and 1,000 ml, or leave it empty.",
+      };
+    }
     return outcome;
   }
+  // The newest pump, whose length and side the pump sheet starts from. Found
+  // here rather than handed down: App has no other use for it. One with no
+  // end is passed over — a build from before pumping drops the end when it
+  // edits a pump — so the length is a real one, not the 15-minute fallback.
+  const lastPump = sheet === "pump"
+    ? activities
+      .filter((activity) => activity.type === "pump" && activity.endedAt && !activity.deleted)
+      .sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt))[0]
+    : undefined;
   const [draft, setDraft] = useState<SheetDraft>(() =>
-    initialSheetDraft(sheet, editing, initialNursingMode, lastBottle, units),
+    initialSheetDraft(sheet, editing, initialNursingMode, lastBottle, units, lastPump),
   );
+  // The lengths on offer. A last pump of a length not among them (25
+  // minutes) brings its own chip, in order — fixed for the open, so tapping
+  // another length does not make it vanish.
+  const [pumpChips] = useState(() => [...new Set([10, 15, 20, 30, 45, draft.pumpMinutes])].sort((a, b) => a - b));
   // The end as the live row has it now: the other parent may stop (or
   // resume) this timer while the sheet is open. Until this parent types in
   // Ended, the field follows the live row rather than the copy the sheet
@@ -293,9 +350,10 @@ export function LogSheet({
   // The amount the last tapped medicine filled in, so tapping another one
   // can take it back instead of leaving it on the wrong medicine.
   const presetDose = useRef<string | undefined>(undefined);
-  const isTimed = editing
-    ? editing.type === "nursing" || editing.type === "burp" || editing.type === "sleep" || editing.type === "tummy"
-    : false;
+  const isTimed = editing ? isTimedType(editing.type) : false;
+  // A pump is a span too — Started and Ended, both required — but never a
+  // timer, so it is never offered "leave empty if still going".
+  const hasSpan = isTimed || editing?.type === "pump";
 
   function patch(partial: Partial<SheetDraft>) {
     setDraft((current) => ({ ...current, ...partial }));
@@ -405,6 +463,48 @@ export function LogSheet({
       note: outcome.value.note,
     };
     if (onAdd(entry, "Sleep saved")) onClose();
+  }
+
+  // A pump, logged when it is done. What a mum knows then is when she
+  // finished and roughly how long it took, so those are what she gives, and
+  // the start is worked back from them. There is nothing to stop and nothing
+  // left running: the pump kept the time (domain/timers.ts).
+  function savePump() {
+    const end = new Date(draft.logTime).getTime();
+    const minutes = draft.pumpMinutes;
+    const outcome = validateDraft(
+      {
+        type: "pump",
+        start: Number.isFinite(end) ? new Date(end - minutes * 60_000).toISOString() : "",
+        end: draft.logTime,
+        amount: pumpAmountMl(),
+        note: draft.note,
+      },
+      { requireEnd: true },
+    );
+    if (!outcome.ok) {
+      // One time on this sheet: whatever is wrong with the span, Finished is
+      // the field that sets it.
+      showFormError(outcome.field === "start" || outcome.field === "end"
+        ? { message: "Choose when it finished — not in the future.", field: "end" }
+        : localiseError(outcome));
+      return;
+    }
+    const amount = outcome.value.amount;
+    const entry: Activity = {
+      id: makeId(),
+      type: "pump",
+      startedAt: outcome.value.startedAt,
+      endedAt: outcome.value.endedAt,
+      side: draft.nursingSide,
+      // No key at all when it was not measured — not 0, which would read as
+      // a pump that gave nothing.
+      ...(amount !== undefined ? { amount } : {}),
+      note: outcome.value.note,
+    };
+    if (!onAdd(entry, `Pump saved — ${humanDuration(minutes)}${amount ? ` · ${formatVolume(amount, units)}` : ""}`)) return;
+    track("pump_logged", { side: draft.nursingSide, amount: mlBucket(amount), minutes: minuteBucket(minutes) });
+    onClose();
   }
 
   // What was given, and when. Nothing here checks a dose or suggests one:
@@ -537,19 +637,20 @@ export function LogSheet({
 
   function saveEditedActivity() {
     if (!editing) return;
-    const timed =
-      editing.type === "sleep" || editing.type === "nursing" || editing.type === "burp" || editing.type === "tummy";
+    const timed = isTimedType(editing.type);
+    // A pump has an end the sheet shows, and must keep one: it is never open.
+    const spanned = timed || editing.type === "pump";
     const outcome = validateDraft(
       {
         type: editing.type,
         start: draft.logTime,
-        end: timed ? draft.endTime : undefined,
-        amount: draft.bottleAmount.trim() === "" ? undefined : draftAmountMl(),
+        end: spanned ? draft.endTime : undefined,
+        amount: editing.type === "pump" ? pumpAmountMl() : draft.bottleAmount.trim() === "" ? undefined : draftAmountMl(),
         ...metricGrowthDraft(),
         temperatureC: metricMeasurement("temperatureC"),
         note: draft.note,
       },
-      { allowEqualEnd: true },
+      { allowEqualEnd: true, requireEnd: editing.type === "pump" },
     );
     if (!outcome.ok) {
       showFormError(localiseError(outcome));
@@ -563,12 +664,12 @@ export function LogSheet({
       // newer build (tummy time was one, once) can be timed without this
       // build knowing it, and dropping its end made a finished session
       // come back as a running timer on the other phone.
-      endedAt: timed ? outcome.value.endedAt : liveEnd,
+      endedAt: spanned ? outcome.value.endedAt : liveEnd,
       note: outcome.value.note,
     };
 
     if (
-      (next.type === "nursing" || next.type === "burp" || next.type === "sleep" || next.type === "tummy") &&
+      isTimedType(next.type) &&
       !next.endedAt &&
       activities.some(
         (activity) => activity.type === next.type && !activity.endedAt && activity.id !== next.id,
@@ -583,6 +684,12 @@ export function LogSheet({
       next.milkType = draft.milkType;
     }
     if (next.type === "nursing") next.side = draft.nursingSide;
+    if (next.type === "pump") {
+      next.side = draft.nursingSide;
+      // Emptied is "not measured": the key goes, rather than staying as 0.
+      if (outcome.value.amount === undefined) delete next.amount;
+      else next.amount = outcome.value.amount;
+    }
     // The photo: the parent's change wins; untouched, it is whatever it is
     // now — the other parent may have changed it since this sheet opened.
     const photoPlan = resolvePhotoSave({
@@ -637,6 +744,43 @@ export function LogSheet({
     onClose();
     showToast(`${activityTitle(next)} updated`);
   }
+
+  // A pump's side and amount: the same two fields on its own sheet and on
+  // its edit, where an amount measured later is added.
+  const pumpFields = (
+    <>
+      <Field className="nursing-side-field">
+        <FieldLabel>Side</FieldLabel>
+        <ToggleGroup type="single" value={draft.nursingSide} className="side-grid" aria-label="Pumping side" onValueChange={(value) => value && patch({ nursingSide: value as "left" | "right" | "both" })}>
+          <ToggleGroupItem value="left"><span className="side-letter">L</span><span className="choice-copy"><strong>Left</strong></span><Check className="choice-check" /></ToggleGroupItem>
+          <ToggleGroupItem value="right"><span className="side-letter">R</span><span className="choice-copy"><strong>Right</strong></span><Check className="choice-check" /></ToggleGroupItem>
+          <ToggleGroupItem value="both"><span className="side-letter">LR</span><span className="choice-copy"><strong>Both</strong></span><Check className="choice-check" /></ToggleGroupItem>
+        </ToggleGroup>
+      </Field>
+      <Field className="amount-field">
+        {/* The validator's range, not the bottle stepper's 400 ml: both
+            sides of one pump can come to more than any one bottle. */}
+        <UnitField
+          label="Amount"
+          optional
+          unit={stepper.unit}
+          min={units === "metric" ? 1 : 0.1}
+          max={units === "metric" ? 1_000 : 33.8}
+          step={units === "metric" ? 1 : 0.1}
+          value={draft.pumpAmount}
+          placeholder="Not measured"
+          inputRef={amountRef}
+          invalid={formError?.field === "amount"}
+          onChange={(value) => { patch({ pumpAmount: value }); setFormError(null); }}
+        />
+        {/* Offered, never picked for her; tapped again, a preset lets go
+            and the amount is back to not measured. */}
+        <ToggleGroup type="single" value={draft.pumpAmount} className="preset-row" aria-label="Preset amounts" onValueChange={(value) => { patch({ pumpAmount: value }); setFormError(null); }}>
+          {presets.map((amount) => <ToggleGroupItem value={String(amount)} aria-label={`${amount} ${stepper.unit}`} key={amount}>{amount}</ToggleGroupItem>)}
+        </ToggleGroup>
+      </Field>
+    </>
+  );
 
   return (
     <>
@@ -782,6 +926,45 @@ export function LogSheet({
           <SheetFooter>
             <p className="sheet-footer-note">A stretch that crosses midnight is counted whole, on the evening it began.</p>
             <Button type="submit" className="primary-button sheet-primary">Save sleep</Button>
+          </SheetFooter>
+        </SheetForm>
+      )}
+
+      {sheet === "pump" && (
+        <SheetForm onSubmit={savePump}>
+          <LogDialogHeader
+            icon={<Droplets />}
+            tone="glyph-pump"
+            eyebrow="Pumping"
+            title="Log a pump"
+            description="When it finished, how long, and how much if you measured."
+          />
+          <TimeField quick value={draft.logTime} label="Finished" inputRef={endRef} error={formError?.field === "end"} onChange={(value) => { patch({ logTime: value }); setFormError(null); }} />
+          <Field className="choice-field">
+            <FieldLabel>How long</FieldLabel>
+            {/* Always one length: the start is worked back from it. One row
+                of chips however many there are, a last odd length included. */}
+            <ToggleGroup
+              type="single"
+              value={String(draft.pumpMinutes)}
+              className="preset-row"
+              aria-label="How long"
+              style={{ gridTemplateColumns: `repeat(${pumpChips.length}, minmax(0, 1fr))` }}
+              onValueChange={(value) => value && patch({ pumpMinutes: Number(value) })}
+            >
+              {pumpChips.map((minutes) => {
+                const focused = minutes === draft.pumpMinutes;
+                return <ToggleGroupItem autoFocus={focused} data-initial-focus={focused ? "" : undefined} value={String(minutes)} aria-label={`${minutes} minutes`} key={minutes}>{minutes}m</ToggleGroupItem>;
+              })}
+            </ToggleGroup>
+          </Field>
+          {pumpFields}
+          <NoteField value={draft.note} onChange={(value) => patch({ note: value })} />
+          <FormError message={formError?.message ?? null} />
+          <SheetFooter>
+            <Button type="submit" className="primary-button sheet-primary">
+              {`Save ${draft.pumpAmount.trim() ? `${draft.pumpAmount} ${stepper.unit}` : "pump"} · ${humanDuration(draft.pumpMinutes)}`}
+            </Button>
           </SheetFooter>
         </SheetForm>
       )}
@@ -1014,6 +1197,8 @@ export function LogSheet({
             </Field>
           )}
 
+          {editing.type === "pump" && pumpFields}
+
           {editing.type === "diaper" && (
             <Field className="choice-field">
               <FieldLabel>Diaper type</FieldLabel>
@@ -1118,9 +1303,9 @@ export function LogSheet({
             </>
           )}
 
-          <div className={isTimed ? "measurement-row edit-time-row" : ""}>
-            <TimeField value={draft.logTime} label={isTimed ? "Started" : "When"} autoFocus={editing.type === "sleep"} inputRef={startRef} error={formError?.field === "start"} onChange={(value) => { patch({ logTime: value }); setFormError(null); }} />
-            {isTimed && <TimeField value={draft.endTime} label="Ended" description="Leave empty if still going." inputRef={endRef} error={formError?.field === "end"} onChange={(value) => { patch({ endTime: value }); setFormError(null); }} />}
+          <div className={hasSpan ? "measurement-row edit-time-row" : ""}>
+            <TimeField value={draft.logTime} label={hasSpan ? "Started" : "When"} autoFocus={editing.type === "sleep"} inputRef={startRef} error={formError?.field === "start"} onChange={(value) => { patch({ logTime: value }); setFormError(null); }} />
+            {hasSpan && <TimeField value={draft.endTime} label="Ended" description={isTimed ? "Leave empty if still going." : undefined} inputRef={endRef} error={formError?.field === "end"} onChange={(value) => { patch({ endTime: value }); setFormError(null); }} />}
           </div>
           {editing.type !== "routine" && (
             <NoteField value={draft.note} onChange={(value) => { patch({ note: value }); setFormError(null); }} />

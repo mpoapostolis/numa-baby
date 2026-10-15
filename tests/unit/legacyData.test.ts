@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { mergeStored } from "@/domain/merge";
 import { parseStoredData } from "@/domain/validate";
 
 // The promise this file exists to keep: nothing a parent ever logged is
@@ -76,6 +77,38 @@ describe("a blob written by the oldest version of the app", () => {
     const again = parseStoredData(JSON.stringify(parsed));
     expect(again.activities).toHaveLength(9);
     expect(again.droppedActivities).toBe(0);
+  });
+});
+
+describe("a pump in a backup", () => {
+  // Exported as the log is stored and read back as any backup is: the row
+  // comes back whole — amount, side and, above all, its end.
+  it("comes back from export and import with every field", () => {
+    const pumped = {
+      id: "p1",
+      type: "pump",
+      startedAt: "2026-07-01T07:00:00.000Z",
+      endedAt: "2026-07-01T07:18:00.000Z",
+      side: "both",
+      amount: 140,
+      note: "after the morning feed",
+      updatedAt: "2026-07-01T07:18:30.000Z",
+    };
+    const exported = JSON.stringify({
+      activities: [pumped],
+      profile: { name: "Mia", birthDate: "2026-06-20", feedingMode: "breast" },
+      onboardingComplete: true,
+      exportedAt: "2026-07-02T08:00:00.000Z",
+    });
+    const imported = parseStoredData(exported);
+    expect(imported.droppedActivities).toBe(0);
+    expect(imported.activities).toEqual([pumped]);
+    const prefs = { nightMode: false, reminders: { feedEnabled: false, feedIntervalMinutes: 180 } };
+    const merged = mergeStored(
+      { activities: [], profile: imported.profile, ...prefs },
+      { activities: imported.activities, profile: imported.profile, ...prefs },
+    );
+    expect(merged.activities).toEqual([pumped]);
   });
 });
 

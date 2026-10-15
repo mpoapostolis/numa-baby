@@ -328,7 +328,9 @@ export function validateDraft(draft: ActivityDraft, options: DraftOptions = {}):
     }
   }
 
-  if (draft.type === "bottle") {
+  // A pump's amount is optional — absent is "not measured" — and when it is
+  // there it is held to the bottle's bounds, which older builds also enforce.
+  if (draft.type === "bottle" || (draft.type === "pump" && draft.amount !== undefined)) {
     const amount = draft.amount;
     if (options.clampAmount) {
       value.amount = roundToStep(
