@@ -3,6 +3,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
+import { CONTENT_SLUGS } from "./scripts/prerender/pages.mjs";
 
 const APP_VERSION = new Date().toISOString().slice(0, 16).replace("T", " ");
 
@@ -80,8 +81,8 @@ export default defineConfig({
         // What the richer install prompt and a store listing (TWA) show.
         // Captured by scripts/screenshots.mjs from the built app.
         screenshots: [
-          { src: "/screenshots/today.png", sizes: "780x1688", type: "image/png", form_factor: "narrow", label: "Today: one-tap logging for feeds, nappies, sleep and more" },
-          { src: "/screenshots/insights.png", sizes: "780x1688", type: "image/png", form_factor: "narrow", label: "Insights: the week's rhythm and a summary for the paediatrician" },
+          { src: "/screenshots/today.png", sizes: "780x1688", type: "image/png", form_factor: "narrow", label: "Today: one-tap logging for feeds, diapers, sleep and more" },
+          { src: "/screenshots/insights.png", sizes: "780x1688", type: "image/png", form_factor: "narrow", label: "Insights: the week's rhythm and a summary for the pediatrician" },
           { src: "/screenshots/timeline.png", sizes: "780x1688", type: "image/png", form_factor: "narrow", label: "Timeline: every entry, day by day" },
         ],
       },
@@ -106,17 +107,18 @@ export default defineConfig({
         // pages, which are the whole point of being findable at all: a person
         // arriving from a search result must get the article they clicked,
         // not the app shell wearing its URL.
+        //
+        // The content pages come from the prerender's own list, so a page
+        // added there is a page the service worker leaves alone — written out
+        // by hand, the next new page would have been served as the app shell
+        // to every family with the app installed. Each matches its address
+        // exactly, with or without .html, a trailing slash or a query
+        // (?via=…), and nothing longer: /guidesX is not a guide. Workbox
+        // tests the path plus the query string.
         navigateFallbackDenylist: [
           /^\/admin/,
           /^\/api\//,
-          /^\/guides/,
-          /^\/sources/,
-          /^\/newborn/,
-          /^\/\d+-(weeks|months)/,
-          /^\/1-year/,
-          /^\/when-to-call-a-doctor/,
-          /^\/how-much-milk/,
-          /^\/baby-bag-checklist/,
+          ...CONTENT_SLUGS.map((slug) => new RegExp(`^/${slug}(?:\\.html)?/?(?:\\?|$)`)),
           // Any file with an extension (sitemap.xml, robots.txt, llms.txt…):
           // navigating to a FILE must show the file, not the app wearing
           // its URL.

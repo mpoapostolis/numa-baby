@@ -147,16 +147,20 @@
   }
 }
 
-/* The one marketing moment: the display role. */
-.onboarding-intro h1 {
+/* The one marketing moment: the display role. A paragraph, not the H1 —
+   the eyebrow above it is the heading, because it says what the app is —
+   so it takes back what the h1 rules in base.css used to give it. */
+.onboarding-intro .onboarding-display {
   margin: 8px 0 16px;
+  color: var(--foreground);
   font-size: 2.75rem;
   font-weight: 400;
   letter-spacing: -0.03em;
   line-height: 1;
+  text-wrap: balance;
 }
 
-.onboarding-intro > p:not(.eyebrow) {
+.onboarding-intro > p:not(.onboarding-display) {
   max-width: 520px;
   margin: 0;
   color: var(--ink-2);
@@ -175,6 +179,39 @@
   color: var(--ink-2);
   font-size: 0.8125rem;
   line-height: 1.55;
+}
+
+/* The rest of what the app does, and the guides: small print under the
+   note, never competing with "Start tracking". */
+.onboarding-also {
+  margin: 18px 0 0;
+  max-width: 42ch;
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+.onboarding-guides {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 10px;
+  max-width: 42ch;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+
+.onboarding-guides a {
+  color: var(--ink-2);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--ink-2) 35%, transparent);
+  text-underline-offset: 3px;
+}
+
+.onboarding-guides a:first-child {
+  flex-basis: 100%;
+  color: var(--foreground);
+  font-weight: 500;
 }
 
 /* The pass-it-on button under the intro points: quiet, left with the text. */
@@ -363,7 +400,7 @@
   min-height: 48px;
 }
 
-/* Stack before the intro column starves: below 1024px the display h1 and
+/* Stack before the intro column starves: below 1024px the display line and
    point rows would otherwise share the row with a 380px+ form column. */
 @media (width < 1024px) {
   .onboarding-layout {

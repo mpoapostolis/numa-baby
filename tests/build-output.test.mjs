@@ -2,9 +2,18 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import { gzipSync } from "node:zlib";
 import test from "node:test";
-import { BAG_PAGE, DOCTOR_PAGE, INDEX_PAGE, MILK_PAGE, SITE, SOURCES_PAGE, STAGES } from "../scripts/prerender/pages.mjs";
+import {
+  BAG_PAGE, CONTENT_SLUGS, DOCTOR_PAGE, INDEX_PAGE, MILK_PAGE, SITE, SOURCES_PAGE, STAGES,
+} from "../scripts/prerender/pages.mjs";
 
 const dist = new URL("../dist/", import.meta.url);
+
+const ENTITIES = { "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#39;": "'" };
+const unescape = (text) => text.replace(/&(?:amp|lt|gt|quot|#39);/g, (e) => ENTITIES[e]);
+/** Every JSON-LD block on a page, parsed — a block that does not parse fails here. */
+const jsonLd = (html) =>
+  [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((m) => JSON.parse(m[1]));
+const metaDescription = (html) => unescape(html.match(/<meta name="description" content="([^"]*)"/)?.[1] ?? "");
 
 test("builds a complete installable application shell", async () => {
   const [html, manifestText] = await Promise.all([
@@ -13,9 +22,25 @@ test("builds a complete installable application shell", async () => {
   ]);
   const manifest = JSON.parse(manifestText);
 
-  assert.match(html, /<title>Numalog — Calm, private baby tracker<\/title>/i);
+  assert.match(html, /<title>Numalog — Free Baby Tracker App: Feeds, Diapers &amp; Sleep<\/title>/i);
   assert.match(html, /manifest\.webmanifest/i);
-  assert.match(html, /og-baby-tracker\.png/i);
+  // Absolute: a relative og:image is not resolved by every scraper.
+  assert.match(html, /<meta property="og:image" content="https:\/\/[^"]*og-baby-tracker\.png"/i);
+  // What a reader without JavaScript gets is real HTML in #root, not a
+  // <noscript> that some fetchers strip and Google never sees.
+  assert.doesNotMatch(html, /<noscript/i);
+  assert.match(html, /<a href="\/guides"/);
+  for (const slug of CONTENT_SLUGS) {
+    assert.match(html, new RegExp(`<a href="/${slug}"`), `the home page links /${slug}`);
+  }
+  const graph = jsonLd(html);
+  assert.equal(graph.length, 1, "one JSON-LD graph on the home page");
+  const types = graph[0]["@graph"].map((node) => node["@type"]);
+  assert.deepEqual(types, ["WebSite", "Organization", "WebApplication"]);
+  // Nothing claimed that is not on the page: no ratings, no reviews.
+  assert.doesNotMatch(JSON.stringify(graph), /aggregateRating|"review"/);
+  const description = metaDescription(html);
+  assert.ok([...description].length <= 155, `home description is ${[...description].length} characters`);
   assert.match(html, /assets\/index-[^"']+\.js/i);
   // The latin face is preloaded so the first paint is in the app's own type.
   assert.match(html, /<link rel="preload" as="font"[^>]*geist-latin-wght-normal[^>]*\.woff2/);
@@ -141,7 +166,14 @@ const BUDGET_GZIP = {
   // the boot path are the row, the pump's name, detail and glyph, and the
   // amount check every save passes — partly paid for by folding the six
   // copies of the timed-types list into one. Measured after: 121.95 kB.
-  "index-*.js": 122_000,
+  // 122_000 → 122_050 on 2026-10-16, for no new code at all: the guide and
+  // home-page work of that day touched only lazy chunks and files outside the
+  // bundle, and the shell came out byte-identical to the one before it apart
+  // from the lazy chunks' hashed names in its preload map and the build
+  // stamp. Those names alone moved it between 121,958 and 121,970 bytes
+  // across builds of the same source, which left 30 bytes — less than one
+  // rebuild's jitter. Measured after: 121.97 kB.
+  "index-*.js": 122_050,
   "index-*.css": 29_000,
 };
 const LAZY_SCREENS = ["SettingsScreen", "GrowthGuideScreen", "InsightsScreen", "TimelineScreen", "LogSheet", "OnboardingScreen", "sonner", "FactOfTheDay"];
@@ -161,6 +193,10 @@ test("lazy screens stay out of the shell", async () => {
   const files = await readdir(new URL("assets/", dist));
   const shell = files.find((name) => /^index-.*\.js$/.test(name));
   const source = await readFile(new URL(`assets/${shell}`, dist), "utf8");
+  // The guidance text and the setup screen's copy load with their screens.
+  for (const phrase of ["call your doctor immediately", "Only 2 or 3 wet diapers", "First foods: alongside milk", "Free, private baby tracker"]) {
+    assert.ok(!source.includes(phrase), `"${phrase}" is in the shell`);
+  }
   for (const screen of LAZY_SCREENS) {
     assert.ok(files.some((name) => name.startsWith(`${screen}-`)), `${screen} has its own chunk`);
     // A lazy chunk is referenced by the shell only through import() — its
@@ -171,18 +207,146 @@ test("lazy screens stay out of the shell", async () => {
 
 test("every prerendered page is whole", async () => {
   const files = new Set(await readdir(dist));
-  for (const page of [...STAGES, DOCTOR_PAGE, MILK_PAGE, BAG_PAGE, SOURCES_PAGE, INDEX_PAGE]) {
+  const pages = [...STAGES, DOCTOR_PAGE, MILK_PAGE, BAG_PAGE, SOURCES_PAGE, INDEX_PAGE];
+  assert.deepEqual(pages.map((p) => p.slug).sort(), [...CONTENT_SLUGS].sort(), "CONTENT_SLUGS names every page");
+  for (const page of pages) {
     assert.ok(files.has(`${page.slug}.html`), `${page.slug}.html is emitted`);
     const html = await readFile(new URL(`${page.slug}.html`, dist), "utf8");
     assert.doesNotMatch(html, /undefined|\[object Object\]|NaN/, `${page.slug} has no leaked value`);
     assert.match(html, new RegExp(`<link rel="canonical" href="${SITE.origin}/${page.slug}"`), `${page.slug} canonical`);
-    const ld = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
-    assert.ok(ld, `${page.slug} has structured data`);
-    JSON.parse(ld[1]);
+    assert.equal((html.match(/<h1>/g) ?? []).length, 1, `${page.slug} has one H1`);
+
+    // A snippet a search result can show whole: one or two finished
+    // sentences, never one cut off by a character count.
+    const description = metaDescription(html);
+    assert.ok([...description].length <= 155, `${page.slug} description is ${[...description].length} characters`);
+    assert.match(description, /[.?]$/, `${page.slug} description ends a sentence`);
+
+    const blocks = jsonLd(html);
+    assert.ok(blocks.length > 0, `${page.slug} has structured data`);
+    for (const node of blocks.flatMap((block) => block["@graph"] ?? [block])) {
+      if (node.description !== undefined) {
+        assert.ok([...node.description].length <= 155, `${page.slug} ${node["@type"]} description length`);
+        assert.match(node.description, /[.?]$/, `${page.slug} ${node["@type"]} description ends a sentence`);
+      }
+      if (node["@type"] === "BreadcrumbList") {
+        const names = node.itemListElement.map((item) => item.name);
+        assert.equal(new Set(names).size, names.length, `${page.slug} breadcrumb repeats a name: ${names.join(" › ")}`);
+        assert.equal(node.itemListElement.at(-1).item, undefined, `${page.slug}: the last crumb is the page itself`);
+      }
+      // A citation names the page and who published it, not "AAP · …".
+      for (const citation of node.citation ?? []) {
+        assert.doesNotMatch(citation.name, /^(AAP|NHS|WHO) · /, `${page.slug} citation name`);
+        assert.ok(citation.publisher?.name, `${page.slug} citation ${citation.url} has a publisher`);
+      }
+    }
     for (const [, href] of html.matchAll(/href="\/([a-z0-9-]+)"/g)) {
       assert.ok(files.has(`${href}.html`) || href === "handoff", `${page.slug} links to /${href}`);
     }
   }
+});
+
+test("the milk page and its snippet quote one figure", async () => {
+  const html = await readFile(new URL(`${MILK_PAGE.slug}.html`, dist), "utf8");
+  // AAP: 75 ml for every 453 g a day — intakeGuide.ts holds the same ratio.
+  const perKg = Math.round(75 / 0.453);
+  assert.match(metaDescription(html), new RegExp(`about ${perKg} ml per kg`));
+  assert.match(html, new RegExp(`roughly ${perKg} ml per kilogram`));
+  assert.doesNotMatch(html, /\b165\b/);
+});
+
+test("the doctor page puts each sign at its source's urgency", async () => {
+  const html = await readFile(new URL(`${DOCTOR_PAGE.slug}.html`, dist), "utf8");
+  const tiers = [...html.matchAll(/<h2>([^<]*)<\/h2>/g)].map((m) => unescape(m[1]));
+  assert.ok(tiers.includes("Get help now if your baby…"), tiers.join(" | "));
+  assert.ok(tiers.includes("Call your doctor today if your baby…"), tiers.join(" | "));
+  assert.ok(tiers.includes("Fever by age"), tiers.join(" | "));
+  // The emergency tier comes first and carries the numbers to call.
+  assert.ok(html.indexOf("Get help now") < html.indexOf("Call your doctor today"));
+  for (const number of ["911", "999", "112"]) assert.match(html, new RegExp(`\\b${number}\\b`));
+  // The under-3-months fever takes the heading's emergency number from the
+  // NHS's 999 list, so its line cites that page beside the AAP's threshold.
+  const fever = html.match(/<li>is 3 months or younger[^]*?<\/li>/)?.[0] ?? "";
+  assert.match(fever, /healthychildren\.org/);
+  assert.match(fever, /nhs\.uk\/baby\/health\/when-to-get-urgent-medical-help/);
+  // The bug this replaced: a fever in a baby under 3 months and a baby who
+  // is hard to wake were "call the same day". Nowhere, on any page, now.
+  for (const file of [...await readdir(dist)].filter((f) => f.endsWith(".html"))) {
+    assert.doesNotMatch(await readFile(new URL(file, dist), "utf8"), /same day/i, `${file} says "same day"`);
+  }
+});
+
+test("a care card is shown once per page, under the age it is for", async () => {
+  const newborn = await readFile(new URL("newborn.html", dist), "utf8");
+  assert.equal((newborn.match(/<h3>Follow the cues/g) ?? []).length, 1);
+  const fiveMonths = await readFile(new URL("5-months.html", dist), "utf8");
+  const before = fiveMonths.indexOf(">Before 6 months<");
+  const from = fiveMonths.indexOf(">From 6 months<");
+  assert.ok(before > 0 && from > before, "5-months labels both care brackets");
+  assert.ok(fiveMonths.indexOf("Milk is still the whole meal") < from);
+  assert.ok(fiveMonths.indexOf("First foods: alongside milk") > from);
+  for (const slug of ["7-months", "9-months"]) {
+    assert.doesNotMatch(await readFile(new URL(`${slug}.html`, dist), "utf8"), /start now/i, slug);
+  }
+});
+
+test("a page that is not there describes nothing", async () => {
+  const html = await readFile(new URL("404.html", dist), "utf8");
+  assert.match(html, /<meta name="robots" content="noindex/);
+  assert.doesNotMatch(html, /application\/ld\+json/);
+  assert.doesNotMatch(html, /rel="canonical"/);
+});
+
+test("every content page is left to the network by the service worker", async () => {
+  // The denylist, read back out of the generated worker: what ships, not
+  // what vite.config.ts meant. A content page missing here is served as the
+  // app shell to every family with the app installed.
+  const sw = await readFile(new URL("sw.js", dist), "utf8");
+  const start = sw.indexOf("denylist:[") + "denylist:".length;
+  assert.ok(start > "denylist:".length, "sw.js has a navigation denylist");
+  let depth = 0;
+  let end = start;
+  // Walk to the array's own closing bracket, stepping over regex literals,
+  // whose character classes contain brackets of their own.
+  for (let i = start; i < sw.length; i++) {
+    const c = sw[i];
+    if (c === "/") {
+      for (i++; sw[i] !== "/"; i++) if (sw[i] === "\\") i++;
+      continue;
+    }
+    if (c === "[") depth++;
+    if (c === "]" && --depth === 0) { end = i + 1; break; }
+  }
+  const denylist = new Function(`return ${sw.slice(start, end)}`)();
+  const denied = (path) => denylist.some((re) => re.test(path));
+
+  const emitted = (await readdir(dist)).filter((f) => f.endsWith(".html")).map((f) => f.slice(0, -".html".length));
+  const appRoutes = ["index", "handoff", "404"];
+  for (const slug of emitted.filter((s) => !appRoutes.includes(s))) {
+    assert.ok(CONTENT_SLUGS.includes(slug), `${slug}.html is emitted but not in CONTENT_SLUGS`);
+  }
+  for (const slug of CONTENT_SLUGS) {
+    for (const path of [`/${slug}`, `/${slug}.html`, `/${slug}/`, `/${slug}?via=share`]) {
+      assert.ok(denied(path), `${path} reaches the network`);
+    }
+  }
+  // …and the app's own addresses still open the app offline.
+  for (const path of ["/", "/?log=diaper", "/handoff", "/insights", "/guidesx"]) {
+    assert.ok(!denied(path), `${path} is answered by the app shell`);
+  }
+});
+
+test("the sitemap dates each page by its own last change", async () => {
+  const sitemap = await readFile(new URL("sitemap.xml", dist), "utf8");
+  const entries = new Map([...sitemap.matchAll(/<loc>([^<]*)<\/loc>\s*<lastmod>([^<]*)<\/lastmod>/g)]
+    .map(([, loc, lastmod]) => [loc.slice(`${SITE.origin}/`.length), lastmod]));
+  assert.deepEqual([...entries.keys()].sort(), ["", ...CONTENT_SLUGS].sort());
+  for (const page of [...STAGES, DOCTOR_PAGE, MILK_PAGE, BAG_PAGE, SOURCES_PAGE, INDEX_PAGE]) {
+    assert.match(page.updated, /^\d{4}-\d{2}-\d{2}$/, `${page.slug} has an updated date`);
+    assert.equal(entries.get(page.slug), page.updated, `${page.slug} lastmod`);
+  }
+  // "/" is dated by the latest release (releaseIds.ts), not the build.
+  assert.match(entries.get(""), /^\d{4}-\d{2}-\d{2}$/);
 });
 
 test("an app one version behind can still find its sounds", async () => {

@@ -123,6 +123,13 @@ describe("the low-nappy rules", () => {
     expect(found.some((f) => f.id === "wet-nappies-below-six")).toBe(true);
   });
 
+  // AAP: get help right away. "Watch today, ring today" could wait a day.
+  it("say to call now, not to wait for today's count", () => {
+    const card = insightsFor(input({ ageDays: 30, days: ordinaryWeek({ wet: 4 }) })).find((f) => f.id === "wet-nappies-below-six");
+    expect(card?.advice).toMatch(/^Call .* now/);
+    expect(card?.advice).not.toMatch(/today/);
+  });
+
   it("stay silent when nappies are barely logged at all", () => {
     // Only two of seven days carry a nappy: the low count is a logging gap.
     const sparse = ordinaryWeek({ diapers: 0, wet: 0, dirty: 0 });
@@ -143,6 +150,16 @@ describe("the low-nappy rules", () => {
     expect(ids).toContain("wet-nappies-very-low");
     expect(ids).not.toContain("wet-nappies-below-six");
   });
+
+  it("send the dehydration signs to the doctor now, as the AAP and the Guide do", () => {
+    // AAP: "notify the pediatrician immediately". The card said "today",
+    // under the Guide that lists the same signs as "call your doctor
+    // immediately".
+    const card = insightsFor(input({ ageDays: 30, days: ordinaryWeek({ wet: 1 }) }))
+      .find((f) => f.id === "wet-nappies-very-low");
+    expect(card?.advice).toMatch(/\bnow\b/);
+    expect(card?.advice).not.toMatch(/\btoday\b/);
+  });
 });
 
 describe("the temperature rules", () => {
@@ -154,6 +171,23 @@ describe("the temperature rules", () => {
     }));
     expect(found[0].id).toBe("fever-for-age");
     expect(found[0].tone).toBe("seek-care");
+  });
+
+  it("give the emergency number wherever the NHS's 999 list does", () => {
+    // "38C or higher in babies under 3 months old, or 39C or higher in
+    // babies 3 to 6 months old" — the Guide's "Get help now" lines.
+    const advice = (ageDays: number, latestTemperatureC: number) => insightsFor(input({
+      ageDays,
+      ageMonths: Math.floor(ageDays / 30),
+      latestTemperatureC,
+      latestTemperatureAt: "2026-08-22T17:30:00",
+    })).find((f) => f.id === "fever-for-age")?.advice ?? "";
+    expect(advice(30, 38.2)).toContain("emergency number");
+    expect(advice(120, 39.2)).toContain("emergency number");
+    // Over the AAP's 38.3 for that age but under the NHS's 39: a call, today.
+    expect(advice(120, 38.5)).toContain("today");
+    expect(advice(120, 38.5)).not.toContain("emergency number");
+    expect(advice(200, 39.6)).not.toContain("emergency number");
   });
 
   it("ignore a reading older than a day", () => {
@@ -182,6 +216,14 @@ describe("the temperature rules", () => {
       latestTemperatureAt: "2026-08-22T17:30:00",
     }));
     expect(found.some((f) => f.id === "low-temperature-newborn")).toBe(true);
+  });
+
+  // NHS files "less than 36C" under "Call 999 or go to A&E", not under 111.
+  it("send a low newborn temperature to an emergency number, from below 36 °C", () => {
+    const at = { ageDays: 20, latestTemperatureAt: "2026-08-22T17:30:00" };
+    const low = insightsFor(input({ ...at, latestTemperatureC: 35.9 })).find((f) => f.id === "low-temperature-newborn");
+    expect(low?.advice).toMatch(/emergency number now/);
+    expect(insightsFor(input({ ...at, latestTemperatureC: 36.0 })).some((f) => f.id === "low-temperature-newborn")).toBe(false);
   });
 
   it("ignore an obviously mistyped reading rather than shouting about it", () => {

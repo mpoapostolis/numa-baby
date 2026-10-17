@@ -5,6 +5,7 @@ import { refreshStats } from "./adminStats";
 import { SEND_LIMIT, ScheduleBody, forgetSubscription, saveSchedule, sendDue, vapidKeys } from "./push";
 import { sendBroadcastChunk } from "./broadcast";
 import { budgetKey } from "./budgetKey";
+import { canonicalRedirect } from "./canonical";
 import { feedbackLimiter, handleFeedback, handleThread } from "./feedback";
 import {
   handleEmailLink,
@@ -569,12 +570,11 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
-    // One address in the address bar. www is registered only to catch typing;
-    // everything it might serve lives at the apex.
-    if (url.hostname === "www.numalog.app") {
-      url.hostname = "numalog.app";
-      return Response.redirect(url.toString(), 301);
-    }
+    // One address per page: https, the apex rather than www, and the content
+    // pages at numalog.app rather than also on the old workers.dev address —
+    // which keeps serving the app itself (worker/canonical.ts says why).
+    const canonical = canonicalRedirect(url);
+    if (canonical) return Response.redirect(canonical, 301);
 
     // The operator page and its endpoints, gated in one place: allowlist,
     // then lockout, then password, then one-time code. With no ADMIN_PASSWORD

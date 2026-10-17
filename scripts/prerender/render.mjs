@@ -11,7 +11,7 @@
 // every citation sits inside the sentence it supports, because an assistant
 // quoting a line should carry the source with it.
 
-import { DISCLAIMER, SITE } from "./pages.mjs";
+import { BAG_PAGE, DISCLAIMER, DOCTOR_PAGE, MILK_PAGE, SITE, SOURCES_CHECKED, SOURCES_PAGE, STAGES } from "./pages.mjs";
 
 const esc = (value) =>
   String(value ?? "").replace(/[&<>"']/g, (c) => ({
@@ -53,6 +53,9 @@ padding:18px 20px;margin:0 0 14px}
 .card h3{margin-top:0}
 .card p{margin-bottom:8px;font-size:.97rem}
 .card .do{font-family:ui-sans-serif,system-ui,sans-serif;font-size:.9rem;color:var(--ink-2)}
+.age{font:600 .8rem/1.4 ui-sans-serif,system-ui,sans-serif;letter-spacing:.06em;
+text-transform:uppercase;color:var(--ink-3);margin:22px 0 10px}
+.numbers{font:600 1rem/1.5 ui-sans-serif,system-ui,sans-serif}
 .note{background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:14px;
 padding:16px 18px;margin:26px 0;font:400 .9rem/1.6 ui-sans-serif,system-ui,sans-serif;color:var(--ink-2)}
 .cta{display:block;background:var(--signal);color:#fff;text-decoration:none;text-align:center;
@@ -64,63 +67,187 @@ footer a{color:var(--ink-2)}
 footer .links{display:flex;flex-wrap:wrap;gap:8px 16px;margin-bottom:14px}
 `.replace(/\n/g, "");
 
+/** The "Source:" line under a claim. More than one only when a line takes
+    its urgency from a second page (careGuidance.ts `alsoSource`); empty
+    slots are skipped so callers can pass that field as it is. */
+export function citeLine(...sources) {
+  const given = sources.filter(Boolean);
+  return `<cite>${given.length > 1 ? "Sources" : "Source"}: ${given
+    .map((source) => `<a href="${esc(source.url)}" rel="noopener">${esc(source.name)}</a>`).join(" · ")}</cite>`;
+}
+
 /** One claim with its source under it — never a numbered footnote. An
     assistant lifting the sentence should lift the citation with it. */
-export function claim(text, source) {
-  return `<li>${esc(text)}<cite>Source: <a href="${esc(source.url)}" rel="noopener">${esc(source.name)}</a></cite></li>`;
+export function claim(text, ...sources) {
+  return `<li>${esc(text)}${citeLine(...sources)}</li>`;
+}
+
+// Who publishes each cited page, matched from its address. Used twice: as the
+// citation's publisher in the markup, and to name in the footer exactly the
+// bodies this page cites — the old footer said "the AAP, the WHO or the NHS"
+// on pages that cited the AAO, and on pages that cited nothing at all.
+const SOURCE_ORGS = [
+  { match: /healthychildren\.org|aap\.org/, name: "American Academy of Pediatrics", url: "https://www.aap.org/" },
+  { match: /who\.int/, name: "World Health Organization", url: "https://www.who.int/" },
+  { match: /nhs\.uk/, name: "NHS", url: "https://www.nhs.uk/" },
+  { match: /aao\.org/, name: "American Academy of Ophthalmology", url: "https://www.aao.org/" },
+];
+const orgOf = (source) => SOURCE_ORGS.find((org) => org.match.test(source.url));
+
+/** "the A, the B or the C" — the bodies behind this page's citations, in a
+    fixed order so two pages citing the same bodies say the same thing. */
+function citedBodies(sources) {
+  const names = SOURCE_ORGS.filter((org) => sources.some((s) => orgOf(s) === org)).map((org) => `the ${org.name}`);
+  return names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} or ${names.at(-1)}`;
+}
+
+const HOME = `${SITE.origin}/`;
+const IMAGE = { "@type": "ImageObject", url: `${SITE.origin}/og-baby-tracker.png`, width: 1200, height: 630 };
+const PUBLISHER = {
+  "@type": "Organization",
+  "@id": `${SITE.origin}/#organization`,
+  name: SITE.name,
+  url: HOME,
+  logo: { "@type": "ImageObject", url: `${SITE.origin}/icon-512.png`, width: 512, height: 512 },
+};
+
+/**
+ * The page's schema.org description, as one @graph: the page and its
+ * breadcrumb. Prototyped and run past the schema.org vocabulary check before
+ * it came here. What it no longer says, and why:
+ *
+ *   MedicalCondition "Infant development and care" — not a condition, and
+ *   not a real one; `about` is now plain Things with the Wikipedia article
+ *   that names them. Patient as the audience — the reader is a parent.
+ *   "Guides" twice in the hub's breadcrumb. An Article with an author —
+ *   that waits until the name to put on it has been decided.
+ *
+ * MedicalWebPage only where the page is health guidance (the stages, the
+ * doctor page, the milk page): a packing list is a WebPage, and the hub and
+ * the sources list are collections. A page marked noindex gets nothing — the
+ * 404 describes no thing.
+ *
+ * @param opts {kind: "medical"|"page"|"collection", crumb, sources, about,
+ *              list: pages for an ItemList, noindex}
+ */
+export function structuredData(page, opts = {}) {
+  if (opts.noindex) return null;
+  const url = `${SITE.origin}/${page.slug}`;
+  const kind = opts.kind ?? "medical";
+  const isHub = page.slug === "guides";
+  const sources = opts.sources ?? [];
+  const webpage = {
+    "@type": { medical: "MedicalWebPage", page: "WebPage", collection: "CollectionPage" }[kind],
+    "@id": `${url}#webpage`,
+    url,
+    name: page.title,
+    headline: page.h1,
+    description: page.description,
+    inLanguage: "en",
+    isPartOf: { "@type": "WebSite", "@id": `${SITE.origin}/#website`, name: SITE.name, url: HOME },
+    breadcrumb: { "@id": `${url}#breadcrumb` },
+    primaryImageOfPage: IMAGE,
+    dateModified: page.updated,
+    publisher: PUBLISHER,
+    ...(opts.about && { about: opts.about }),
+    ...(kind === "medical" && {
+      specialty: "https://schema.org/Pediatric",
+      audience: { "@type": "PeopleAudience", audienceType: "Parents and caregivers of babies" },
+    }),
+    ...(opts.list && {
+      mainEntity: {
+        "@type": "ItemList",
+        numberOfItems: opts.list.length,
+        itemListElement: opts.list.map((p, i) => ({
+          "@type": "ListItem", position: i + 1, url: `${SITE.origin}/${p.slug}`, name: p.title,
+        })),
+      },
+    }),
+    ...(sources.length > 0 && {
+      citation: sources.map((source) => {
+        const org = orgOf(source);
+        return {
+          "@type": "WebPage",
+          // "AAP · Fever and Your Baby" is how the app labels a link; the
+          // page's own name is the part after the dot, and the publisher
+          // says who it is.
+          name: source.name.replace(/^(AAP|NHS|WHO) · /, ""),
+          url: source.url,
+          ...(org && { publisher: { "@type": "Organization", name: org.name, url: org.url } }),
+        };
+      }),
+    }),
+  };
+  // The last crumb is the page itself, so it carries no `item`: Google reads
+  // an item-less final crumb as "you are here".
+  const crumbs = {
+    "@type": "BreadcrumbList",
+    "@id": `${url}#breadcrumb`,
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: SITE.name, item: HOME },
+      ...(isHub ? [] : [{ "@type": "ListItem", position: 2, name: "Guides", item: `${SITE.origin}/guides` }]),
+      { "@type": "ListItem", position: isHub ? 2 : 3, name: opts.crumb ?? page.h1 },
+    ],
+  };
+  return { "@context": "https://schema.org", "@graph": [webpage, crumbs] };
 }
 
 /**
- * @param page  {slug, title, h1, description, lead}
+ * "Diaper" is the word the app, and most of the families using it, say; the
+ * NHS and much of the world say "nappy". Each page glosses its first diaper
+ * once — "diapers (nappies)" — so both searches find it and nobody reads the
+ * gloss twice. Text only: never inside a tag, a link, a heading or a
+ * citation (an NHS page title stays exactly as published), and never "diaper
+ * bag", which no one calls a nappy bag (diaper bag checklist).
+ */
+function glossFirstDiaper(html) {
+  let done = false;
+  let skip = 0;
+  return html.split(/(<[^>]+>)/).map((part) => {
+    if (part.startsWith("<")) {
+      if (/^<(a|h[1-6]|cite)\b/i.test(part)) skip += 1;
+      else if (/^<\/(a|h[1-6]|cite)>/i.test(part)) skip -= 1;
+      return part;
+    }
+    if (done || skip > 0) return part;
+    return part.replace(/\b(diaper)(s?)\b(?! bag)/i, (word, _stem, plural) => {
+      done = true;
+      return `${word} (${plural ? "nappies" : "nappy"})`;
+    });
+  }).join("");
+}
+
+/**
+ * @param page  {slug, title, h1, description, lead, updated, cta?}
  * @param body  the rendered HTML between the H1 and the footer
- * @param opts  {sources: FactSource[], crumb: string, updated: ISO date}
+ * @param opts  {sources: FactSource[], crumb: string, kind, about, list, noindex}
  */
 export function render(page, body, opts = {}) {
   const url = `${SITE.origin}/${page.slug}`;
   const sources = opts.sources ?? [];
-  const updated = opts.updated;
-
-  // MedicalWebPage rather than Article: this is health information about a
-  // named subject, and the citation list is the part that matters — it is what
-  // lets an assistant see the claims are attributed rather than invented.
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "MedicalWebPage",
-    name: page.title,
-    headline: page.h1,
-    description: page.description,
-    url,
-    inLanguage: "en",
-    dateModified: updated,
-    isPartOf: { "@type": "WebSite", name: SITE.name, url: `${SITE.origin}/` },
-    about: { "@type": "MedicalCondition", name: "Infant development and care" },
-    audience: { "@type": "Patient", name: "Parents and carers of infants" },
-    citation: sources.map((source) => ({
-      "@type": "WebPage",
-      name: source.name,
-      url: source.url,
-    })),
+  // The suffix only when the whole title still fits: past about 60
+  // characters a result page cuts the end off, and the end is the part that
+  // says what the page is about.
+  const suffixed = `${page.title} · ${SITE.name}`;
+  const title = [...suffixed].length <= 60 ? suffixed : page.title;
+  const ld = structuredData(page, opts);
+  const isHub = page.slug === "guides";
+  const cta = {
+    text: "Track feeds, diapers and sleep",
+    sub: "Free, no account, works offline. Your entries stay on your device.",
+    ...page.cta,
   };
-
-  const crumbs = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      { "@type": "ListItem", position: 1, name: SITE.name, item: `${SITE.origin}/` },
-      { "@type": "ListItem", position: 2, name: "Guides", item: `${SITE.origin}/guides` },
-      { "@type": "ListItem", position: 3, name: opts.crumb ?? page.h1, item: url },
-    ],
-  };
+  const main = glossFirstDiaper(`${page.lead ? `<p class="lead">${esc(page.lead)}</p>` : ""}
+${body}`);
 
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>${esc(page.title)} · ${esc(SITE.name)}</title>
+<title>${esc(title)}</title>
 <meta name="description" content="${esc(page.description)}" />
-<link rel="canonical" href="${esc(url)}" />
-${opts.noindex ? '<meta name="robots" content="noindex, follow" />' : ""}
+${opts.noindex ? '<meta name="robots" content="noindex, follow" />' : `<link rel="canonical" href="${esc(url)}" />`}
 <meta name="theme-color" content="#fdf5f2" />
 <meta property="og:type" content="article" />
 <meta property="og:title" content="${esc(page.title)}" />
@@ -131,8 +258,7 @@ ${opts.noindex ? '<meta name="robots" content="noindex, follow" />' : ""}
 <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
 <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
 <style>${STYLE}</style>
-<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
-<script type="application/ld+json">${JSON.stringify(crumbs)}</script>
+${ld ? `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>` : ""}
 </head>
 <body>
 <div class="wrap">
@@ -140,27 +266,29 @@ ${opts.noindex ? '<meta name="robots" content="noindex, follow" />' : ""}
   <a href="/">${esc(SITE.name)}</a>
   <a class="open" href="/">Open the app →</a>
 </header>
-<nav class="crumbs"><a href="/">Home</a> › <a href="/guides">Guides</a> › ${esc(opts.crumb ?? page.h1)}</nav>
+<nav class="crumbs"><a href="/">${esc(SITE.name)}</a> › ${isHub ? "Guides" : `<a href="/guides">Guides</a> › ${esc(opts.crumb ?? page.h1)}`}</nav>
 <main>
 <h1>${esc(page.h1)}</h1>
-${page.lead ? `<p class="lead">${esc(page.lead)}</p>` : ""}
-${body}
+${main}
 <p class="note">${esc(DISCLAIMER)}</p>
-<a class="cta" href="/">Track feeds, nappies and sleep — free
-  <small>No account, works offline, your entries stay on your device</small></a>
+<a class="cta" href="/?via=${esc(cta.via ?? page.slug)}">${esc(cta.text)}
+  <small>${esc(cta.sub)}</small></a>
 </main>
 <footer>
-  <div class="links">
-    <a href="/guides">All stages</a>
-    <a href="/when-to-call-a-doctor">When to call a doctor</a>
-    <a href="/how-much-milk-does-my-baby-need">How much milk</a>
-    <a href="/sources">Sources</a>
-  </div>
-  <p>Every claim on this page cites the American Academy of Pediatrics, the World Health
-  Organization or the NHS page it came from${updated ? `. Sources last checked ${esc(updated)}` : ""}.</p>
+  <nav class="links" aria-label="Guides">
+    <a href="/guides">All guides</a>
+    <a href="/${DOCTOR_PAGE.slug}">When to call a doctor</a>
+    <a href="/${MILK_PAGE.slug}">How much milk</a>
+    <a href="/${BAG_PAGE.slug}">Diaper bag checklist</a>
+    <a href="/${SOURCES_PAGE.slug}">Sources</a>
+  </nav>
+  <nav class="links" aria-label="Ages">
+    ${STAGES.map((stage) => `<a href="/${stage.slug}">${esc(stage.age)}</a>`).join("\n    ")}
+  </nav>
+  ${sources.length ? `<p>Every claim on this page cites ${esc(citedBodies(sources))} page it came from. Sources last checked ${esc(SOURCES_CHECKED)}.</p>` : ""}
   <p>Numalog is a tracking tool and general information, not a medical device and not
   medical advice. Every baby is different — for anything about your own baby, follow
-  your paediatrician, midwife or health visitor.</p>
+  your pediatrician, midwife or health visitor.</p>
 </footer>
 </div>
 </body>

@@ -1,3 +1,8 @@
+// First, and outside the try: a reader whose browser runs this is a reader
+// the app will load for, so the plain-HTML landing in index.html can stay
+// hidden behind the loading screen (the style beside it in <head>). A reader
+// without script never gets here and is shown the landing instead.
+document.documentElement.classList.add("js");
 (() => {
   const systemDark = matchMedia("(prefers-color-scheme: dark)").matches;
   const apply = (dark) => {

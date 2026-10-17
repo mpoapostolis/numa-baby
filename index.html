@@ -4,50 +4,117 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#fdf5f2" />
-    <meta name="description" content="Local-first baby tracking. Log feeds, diapers, burping and growth with one hand — no accounts, works offline, and your entries stay on your device unless you turn on Family Sync." />
+    <meta name="description" content="Free baby tracker app for feeds, diapers, sleep, pumping and growth on WHO charts. No account, no ads, works offline. Share with a partner if you choose." />
     <meta name="application-name" content="Numalog" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Numalog" />
     <meta property="og:site_name" content="Numalog" />
-    <meta property="og:title" content="Numalog — Calm, private baby tracker" />
-    <meta property="og:description" content="Private by design. Made for one tired hand." />
+    <meta property="og:title" content="Numalog — Free Baby Tracker App: Feeds, Diapers &amp; Sleep" />
+    <meta property="og:description" content="Free baby tracker app for feeds, diapers, sleep, pumping and growth on WHO charts. No account, no ads, works offline. Share with a partner if you choose." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://numalog.app/" />
-    <meta property="og:image" content="/og-baby-tracker.png" />
+    <meta property="og:locale" content="en_US" />
+    <!-- Absolute: a relative og:image is resolved by some scrapers against
+         whatever address they fetched, and by others not at all. -->
+    <meta property="og:image" content="https://numalog.app/og-baby-tracker.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Numalog, a free and private baby tracker app" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Numalog — Calm, private baby tracker" />
-    <meta name="twitter:description" content="Private by design. Made for one tired hand." />
-    <meta name="twitter:image" content="/og-baby-tracker.png" />
+    <meta name="twitter:title" content="Numalog — Free Baby Tracker App: Feeds, Diapers &amp; Sleep" />
+    <meta name="twitter:description" content="Free baby tracker app for feeds, diapers, sleep, pumping and growth on WHO charts. No account, no ads, works offline. Share with a partner if you choose." />
+    <meta name="twitter:image" content="https://numalog.app/og-baby-tracker.png" />
     <!-- The .ico first and at 48px: exactly what Google's result-page
          favicon pipeline wants; the 192px PNG serves everything newer. -->
     <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
     <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="canonical" href="https://numalog.app/" />
-    <title>Numalog — Calm, private baby tracker</title>
+    <title>Numalog — Free Baby Tracker App: Feeds, Diapers &amp; Sleep</title>
+    <!-- One graph, so the site, who publishes it and the app itself are three
+         linked things rather than two unrelated blocks. Only what is true and
+         visible: no rating until there are real ones, no person until the
+         name to publish is decided, every feature one the app has today. -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "WebSite",
-        "name": "Numalog",
-        "url": "https://numalog.app/"
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://numalog.app/#website",
+            "url": "https://numalog.app/",
+            "name": "Numalog",
+            "description": "Free, private baby tracker for feeds, diapers, sleep and growth, with sourced guides to baby development from newborn to one year.",
+            "inLanguage": "en",
+            "publisher": { "@id": "https://numalog.app/#organization" }
+          },
+          {
+            "@type": "Organization",
+            "@id": "https://numalog.app/#organization",
+            "name": "Numalog",
+            "url": "https://numalog.app/",
+            "logo": {
+              "@type": "ImageObject",
+              "@id": "https://numalog.app/#logo",
+              "url": "https://numalog.app/icon-512.png",
+              "contentUrl": "https://numalog.app/icon-512.png",
+              "width": 512,
+              "height": 512,
+              "caption": "Numalog"
+            }
+          },
+          {
+            "@type": "WebApplication",
+            "@id": "https://numalog.app/#app",
+            "name": "Numalog",
+            "alternateName": "Numalog Baby Tracker",
+            "url": "https://numalog.app/",
+            "installUrl": "https://numalog.app/",
+            "description": "A free, private baby tracker: log feeds, diapers, sleep, pumping and growth one-handed. No account, no ads, works offline, and your entries stay on your device unless you turn on Family Sync.",
+            "applicationCategory": "HealthApplication",
+            "applicationSubCategory": "Baby tracker",
+            "operatingSystem": "Any modern web browser; installable on Android, iOS and desktop",
+            "browserRequirements": "Requires JavaScript. Works offline after the first visit.",
+            "inLanguage": "en",
+            "isAccessibleForFree": true,
+            "offers": { "@type": "Offer", "price": 0, "priceCurrency": "USD" },
+            "image": "https://numalog.app/og-baby-tracker.png",
+            "screenshot": [
+              { "@type": "ImageObject", "url": "https://numalog.app/screenshots/today.png", "width": 780, "height": 1688, "caption": "Today: one-tap logging for feeds, diapers, sleep and more" },
+              { "@type": "ImageObject", "url": "https://numalog.app/screenshots/insights.png", "width": 780, "height": 1688, "caption": "Insights: the week's rhythm and a summary for the pediatrician" },
+              { "@type": "ImageObject", "url": "https://numalog.app/screenshots/timeline.png", "width": 780, "height": 1688, "caption": "Timeline: every entry, day by day" }
+            ],
+            "featureList": [
+              "Bottle and nursing feeds, with a nursing timer",
+              "Wet and dirty diapers",
+              "Sleep",
+              "Burping and tummy-time timers",
+              "Pumping log",
+              "Weight, length and head circumference, with weight on the WHO growth chart",
+              "Vaccines, medicine and solid foods",
+              "Monthly photos and a milestones guide",
+              "White noise and lullabies",
+              "Insights and feed forecasts from your own pattern",
+              "Optional Family Sync between two phones",
+              "Reminders",
+              "Pediatrician visit summary and PDF",
+              "Backup and restore",
+              "Works offline, with no account"
+            ],
+            "license": "https://opensource.org/licenses/MIT",
+            "publisher": { "@id": "https://numalog.app/#organization" }
+          }
+        ]
       }
     </script>
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "SoftwareApplication",
-        "name": "Numalog",
-        "alternateName": "Baby Tracker",
-        "description": "Local-first baby tracking. Log feeds, diapers, burping and growth with one hand — no accounts, works offline, and your entries stay on your device unless you turn on Family Sync.",
-        "applicationCategory": "HealthApplication",
-        "operatingSystem": "Web",
-        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
-      }
-    </script>
+    <!-- theme-init.js marks the page as running script ("js" on <html>)
+         before the body is parsed. With it, the loading screen shows and the
+         plain-HTML landing below stays hidden until React replaces both;
+         without it, the reverse — the loading screen fills the viewport
+         (min-height: 100dvh) and would cover the only words such a reader
+         gets. -->
+    <style>html.js .static-landing{display:none}html:not(.js) .loading-screen{display:none}.static-landing{max-width:40rem;margin:0 auto;padding:32px 16px 64px}.static-landing h2{margin:28px 0 8px}.static-landing h3{margin:16px 0 4px}.static-landing p{margin:0 0 8px}.static-landing ul{margin:0 0 8px;padding-left:20px;list-style:disc}.static-landing a{text-decoration:underline}</style>
     <script src="/theme-init.js"></script>
   </head>
   <body>
@@ -55,47 +122,70 @@
       <main class="loading-screen" aria-label="Loading Numalog">
         <span>Numalog</span>
       </main>
+      <!--
+        What a reader without JavaScript gets — which, as of 2026, is most AI
+        assistants' fetchers: they read pages but do not run them, and many
+        strip noscript blocks before they read. This used to be one, which
+        Google (it runs the script) never saw either. As real
+        HTML inside #root it is read by everyone, shown only when script is
+        off (see the style in <head>), and replaced by the app the moment
+        React mounts. Everything here is what the setup screen says too, and
+        nothing is written for a crawler that a person would not be told.
+      -->
+      <div class="static-landing">
+        <h1>Numalog — free, private baby tracker app</h1>
+        <p>
+          Numalog is a free, private baby tracker app: log feeds, diapers, sleep and pumping
+          one-handed. No account, no ads, works offline.
+        </p>
+        <h2>What you can track</h2>
+        <ul>
+          <li>Bottle and nursing feeds</li>
+          <li>Diapers</li>
+          <li>Sleep</li>
+          <li>Burp and tummy-time timers</li>
+          <li>Pumping</li>
+          <li>Growth on WHO charts</li>
+          <li>Vaccines, medicine and solids</li>
+          <li>Monthly photos and milestones</li>
+          <li>White noise and lullabies</li>
+          <li>Reminders</li>
+          <li>A summary PDF for your pediatrician</li>
+          <li>Backups</li>
+        </ul>
+        <h2>Questions</h2>
+        <h3>Is it free?</h3>
+        <p>Yes, and there are no ads.</p>
+        <h3>Do I need an account?</h3>
+        <p>No. Open it and start logging — there is no sign-up.</p>
+        <h3>Where is my data?</h3>
+        <p>
+          On your phone. Your entries stay on this device until you choose to share them.
+          Family Sync, which shares one log between two phones, is opt-in.
+        </p>
+        <h3>Does it work on iPhone and Android?</h3>
+        <p>
+          Yes. It runs in the browser on any phone, and you can add it to your home screen to
+          open it like an app. The tracker needs JavaScript; the guides below do not.
+        </p>
+        <h2>Free guides</h2>
+        <ul>
+          <li><a href="/guides">All guides: baby development month by month</a></li>
+          <li><a href="/newborn">Newborn baby (0–2 weeks)</a></li>
+          <li><a href="/2-weeks">2–6 week old baby</a></li>
+          <li><a href="/6-weeks">6 weeks to 3 months</a></li>
+          <li><a href="/3-months">3–4 month old baby</a></li>
+          <li><a href="/5-months">5–6 month old baby</a></li>
+          <li><a href="/7-months">7–8 month old baby</a></li>
+          <li><a href="/9-months">9–11 month old baby</a></li>
+          <li><a href="/1-year">1 year old</a></li>
+          <li><a href="/when-to-call-a-doctor">When to call a doctor</a></li>
+          <li><a href="/how-much-milk-does-my-baby-need">How much milk does my baby need?</a></li>
+          <li><a href="/baby-bag-checklist">Diaper bag checklist</a></li>
+        </ul>
+        <p>Every claim in the guides links to the page it came from: <a href="/sources">the sources</a>.</p>
+      </div>
     </div>
-    <!--
-      What a reader without JavaScript gets — which, as of 2026, is every AI
-      assistant's crawler: GPTBot, ClaudeBot, PerplexityBot and the rest fetch
-      pages but do not run them. Without this the home page is a spinner and a
-      div to them, while the twelve pages of real sourced guidance sit one link
-      away, unlinked from the only page they will ever fetch. Everything below
-      is true of the app and reachable from it; nothing here is written for a
-      crawler that a person would not also be told.
-    -->
-    <noscript>
-      <h1>Numalog — free, private baby tracker for newborns</h1>
-      <p>
-        Record feeds, nappy changes, burping, sleep and growth with one hand. No account,
-        works offline, and your entries stay on your device unless you switch on Family
-        Sync, which shares the log with a second phone. JavaScript is required to run the
-        tracker itself — the guidance below is plain pages that need none.
-      </p>
-      <h2>Baby development by age</h2>
-      <ul>
-        <li><a href="/newborn">Newborn baby: what to expect in the first 2 weeks</a></li>
-        <li><a href="/2-weeks">2-week-old baby: what to expect</a></li>
-        <li><a href="/6-weeks">6-week-old baby: what to expect</a></li>
-        <li><a href="/3-months">3-month-old baby: what to expect</a></li>
-        <li><a href="/5-months">5-month-old baby: what to expect</a></li>
-        <li><a href="/7-months">7-month-old baby: what to expect</a></li>
-        <li><a href="/9-months">9-month-old baby: what to expect</a></li>
-        <li><a href="/1-year">1-year-old: what to expect</a></li>
-      </ul>
-      <h2>Common questions</h2>
-      <ul>
-        <li><a href="/when-to-call-a-doctor">When to call a doctor about your baby</a></li>
-        <li><a href="/how-much-milk-does-my-baby-need">How much milk does my baby need?</a></li>
-        <li><a href="/guides">All guides</a></li>
-        <li><a href="/sources">Every source behind these pages</a></li>
-      </ul>
-      <p>
-        Every claim on those pages cites the American Academy of Pediatrics, the World
-        Health Organization or the NHS page it came from.
-      </p>
-    </noscript>
     <!-- Consent Mode defaults and the tag loader. The tag itself is only
          fetched once a visitor has said yes (see /analytics.js); keeping the
          configuration out of an inline script lets the CSP go on refusing

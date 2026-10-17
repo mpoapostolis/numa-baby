@@ -427,6 +427,23 @@
   color: var(--glyph-health);
 }
 
+/* The two urgency tiers. A heading in plain weight, not a red banner — the
+   words carry the urgency, as the card comment above asks. */
+.watch-tier {
+  display: grid;
+  gap: 8px;
+}
+
+.watch-tier-heading {
+  margin: 4px 0 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.watch-tier > .t-meta {
+  margin: 0;
+}
+
 .watch-list {
   margin: 0;
   padding: 0;

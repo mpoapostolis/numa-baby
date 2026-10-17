@@ -195,12 +195,20 @@ const RULES: Rule[] = [
       if (latestTemperatureC === undefined || hours === null || hours > 24) return null;
       // The upper guard rejects a mistyped value rather than shouting about it.
       if (latestTemperatureC < feverThresholdC(ageDays) || latestTemperatureC >= 43) return null;
+      // NHS, under "Call 999 or go to A&E": "38C or higher in babies under 3
+      // months old, or 39C or higher in babies 3 to 6 months old". The
+      // Guide's "Get help now" list carries both lines with the emergency
+      // number; this card said "call your paediatrician" for the first and
+      // "today" for the second, so a parent who tapped through from here to
+      // the Guide read the same reading at two urgencies. 183 days is six
+      // calendar months, read to its end rather than cut short.
+      const emergencyAt = ageDays === null ? null : ageDays < 90 ? 38 : ageDays < 183 ? 39 : null;
       return {
         title: "That temperature is worth a phone call",
         body: `You logged ${formatTemperature(latestTemperatureC, units)}. AAP's call-the-doctor threshold changes with age and is ${formatTemperature(feverThresholdC(ageDays), units)} for yours.`,
         advice:
-          ageDays !== null && ageDays < 90
-            ? `Call your paediatrician now, even if your baby otherwise seems fine. NHS lists ${degrees(38, units)} or more in a baby under 3 months as a reason to seek urgent help.`
+          emergencyAt !== null && latestTemperatureC >= emergencyAt
+            ? `Call an emergency number now — 911, 999 or 112 — even if your baby otherwise seems fine. NHS lists ${degrees(emergencyAt, units)} or more at this age among its reasons to call 999 or go to A&E.`
             : "Call your paediatrician today and describe how your baby is behaving, not just the number.",
       };
     },
@@ -214,13 +222,16 @@ const RULES: Rule[] = [
       const hours = hoursSince(latestTemperatureAt, now);
       if (latestTemperatureC === undefined || hours === null || hours > 24) return null;
       // Above 30 rejects a mistyped 3.6; unknown age fails safe and fires.
-      if (latestTemperatureC > 36.0 || latestTemperatureC <= 30) return null;
+      // "Less than 36C" is the page's own line, so 36.0 itself does not fire.
+      if (latestTemperatureC >= 36.0 || latestTemperatureC <= 30) return null;
       if (ageDays !== null && ageDays > 90) return null;
       return {
         title: "A low temperature matters as much as a fever",
-        body: `You logged ${formatTemperature(latestTemperatureC, units)}. NHS lists a temperature of ${degrees(36, units)} or below in a young baby alongside ${degrees(38, units)} or above as a reason to get urgent help.`,
+        body: `You logged ${formatTemperature(latestTemperatureC, units)}. NHS lists a temperature below ${degrees(36, units)} — or a baby who feels cold to the touch or is shivery — under “Call 999 or go to A&E”.`,
+        // "Urgent advice" was softer than the page it cites, which files a
+        // low temperature with the signs that cannot wait, not with NHS 111.
         advice:
-          "Get urgent advice now — especially if your baby also feels cold to the touch, is sleepier than usual, or is not feeding.",
+          "Call an emergency number now — 911 / 999 / 112 — or go to the nearest emergency department.",
       };
     },
   },
@@ -237,8 +248,11 @@ const RULES: Rule[] = [
         title: `Only ${yesterday.wet} wet ${yesterday.wet === 1 ? "nappy" : "nappies"} logged yesterday`,
         body:
           "AAP lists weeing only once or twice a day among the signs of serious dehydration. This counts what was logged — if changes went unrecorded, the real number is higher.",
+        // "Today" was softer than the page this card cites, which says to
+        // "notify the pediatrician immediately" for any of these signs, and
+        // than the Guide's dehydration line this card's reader taps through to.
         advice:
-          "Look at your baby rather than at this screen: dry mouth, no tears when crying, a sunken soft spot, unusual sleepiness. Then call your paediatrician today.",
+          "Look at your baby rather than at this screen: dry mouth, fewer tears when crying, a sunken soft spot, unusual sleepiness. Then call your paediatrician now — AAP says to tell them immediately.",
       };
     },
   },
@@ -256,8 +270,11 @@ const RULES: Rule[] = [
         title: `${yesterday.wet} wet nappies logged yesterday, against a floor of 6`,
         body:
           "After the first week, both AAP and NHS put at least 6 heavy wet nappies a day as the mark of a baby getting enough milk.",
+        // "Watch today, ring today" could wait a whole day on a page that
+        // says to get help right away — and the Guide's day-5 card, which
+        // cites the same count, now says "now".
         advice:
-          "Watch today's nappies as they come. If the count is still under 6, ring your midwife, health visitor or paediatrician today.",
+          "Call your midwife, health visitor or paediatrician now — AAP says to get help right away when a baby past the first week has fewer than 6 wet nappies a day. If some changes went unlogged, tell them.",
       };
     },
   },

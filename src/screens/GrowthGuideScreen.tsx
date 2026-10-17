@@ -7,7 +7,7 @@ import { SproutChart } from "../components/illustrations";
 import { track } from "../domain/analytics";
 import { gramsToLb, useUnits } from "../domain/units";
 import { OutingChecklist } from "../components/OutingChecklist";
-import { CareCard, WATCH_FOR, careForAge } from "../domain/careGuidance";
+import { CareCard, WATCH_FOR, WATCH_INSTINCT, WATCH_TIERS, careForAge } from "../domain/careGuidance";
 import { playForAge } from "../domain/playIdeas";
 import { PlaySection } from "../components/PlaySection";
 import { ageInDays, exactAgeInMonths } from "../domain/time";
@@ -66,9 +66,11 @@ function CareCardView({ card }: { card: CareCard }) {
         <h3 className="care-title">{card.title}</h3>
         <p className="care-body">{card.body}</p>
         <p className="care-action">{card.action}</p>
-        <a className="fact-source" onClick={() => track("source_opened", { name: card.source.name })} href={card.source.url} target="_blank" rel="noopener noreferrer">
-          {card.source.name} <ExternalLink size={12} aria-hidden="true" />
-        </a>
+        {[card.source, card.alsoSource].map((source) => source && (
+          <a key={source.url} className="fact-source" onClick={() => track("source_opened", { name: source.name })} href={source.url} target="_blank" rel="noopener noreferrer">
+            {source.name} <ExternalLink size={12} aria-hidden="true" />
+          </a>
+        ))}
       </div>
     </li>
   );
@@ -242,21 +244,31 @@ export default function GrowthGuideScreen({
           <div>
             <h2 id="watch-heading" className="t-title-2">When to call someone</h2>
             <p className="t-meta">
-              This app never decides any of these — you do. Trust your instincts and ring your
-              paediatrician, midwife or health visitor.
+              This app never decides any of these — you do. {WATCH_INSTINCT.text}
             </p>
           </div>
         </div>
-        <ul className="watch-list">
-          {WATCH_FOR.map((item) => (
-            <li key={item.sign}>
-              <span>{item.sign}</span>
-              <a className="fact-source" href={item.source.url} target="_blank" rel="noopener noreferrer">
-                {item.source.name} <ExternalLink size={12} aria-hidden="true" />
-              </a>
-            </li>
-          ))}
-        </ul>
+        {/* Split by urgency, in the same words as the web page. One flat
+            list once put a fever in a six-week-old ("call the same day")
+            beside a slow return to birthweight, at one level of urgency. */}
+        {WATCH_TIERS.map(({ tier, heading, how }) => (
+          <div key={tier} className="watch-tier">
+            <h3 className="watch-tier-heading">{heading}</h3>
+            {how && <p className="t-meta">{how}</p>}
+            <ul className="watch-list">
+              {WATCH_FOR.filter((item) => item.tier === tier).map((item) => (
+                <li key={item.sign}>
+                  <span>{item.sign}</span>
+                  {[item.source, item.alsoSource].map((source) => source && (
+                    <a key={source.url} className="fact-source" href={source.url} target="_blank" rel="noopener noreferrer">
+                      {source.name} <ExternalLink size={12} aria-hidden="true" />
+                    </a>
+                  ))}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </section>
 
       <OutingChecklist />
@@ -375,16 +387,28 @@ export default function GrowthGuideScreen({
             <span className="guide-authority">NHS · NICE</span>
           </li>
           <li>
-            <p>After the first week, fewer than six wet diapers a day, or urine that is dark or has reddish-orange marks in it.</p>
+            <p>After the first week, urine that is dark or has reddish-orange marks in it.</p>
             <span className="guide-authority">AAP</span>
           </li>
           <li>
             <p>Weight drifting across more than one line on their growth chart, in either direction.</p>
             <span className="guide-authority">NHS</span>
           </li>
+        </ul>
+        {/* Not check-ins, so not in the list above. These rows once said
+            "seek care the same day" and filed fewer than six wet diapers as
+            a check-in, a few inches below the "Get help now" list giving the
+            same signs as "call your doctor immediately" — the AAP's word for
+            every one of them. One screen, one urgency per sign. */}
+        <p className="t-body guide-intro">These cannot wait for a check-in. The AAP counts them as signs of dehydration and says to call your doctor immediately — they are on the “Get help now” list above:</p>
+        <ul className="guide-rows">
           <li>
-            <p>Noticeably fewer wet diapers alongside irritability, unusual sleepiness or reduced feeding — seek care the same day.</p>
-            <span className="guide-authority">NHS</span>
+            <p>After the first week, fewer than six wet diapers a day.</p>
+            <span className="guide-authority">AAP</span>
+          </li>
+          <li>
+            <p>At any age, a dry mouth, fewer tears when crying, a sunken soft spot on the head, or unusual sleepiness.</p>
+            <span className="guide-authority">AAP</span>
           </li>
         </ul>
       </div>

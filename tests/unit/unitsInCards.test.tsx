@@ -91,7 +91,7 @@ describe("insight cards on US units", () => {
 
   it("reads a low temperature back in Fahrenheit too", () => {
     const low = card("low-temperature-newborn", { ageDays: 20, latestTemperatureC: 35.6, latestTemperatureAt: "2026-08-22T17:30:00" });
-    expect(low.body).toBe("You logged 96.1 °F. NHS lists a temperature of 96.8 °F or below in a young baby alongside 100.4 °F or above as a reason to get urgent help.");
+    expect(low.body).toBe("You logged 96.1 °F. NHS lists a temperature below 96.8 °F — or a baby who feels cold to the touch or is shivery — under “Call 999 or go to A&E”.");
   });
 
   it("keeps the metric wording as it was", () => {

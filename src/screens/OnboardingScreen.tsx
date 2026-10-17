@@ -57,6 +57,24 @@ const RestoreWithGoogle = lazy(() =>
   import("../components/GoogleRecovery").then((m) => ({ default: m.RestoreWithGoogle })),
 );
 
+// The prerendered guide pages (scripts/prerender/pages.mjs), by the age or
+// question each answers. Written out rather than imported: the page list
+// carries every title and lead, and this screen needs only the addresses.
+const GUIDE_LINKS = [
+  ["/newborn", "Newborn"],
+  ["/2-weeks", "2–6 weeks"],
+  ["/6-weeks", "6 weeks–3 months"],
+  ["/3-months", "3–4 months"],
+  ["/5-months", "5–6 months"],
+  ["/7-months", "7–8 months"],
+  ["/9-months", "9–11 months"],
+  ["/1-year", "1 year"],
+  ["/when-to-call-a-doctor", "When to call a doctor"],
+  ["/how-much-milk-does-my-baby-need", "How much milk"],
+  ["/baby-bag-checklist", "Diaper bag checklist"],
+  ["/sources", "Sources"],
+] as const;
+
 export default function OnboardingScreen({
   mode,
   profile,
@@ -164,9 +182,15 @@ export default function OnboardingScreen({
         <div className="onboarding-layout">
           <section className="onboarding-intro" aria-labelledby="onboarding-title">
             <NurseryScene className="onboarding-scene" />
-            <p className="eyebrow">Private by default</p>
-            <h1 id="onboarding-title">The whole day,<br />without the mental load.</h1>
-            <p>Log feeds, diapers, burping and growth in seconds. No account needed — your entries stay on this device until you choose to share them.</p>
+            {/* The eyebrow is the page's one H1, because it is the line that
+                says what this is: the rendered page Google indexes for the
+                address had "The whole day, without the mental load." as its
+                heading, which says nothing about babies or tracking. The
+                design is unchanged — the display line keeps its look as a
+                styled paragraph (onboarding.css). */}
+            <h1 id="onboarding-title" className="eyebrow">Free, private baby tracker</h1>
+            <p className="onboarding-display">The whole day,<br />without the mental load.</p>
+            <p>Log feeds, diapers, sleep, pumping and growth in seconds. Free, no account needed — your entries stay on this device until you choose to share them.</p>
           </section>
 
           {welcomeBack ? (
@@ -348,6 +372,19 @@ export default function OnboardingScreen({
           >
             <Gift size={16} aria-hidden="true" /> Know another tired parent? Share Numalog
           </Button>
+          {/* After the note and the share offer, so the 3am path to "Start
+              tracking" stays first on a phone. Plain links on purpose: they
+              are how a search engine rendering this page finds the guides,
+              and the service worker sends these addresses to the network
+              rather than answering with the app (vite.config.ts). */}
+          <p className="onboarding-also">
+            Also: pumping, WHO growth charts, vaccines, medicine, solids, monthly photos, white
+            noise, reminders, a summary PDF for your pediatrician.
+          </p>
+          <nav className="onboarding-guides" aria-label="Free guides">
+            <a href="/guides">Free guides</a>
+            {GUIDE_LINKS.map(([href, label]) => <a key={href} href={href}>{label}</a>)}
+          </nav>
           </aside>
         </div>
       )}
