@@ -24,6 +24,14 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-10-30",
+    title: "Bottle and Nursing, always both",
+    items: [
+      "“Nursing button is still missing” — a parent who had picked Bottle on the first day could not find it, and the way back was buried in the baby’s profile. Now Bottle and Nursing are always on Today, whatever you chose at the start.",
+      "The choice still counts: if you breastfeed, Nursing comes first; otherwise Bottle does. You can change it any time in your baby’s profile.",
+    ],
+  },
+  {
     id: "2026-10-15.4",
     title: "Pumping, and how long since the last one",
     items: [

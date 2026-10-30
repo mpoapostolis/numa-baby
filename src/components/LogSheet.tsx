@@ -1403,7 +1403,7 @@ function ProfileForm({ profile, onChange, onDone }: { profile: Profile; onChange
           <ToggleGroup type="single" value={draft.feedingMode} className="segmented three-way" aria-label="Feeding method" onValueChange={(value) => value && setDraft({ ...draft, feedingMode: value as FeedingMode })}>
             {(["breast", "bottle", "mixed"] as FeedingMode[]).map((mode) => <ToggleGroupItem key={mode} value={mode}>{mode[0].toUpperCase() + mode.slice(1)}<Check className="choice-check" /></ToggleGroupItem>)}
           </ToggleGroup>
-          <FieldDescription>This changes which quick actions are shown.</FieldDescription>
+          <FieldDescription>Bottle and Nursing are always on Today — this only decides which comes first.</FieldDescription>
         </Field>
       </FieldGroup>
       <SheetFooter><Button type="submit" className="primary-button sheet-primary" disabled={photoBusy}>Save profile</Button></SheetFooter>

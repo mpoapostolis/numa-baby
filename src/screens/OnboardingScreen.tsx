@@ -318,7 +318,7 @@ export default function OnboardingScreen({
                         </ToggleGroupItem>
                       ))}
                     </ToggleGroup>
-                    <FieldDescription>This only changes the quick actions you see.</FieldDescription>
+                    <FieldDescription>Bottle and Nursing are always there — this only decides which comes first.</FieldDescription>
                   </Field>
                 </FieldGroup>
 

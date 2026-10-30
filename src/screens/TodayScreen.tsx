@@ -1,5 +1,5 @@
 import { Suspense, lazy, memo, useState } from "react";
-import { Camera, ChevronRight, Cloud, CloudOff, Gift, History, Images, Milk, Pill, ShieldCheck, Smile, Square, Syringe, Thermometer, Utensils, Waves, Weight } from "lucide-react";
+import { Camera, ChevronRight, Cloud, CloudOff, Gift, History, Images, Pill, ShieldCheck, Smile, Square, Syringe, Thermometer, Utensils, Waves, Weight } from "lucide-react";
 
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
@@ -434,14 +434,13 @@ function TodayScreen({
       ? "bottle"
       : lastFeed?.type === "nursing" ? "nursing" : "bottle";
 
-  // Every timer now runs in its own tile, so a row is only for one that has
-  // no tile on screen — a nursing session still going for a family that has
-  // since switched to bottles only. Rare, and it must never go invisible.
+  // Every timer runs in its own tile or row, so a row here is only for one
+  // that has none — a timed type this build does not know. Rare, and it must
+  // never go invisible.
   const lastMedicine = sortedActivities.find((activity) => activity.type === "medicine");
   const lastSolid = sortedActivities.find((activity) => activity.type === "solid");
-  const nursingTileShown = profile.feedingMode !== "bottle";
   const homelessTimers = activeTimers.filter((timer) =>
-    timer.type === "nursing" ? !nursingTileShown : timer.type !== "sleep" && timer.type !== "burp" && timer.type !== "tummy",
+    timer.type !== "nursing" && timer.type !== "sleep" && timer.type !== "burp" && timer.type !== "tummy",
   );
   // Pumping, asked for from the feedback box. Logged when it is done, never
   // timed: a pump keeps its own time (see domain/timers.ts). "Pumped … ago"
@@ -713,6 +712,78 @@ function TodayScreen({
             ? "content"
             : "awake";
 
+  const bottleTile = (
+    <div className="quick-tile tile-bottle">
+      <button
+        type="button"
+        className="tile-main"
+        onClick={quickLogBottle}
+        aria-label={lastBottle?.amount
+          ? `Log ${lastBottle.amount} millilitres of ${lastBottle.milkType === "expressed" ? "breast milk" : "formula"} now`
+          : "Log a bottle"}
+      >
+        <span className="activity-glyph glyph-bottle" aria-hidden="true"><ActivityGlyph type="bottle" /></span>
+        <span className="tile-title">Bottle</span>
+        <span className="tile-sub">
+          {lastBottle?.amount
+            ? `${formatVolume(lastBottle.amount, units)} · ${lastBottle.milkType === "expressed" ? "breast milk" : "formula"}`
+            : "Log the first feed"}
+        </span>
+      </button>
+      {lastBottle?.amount && (
+        <Button
+          variant="ghost"
+          className="tile-chip"
+          onClick={() => onOpenSheet("bottle")}
+          aria-label="Change bottle amount"
+        >
+          Change
+        </Button>
+      )}
+    </div>
+  );
+  const nursingTile = activeNursing ? (
+    <TimerTile activity={activeNursing} onStop={stopNursing} onEdit={onEdit} />
+  ) : (
+    <div className="quick-tile tile-nurse">
+      <div className="tile-head">
+        <span className="activity-glyph glyph-nursing" aria-hidden="true"><ActivityGlyph type="nursing" /></span>
+        <span className="tile-title">Nursing</span>
+      </div>
+      <div className="tile-split">
+        <Button
+          variant="outline"
+          className={nextSide === "left" ? "is-next-side" : undefined}
+          onClick={() => quickStartNursing("left")}
+          aria-label={nextSide === "left"
+            ? "Start nursing timer on the left side — usually next"
+            : "Start nursing timer on the left side"}
+        >
+          Left
+        </Button>
+        <Button
+          variant="outline"
+          className={nextSide === "right" ? "is-next-side" : undefined}
+          onClick={() => quickStartNursing("right")}
+          aria-label={nextSide === "right"
+            ? "Start nursing timer on the right side — usually next"
+            : "Start nursing timer on the right side"}
+        >
+          Right
+        </Button>
+      </div>
+      <Button
+        variant="ghost"
+        className="tile-chip"
+        onClick={onManualNursing}
+        aria-label="Add a completed nursing session manually"
+      >
+        <History aria-hidden="true" />
+        Earlier
+      </Button>
+    </div>
+  );
+
   return (
     <section
       className={`screen today-screen${sortedActivities.length ? "" : " is-empty"}`}
@@ -793,15 +864,8 @@ function TodayScreen({
               <div className="hearth-clock hearth-empty">
                 <LittleBottle className="hearth-illustration" />
                 <p className="t-title-2">Ready when you are</p>
-                {/* Name the tiles this family actually has: a bottle-only
-                    home has no Nursing tile, and nursing is Left/Right, not
-                    one tap. */}
                 <p className="t-meta">
-                  {profile.feedingMode === "bottle"
-                    ? "Log the first feed when it happens — one tap on Bottle."
-                    : profile.feedingMode === "breast"
-                      ? "Log the first feed when it happens — tap Left or Right under Nursing."
-                      : "Log the first feed when it happens — one tap on Bottle or Nursing."}
+                  Log the first feed when it happens — one tap on Bottle, or Left or Right under Nursing.
                 </p>
               </div>
             ) : (
@@ -921,80 +985,11 @@ function TodayScreen({
               rags. Secondary flows (change amount, past session) ride along
               as small chips — never in the way of the main tap. */}
           <div className="quick-grid">
-            {profile.feedingMode !== "breast" && (
-              <div className="quick-tile tile-bottle">
-                <button
-                  type="button"
-                  className="tile-main"
-                  onClick={quickLogBottle}
-                  aria-label={lastBottle?.amount
-                    ? `Log ${lastBottle.amount} millilitres of ${lastBottle.milkType === "expressed" ? "breast milk" : "formula"} now`
-                    : "Log a bottle"}
-                >
-                  <span className="activity-glyph glyph-bottle" aria-hidden="true"><ActivityGlyph type="bottle" /></span>
-                  <span className="tile-title">Bottle</span>
-                  <span className="tile-sub">
-                    {lastBottle?.amount
-                      ? `${formatVolume(lastBottle.amount, units)} · ${lastBottle.milkType === "expressed" ? "breast milk" : "formula"}`
-                      : "Log the first feed"}
-                  </span>
-                </button>
-                {lastBottle?.amount && (
-                  <Button
-                    variant="ghost"
-                    className="tile-chip"
-                    onClick={() => onOpenSheet("bottle")}
-                    aria-label="Change bottle amount"
-                  >
-                    Change
-                  </Button>
-                )}
-              </div>
-            )}
-
-            {profile.feedingMode !== "bottle" && activeNursing && (
-              <TimerTile activity={activeNursing} onStop={stopNursing} onEdit={onEdit} />
-            )}
-
-            {profile.feedingMode !== "bottle" && !activeNursing && (
-              <div className="quick-tile tile-nurse">
-                <div className="tile-head">
-                  <span className="activity-glyph glyph-nursing" aria-hidden="true"><ActivityGlyph type="nursing" /></span>
-                  <span className="tile-title">Nursing</span>
-                </div>
-                <div className="tile-split">
-                  <Button
-                    variant="outline"
-                    className={nextSide === "left" ? "is-next-side" : undefined}
-                    onClick={() => quickStartNursing("left")}
-                    aria-label={nextSide === "left"
-                      ? "Start nursing timer on the left side — usually next"
-                      : "Start nursing timer on the left side"}
-                  >
-                    Left
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className={nextSide === "right" ? "is-next-side" : undefined}
-                    onClick={() => quickStartNursing("right")}
-                    aria-label={nextSide === "right"
-                      ? "Start nursing timer on the right side — usually next"
-                      : "Start nursing timer on the right side"}
-                  >
-                    Right
-                  </Button>
-                </div>
-                <Button
-                  variant="ghost"
-                  className="tile-chip"
-                  onClick={onManualNursing}
-                  aria-label="Add a completed nursing session manually"
-                >
-                  <History aria-hidden="true" />
-                  Earlier
-                </Button>
-              </div>
-            )}
+            {/* Both, always, whatever was chosen at the start: a family
+                that said "bottle" on day one still nurses some nights, and
+                looking for a button that a setting hid is the worst kind of
+                lost at 3am. The choice only decides which comes first. */}
+            {profile.feedingMode === "breast" ? <>{nursingTile}{bottleTile}</> : <>{bottleTile}{nursingTile}</>}
 
             <div className="quick-tile tile-diaper">
               <div className="tile-head">
@@ -1191,26 +1186,7 @@ function TodayScreen({
             </span>
             <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
           </Button>
-          {/* Breast-only families lose the Bottle tile, which is right — it is
-              not their daily tap. But expressed milk goes into a bottle, and a
-              bottle at a grandparent's house is an ordinary evening, and until
-              now neither could be logged from this screen at all. The tile
-              stays hidden; the route back exists. */}
-          {profile.feedingMode === "breast" && (
-            <Button
-              variant="ghost"
-              className="log-row log-row-secondary action-feed"
-              onClick={() => onOpenSheet("bottle")}
-            >
-              <span className="action-icon" aria-hidden="true"><Milk /></span>
-              <span className="log-copy">
-                <strong>Bottle</strong>
-                <small>Expressed milk or formula</small>
-              </span>
-              <ChevronRight size={16} className="log-chevron" aria-hidden="true" />
-            </Button>
-          )}
-          {(() => {
+                    {(() => {
             const months = profile.birthDate ? ageInMonths(profile.birthDate) : null;
             // Solids start around six months (AAP/NHS); the row shows a little
             // early — four months — because "we just started tastes" is
