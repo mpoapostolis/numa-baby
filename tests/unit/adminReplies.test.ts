@@ -220,3 +220,21 @@ describe("a connection that drops while an answer is on its way", () => {
     expect(again.body!.replyId).toBeTruthy();
   });
 });
+
+// "Why did it disappear when I replied?" Waiting-first sent an answered
+// conversation to the bottom of the page, "Sent ✓" and all. The latest word
+// comes first now, so an answer brings its conversation to the top.
+describe("an answered conversation", () => {
+  it("comes to the top of the list, not the bottom", async () => {
+    const answered = STATS.feedback.find((f) => f.id === "old-mail")!;
+    answered.handled = 1;
+    (STATS.replies as Array<Record<string, unknown>>).push({
+      id: "r9", feedback_id: "old-mail", at: "2026-10-30T09:00:00.000Z", sent: "2026-10-30T09:00",
+      body: "Answered by email", emailed_to: "dad@example.com", thread: null,
+    });
+    (conversations()[0].querySelector(".mark") as HTMLElement).click();
+    await settle();
+    expect(conversations()[0].textContent).toContain("Answered by email");
+    expect(conversations()[0].querySelector(".pill")!.textContent).toBe("Handled");
+  });
+});

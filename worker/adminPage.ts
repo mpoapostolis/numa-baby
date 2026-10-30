@@ -481,9 +481,11 @@ export function adminPageHtml(nonce: string): string {
     for (var o = 0; o < order.length; o++) {
       order[o].items.sort(function (a, b) { return a.at < b.at ? -1 : (a.at > b.at ? 1 : 0); });
     }
-    // Waiting for an answer first; within each, the latest word first.
+    // The latest word first, like any inbox. Waiting-first sent a
+    // conversation to the bottom of the page the moment it was answered —
+    // reply, and it vanished, with its "Sent ✓" — so the order is the time
+    // alone, and the pill and the heading's count say what is waiting.
     order.sort(function (a, b) {
-      if (a.open !== b.open) return a.open ? -1 : 1;
       return a.latest < b.latest ? 1 : (a.latest > b.latest ? -1 : 0);
     });
     return order;
@@ -496,6 +498,9 @@ export function adminPageHtml(nonce: string): string {
   // newest one on screen and moves. "sending" keeps a button that is already
   // on its way from being pressed again on a re-drawn page.
   var drafts = {}, noMail = {}, notes = {}, sending = {};
+  // The conversation just answered: the redraw after a send keeps it in
+  // front of the operator instead of wherever the page happens to scroll.
+  var justSent = null;
   // The name each answer is sent under, kept until it is known to have
   // arrived: a retry after a dropped connection sends the same name, and the
   // server stores and mails it once. New words get a new name.
@@ -667,6 +672,11 @@ export function adminPageHtml(nonce: string): string {
   }
 
   function wireLive() {
+    if (justSent) {
+      var answered = byConv(".reply-note", justSent);
+      justSent = null;
+      if (answered && answered.scrollIntoView) answered.scrollIntoView({ block: "center" });
+    }
     var marks = document.querySelectorAll(".mark");
     for (var i = 0; i < marks.length; i++) {
       marks[i].addEventListener("click", function (e) {
@@ -753,6 +763,7 @@ export function adminPageHtml(nonce: string): string {
           if (box2) box2.value = "";
           if (again) { again.disabled = false; again.textContent = "Send reply"; }
           showNote(conv, said, r.emailError || r.unticked ? "note-bad" : "note-ok");
+          justSent = conv;
           load();
         }).catch(function () {
           // No answer is not "not sent": the server may have stored and
