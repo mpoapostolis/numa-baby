@@ -67,6 +67,12 @@ footer a{color:var(--ink-2)}
 footer .links{display:flex;flex-wrap:wrap;gap:8px 16px;margin-bottom:14px}
 `.replace(/\n/g, "");
 
+// The maker's other projects, at the maker's wish. Plain links between sites
+// of one person are fine; one quiet line, not a link farm, on every page.
+const MORE_BY_MAKER = `<p class="maker">Made by Apostolis, who also makes
+  <a href="https://galerra.art">Galerra</a>, 3D virtual art galleries, and
+  <a href="https://www.vxlverse.com">VXLVERSE</a>, a 3D game maker in the browser.</p>`;
+
 /** The "Source:" line under a claim. More than one only when a line takes
     its urgency from a second page (careGuidance.ts `alsoSource`); empty
     slots are skipped so callers can pass that field as it is. */
@@ -289,6 +295,7 @@ ${main}
   <p>Numalog is a tracking tool and general information, not a medical device and not
   medical advice. Every baby is different — for anything about your own baby, follow
   your pediatrician, midwife or health visitor.</p>
+  ${MORE_BY_MAKER}
 </footer>
 </div>
 </body>
