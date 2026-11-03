@@ -820,6 +820,7 @@ export default function HomePage() {
   // screen holds: the store's actions are fresh closures every render, and a
   // fresh function is a fresh prop.
   const onAdd = useStableCallback(addActivity);
+  const onUpdate = useStableCallback(updateActivity);
   const onStopTimer = useStableCallback(stopTimer);
   const onOpenSheet = useStableCallback((next: Exclude<Sheet, null>) => openSheet(next));
   const onManualNursing = useStableCallback(() => openSheet("nursing", "manual"));
@@ -1122,6 +1123,7 @@ export default function HomePage() {
               milestoneTotals={milestoneTotals}
               onDismissCelebration={dismissCelebration}
               onAdd={onAdd}
+              onUpdate={onUpdate}
               onStopTimer={onStopTimer}
               onOpenSheet={onOpenSheet}
               onManualNursing={onManualNursing}

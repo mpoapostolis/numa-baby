@@ -33,7 +33,7 @@ import { formatTime, formatTimelineDay, humanDuration, localDateInput, minutesBe
 import { isTimedType } from "../domain/timers";
 import { DraftErrorField, validateDraft } from "../domain/validate";
 import { NOTE_MAX_LENGTH } from "../domain/activitySchema";
-import { Activity, DiaperKind, FeedingMode, Profile, Sheet } from "../domain/types";
+import { Activity, DiaperKind, FeedingMode, Profile, Sheet, Wetness } from "../domain/types";
 import { PhotoField } from "./PhotoField";
 import { MonthsSheet } from "./MonthsSheet";
 import { VaccinesSheet } from "./VaccinesSheet";
@@ -77,6 +77,8 @@ type SheetDraft = {
   foodText: string;
   nursingEntryMode: "timer" | "manual";
   diaperKind: DiaperKind;
+  /** Light or heavy, for a wet one; unset is "not said". */
+  wetness?: Wetness;
   /** A photo on a nappy entry, kept on this phone until Save (PhotoField). */
   photo?: string;
   /** A pump's length. Finished is logTime and the side is nursingSide; the
@@ -143,6 +145,7 @@ function initialSheetDraft(
       foodText: editing.food ?? "",
       doseText: editing.dose ?? "",
       diaperKind: editing.diaperKind ?? "wet",
+      wetness: editing.wetness === "light" || editing.wetness === "heavy" ? editing.wetness : undefined,
       photo: editing.photo,
       pumpAmount: editing.type === "pump" && editing.amount ? mlToBottleDraft(editing.amount, units) : "",
     };
@@ -335,6 +338,7 @@ export function LogSheet({
     setDraft((current) => (current.endTime === shown(seenEnd) ? { ...current, endTime: shown(liveEnd) } : current));
   }
   const [formError, setFormError] = useState<SheetError | null>(null);
+  const wetnessId = useId();
   // One ref per failable field, so the error can land focus on the exact
   // input it names instead of whichever field happened to hold the ref.
   const startRef = useRef<HTMLInputElement>(null);
@@ -583,11 +587,13 @@ export function LogSheet({
       id: makeId(),
       type: "diaper",
       diaperKind: kind,
+      // Chosen, then Dirty picked instead: a dirty nappy has no wetness.
+      ...(kind !== "dirty" && draft.wetness ? { wetness: draft.wetness } : {}),
       startedAt: outcome.value.startedAt,
       note: outcome.value.note,
       ...(draft.photo ? { photo: draft.photo } : {}),
     };
-    if (!onAdd(entry, `${kind === "both" ? "Wet + dirty" : kind === "dirty" ? "Dirty" : "Wet"} diaper saved`)) return;
+    if (!onAdd(entry, `${activityTitle(entry)} saved`)) return;
     // Saved: now, and only now, the photo goes to the family's other phones.
     if (draft.photo) void sharePhoto(draft.photo);
     onClose();
@@ -699,6 +705,8 @@ export function LogSheet({
     });
     if (next.type === "diaper") {
       next.diaperKind = draft.diaperKind;
+      if (draft.diaperKind !== "dirty" && draft.wetness) next.wetness = draft.wetness;
+      else delete next.wetness;
       if (photoPlan.photo) next.photo = photoPlan.photo;
       else delete next.photo;
     }
@@ -744,6 +752,19 @@ export function LogSheet({
     onClose();
     showToast(`${activityTitle(next)} updated`);
   }
+
+  // Light or heavy, for a wet nappy. The app's segmented control, on the
+  // sheet and on the edit; a second tap clears it, because how wet is
+  // optional. Gone for a dirty one.
+  const wetnessField = draft.diaperKind !== "dirty" && (
+    <Field>
+      <FieldLabel id={wetnessId}>How wet <span className="optional-label">Optional</span></FieldLabel>
+      <ToggleGroup type="single" value={draft.wetness ?? ""} className="segmented" aria-labelledby={wetnessId} onValueChange={(value) => patch({ wetness: value === "light" || value === "heavy" ? value : undefined })}>
+        <ToggleGroupItem value="light">Light<Check className="choice-check" /></ToggleGroupItem>
+        <ToggleGroupItem value="heavy">Heavy<Check className="choice-check" /></ToggleGroupItem>
+      </ToggleGroup>
+    </Field>
+  );
 
   // A pump's side and amount: the same two fields on its own sheet and on
   // its edit, where an amount measured later is added.
@@ -1104,6 +1125,7 @@ export function LogSheet({
               <ToggleGroupItem value="both"><span className="both-icon" aria-hidden="true"><Droplet size={18} />●</span><strong>Both</strong><Check className="choice-check" /></ToggleGroupItem>
             </ToggleGroup>
           </Field>
+          {wetnessField}
           <TimeField quick value={draft.logTime} onChange={(value) => patch({ logTime: value })} />
           {/* Above the note, and a real button: a photo for the doctor is
               why most parents open this form rather than tapping the tile. */}
@@ -1209,6 +1231,7 @@ export function LogSheet({
               </ToggleGroup>
             </Field>
           )}
+          {editing.type === "diaper" && wetnessField}
 
           {/* Reported from the feedback box: "I logged the wrong amount of
               vitamin D and I couldn't change it." The edit sheet had no field

@@ -12,6 +12,7 @@ import type { Routine } from "./routines";
     feeds lists it. */
 export type ActivityType = "bottle" | "nursing" | "diaper" | "burp" | "sleep" | "growth" | "health" | "medicine" | "solid" | "routine" | "month" | "vaccine" | "tummy" | "pump";
 export type DiaperKind = "wet" | "dirty" | "both";
+export type Wetness = "light" | "heavy";
 export type FeedingMode = "mixed" | "breast" | "bottle";
 export type Tab = "today" | "timeline" | "insights" | "guide" | "more";
 
@@ -25,6 +26,10 @@ export type Activity = {
       actually go — it is not two sessions and should not be logged as two. */
   side?: "left" | "right" | "both";
   diaperKind?: DiaperKind;
+  /** How wet a wet (or wet + dirty) nappy was, if the parent said. Absent is
+      "not said", never "normal". Like `place`, not checked on load: a value
+      from a later build reads as not said, not as a reason to drop the row. */
+  wetness?: Wetness;
   milkType?: "formula" | "expressed";
   weightGrams?: number;
   lengthCm?: number;

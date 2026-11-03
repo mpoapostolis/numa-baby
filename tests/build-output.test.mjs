@@ -173,7 +173,12 @@ const BUDGET_GZIP = {
   // stamp. Those names alone moved it between 121,958 and 121,970 bytes
   // across builds of the same source, which left 30 bytes — less than one
   // rebuild's jitter. Measured after: 121.97 kB.
-  "index-*.js": 122_050,
+  // 122_050 → 122_250 on 2026-11-03 for light or heavy on a wet nappy. The
+  // split rule was honoured: the form field and the news are lazy; on the
+  // boot path are Light and Heavy on the Diaper card for the quarter of an
+  // hour after Wet, and the word in the entry's title. Measured after:
+  // 122.13 kB.
+  "index-*.js": 122_250,
   "index-*.css": 29_000,
 };
 const LAZY_SCREENS = ["SettingsScreen", "GrowthGuideScreen", "InsightsScreen", "TimelineScreen", "LogSheet", "OnboardingScreen", "sonner", "FactOfTheDay"];

@@ -24,6 +24,15 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-11-03",
+    title: "Wet diapers: light or heavy",
+    items: [
+      "After you tap Wet on Today, the Diaper card offers Light and Heavy for the next 15 minutes. Tap one to note how wet it was, or tap it again to take it back. Wet is still one tap if you skip it.",
+      "The same choice is in the diaper form and when you edit a change, under “How wet”. The timeline then reads “Heavy wet diaper” or “Light wet diaper”.",
+      "Update the app on both phones: until then, the other phone shows these as plain “Wet diaper”.",
+    ],
+  },
+  {
     id: "2026-10-30",
     title: "Bottle and Nursing, always both",
     items: [

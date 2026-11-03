@@ -18,8 +18,10 @@ export function activityTitle(activity: Activity) {
   // rename "Vitamin D, 09:12" into something nobody can identify.
   if (activity.type === "routine") return activity.note?.trim() || "Daily routine";
   if (activity.type === "diaper") {
-    if (activity.diaperKind === "both") return "Wet + dirty diaper";
-    return activity.diaperKind === "dirty" ? "Dirty diaper" : "Wet diaper";
+    // Only the two words this build knows; a dirty one is never "heavy".
+    const wet = activity.wetness === "heavy" ? "Heavy wet" : activity.wetness === "light" ? "Light wet" : "Wet";
+    if (activity.diaperKind === "both") return `${wet} + dirty diaper`;
+    return activity.diaperKind === "dirty" ? "Dirty diaper" : `${wet} diaper`;
   }
   // An activity type from a build newer than this one. Naming it honestly
   // beats mislabelling it as a nappy, which is what falling through did.

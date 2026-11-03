@@ -502,6 +502,31 @@
   vertical-align: -2px;
 }
 
+/* The quarter of an hour after Wet: Light or Heavy on the same line. Small to
+   look at, 44px tall to hit, and the one chosen wears the quiet selected wash. */
+.tile-since-wet button {
+  position: relative;
+  margin-left: 2px;
+  padding: 1px 6px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  font: inherit;
+  color: var(--signal);
+  font-weight: 550;
+  cursor: pointer;
+}
+
+.tile-since-wet button::before {
+  content: "";
+  position: absolute;
+  inset: -16px 0 -8px;
+}
+
+.tile-since-wet button[aria-pressed="true"] {
+  background: var(--signal-quiet);
+}
+
 /* A tile that is currently a stopwatch. It keeps its place in the grid and its
    own hue; what changes is that it is obviously LIVE — a stronger edge, a
    numeral big enough to read at arm's length in the dark, and a stop button
@@ -1469,7 +1494,8 @@
 
   /* The longer "Dirty · 2m ago · Add photo" goes under the title, not into a
      second column that pushed the title over its glyph. */
-  .tile-head .tile-since-photo {
+  .tile-head .tile-since-photo,
+  .tile-head .tile-since-wet {
     grid-column: 1;
   }
 
@@ -1500,7 +1526,8 @@
     justify-items: start;
   }
 
-  .quick-grid > .tile-diaper .tile-head .tile-since-photo {
+  .quick-grid > .tile-diaper .tile-head .tile-since-photo,
+  .quick-grid > .tile-diaper .tile-head .tile-since-wet {
     grid-column: 2;
   }
 

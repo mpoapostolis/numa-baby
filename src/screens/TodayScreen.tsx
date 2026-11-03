@@ -38,7 +38,7 @@ import { dueLabel, dueSoon, vaccineLabel } from "../domain/vaccines";
 import { MONTHS_KEPT } from "../domain/keepsakes";
 import { tummyGoalMinutes } from "../domain/tummyGoal";
 import { usePhoto } from "../hooks/usePhoto";
-import { Activity, DiaperKind, Profile, Sheet } from "../domain/types";
+import { Activity, DiaperKind, Profile, Sheet, Wetness } from "../domain/types";
 import { UnitSystem, formatVolume, useUnits } from "../domain/units";
 import { Milestone } from "../domain/milestones";
 import { LifetimeTotals } from "../domain/lifetime";
@@ -357,6 +357,7 @@ type TodayScreenProps = {
   /** The party's own 🎉: dismissed for the day, on every return to Today. */
   onDismissCelebration: () => void;
   onAdd: (activity: Activity, message: string) => boolean;
+  onUpdate: (activity: Activity) => boolean;
   onStopTimer: (id: string) => void;
   onOpenSheet: (sheet: Exclude<Sheet, null>) => void;
   onManualNursing: () => void;
@@ -388,6 +389,7 @@ function TodayScreen({
   milestoneTotals,
   onDismissCelebration,
   onAdd,
+  onUpdate,
   onStopTimer,
   onOpenSheet,
   onManualNursing,
@@ -592,6 +594,15 @@ function TodayScreen({
       setReactionKey(entry.id);
       track("diaper_logged", { kind });
     }
+  }
+
+  // Light or heavy, added to the wet one just logged. The one already chosen
+  // takes it back: a mis-tap at 3am is undone where it was made.
+  function markWetness(entry: Activity, wetness: Wetness) {
+    const next: Activity = { ...entry };
+    if (entry.wetness === wetness) delete next.wetness;
+    else next.wetness = wetness;
+    if (onUpdate(next)) track("diaper_wetness", { wetness: next.wetness ?? "cleared" });
   }
 
   // A stopwatch, not a counter: one tap starts it, one tap stops it. The
@@ -1007,6 +1018,17 @@ function TodayScreen({
                       <button type="button" className="tile-since tile-since-photo" onClick={() => onEdit(lastDiaper)}>
                         {lastDiaper.diaperKind === "both" ? "Wet + dirty" : "Dirty"} · {humanDuration(since)} ago <span className="tile-started-edit">· <Camera size={12} aria-hidden="true" /> Add photo</span>
                       </button>
+                    );
+                  }
+                  // How wet: Wet stays one tap, and for the same quarter of an
+                  // hour the time also takes Light or Heavy.
+                  if (lastDiaper.diaperKind === "wet" && since < 15) {
+                    return (
+                      <span className="tile-since tile-since-wet">
+                        Wet · {humanDuration(since)} ago ·
+                        <button type="button" aria-pressed={lastDiaper.wetness === "light"} aria-label="Light wet" onClick={() => markWetness(lastDiaper, "light")}>Light</button>
+                        <button type="button" aria-pressed={lastDiaper.wetness === "heavy"} aria-label="Heavy wet" onClick={() => markWetness(lastDiaper, "heavy")}>Heavy</button>
+                      </span>
                     );
                   }
                   return <span className="tile-since">{humanDuration(since)} ago</span>;
