@@ -8,7 +8,7 @@ import {
   outsideStoredBounds,
   roundToStep,
 } from "./activitySchema";
-import { Activity, ActivityType, Profile, ReminderSettings, StoredData } from "./types";
+import { Activity, ActivityType, Profile, ReminderSettings, StoredData, Wetness } from "./types";
 import { sanitizeRoutines } from "./routines";
 import { PHOTO_ID, sanitizePhotoRef } from "./photoRef";
 import { MONTHS_KEPT } from "./keepsakes";
@@ -45,6 +45,12 @@ export function tooFarInFuture(value: string, now = Date.now()) {
 export function clampFutureUpdatedAt(activity: Activity, now = Date.now()): Activity {
   if (activity.updatedAt === undefined || !tooFarInFuture(activity.updatedAt, now)) return activity;
   return { ...activity, updatedAt: new Date(now).toISOString() };
+}
+
+/** One of the words this build knows for how wet a nappy was. Never used to
+    drop a row on load: a later build's word just reads as not said. */
+export function isWetness(value: unknown): value is Wetness {
+  return value === "light" || value === "medium" || value === "heavy";
 }
 
 function invalidStoredNumber(name: NumericFieldName, value: unknown) {

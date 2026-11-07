@@ -24,11 +24,20 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
-    id: "2026-11-03",
-    title: "Wet diapers: light or heavy",
+    id: "2026-11-07",
+    title: "Vitamin D, counted once",
     items: [
-      "After you tap Wet on Today, the Diaper card offers Light and Heavy for the next 15 minutes. Tap one to note how wet it was, or tap it again to take it back. Wet is still one tap if you skip it.",
-      "The same choice is in the diaper form and when you edit a change, under “How wet”. The timeline then reads “Heavy wet diaper” or “Light wet diaper”.",
+      "“We logged Vitamin D under Medicine, then the daily reminder asked for it again, and we ended up with two entries.” Now a dose logged under Medicine also ticks it off your daily list, so the list stops asking.",
+      "The other way round too: Vitamin D ticked on the daily list now shows on the Medicine row, so the time since the last dose counts from it.",
+      "They are matched by name: “Vitamin D drops” under Medicine counts for “Vitamin D” on the list.",
+    ],
+  },
+  {
+    id: "2026-11-03",
+    title: "Wet diapers: light, medium or heavy",
+    items: [
+      "After you tap Wet on Today, the Diaper card offers Light, Medium and Heavy for the next 15 minutes. Tap one to note how wet it was, or tap it again to take it back. Wet is still one tap if you skip it.",
+      "The same choice is in the diaper form and when you edit a change, under “How wet”. The timeline then reads “Light wet diaper”, “Medium wet diaper” or “Heavy wet diaper”.",
       "Update the app on both phones: until then, the other phone shows these as plain “Wet diaper”.",
     ],
   },

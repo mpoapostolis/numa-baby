@@ -178,7 +178,11 @@ const BUDGET_GZIP = {
   // boot path are Light and Heavy on the Diaper card for the quarter of an
   // hour after Wet, and the word in the entry's title. Measured after:
   // 122.13 kB.
-  "index-*.js": 122_250,
+  // 122_250 → 122_450 on 2026-11-07 for Medium on a wet nappy and for
+  // Vitamin D counted once: a dose under Medicine ticks the daily list, and a
+  // tick counts on the Medicine row. Both are decided by Today itself, so the
+  // name match is boot path; the news is lazy. Measured after: 122.39 kB.
+  "index-*.js": 122_450,
   "index-*.css": 29_000,
 };
 const LAZY_SCREENS = ["SettingsScreen", "GrowthGuideScreen", "InsightsScreen", "TimelineScreen", "LogSheet", "OnboardingScreen", "sonner", "FactOfTheDay"];

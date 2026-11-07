@@ -42,11 +42,42 @@ export function doneToday(activities: Activity[], now: number): Set<string> {
   return done;
 }
 
-/** The ones still waiting, in the order the family wrote them. */
+/** The ones still waiting, in the order the family wrote them.
+ *
+ * A dose logged under Medicine counts as well. From the feedback box: a
+ * family logged "Vitamin D drops" there, the card still asked for Vitamin D,
+ * and its tick made a second entry for the one dose. Whoever gave it, by
+ * whichever button, it has been given.
+ */
 export function pendingRoutines(routines: Routine[], activities: Activity[], now: number): Routine[] {
   if (!routines.length) return [];
   const done = doneToday(activities, now);
-  return routines.filter((routine) => !done.has(routine.id));
+  const today = dayKey(new Date(now));
+  const medicines = activities.filter(
+    (activity) => activity.type === "medicine" && activity.medicine && dayKey(new Date(activity.startedAt)) === today,
+  );
+  return routines.filter(
+    (routine) => !done.has(routine.id) && !medicines.some((activity) => namesRoutine(activity.medicine, routine.label)),
+  );
+}
+
+/** Word by word, case and accents aside: "Βιταμίνη D" and "βιταμινη d" are
+    the same two words. */
+function words(text: string): string[] {
+  return text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+}
+
+/** Whether a medicine's name is this routine: the label's words, in order,
+    somewhere in the name. "Vitamin D drops" is the "Vitamin D" on the list;
+    a "D" on its own is not, and neither is "Iron" for "Iron drops". */
+export function namesRoutine(name: string | undefined, label: string): boolean {
+  const have = words(name ?? "");
+  const want = words(label);
+  if (!want.length) return false;
+  for (let start = 0; start + want.length <= have.length; start++) {
+    if (want.every((word, offset) => have[start + offset] === word)) return true;
+  }
+  return false;
 }
 
 /** A label somebody typed, made safe to keep. Empty means "not a routine". */

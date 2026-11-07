@@ -3,6 +3,7 @@ import {
   MAX_ROUTINES,
   addRoutine,
   doneToday,
+  namesRoutine,
   pendingRoutines,
   removeRoutine,
   sanitizeRoutines,
@@ -59,11 +60,10 @@ describe("what is still waiting today", () => {
     expect(pendingRoutines([vitamin], log, Date.parse("2026-09-02T23:50:00"))).toEqual([]);
   });
 
-  it("ignores everything that is not a tick", () => {
+  it("ignores everything that is not a tick or a dose of it", () => {
     const log: Activity[] = [
       { id: "b1", type: "bottle", startedAt: "2026-09-03T08:00:00", amount: 90 },
-      // A medicine entry is a different thing and must not tick a routine off.
-      { id: "m1", type: "medicine", startedAt: "2026-09-03T08:00:00", medicine: "Vitamin D" },
+      { id: "m1", type: "medicine", startedAt: "2026-09-03T08:00:00", medicine: "Paracetamol" },
       // A tick for a routine the family has since deleted.
       tick("gone", "2026-09-03T08:00:00"),
     ];
@@ -71,8 +71,32 @@ describe("what is still waiting today", () => {
     expect(pendingRoutines([vitamin], log, NOON)).toEqual([vitamin]);
   });
 
+  it("counts a dose logged under Medicine, so the card does not ask for it twice", () => {
+    const dose = (medicine: string, at = "2026-09-03T08:00:00"): Activity => ({ id: `m-${medicine}`, type: "medicine", startedAt: at, medicine });
+    expect(pendingRoutines([vitamin, drops], [dose("vitamin D drops")], NOON)).toEqual([drops]);
+    expect(pendingRoutines([vitamin, drops], [dose("Iron drops 1ml")], NOON)).toEqual([vitamin]);
+    // Yesterday's dose says nothing about today.
+    expect(pendingRoutines([vitamin], [dose("Vitamin D", "2026-09-02T08:00:00")], NOON)).toEqual([vitamin]);
+  });
+
   it("has nothing to say when the family keeps no list", () => {
     expect(pendingRoutines([], [tick("vitamin d", "2026-09-03T08:00:00")], NOON)).toEqual([]);
+  });
+});
+
+describe("a medicine's name and a routine", () => {
+  it("matches the routine's words, in order, anywhere in the name", () => {
+    expect(namesRoutine("vitamin D drops", "Vitamin D")).toBe(true);
+    expect(namesRoutine("Baby's Vitamin-D", "Vitamin D")).toBe(true);
+    expect(namesRoutine("Βιταμίνη D", "βιταμινη d")).toBe(true);
+  });
+
+  it("does not match part of a routine, or a word inside another word", () => {
+    expect(namesRoutine("Iron", "Iron drops")).toBe(false);
+    expect(namesRoutine("D3", "D")).toBe(false);
+    expect(namesRoutine("Paracetamol", "Vitamin D")).toBe(false);
+    expect(namesRoutine(undefined, "Vitamin D")).toBe(false);
+    expect(namesRoutine("Vitamin D", "  ")).toBe(false);
   });
 });
 

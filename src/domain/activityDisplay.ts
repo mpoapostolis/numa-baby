@@ -18,8 +18,12 @@ export function activityTitle(activity: Activity) {
   // rename "Vitamin D, 09:12" into something nobody can identify.
   if (activity.type === "routine") return activity.note?.trim() || "Daily routine";
   if (activity.type === "diaper") {
-    // Only the two words this build knows; a dirty one is never "heavy".
-    const wet = activity.wetness === "heavy" ? "Heavy wet" : activity.wetness === "light" ? "Light wet" : "Wet";
+    // Only the words this build knows; a dirty one is never "heavy".
+    const wet =
+      activity.wetness === "heavy" ? "Heavy wet"
+      : activity.wetness === "medium" ? "Medium wet"
+      : activity.wetness === "light" ? "Light wet"
+      : "Wet";
     if (activity.diaperKind === "both") return `${wet} + dirty diaper`;
     return activity.diaperKind === "dirty" ? "Dirty diaper" : `${wet} diaper`;
   }

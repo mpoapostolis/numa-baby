@@ -10,6 +10,7 @@
 // changelog test fails until the two lists agree.
 
 export const RELEASE_IDS: readonly string[] = [
+  "2026-11-07",
   "2026-11-03",
   "2026-10-30",
   "2026-10-15.4",

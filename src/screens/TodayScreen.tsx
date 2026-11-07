@@ -45,7 +45,7 @@ import { LifetimeTotals } from "../domain/lifetime";
 import { shareLink } from "../domain/shareApp";
 import { isMorning, summarizeNight } from "../domain/nightSummary";
 import { typicalVerdict } from "../domain/typical";
-import { ROUTINE_TYPE, pendingRoutines, type Routine } from "../domain/routines";
+import { ROUTINE_TYPE, namesRoutine, pendingRoutines, type Routine } from "../domain/routines";
 import { shareCardOnTap } from "../lib/shareOnTap";
 
 /** "Jun 28" — the short day the secondary rows speak in. */
@@ -439,7 +439,13 @@ function TodayScreen({
   // Every timer runs in its own tile or row, so a row here is only for one
   // that has none — a timed type this build does not know. Rare, and it must
   // never go invisible.
-  const lastMedicine = sortedActivities.find((activity) => activity.type === "medicine");
+  // A tick on the daily list is a dose too, when it is a medicine the family
+  // also logs here: the row said "Vitamin D drops · 1d ago" about a Vitamin D
+  // ticked off this morning (from the feedback box).
+  const medicineNames = new Set(sortedActivities.flatMap((activity) => activity.type === "medicine" && activity.medicine ? [activity.medicine] : []));
+  const lastMedicine = sortedActivities.find((activity) =>
+    activity.type === "medicine"
+    || (activity.type === ROUTINE_TYPE && [...medicineNames].some((name) => namesRoutine(name, activity.note ?? ""))));
   const lastSolid = sortedActivities.find((activity) => activity.type === "solid");
   const homelessTimers = activeTimers.filter((timer) =>
     timer.type !== "nursing" && timer.type !== "sleep" && timer.type !== "burp" && timer.type !== "tummy",
@@ -596,7 +602,7 @@ function TodayScreen({
     }
   }
 
-  // Light or heavy, added to the wet one just logged. The one already chosen
+  // Light, medium or heavy, added to the wet one just logged. The one already chosen
   // takes it back: a mis-tap at 3am is undone where it was made.
   function markWetness(entry: Activity, wetness: Wetness) {
     const next: Activity = { ...entry };
@@ -1021,13 +1027,16 @@ function TodayScreen({
                     );
                   }
                   // How wet: Wet stays one tap, and for the same quarter of an
-                  // hour the time also takes Light or Heavy.
+                  // hour the time also takes Light, Medium or Heavy.
                   if (lastDiaper.diaperKind === "wet" && since < 15) {
                     return (
                       <span className="tile-since tile-since-wet">
-                        Wet · {humanDuration(since)} ago ·
-                        <button type="button" aria-pressed={lastDiaper.wetness === "light"} aria-label="Light wet" onClick={() => markWetness(lastDiaper, "light")}>Light</button>
-                        <button type="button" aria-pressed={lastDiaper.wetness === "heavy"} aria-label="Heavy wet" onClick={() => markWetness(lastDiaper, "heavy")}>Heavy</button>
+                        Wet · {humanDuration(since)} ago
+                        <span className="wetness-choices">
+                          <button type="button" aria-pressed={lastDiaper.wetness === "light"} aria-label="Light wet" onClick={() => markWetness(lastDiaper, "light")}>Light</button>
+                          <button type="button" aria-pressed={lastDiaper.wetness === "medium"} aria-label="Medium wet" onClick={() => markWetness(lastDiaper, "medium")}>Medium</button>
+                          <button type="button" aria-pressed={lastDiaper.wetness === "heavy"} aria-label="Heavy wet" onClick={() => markWetness(lastDiaper, "heavy")}>Heavy</button>
+                        </span>
                       </span>
                     );
                   }
@@ -1257,7 +1266,7 @@ function TodayScreen({
               <strong>Medicine</strong>
               <small>
                 {lastMedicine
-                  ? `${lastMedicine.medicine?.trim() || "Last dose"} · ${humanDuration(minutesBetween(lastMedicine.startedAt, new Date(minuteClock).toISOString()))} ago`
+                  ? `${(lastMedicine.type === "medicine" ? lastMedicine.medicine : lastMedicine.note)?.trim() || "Last dose"} · ${humanDuration(minutesBetween(lastMedicine.startedAt, new Date(minuteClock).toISOString()))} ago`
                   : "Vitamin D, paracetamol, drops"}
               </small>
             </span>

@@ -31,7 +31,7 @@ import { makeId } from "../domain/id";
 import { minuteBucket, mlBucket, track } from "../domain/analytics";
 import { formatTime, formatTimelineDay, humanDuration, localDateInput, minutesBetween } from "../domain/time";
 import { isTimedType } from "../domain/timers";
-import { DraftErrorField, validateDraft } from "../domain/validate";
+import { DraftErrorField, isWetness, validateDraft } from "../domain/validate";
 import { NOTE_MAX_LENGTH } from "../domain/activitySchema";
 import { Activity, DiaperKind, FeedingMode, Profile, Sheet, Wetness } from "../domain/types";
 import { PhotoField } from "./PhotoField";
@@ -145,7 +145,7 @@ function initialSheetDraft(
       foodText: editing.food ?? "",
       doseText: editing.dose ?? "",
       diaperKind: editing.diaperKind ?? "wet",
-      wetness: editing.wetness === "light" || editing.wetness === "heavy" ? editing.wetness : undefined,
+      wetness: isWetness(editing.wetness) ? editing.wetness : undefined,
       photo: editing.photo,
       pumpAmount: editing.type === "pump" && editing.amount ? mlToBottleDraft(editing.amount, units) : "",
     };
@@ -706,7 +706,9 @@ export function LogSheet({
     if (next.type === "diaper") {
       next.diaperKind = draft.diaperKind;
       if (draft.diaperKind !== "dirty" && draft.wetness) next.wetness = draft.wetness;
-      else delete next.wetness;
+      // A word from a later build is not this sheet's to drop: it showed as
+      // nothing chosen, so leaving the field alone keeps it.
+      else if (draft.diaperKind === "dirty" || isWetness(editing.wetness)) delete next.wetness;
       if (photoPlan.photo) next.photo = photoPlan.photo;
       else delete next.photo;
     }
@@ -753,14 +755,15 @@ export function LogSheet({
     showToast(`${activityTitle(next)} updated`);
   }
 
-  // Light or heavy, for a wet nappy. The app's segmented control, on the
+  // Light, medium or heavy, for a wet nappy. The app's segmented control, on the
   // sheet and on the edit; a second tap clears it, because how wet is
   // optional. Gone for a dirty one.
   const wetnessField = draft.diaperKind !== "dirty" && (
     <Field>
       <FieldLabel id={wetnessId}>How wet <span className="optional-label">Optional</span></FieldLabel>
-      <ToggleGroup type="single" value={draft.wetness ?? ""} className="segmented" aria-labelledby={wetnessId} onValueChange={(value) => patch({ wetness: value === "light" || value === "heavy" ? value : undefined })}>
+      <ToggleGroup type="single" value={draft.wetness ?? ""} className="segmented three-way" aria-labelledby={wetnessId} onValueChange={(value) => patch({ wetness: isWetness(value) ? value : undefined })}>
         <ToggleGroupItem value="light">Light<Check className="choice-check" /></ToggleGroupItem>
+        <ToggleGroupItem value="medium">Medium<Check className="choice-check" /></ToggleGroupItem>
         <ToggleGroupItem value="heavy">Heavy<Check className="choice-check" /></ToggleGroupItem>
       </ToggleGroup>
     </Field>

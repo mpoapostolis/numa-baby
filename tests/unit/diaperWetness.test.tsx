@@ -9,7 +9,7 @@ import { isValidActivity } from "@/domain/validate";
 import { Activity } from "@/domain/types";
 import { seedLog, stubBrowser } from "./appHarness";
 
-// Light or heavy, for a wet nappy: one more tap after Wet on Today, or a
+// Light, medium or heavy, for a wet nappy: one more tap after Wet on Today, or a
 // choice on the diaper form. Never asked for, never in the way.
 
 beforeEach(() => {
@@ -46,6 +46,7 @@ const nappy = (fields: Partial<Activity>): Activity => ({ id: "d1", type: "diape
 test("the title says how wet, and only for a wet one", () => {
   expect(activityTitle(nappy({ diaperKind: "wet" }))).toBe("Wet diaper");
   expect(activityTitle(nappy({ diaperKind: "wet", wetness: "heavy" }))).toBe("Heavy wet diaper");
+  expect(activityTitle(nappy({ diaperKind: "wet", wetness: "medium" }))).toBe("Medium wet diaper");
   expect(activityTitle(nappy({ diaperKind: "wet", wetness: "light" }))).toBe("Light wet diaper");
   expect(activityTitle(nappy({ diaperKind: "both", wetness: "heavy" }))).toBe("Heavy wet + dirty diaper");
   expect(activityTitle(nappy({ diaperKind: "dirty", wetness: "heavy" }))).toBe("Dirty diaper");
@@ -57,7 +58,7 @@ test("a wetness from a later build keeps the nappy, and reads as not said", () =
   expect(activityTitle(later)).toBe("Wet diaper");
 });
 
-test("after Wet on Today, Light or Heavy goes on that nappy, and a second tap takes it back", async () => {
+test("after Wet on Today, Light, Medium or Heavy goes on that nappy, and a second tap takes it back", async () => {
   render(<App />);
   await tap(tileButton("Log wet diaper"));
   expect(stored()[0].wetness).toBeUndefined();
@@ -68,7 +69,9 @@ test("after Wet on Today, Light or Heavy goes on that nappy, and a second tap ta
   expect(stored()[0]).toMatchObject({ type: "diaper", diaperKind: "wet", wetness: "heavy" });
   await waitFor(() => expect((document.querySelector('button[aria-label="Heavy wet"]') as HTMLButtonElement).getAttribute("aria-pressed")).toBe("true"));
 
-  // Changed mind: Light replaces Heavy.
+  // Changed mind: Medium replaces Heavy, then Light replaces Medium.
+  await tap(tileButton("Medium wet"));
+  expect(stored()[0].wetness).toBe("medium");
   await tap(tileButton("Light wet"));
   expect(stored()[0].wetness).toBe("light");
 
@@ -81,15 +84,15 @@ test("after Dirty, the card does not ask how wet", async () => {
   render(<App />);
   await tap(tileButton("Log dirty diaper"));
   await waitFor(() => expect(document.querySelector(".tile-since")).not.toBeNull());
-  expect(document.querySelector('button[aria-label="Heavy wet"]')).toBeNull();
+  for (const label of ["Light wet", "Medium wet", "Heavy wet"]) expect(document.querySelector(`button[aria-label="${label}"]`)).toBeNull();
 }, 15_000);
 
 test("the diaper form takes How wet, and drops it for a dirty one", async () => {
   render(<App />);
   await tap(tileButton("Log a diaper change at a different time"));
-  await tap(screen.findByRole("radio", { name: "Heavy" }));
+  await tap(screen.findByRole("radio", { name: "Medium" }));
   await tap(screen.getByRole("button", { name: /Save wet diaper/i }));
-  expect(stored()[0]).toMatchObject({ diaperKind: "wet", wetness: "heavy" });
+  expect(stored()[0]).toMatchObject({ diaperKind: "wet", wetness: "medium" });
 
   cleanup();
   seedLog();
@@ -119,4 +122,18 @@ test("editing a nappy shows how wet it was, and can clear it", async () => {
   await tap(screen.getByRole("button", { name: /^Save/ }));
   expect("wetness" in stored()[0]).toBe(false);
   expect(stored()[0].diaperKind).toBe("wet");
+}, 15_000);
+
+test("an edit leaves a later build's word alone unless the parent picks one", async () => {
+  seedLog([{ ...nappy({ diaperKind: "wet", note: "before" }), wetness: "soaked" } as unknown as Activity]);
+  render(<App />);
+  const row = await waitFor(() => {
+    const found = Array.from(document.querySelectorAll("button")).find((b) => /Wet diaper(?!s)/.test(b.textContent ?? "")); // not News's "Wet diapers: …"
+    if (!found) throw new Error("no row yet");
+    return found;
+  }, { timeout: 5_000 });
+  await tap(row);
+  for (const name of ["Light", "Medium", "Heavy"]) expect((await screen.findByRole("radio", { name })).getAttribute("aria-checked")).toBe("false");
+  await tap(screen.getByRole("button", { name: /^Save/ }));
+  expect((stored()[0] as unknown as { wetness: string }).wetness).toBe("soaked");
 }, 15_000);

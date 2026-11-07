@@ -12,7 +12,7 @@ import type { Routine } from "./routines";
     feeds lists it. */
 export type ActivityType = "bottle" | "nursing" | "diaper" | "burp" | "sleep" | "growth" | "health" | "medicine" | "solid" | "routine" | "month" | "vaccine" | "tummy" | "pump";
 export type DiaperKind = "wet" | "dirty" | "both";
-export type Wetness = "light" | "heavy";
+export type Wetness = "light" | "medium" | "heavy";
 export type FeedingMode = "mixed" | "breast" | "bottle";
 export type Tab = "today" | "timeline" | "insights" | "guide" | "more";
 
