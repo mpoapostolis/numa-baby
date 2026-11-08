@@ -11,7 +11,7 @@
 // every citation sits inside the sentence it supports, because an assistant
 // quoting a line should carry the source with it.
 
-import { BAG_PAGE, DISCLAIMER, DOCTOR_PAGE, MILK_PAGE, SITE, SOURCES_CHECKED, SOURCES_PAGE, STAGES } from "./pages.mjs";
+import { BAG_PAGE, DISCLAIMER, DOCTOR_PAGE, MILK_PAGE, PRIVACY_PAGE, SITE, SOURCES_CHECKED, SOURCES_PAGE, STAGES } from "./pages.mjs";
 
 const esc = (value) =>
   String(value ?? "").replace(/[&<>"']/g, (c) => ({
@@ -134,13 +134,15 @@ const PUBLISHER = {
  * 404 describes no thing.
  *
  * @param opts {kind: "medical"|"page"|"collection", crumb, sources, about,
- *              list: pages for an ItemList, noindex}
+ *              list: pages for an ItemList, noindex, standalone: not a guide}
  */
 export function structuredData(page, opts = {}) {
   if (opts.noindex) return null;
   const url = `${SITE.origin}/${page.slug}`;
   const kind = opts.kind ?? "medical";
-  const isHub = page.slug === "guides";
+  // The hub, and a page that is not a guide (privacy), hang off the site
+  // itself rather than off Guides.
+  const topLevel = page.slug === "guides" || Boolean(opts.standalone);
   const sources = opts.sources ?? [];
   const webpage = {
     "@type": { medical: "MedicalWebPage", page: "WebPage", collection: "CollectionPage" }[kind],
@@ -191,8 +193,8 @@ export function structuredData(page, opts = {}) {
     "@id": `${url}#breadcrumb`,
     itemListElement: [
       { "@type": "ListItem", position: 1, name: SITE.name, item: HOME },
-      ...(isHub ? [] : [{ "@type": "ListItem", position: 2, name: "Guides", item: `${SITE.origin}/guides` }]),
-      { "@type": "ListItem", position: isHub ? 2 : 3, name: opts.crumb ?? page.h1 },
+      ...(topLevel ? [] : [{ "@type": "ListItem", position: 2, name: "Guides", item: `${SITE.origin}/guides` }]),
+      { "@type": "ListItem", position: topLevel ? 2 : 3, name: opts.crumb ?? page.h1 },
     ],
   };
   return { "@context": "https://schema.org", "@graph": [webpage, crumbs] };
@@ -226,7 +228,8 @@ function glossFirstDiaper(html) {
 /**
  * @param page  {slug, title, h1, description, lead, updated, cta?}
  * @param body  the rendered HTML between the H1 and the footer
- * @param opts  {sources: FactSource[], crumb: string, kind, about, list, noindex}
+ * @param opts  {sources: FactSource[], crumb: string, kind, about, list, noindex,
+ *               standalone: not a guide — no Guides crumb, no medical note}
  */
 export function render(page, body, opts = {}) {
   const url = `${SITE.origin}/${page.slug}`;
@@ -238,6 +241,9 @@ export function render(page, body, opts = {}) {
   const title = [...suffixed].length <= 60 ? suffixed : page.title;
   const ld = structuredData(page, opts);
   const isHub = page.slug === "guides";
+  const crumbs = isHub
+    ? "Guides"
+    : opts.standalone ? esc(opts.crumb ?? page.h1) : `<a href="/guides">Guides</a> › ${esc(opts.crumb ?? page.h1)}`;
   const cta = {
     text: "Track feeds, diapers and sleep",
     sub: "Free, no account, works offline. Your entries stay on your device.",
@@ -272,11 +278,11 @@ ${ld ? `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\
   <a href="/">${esc(SITE.name)}</a>
   <a class="open" href="/">Open the app →</a>
 </header>
-<nav class="crumbs"><a href="/">${esc(SITE.name)}</a> › ${isHub ? "Guides" : `<a href="/guides">Guides</a> › ${esc(opts.crumb ?? page.h1)}`}</nav>
+<nav class="crumbs"><a href="/">${esc(SITE.name)}</a> › ${crumbs}</nav>
 <main>
 <h1>${esc(page.h1)}</h1>
 ${main}
-<p class="note">${esc(DISCLAIMER)}</p>
+${opts.standalone ? "" : `<p class="note">${esc(DISCLAIMER)}</p>`}
 <a class="cta" href="/?via=${esc(cta.via ?? page.slug)}">${esc(cta.text)}
   <small>${esc(cta.sub)}</small></a>
 </main>
@@ -287,6 +293,7 @@ ${main}
     <a href="/${MILK_PAGE.slug}">How much milk</a>
     <a href="/${BAG_PAGE.slug}">Diaper bag checklist</a>
     <a href="/${SOURCES_PAGE.slug}">Sources</a>
+    <a href="/${PRIVACY_PAGE.slug}">Privacy</a>
   </nav>
   <nav class="links" aria-label="Ages">
     ${STAGES.map((stage) => `<a href="/${stage.slug}">${esc(stage.age)}</a>`).join("\n    ")}

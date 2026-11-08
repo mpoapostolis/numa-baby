@@ -11,7 +11,7 @@ import { copyFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
-  BAG_PAGE, CONTENT_SLUGS, DOCTOR_PAGE, INDEX_PAGE, MILK_PAGE, SITE, SOURCES_CHECKED, SOURCES_PAGE, STAGES,
+  BAG_PAGE, CONTENT_SLUGS, DOCTOR_PAGE, INDEX_PAGE, MILK_PAGE, PRIVACY_PAGE, SITE, SOURCES_CHECKED, SOURCES_PAGE, STAGES,
 } from "./prerender/pages.mjs";
 import { citeLine, claim, esc, render } from "./prerender/render.mjs";
 
@@ -251,6 +251,78 @@ emit(SOURCES_PAGE, render(SOURCES_PAGE, `
 <p>Last fetched and read on ${esc(SOURCES_CHECKED)}. Where a source has since moved, the
 link points at the page that replaced it rather than at a redirect.</p>`,
   { kind: "collection", sources: everySource, crumb: "Sources" }));
+
+// --- privacy ------------------------------------------------------------
+// Every sentence here was checked against the code on PRIVACY_PAGE.updated.
+// Change what the app sends or keeps, and this page changes in the same
+// commit — a policy that drifts from the code is worse than none.
+emit(PRIVACY_PAGE, render(PRIVACY_PAGE, `
+<h2>The short version</h2>
+<ul>
+<li>Without Family Sync, your baby's log and photos stay on your phone. Nothing from the log is sent anywhere.</li>
+<li>Family Sync, which you turn on yourself, keeps the log on a server so two phones can share it.</li>
+<li>Usage statistics are collected only if you tap Allow, and never include your baby's name, birth date, notes or photos.</li>
+<li>There are no ads, and your data is never sold.</li>
+<li>You can have everything deleted. How is at the end of this page.</li>
+</ul>
+
+<h2>On your phone</h2>
+<p>Everything you log — entries, notes, the baby's profile, reminder settings — is kept in your browser's storage on this phone, and photos in the browser's own database. Photos are re-saved before they are kept, which removes their location data. "Erase all data" in Settings deletes all of it from this phone.</p>
+
+<h2>Family Sync</h2>
+<p>When you turn on Family Sync (or protect your log with Google or an email address, which turns it on for this phone), this is sent to the server and kept there:</p>
+<ul>
+<li>every entry, in full, including notes, medicine names and doses, measurements and temperatures;</li>
+<li>the baby's profile: name, birth date, sex if you set it, feeding method, daily routines and profile photo;</li>
+<li>photos you add to entries, months or the profile;</li>
+<li>each phone's name (such as "Mia's tracker") and when it last synced.</li>
+</ul>
+<p><strong>Where:</strong> entries and the profile are in a Turso database on Amazon Web Services in Ireland (eu-west-1). Photos are in Cloudflare R2, in its Eastern Europe region. The app's server runs on Cloudflare.</p>
+<p><strong>How it is protected:</strong> everything travels over HTTPS, and both Turso and Cloudflare encrypt stored data (AES-256). Phones join a family with a six-digit code that expires after 15 minutes, works once, and allows only a limited number of tries. Each phone then gets its own random key; the server keeps only a hash of it, never the key itself, and a phone can be removed from the family on its own.</p>
+<p><strong>What it is not:</strong> the data is not end-to-end encrypted. The server has to read it to keep two phones in step, so as the person running it I technically can too. I do not read families' logs. The admin dashboard shows counts — how many families, entries and phones — not their content. Two tools can see more: the one I use to send announcements sees a baby's first name and age, so a message reaches the families it is meant for, and the one I use to help a family that has lost access can look a family up by the baby's name and birth date.</p>
+<p><strong>Deleted entries:</strong> when you delete an entry, the server keeps a marked-as-deleted copy so the other phone learns it is gone. These copies are not cleared automatically yet. A photo is removed from the server when you delete its entry or remove the photo.</p>
+<p><strong>Leaving:</strong> "Leave family" disconnects this phone and stops syncing; it does not delete the family's data from the server. To have that deleted, see the last section.</p>
+
+<h2>Protecting your log with Google or email</h2>
+<p>If you choose Google, the server keeps your Google account id and email address; if you choose email, it keeps the email address. They are used only to send you a link back to your log on a new phone. Sign-in emails are sent through Cloudflare. When the screen that offers this protection appears, it loads Google's sign-in script from accounts.google.com, even before you tap anything.</p>
+
+<h2>Reminders</h2>
+<p>If you turn on feed or diaper reminders, your browser gives the app an address at its push service (Apple, Google, Mozilla or Microsoft). The server keeps that address, its keys, the time the next reminder is due and, if the phone is in a family, which family. The reminder text is fixed and contains nothing from your log. Turning both reminders off deletes this.</p>
+
+<h2>Messages to me</h2>
+<p>When you write to me from the app, the server keeps your message, the app version and — only if you add it — a way to reach you. If you leave an email address, my reply is also emailed to you. Messages are kept until you ask me to delete them.</p>
+
+<h2>Usage statistics</h2>
+<p>Only if you tap Allow, the app uses Google Analytics to count how it is used: which screens are opened and which buttons are tapped, with coarse details such as the type of entry, a bottle size range, a diaper type or a milestone reached ("3 months"). It never sends the baby's name, birth date, notes, photos or any entry as written. Google Analytics sets cookies; ad features and Google signals are off. If you decline, nothing is loaded and nothing is sent. You can change your answer at any time in Settings.</p>
+
+<h2>IP addresses</h2>
+<p>Like any website, the server sees your IP address with each request. To stop abuse — someone guessing pairing codes, for example — it keeps addresses for about an hour, then deletes them. Cloudflare, which hosts the app, keeps its own request logs under <a href="https://www.cloudflare.com/privacypolicy/" rel="noopener">its privacy policy</a>.</p>
+
+<h2>Who else handles it</h2>
+<ul>
+<li><a href="https://www.cloudflare.com/privacypolicy/" rel="noopener">Cloudflare</a>: hosting, photo storage, sign-in emails.</li>
+<li><a href="https://turso.tech/privacy-policy" rel="noopener">Turso</a>: the database, on Amazon Web Services.</li>
+<li><a href="https://policies.google.com/privacy" rel="noopener">Google</a>: usage statistics, only if you allow them; sign-in, only if you protect your log with Google.</li>
+<li>Your browser's push service, to deliver reminders you turned on.</li>
+</ul>
+
+<h2>Why it is allowed</h2>
+<p>Family Sync, protection, reminders and messages run because you asked for them; usage statistics because you allowed them; the short-lived IP records to keep the service safe. A baby's log is health information, which is why none of it leaves your phone unless you choose a feature that needs it.</p>
+
+<h2>Deleting your data, and your other rights</h2>
+<ul>
+<li><strong>On this phone:</strong> Settings → "Erase all data".</li>
+<li><strong>A copy of your data:</strong> Settings → download a backup. It contains every entry.</li>
+<li><strong>Everything on the server</strong> — the family's entries, profile, photos, recovery email or Google link, reminders and messages: write to me from the app's message bubble and I will delete it and tell you when it is done.</li>
+</ul>
+<p>You can also ask me what I hold about you, or ask me to correct it. If you are unhappy with how your data is handled, you can complain to the data protection authority where you live.</p>
+
+<h2>The code</h2>
+<p>Numalog is open source, so every statement here can be checked: <a href="https://github.com/mpoapostolis/numa-baby" rel="noopener">github.com/mpoapostolis/numa-baby</a>. You can also run your own copy, with your own Cloudflare account and Turso database, so that nothing passes through mine; the README explains how, though it takes some technical knowledge.</p>
+
+<h2>Changes</h2>
+<p>When this page changes in substance, the app's News says so. Last updated ${esc(PRIVACY_PAGE.updated)}.</p>`,
+  { kind: "page", standalone: true, crumb: "Privacy" }));
 
 // --- the hub ------------------------------------------------------------
 emit(INDEX_PAGE, render(INDEX_PAGE, `
