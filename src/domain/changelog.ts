@@ -24,6 +24,14 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-11-08",
+    title: "Nursing time, left and right, every day",
+    items: [
+      "“Could it show how long she nurses on the right and on the left each day?” Now each day on the Timeline says it, under the date: “Left 1h 5m · Right 50m”.",
+      "Only the sides you used appear. A session logged as both sides keeps its own figure, because nobody timed how it split.",
+    ],
+  },
+  {
     id: "2026-11-07",
     title: "Vitamin D, counted once",
     items: [
