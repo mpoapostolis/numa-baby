@@ -28,6 +28,7 @@ function day(offsetFromToday: number, fields: Partial<DaySummary> = {}): DaySumm
     nursings: 0,
     ml: 0,
     nursingMinutes: 0,
+    nursingBySide: { left: 0, right: 0, both: 0, unsaid: 0 },
     diapers: 0,
     wet: 0,
     dirty: 0,

@@ -7,7 +7,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { ItemGroup, ItemSeparator } from "../components/ui/item";
 import { ToggleGroup, ToggleGroupItem } from "../components/ui/toggle-group";
 import { ActivityRow } from "../components/ActivityRow";
-import { DayRecapLine } from "../components/DayRecap";
+import { DayRecapLine } from "../components/DayRecapLine";
 import { EmptyState } from "../components/EmptyState";
 import { detailReadsClock } from "../domain/activityDisplay";
 import { bucketByDay, dayKey, summarizeDay } from "../domain/daySummary";

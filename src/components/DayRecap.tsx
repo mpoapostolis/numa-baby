@@ -14,7 +14,7 @@ import { t } from "../i18n";
 import { DaySummary } from "../domain/daySummary";
 import { shareLink } from "../domain/shareApp";
 import { formatTime, humanDuration } from "../domain/time";
-import { formatVolume, useUnits, volumeParts } from "../domain/units";
+import { useUnits, volumeParts } from "../domain/units";
 import { shareCardOnTap } from "../lib/shareOnTap";
 
 // Unit demotion, the house rule: digits speak, units recede.
@@ -213,23 +213,4 @@ export function DayRecap({ summary, title, name = "", stepper }: DayRecapProps) 
       )}
     </section>
   );
-}
-
-/**
- * The same day as one line, for a Timeline day heading. Only the parts that
- * happened appear — an empty day renders nothing at all.
- */
-export function DayRecapLine({ summary }: { summary: DaySummary }) {
-  const units = useUnits();
-  const parts: string[] = [];
-  // Each part is its own small sentence, so Greek can put the number where it
-  // belongs — "4 τσίσα", not a count glued to a translated noun.
-  if (summary.feeds > 0) parts.push(summary.feeds === 1 ? t("1 feed") : t("{n} feeds", { n: summary.feeds }));
-  if (summary.ml > 0) parts.push(formatVolume(summary.ml, units));
-  if (summary.wet > 0) parts.push(t("{n} wet", { n: summary.wet }));
-  if (summary.dirty > 0) parts.push(t("{n} dirty", { n: summary.dirty }));
-  if (summary.sleepMinutes > 0) parts.push(t("{duration} sleep", { duration: humanDuration(summary.sleepMinutes) }));
-  if (summary.solids > 0) parts.push(summary.solids === 1 ? t("1 solid") : t("{n} solids", { n: summary.solids }));
-  if (parts.length === 0) return null;
-  return <p className="recap-line">{parts.join(" · ")}</p>;
 }

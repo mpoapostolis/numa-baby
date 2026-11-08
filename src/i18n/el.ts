@@ -320,7 +320,7 @@ const el: Record<string, string> = {
   "{what} reminders on": "Υπενθυμίσεις: {what} — ανοιχτές",
   "Nappy": "Πάνα",
   "Notifications are not supported in this browser": "Αυτός ο browser δεν υποστηρίζει ειδοποιήσεις",
-  "Notifications were not enabled. You can allow them in browser settings.": "Οι ειδοποιήσεις δεν ενεργοποιήθηκαν. Μπορείτε να τις επιτρέψεις από τις ρυθμίσεις του browser.",
+  "Notifications were not enabled. You can allow them in browser settings.": "Οι ειδοποιήσεις δεν ενεργοποιήθηκαν. Μπορείτε να τις επιτρέψετε από τις ρυθμίσεις του browser.",
   "Recovery data is unavailable in this browser": "Τα δεδομένα ανάκτησης δεν είναι διαθέσιμα σε αυτόν τον browser",
   "Local copy reset. Start with a clean tracker.": "Το τοπικό αντίγραφο μηδενίστηκε. Καθαρή αρχή.",
   "This browser is still blocking local storage": "Ο browser εξακολουθεί να μπλοκάρει την τοπική αποθήκευση",
@@ -2068,6 +2068,14 @@ const el: Record<string, string> = {
   "No appointments yet. Add the next date from the health center or clinic card with Add appointment.": "Κανένα ραντεβού ακόμα. Προσθέστε την επόμενη ημερομηνία από την κάρτα του κέντρου υγείας ή της κλινικής με το «Προσθήκη ραντεβού».",
   "Plan the {dose}": "Κλείστε ραντεβού για τη {dose}",
   "Earlier (months)": "Προηγούμενοι μήνες",
+
+  // --- Added with main on 2026-11-08: nursing by side, the privacy link ---
+  "Left {duration}": "Αριστερά {duration}",
+  "Right {duration}": "Δεξιά {duration}",
+  "Both sides {duration}": "Και οι δύο πλευρές {duration}",
+  "{duration} nursing": "{duration} θηλασμός",
+  "Privacy policy": "Πολιτική απορρήτου",
+  "Notifications": "Ειδοποιήσεις",
 
   // --- The server's own words (worker/*.ts), shown through t(error.message) ---
   "Enter the 6-digit code from the other phone.": "Γράψτε τον εξαψήφιο κωδικό από το άλλο κινητό.",

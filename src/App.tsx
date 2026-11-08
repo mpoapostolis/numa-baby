@@ -1319,6 +1319,7 @@ export default function HomePage() {
             theme={nightMode ? "dark" : "light"}
             position="bottom-center"
             closeButton
+            containerAriaLabel={t("Notifications")}
             mobileOffset={{
               // The consent banner owns the bottom band until answered —
               // toasts lift above it rather than landing on its Allow button.

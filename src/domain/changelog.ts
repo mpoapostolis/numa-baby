@@ -24,6 +24,23 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-11-08.2",
+    title: "Numalog in Greek",
+    items: [
+      "Η εφαρμογή μιλάει πλέον ελληνικά: Ρυθμίσεις → Γλώσσα → Ελληνικά.",
+      "Settings → Language now has Ελληνικά. Every screen reads in Greek, and so do the reminders on your lock screen; this News list stays in English.",
+      "Nothing changes unless you choose it: the app stays in English until you pick Greek, and you can switch back at any time.",
+    ],
+  },
+  {
+    id: "2026-11-08",
+    title: "Nursing time, left and right, every day",
+    items: [
+      "“Could it show how long she nurses on the right and on the left each day?” Now each day on the Timeline says it, under the date: “Left 1h 5m · Right 50m”.",
+      "Only the sides you used appear. A session logged as both sides keeps its own figure, because nobody timed how it split.",
+    ],
+  },
+  {
     id: "2026-11-07",
     title: "Vitamin D, counted once",
     items: [

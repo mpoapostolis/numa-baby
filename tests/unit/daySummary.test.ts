@@ -36,6 +36,34 @@ describe("summarizeDay", () => {
     expect(summary.dirty).toBe(2);
   });
 
+  it("splits nursed minutes by side, keeping both-sides and unsided sessions apart", () => {
+    const nursing = (side: Activity["side"], from: string, to: string) =>
+      make({ type: "nursing", startedAt: `2026-08-12T${from}:00`, endedAt: `2026-08-12T${to}:00`, side });
+    const summary = summarizeDay(
+      [
+        nursing("left", "06:00", "06:15"),
+        nursing("right", "06:15", "06:27"),
+        nursing("left", "10:00", "10:20"),
+        nursing("both", "14:00", "14:25"),
+        nursing(undefined, "18:00", "18:08"),
+        // A forgotten stopwatch, still open, counts for no side, as it
+        // counts for no total.
+        make({ type: "nursing", startedAt: "2026-08-12T00:30:00", side: "right" }),
+      ],
+      day,
+      now,
+    );
+    expect(summary.nursingBySide).toEqual({ left: 35, right: 12, both: 25, unsaid: 8 });
+    expect(summary.nursingMinutes).toBe(35 + 12 + 25 + 8);
+  });
+
+  it("gives every day its own side counts", () => {
+    const first = summarizeDay([make({ type: "nursing", startedAt: "2026-08-12T06:00:00", endedAt: "2026-08-12T06:10:00", side: "left" })], day, now);
+    const empty = summarizeDay([], day, now);
+    expect(first.nursingBySide.left).toBe(10);
+    expect(empty.nursingBySide.left).toBe(0);
+  });
+
   it("splits feeds by kind, totals millilitres and brackets the day", () => {
     const summary = summarizeDay(
       [

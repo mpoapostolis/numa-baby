@@ -35,6 +35,11 @@ export type DaySummary = {
   ml: number;
   /** Minutes actually nursed on this day (open sessions clamped to now). */
   nursingMinutes: number;
+  /** The same minutes by side, for "Left 45m · Right 38m" (asked for from the
+      feedback box). A session on both sides is one session whose split
+      nobody timed, so it stays "both" rather than being halved; one saved
+      with no side is "unsaid". The four always add up to nursingMinutes. */
+  nursingBySide: { left: number; right: number; both: number; unsaid: number };
   /** Local ISO times of the first and last feed, for "06:10 → 23:40". */
   firstFeedAt?: string;
   lastFeedAt?: string;
@@ -116,6 +121,8 @@ export function summarizeDay(activities: Activity[], day: Date, now: number): Da
     hasRunningNursing: false,
     hasStaleTimer: false,
     isEmpty: true,
+    // Its own object per day: one in EMPTY would be shared by every spread.
+    nursingBySide: { left: 0, right: 0, both: 0, unsaid: 0 },
   };
 
   const nowIso = new Date(now).toISOString();
@@ -150,7 +157,9 @@ export function summarizeDay(activities: Activity[], day: Date, now: number): Da
           summary.nursings += 1;
           // A timer nobody stopped is not twenty hours of nursing.
           if (!isStale) {
-            summary.nursingMinutes += minutesBetween(activity.startedAt, activity.endedAt ?? nowIso);
+            const minutes = minutesBetween(activity.startedAt, activity.endedAt ?? nowIso);
+            summary.nursingMinutes += minutes;
+            summary.nursingBySide[activity.side ?? "unsaid"] += minutes;
           }
         }
         // Compared as instants, never as strings: lexicographic order only

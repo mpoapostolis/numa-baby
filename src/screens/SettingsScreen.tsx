@@ -504,11 +504,17 @@ export default function SettingsScreen({
 
       <Card className="privacy-card">
         <span><ShieldCheck size={18} /></span>
-        {familySync.pairing ? (
-          <div><strong>{t("Shared with your family")}</strong><p>{t("Entries, and any photos you add, are stored in your family’s private space in the cloud so both phones stay in step — never public. Anonymous usage statistics help improve the app.")}</p></div>
-        ) : (
-          <div><strong>{t("On this device")}</strong><p>{t("Your baby’s entries and photos stay in this browser until you turn on Family Sync. Anonymous usage statistics help improve the app.")}</p></div>
-        )}
+        <div>
+          {familySync.pairing ? (
+            <><strong>{t("Shared with your family")}</strong><p>{t("Entries, and any photos you add, are stored in your family’s private space in the cloud so both phones stay in step — never public. Anonymous usage statistics help improve the app.")}</p></>
+          ) : (
+            <><strong>{t("On this device")}</strong><p>{t("Your baby’s entries and photos stay in this browser until you turn on Family Sync. Anonymous usage statistics help improve the app.")}</p></>
+          )}
+          {/* The whole of it, written against the code: what leaves the
+              phone, where it is kept and how to delete it. A new tab, so the
+              app is still where it was when they come back. */}
+          <a className="privacy-link" href="/privacy" target="_blank" rel="noopener">{t("Privacy policy")}</a>
+        </div>
       </Card>
 
       <p className="version-note">{t("Numalog · build {version}", { version: __APP_VERSION__ })}</p>

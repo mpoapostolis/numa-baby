@@ -3,7 +3,7 @@ import { readFile, readdir } from "node:fs/promises";
 import { gzipSync } from "node:zlib";
 import test from "node:test";
 import {
-  BAG_PAGE, CONTENT_SLUGS, DOCTOR_PAGE, INDEX_PAGE, MILK_PAGE, SITE, SOURCES_PAGE, STAGES,
+  BAG_PAGE, CONTENT_SLUGS, DOCTOR_PAGE, INDEX_PAGE, MILK_PAGE, PRIVACY_PAGE, SITE, SOURCES_PAGE, STAGES,
 } from "../scripts/prerender/pages.mjs";
 
 const dist = new URL("../dist/", import.meta.url);
@@ -216,7 +216,7 @@ test("lazy screens stay out of the shell", async () => {
 
 test("every prerendered page is whole", async () => {
   const files = new Set(await readdir(dist));
-  const pages = [...STAGES, DOCTOR_PAGE, MILK_PAGE, BAG_PAGE, SOURCES_PAGE, INDEX_PAGE];
+  const pages = [...STAGES, DOCTOR_PAGE, MILK_PAGE, BAG_PAGE, SOURCES_PAGE, INDEX_PAGE, PRIVACY_PAGE];
   assert.deepEqual(pages.map((p) => p.slug).sort(), [...CONTENT_SLUGS].sort(), "CONTENT_SLUGS names every page");
   for (const page of pages) {
     assert.ok(files.has(`${page.slug}.html`), `${page.slug}.html is emitted`);
@@ -350,7 +350,7 @@ test("the sitemap dates each page by its own last change", async () => {
   const entries = new Map([...sitemap.matchAll(/<loc>([^<]*)<\/loc>\s*<lastmod>([^<]*)<\/lastmod>/g)]
     .map(([, loc, lastmod]) => [loc.slice(`${SITE.origin}/`.length), lastmod]));
   assert.deepEqual([...entries.keys()].sort(), ["", ...CONTENT_SLUGS].sort());
-  for (const page of [...STAGES, DOCTOR_PAGE, MILK_PAGE, BAG_PAGE, SOURCES_PAGE, INDEX_PAGE]) {
+  for (const page of [...STAGES, DOCTOR_PAGE, MILK_PAGE, BAG_PAGE, SOURCES_PAGE, INDEX_PAGE, PRIVACY_PAGE]) {
     assert.match(page.updated, /^\d{4}-\d{2}-\d{2}$/, `${page.slug} has an updated date`);
     assert.equal(entries.get(page.slug), page.updated, `${page.slug} lastmod`);
   }

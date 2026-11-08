@@ -435,7 +435,7 @@ export default function OnboardingScreen({
           <ShareNumalogDialog open={shareOpen} onOpenChange={setShareOpen} />
         </Suspense>
       )}
-      <Toaster theme={nightMode ? "dark" : "light"} position="bottom-center" closeButton />
+      <Toaster theme={nightMode ? "dark" : "light"} position="bottom-center" closeButton containerAriaLabel={t("Notifications")} />
     </main>
   );
 }

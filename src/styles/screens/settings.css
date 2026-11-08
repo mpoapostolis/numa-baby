@@ -259,6 +259,18 @@
   font-size: 0.8125rem;
 }
 
+/* Small to read, 44px tall to hit; the negative margin keeps the card's
+   height what the text needs. */
+.privacy-card .privacy-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin: -6px 0 -12px;
+  color: var(--signal);
+  font-size: 0.8125rem;
+  font-weight: 550;
+}
+
 .version-note {
   margin: 0;
   color: var(--ink-3);

@@ -212,6 +212,19 @@ export const SOURCES_PAGE = {
   updated: "2026-10-16",
 };
 
+/** What happens to a family's data. Not a guide: no medical note, no Guides
+    crumb, and every sentence true to the code as of `updated`. */
+export const PRIVACY_PAGE = {
+  slug: "privacy",
+  title: "Privacy policy",
+  h1: "Privacy policy",
+  lead:
+    "I'm Apostolis, and I make Numalog on my own, in my free time. This page says in plain words what leaves your phone, where it is kept, who can see it and how to have it deleted. It is written against the app's code as it works today, and that code is open for anyone to check.",
+  description:
+    "What Numalog keeps on your phone, what Family Sync stores and where, who can see it, analytics only if you allow it, and how to have your data deleted.",
+  updated: "2026-11-07",
+};
+
 export const INDEX_PAGE = {
   slug: "guides",
   title: "Baby Development Month by Month: Newborn to 1 Year",
@@ -226,7 +239,7 @@ export const INDEX_PAGE = {
 /** Every page the prerender emits, by address. The prerender writes exactly
     these; the service worker's denylist and the workers.dev redirect are built
     from this list, and a build test fails if the three ever disagree. */
-export const CONTENT_SLUGS = [INDEX_PAGE, ...STAGES, DOCTOR_PAGE, MILK_PAGE, BAG_PAGE, SOURCES_PAGE]
+export const CONTENT_SLUGS = [INDEX_PAGE, ...STAGES, DOCTOR_PAGE, MILK_PAGE, BAG_PAGE, SOURCES_PAGE, PRIVACY_PAGE]
   .map((page) => page.slug);
 
 /** The day every cited page was last fetched and read. A hand-maintained
