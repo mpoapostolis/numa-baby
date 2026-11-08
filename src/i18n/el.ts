@@ -2075,6 +2075,11 @@ const el: Record<string, string> = {
   "Both sides {duration}": "Και οι δύο πλευρές {duration}",
   "{duration} nursing": "{duration} θηλασμός",
   "Privacy policy": "Πολιτική απορρήτου",
+  "Nursing by side": "Θηλασμός ανά πλευρά",
+  "About {left} on the left and {right} on the right a day.": "Περίπου {left} αριστερά και {right} δεξιά τη μέρα.",
+  "From the one day with nursing this week.": "Από τη μία μέρα με θηλασμό αυτή την εβδομάδα.",
+  "An average of the {n} days with nursing this week.": "Μέσος όρος από τις {n} μέρες με θηλασμό αυτή την εβδομάδα.",
+  "Sessions on both sides add {both} a day, not split between them.": "Οι θηλασμοί και από τις δύο πλευρές προσθέτουν {both} τη μέρα, χωρίς να χωρίζονται ανάμεσά τους.",
   "Notifications": "Ειδοποιήσεις",
 
   // --- The server's own words (worker/*.ts), shown through t(error.message) ---

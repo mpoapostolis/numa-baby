@@ -95,6 +95,43 @@
 
 
 
+/* Nursing by side: one bar, split by the minutes each side had. Left in the
+   nursing glyph's blush, right in a quieter wash of it, so the two read as
+   one feed and the split is the thing that stands out. */
+.side-bar {
+  display: flex;
+  gap: 3px;
+  height: 36px;
+  margin-top: 16px;
+}
+
+.side-bar span {
+  min-width: 52px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  font-weight: 550;
+}
+
+.side-bar .side-left {
+  background: var(--glyph-nursing);
+  color: var(--card);
+}
+
+.side-bar .side-right {
+  justify-content: flex-end;
+  background: color-mix(in oklab, var(--glyph-nursing) 22%, var(--card));
+  color: var(--ink);
+}
+
+.side-note {
+  margin: 12px 0 0;
+  color: var(--ink-3);
+  font-size: 0.8125rem;
+}
+
 /* Bottle volume bars — --signal marks today, the dashed line is the median. */
 .bar-chart {
   display: grid;

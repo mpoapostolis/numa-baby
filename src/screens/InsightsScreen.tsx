@@ -12,6 +12,7 @@ import { TrendChart } from "../components/TrendChart";
 import { LittleBottle } from "../components/illustrations";
 import { activityTitle } from "../domain/activityDisplay";
 import { hasRoutineCare } from "../domain/daySummary";
+import { nursingSideAverage } from "../domain/nursingSides";
 import { formatVolume, formatWeight, useUnits, volumeParts, weightParts } from "../domain/units";
 import { formatShortDay, formatTime, humanDuration, median } from "../domain/time";
 import { track } from "../domain/analytics";
@@ -136,6 +137,7 @@ export default function InsightsScreen({
   } = stats;
 
   const showBottles = weekly.some((day) => day.ml > 0);
+  const sides = nursingSideAverage(stats.recentDays.slice(-7));
   const weekFeeds = weekly.reduce((sum, day) => sum + day.feeds.length, 0);
   const weekBottles = weekly.reduce(
     (sum, day) => sum + day.feeds.filter((feed) => feed.type === "bottle").length,
@@ -360,6 +362,29 @@ export default function InsightsScreen({
           both open on Sleep. Shown once there are two days to compare. */}
       {stats.recentDays.filter(hasRoutineCare).length > 1 && (
         <TrendChart days={stats.recentDays} />
+      )}
+
+      {/* Asked for from the feedback box: "a statistic of how long she
+          nurses on the right and on the left each day". The Timeline shows
+          each day; this is the usual day. The bar is the split, so a side
+          that is getting less is visible before anyone reads a number. */}
+      {sides && sides.left + sides.right > 0 && (
+        <figure className="chart-card insight-figure side-card">
+          <figcaption>
+            <div>
+              <p className="t-label">{t("Nursing by side")}</p>
+              <h2>{t("About {left} on the left and {right} on the right a day.", { left: humanDuration(sides.left), right: humanDuration(sides.right) })}</h2>
+            </div>
+          </figcaption>
+          <div className="side-bar" aria-hidden="true">
+            {sides.left > 0 && <span className="side-left" style={{ flexGrow: sides.left }}>{t("Left")}</span>}
+            {sides.right > 0 && <span className="side-right" style={{ flexGrow: sides.right }}>{t("Right")}</span>}
+          </div>
+          <p className="side-note">
+            {sides.days === 1 ? t("From the one day with nursing this week.") : t("An average of the {n} days with nursing this week.", { n: sides.days })}
+            {sides.both > 0 && ` ${t("Sessions on both sides add {both} a day, not split between them.", { both: humanDuration(sides.both) })}`}
+          </p>
+        </figure>
       )}
 
       {showBottles && (

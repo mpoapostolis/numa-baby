@@ -24,6 +24,14 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-11-08.3",
+    title: "Nursing by side, on Insights too",
+    items: [
+      "Insights now has the usual day as well: about how long on the left and on the right, averaged over this week's days with nursing, with a bar that shows the split at a glance.",
+      "Each single day is still on the Timeline, under its date.",
+    ],
+  },
+  {
     id: "2026-11-08.2",
     title: "Numalog in Greek",
     items: [
