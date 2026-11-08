@@ -23,13 +23,15 @@ test("a running sleep's start time opens it for editing", async () => {
   seedLog([{ id: "nap", type: "sleep", startedAt }]);
   render(<App />);
 
-  fireEvent.click(await screen.findByRole("button", { name: /Started .* · Edit/ }));
+  fireEvent.click(await screen.findByRole("button", { name: /Started .* · Edit/ }, { timeout: 5_000 }));
 
-  expect(await screen.findByText("Edit log")).toBeTruthy();
+  // The edit sheet is a lazy chunk; a slow CI runner took longer than the
+  // default second to load it.
+  expect(await screen.findByText("Edit log", undefined, { timeout: 5_000 })).toBeTruthy();
   // Started can move back; Ended is where the missed Wake up goes.
   expect(screen.getByLabelText("Started")).toBeTruthy();
   expect(screen.getByLabelText("Ended")).toBeTruthy();
-});
+}, 15_000);
 
 test("the way to log a missed one says what it is for", async () => {
   // "Past" sat grey in the tile's corner and a parent on the current build

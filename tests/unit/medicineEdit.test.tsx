@@ -28,7 +28,7 @@ async function openEdit() {
     return found;
   }, { timeout: 5_000 });
   await act(async () => fireEvent.click(row));
-  await screen.findByText("Edit log");
+  await screen.findByText("Edit log", undefined, { timeout: 5_000 });
 }
 
 function stored() {
