@@ -10,6 +10,7 @@ import { useState } from "react";
 import { RotateCcw, ShoppingBag } from "lucide-react";
 import { Button } from "./ui/button";
 import { track } from "../domain/analytics";
+import { t } from "../i18n";
 
 const KEY = "numalog-outing-v1";
 
@@ -54,8 +55,8 @@ export function OutingChecklist() {
       <div className="outing-head">
         <span className="outing-icon" aria-hidden="true"><ShoppingBag /></span>
         <div>
-          <h2 className="t-title-2">Going out</h2>
-          <p className="t-meta">Tick as you pack. Reset before the next outing.</p>
+          <h2 className="t-title-2">{t("Going out")}</h2>
+          <p className="t-meta">{t("Tick as you pack. Reset before the next outing.")}</p>
         </div>
         {ticked.length > 0 && (
           <Button
@@ -64,7 +65,7 @@ export function OutingChecklist() {
             className="outing-reset"
             onClick={() => { track("outing_reset"); save([]); }}
           >
-            <RotateCcw size={14} aria-hidden="true" /> Reset
+            <RotateCcw size={14} aria-hidden="true" /> {t("Reset")}
           </Button>
         )}
       </div>
@@ -79,7 +80,7 @@ export function OutingChecklist() {
                   checked={done}
                   onChange={() => save(done ? ticked.filter((t) => t !== item.id) : [...ticked, item.id])}
                 />
-                <span>{item.label}</span>
+                <span>{t(item.label)}</span>
               </label>
             </li>
           );

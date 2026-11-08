@@ -8,14 +8,15 @@ import { NewsDialog } from "./NewsDialog";
 import { SettingsAction } from "./SettingsAction";
 import { track } from "../domain/analytics";
 import type { ReleaseAction } from "../domain/changelog";
+import { t } from "../i18n";
 
 export function AppNews({ onAction }: { onAction?: (to: ReleaseAction["to"]) => void }) {
   const [open, setOpen] = useState(false);
   return (
     <>
       <SettingsAction
-        title="What’s new"
-        description="Every update and announcement, from the dad who builds this"
+        title={t("What’s new")}
+        description={t("Every update and announcement, from the dad who builds this")}
         icon={<Newspaper />}
         onClick={() => { track("news_opened", { from: "settings" }); setOpen(true); }}
       />

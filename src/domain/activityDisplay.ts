@@ -1,35 +1,37 @@
 import { formatTime, humanDuration, minutesBetween, timeAgo } from "./time";
+import { t } from "../i18n";
 import { Activity } from "./types";
 import { UnitSystem, formatLength, formatTemperature, formatVolume, formatWeight } from "./units";
 
 export function activityTitle(activity: Activity) {
-  if (activity.type === "bottle") return "Bottle";
-  if (activity.type === "nursing") return "Nursing";
-  if (activity.type === "pump") return "Pumping";
-  if (activity.type === "burp") return activity.endedAt ? "Burping" : "Burping now";
-  if (activity.type === "tummy") return activity.endedAt ? "Tummy time" : "Tummy time now";
-  if (activity.type === "sleep") return activity.endedAt ? "Sleep" : "Sleeping now";
-  if (activity.type === "growth") return "Growth check";
-  if (activity.type === "health") return activity.temperatureC ? "Temperature" : "Health note";
-  if (activity.type === "medicine") return activity.medicine?.trim() || "Medicine";
-  if (activity.type === "solid") return activity.food?.trim() || "Solid food";
+  if (activity.type === "bottle") return t("Bottle");
+  if (activity.type === "nursing") return t("Nursing");
+  if (activity.type === "pump") return t("Pumping");
+  if (activity.type === "burp") return activity.endedAt ? t("Burping") : t("Burping now");
+  if (activity.type === "tummy") return activity.endedAt ? t("Tummy time") : t("Tummy time now");
+  if (activity.type === "sleep") return activity.endedAt ? t("Sleep") : t("Sleeping now");
+  if (activity.type === "growth") return t("Growth check");
+  if (activity.type === "health") return activity.temperatureC ? t("Temperature") : t("Health note");
+  if (activity.type === "medicine") return activity.medicine?.trim() || t("Medicine");
+  if (activity.type === "solid") return activity.food?.trim() || t("Solid food");
   // The label is carried ON the tick rather than looked up in the profile, so
   // a log entry stays self-describing: deleting the routine later must not
   // rename "Vitamin D, 09:12" into something nobody can identify.
-  if (activity.type === "routine") return activity.note?.trim() || "Daily routine";
+  if (activity.type === "routine") return activity.note?.trim() || t("Daily routine");
   if (activity.type === "diaper") {
-    // Only the words this build knows; a dirty one is never "heavy".
-    const wet =
-      activity.wetness === "heavy" ? "Heavy wet"
-      : activity.wetness === "medium" ? "Medium wet"
-      : activity.wetness === "light" ? "Light wet"
-      : "Wet";
-    if (activity.diaperKind === "both") return `${wet} + dirty diaper`;
-    return activity.diaperKind === "dirty" ? "Dirty diaper" : `${wet} diaper`;
+    // Only the words this build knows; a dirty one is never "heavy". Each
+    // title whole, not "{wet} + dirty diaper": the wetness word is not a
+    // prefix in every language.
+    if (activity.diaperKind === "dirty") return t("Dirty diaper");
+    const both = activity.diaperKind === "both";
+    if (activity.wetness === "heavy") return both ? t("Heavy wet + dirty diaper") : t("Heavy wet diaper");
+    if (activity.wetness === "medium") return both ? t("Medium wet + dirty diaper") : t("Medium wet diaper");
+    if (activity.wetness === "light") return both ? t("Light wet + dirty diaper") : t("Light wet diaper");
+    return both ? t("Wet + dirty diaper") : t("Wet diaper");
   }
   // An activity type from a build newer than this one. Naming it honestly
   // beats mislabelling it as a nappy, which is what falling through did.
-  return "Entry";
+  return t("Entry");
 }
 
 /** One wording for a side, nursing or pumping. No side saved is no side
@@ -49,15 +51,17 @@ export function detailReadsClock(activity: Activity) {
 export function activityDetail(activity: Activity, units: UnitSystem = "metric", now = Date.now()) {
   if (activity.type === "bottle") {
     return includeNote(
-      `${formatVolume(activity.amount ?? 0, units)} · ${activity.milkType === "expressed" ? "breast milk" : "formula"}`,
+      `${formatVolume(activity.amount ?? 0, units)} · ${activity.milkType === "expressed" ? t("breast milk") : t("formula")}`,
       activity.note,
     );
   }
   if (activity.type === "nursing") {
-    const side = activity.side ? SIDE_LABEL[activity.side] : null;
+    const side = activity.side ? t(SIDE_LABEL[activity.side]) : null;
     const detail = activity.endedAt
       ? [side, `${formatTime(activity.startedAt)}–${formatTime(activity.endedAt)}`, humanDuration(minutesBetween(activity.startedAt, activity.endedAt))].filter(Boolean).join(" · ")
-      : side ? `${side} · started ${formatTime(activity.startedAt)}` : `Started ${formatTime(activity.startedAt)}`;
+      : side
+        ? t("{side} · started {time}", { side, time: formatTime(activity.startedAt) })
+        : t("Started {time}", { time: formatTime(activity.startedAt) });
     return includeNote(detail, activity.note);
   }
   // The amount leads, as on a bottle: it is the figure a mum who pumps comes
@@ -71,7 +75,7 @@ export function activityDetail(activity: Activity, units: UnitSystem = "metric",
   if (activity.type === "pump") {
     return [
       activity.amount && formatVolume(activity.amount, units),
-      activity.side && SIDE_LABEL[activity.side],
+      activity.side && t(SIDE_LABEL[activity.side]),
       activity.endedAt && humanDuration(minutesBetween(activity.startedAt, activity.endedAt)),
       activity.note?.trim(),
     ].filter(Boolean).join(" · ");
@@ -79,13 +83,13 @@ export function activityDetail(activity: Activity, units: UnitSystem = "metric",
   if (activity.type === "sleep") {
     const detail = activity.endedAt
       ? `${formatTime(activity.startedAt)}–${formatTime(activity.endedAt)} · ${humanDuration(minutesBetween(activity.startedAt, activity.endedAt))}`
-      : `Started ${formatTime(activity.startedAt)} · ${timeAgo(activity.startedAt, now)}`;
+      : t("Started {time} · {ago}", { time: formatTime(activity.startedAt), ago: timeAgo(activity.startedAt, now) });
     return includeNote(detail, activity.note);
   }
   if (activity.type === "burp" || activity.type === "tummy") {
     const detail = activity.endedAt
       ? `${formatTime(activity.startedAt)}–${formatTime(activity.endedAt)} · ${humanDuration(minutesBetween(activity.startedAt, activity.endedAt))}`
-      : `Started ${formatTime(activity.startedAt)} · ${timeAgo(activity.startedAt, now)}`;
+      : t("Started {time} · {ago}", { time: formatTime(activity.startedAt), ago: timeAgo(activity.startedAt, now) });
     return includeNote(detail, activity.note);
   }
   if (activity.type === "medicine") {
@@ -106,13 +110,13 @@ export function activityDetail(activity: Activity, units: UnitSystem = "metric",
   if (activity.type === "growth") {
     const values = [
       activity.weightGrams ? formatWeight(activity.weightGrams, units) : null,
-      activity.lengthCm ? `${formatLength(activity.lengthCm, units)} long` : null,
-      activity.headCm ? `${formatLength(activity.headCm, units)} head` : null,
+      activity.lengthCm ? t("{value} long", { value: formatLength(activity.lengthCm, units) }) : null,
+      activity.headCm ? t("{value} head", { value: formatLength(activity.headCm, units) }) : null,
     ].filter(Boolean);
     return includeNote(values.join(" · "), activity.note);
   }
   if (activity.type === "health") {
-    const detail = activity.temperatureC ? formatTemperature(activity.temperatureC, units) : "Note";
+    const detail = activity.temperatureC ? formatTemperature(activity.temperatureC, units) : t("Note");
     return includeNote(detail, activity.note);
   }
   return activity.note?.trim() ?? "";

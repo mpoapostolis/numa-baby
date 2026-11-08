@@ -2,6 +2,8 @@
 // needs a calendar. Days are counted by the calendar, not in 24-hour blocks:
 // at five past midnight, the appointment that was "tomorrow" is "today".
 
+import { currentLocale, t } from "../i18n";
+
 const later = new Intl.DateTimeFormat("en", { weekday: "short", month: "short", day: "numeric" });
 const laterYear = new Intl.DateTimeFormat("en", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
 
@@ -26,6 +28,29 @@ export function dueLabel(due: string, now: number): { text: string; inline: stri
   const text = format.format(target);
   // A date keeps its capitals inside a sentence ("due Sun, Oct 18").
   return { text, inline: text, overdue: false, days };
+}
+
+/** dueLabel's words in the reader's language, from the same day count. dueLabel
+    itself stays English, because its output is compared and tested; this is
+    what Today and the Vaccines sheet show. */
+export function dueWords(due: string, now: number): ReturnType<typeof dueLabel> {
+  const label = dueLabel(due, now);
+  if (currentLocale() === "en") return label;
+  const { days } = label;
+  if (days === 0) return { ...label, text: t("Today"), inline: t("today") };
+  if (days === 1) return { ...label, text: t("Tomorrow"), inline: t("tomorrow") };
+  if (days === -1) return { ...label, text: t("Yesterday"), inline: t("yesterday") };
+  if (days < 0) {
+    const late = t("{n} days late", { n: -days });
+    return { ...label, text: late, inline: late };
+  }
+  if (days < 14) return { ...label, text: t("In {n} days", { n: days }), inline: t("in {n} days", { n: days }) };
+  const target = new Date(`${due}T12:00:00`);
+  const sameYear = target.getFullYear() === new Date(now).getFullYear();
+  const text = target.toLocaleDateString(currentLocale(), sameYear
+    ? { weekday: "short", month: "short", day: "numeric" }
+    : { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+  return { ...label, text, inline: text };
 }
 
 /** "PCV · 2nd dose" — a vaccine named the way the card writes it. */

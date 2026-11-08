@@ -15,6 +15,7 @@ import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 import { track } from "../domain/analytics";
+import { t } from "../i18n";
 
 const FeedbackForm = lazy(() =>
   import("./FeedbackCard").then((m) => ({ default: m.FeedbackForm })),
@@ -49,29 +50,25 @@ export function ThanksCard() {
     <Card className="thanks-card">
       <CardHeader>
         <span className="thanks-heart" aria-hidden="true"><Heart /></span>
-        <CardTitle asChild><h2>Thank you for being here</h2></CardTitle>
+        <CardTitle asChild><h2>{t("Thank you for being here")}</h2></CardTitle>
         <CardDescription>
-          Numalog started as two parents’ app for their own daughter, built in the
-          evenings between feeds. I honestly never expected other families to
-          find it — seeing it help with your baby means more than you’d guess.
-          If anything is broken, missing, or just annoying, don’t hesitate to
-          say so. It comes straight to me.
+          {t("Numalog started as two parents’ app for their own daughter, built in the evenings between feeds. I honestly never expected other families to find it — seeing it help with your baby means more than you’d guess. If anything is broken, missing, or just annoying, don’t hesitate to say so. It comes straight to me.")}
         </CardDescription>
       </CardHeader>
       <CardContent className="thanks-actions">
         <Button onClick={() => { track("thanks_write_opened"); setWriting(true); }}>
-          <MessageCircle /> Write to me
+          <MessageCircle /> {t("Write to me")}
         </Button>
         <Button variant="ghost" onClick={() => { track("thanks_dismissed"); dismiss(); }}>
-          Close
+          {t("Close")}
         </Button>
       </CardContent>
 
       <Dialog open={writing} onOpenChange={(open) => { setWriting(open); if (!open) dismiss(); }}>
         <DialogContent className="feedback-dialog">
-          <DialogTitle>Say anything</DialogTitle>
+          <DialogTitle>{t("Say anything")}</DialogTitle>
           <DialogDescription>
-            A bug, a wish, a hello — it all lands with the same person.
+            {t("A bug, a wish, a hello — it all lands with the same person.")}
           </DialogDescription>
           <Suspense fallback={null}>
             <FeedbackForm />

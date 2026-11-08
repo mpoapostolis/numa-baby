@@ -15,6 +15,7 @@
 import "../styles/screens/keepsake.css";
 import { useEffect, useId, useRef, useState } from "react";
 import { Camera, Trash2 } from "lucide-react";
+import { t } from "../i18n";
 import { Field, FieldDescription, FieldError, FieldLabel } from "./ui/field";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
@@ -40,7 +41,7 @@ export function PhotoField({
   hint,
   onBusyChange,
   variant = "default",
-  addLabel = "Add a photo",
+  addLabel = t("Add a photo"),
 }: {
   label: string;
   photoId: string | undefined;
@@ -90,7 +91,7 @@ export function PhotoField({
     setBusy(true);
     onBusyChange?.(true);
     setFailed(false);
-    setStatus("Preparing photo…");
+    setStatus(t("Preparing photo…"));
     try {
       const blob = await compressPhoto(file);
       const id = newPhotoId();
@@ -106,7 +107,7 @@ export function PhotoField({
       }
       picked.current.add(id);
       onChange(id);
-      setStatus("Photo added");
+      setStatus(t("Photo added"));
     } catch {
       setFailed(true);
       setStatus("");
@@ -118,12 +119,12 @@ export function PhotoField({
 
   function remove() {
     onChange(undefined);
-    setStatus("Photo removed");
+    setStatus(t("Photo removed"));
     // The button that had focus is gone with the photo: the picker takes it.
     window.requestAnimationFrame(() => inputRef.current?.focus());
   }
 
-  const pickWords = busy ? "Preparing…" : photoId ? "Change photo" : addLabel;
+  const pickWords = busy ? t("Preparing…") : photoId ? t("Change photo") : addLabel;
   const showLabel = variant !== "compact" || Boolean(photoId);
   const showHint = Boolean(hint) && (variant !== "compact" || Boolean(photoId));
   const classes = ["photo-field", `is-${variant}`, photoId ? "has-photo" : ""].filter(Boolean).join(" ");
@@ -135,7 +136,7 @@ export function PhotoField({
       className="sr-only"
       type="file"
       accept="image/*"
-      aria-label={photoId ? "Change photo" : addLabel}
+      aria-label={photoId ? t("Change photo") : addLabel}
       aria-disabled={busy || undefined}
       onChange={(event) => {
         void choose(event.target.files?.[0]);
@@ -149,7 +150,7 @@ export function PhotoField({
     <Field className={classes}>
       {showLabel && (
         <FieldLabel htmlFor={inputId}>
-          {label} {variant !== "hero" && <span className="optional-label">Optional</span>}
+          {label} {variant !== "hero" && <span className="optional-label">{t("Optional")}</span>}
         </FieldLabel>
       )}
 
@@ -157,8 +158,8 @@ export function PhotoField({
         // A month with no photo yet: the whole frame is the button.
         <label className="photo-drop" htmlFor={inputId} aria-busy={busy || undefined}>
           <Camera size={24} aria-hidden="true" />
-          <span>{busy ? "Preparing…" : addLabel}</span>
-          <small>Camera or gallery</small>
+          <span>{busy ? t("Preparing…") : addLabel}</span>
+          <small>{t("Camera or gallery")}</small>
         </label>
       ) : (
         <div className="photo-field-row">
@@ -171,7 +172,7 @@ export function PhotoField({
               type="button"
               className="photo-thumb"
               disabled={!url}
-              aria-label={url ? "View photo full size" : "Photo not on this phone yet"}
+              aria-label={url ? t("View photo full size") : t("Photo not on this phone yet")}
               onClick={() => setViewing(true)}
             >
               {url ? <img src={url} alt="" /> : <Camera size={18} aria-hidden="true" />}
@@ -184,8 +185,8 @@ export function PhotoField({
           {photoId && !busy && (
             // Said in words: a bare bin beside "Change photo" read as a way
             // to delete something bigger.
-            <Button type="button" variant="ghost" className="photo-remove" aria-label="Remove photo" onClick={remove}>
-              <Trash2 size={16} aria-hidden="true" /> Remove
+            <Button type="button" variant="ghost" className="photo-remove" aria-label={t("Remove photo")} onClick={remove}>
+              <Trash2 size={16} aria-hidden="true" /> {t("Remove")}
             </Button>
           )}
         </div>
@@ -193,9 +194,9 @@ export function PhotoField({
       {input}
 
       <span className="sr-only" role="status">{status}</span>
-      {failed && <FieldError>That photo could not be prepared on this phone — try another one.</FieldError>}
+      {failed && <FieldError>{t("That photo could not be prepared on this phone — try another one.")}</FieldError>}
       {!failed && photoId && url === null && (
-        <FieldDescription>This photo hasn’t reached this phone yet.</FieldDescription>
+        <FieldDescription>{t("This photo hasn’t reached this phone yet.")}</FieldDescription>
       )}
       {!failed && showHint && url !== null && <FieldDescription>{hint}</FieldDescription>}
 

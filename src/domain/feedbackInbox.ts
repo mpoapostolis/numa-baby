@@ -11,6 +11,7 @@
 // conversation exists (INBOX_STORE, below) before asking for this module.
 
 import { toast } from "../lib/toast";
+import { t } from "../i18n";
 
 export type ThreadMessage = { id: string; at: string; from: "you" | "dev"; text: string };
 
@@ -243,9 +244,9 @@ export function watchInbox(
     if (!current || !newest || newest <= current.seenAt || newest <= current.toastedAt) return;
     if (quiet() || onScreen > 0) return;
     write({ ...current, toastedAt: newest });
-    toast("Apostolis replied to your message", {
+    toast(t("Apostolis replied to your message"), {
       duration: 10_000,
-      action: { label: "Read", onClick: open },
+      action: { label: t("Read"), onClick: open },
     });
   }
   function check() {

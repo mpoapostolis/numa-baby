@@ -21,9 +21,9 @@ const FeedbackForm = lazy(() =>
   import("./FeedbackCard").then((m) => ({ default: m.FeedbackForm })),
 );
 const FEEDBACK_BLURB =
-  "Something broken, missing, or just annoying? It goes straight to the person who built " +
-  "this — two tired parents, evenings, between feeds.";
+  "Something broken, missing, or just annoying? It goes straight to the person who built this — two tired parents, evenings, between feeds.";
 import { track } from "../domain/analytics";
+import { t } from "../i18n";
 
 /** Has this phone ever written? Read without loading the conversation code,
     which only a phone that has needs. Mirrors INBOX_STORE in feedbackInbox. */
@@ -104,8 +104,10 @@ export function FeedbackBubble({ hidden }: { hidden: boolean }) {
         className="feedback-bubble"
         aria-label={
           unread
-            ? `Messages — ${unread} new ${unread === 1 ? "reply" : "replies"}`
-            : hasThread ? "Messages" : "Send feedback to the developer"
+            ? unread === 1
+              ? t("Messages — {n} new reply", { n: unread })
+              : t("Messages — {n} new replies", { n: unread })
+            : hasThread ? t("Messages") : t("Send feedback to the developer")
         }
         onClick={() => {
           track("feedback_opened", { from: "bubble", unread });
@@ -119,11 +121,11 @@ export function FeedbackBubble({ hidden }: { hidden: boolean }) {
 
       <Dialog open={showing} onOpenChange={setOpen}>
         <DialogContent className="feedback-dialog">
-          <DialogTitle>{hasThread ? "Messages" : "Need anything?"}</DialogTitle>
+          <DialogTitle>{hasThread ? t("Messages") : t("Need anything?")}</DialogTitle>
           <DialogDescription>
             {hasThread
-              ? "Answers show up here, with a dot on the bubble when one arrives."
-              : FEEDBACK_BLURB}
+              ? t("Answers show up here, with a dot on the bubble when one arrives.")
+              : t(FEEDBACK_BLURB)}
           </DialogDescription>
           {/* Closing on send would hide the conversation, so the dialog
               stays open and its own X closes it. */}

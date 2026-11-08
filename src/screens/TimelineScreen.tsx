@@ -14,6 +14,68 @@ import { bucketByDay, dayKey, summarizeDay } from "../domain/daySummary";
 import { formatTimelineDay } from "../domain/time";
 import { isTimedType } from "../domain/timers";
 import { Activity, ActivityType } from "../domain/types";
+import { t } from "../i18n";
+
+/** The chips in the filter row, in order. */
+const FILTER_CHIPS = ["all", "photos", "bottle", "nursing", "pump", "diaper", "burp", "tummy", "sleep", "solid", "medicine", "growth", "health"] as const;
+type FilterChip = (typeof FILTER_CHIPS)[number];
+
+// Spelled out rather than capitalised from the type name, for the same
+// reason as the feeding modes: a word assembled at runtime is a word the
+// dictionary cannot be checked against. Whole sentences for the same reason —
+// keyed by chip, so adding a chip cannot forget its words.
+const FILTER_LABEL: Record<FilterChip, string> = {
+  all: "All",
+  photos: "Photos",
+  bottle: "Bottle",
+  nursing: "Nursing",
+  pump: "Pumping",
+  diaper: "Diaper",
+  burp: "Burp",
+  tummy: "Tummy time",
+  sleep: "Sleep",
+  solid: "Solids",
+  medicine: "Medicine",
+  growth: "Growth",
+  health: "Health",
+};
+
+const FILTER_ARIA: Record<FilterChip, string> = {
+  all: "Show all logs",
+  photos: "Show entries with a photo",
+  bottle: "Show bottle logs",
+  nursing: "Show nursing logs",
+  pump: "Show pumping logs",
+  diaper: "Show diaper logs",
+  burp: "Show burp logs",
+  tummy: "Show tummy time logs",
+  sleep: "Show sleep logs",
+  solid: "Show solid logs",
+  medicine: "Show medicine logs",
+  growth: "Show growth logs",
+  health: "Show health logs",
+};
+
+const FILTER_EMPTY: Partial<Record<TimelineFilter, string>> = {
+  photos: "No photos yet.",
+  bottle: "No bottle entries yet.",
+  nursing: "No nursing entries yet.",
+  pump: "No pump entries yet.",
+  diaper: "No diaper entries yet.",
+  burp: "No burp entries yet.",
+  tummy: "No tummy entries yet.",
+  sleep: "No sleep entries yet.",
+  solid: "No solid entries yet.",
+  medicine: "No medicine entries yet.",
+  growth: "No growth entries yet.",
+  health: "No health entries yet.",
+};
+
+/** What the timeline says when the chosen filter has nothing in it. */
+function emptyFilterText(filter: TimelineFilter): string {
+  const sentence = FILTER_EMPTY[filter];
+  return sentence ? t(sentence) : t("No {what} entries yet.", { what: filter });
+}
 
 /** Every entry, one kind, or — asked for alongside nappy photos — the
     entries that have a photo, to find the one for the doctor again. */
@@ -79,34 +141,34 @@ export default function TimelineScreen({
     <section className="screen timeline-screen" aria-labelledby="timeline-heading">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">The full picture</p>
-          <h1 id="timeline-heading">Timeline</h1>
+          <p className="eyebrow">{t("The full picture")}</p>
+          <h1 id="timeline-heading">{t("Timeline")}</h1>
         </div>
-        <Badge variant="outline" className="count-badge"><span aria-live="polite">{filteredTimeline.length} {filteredTimeline.length === 1 ? "entry" : "entries"}</span></Badge>
+        <Badge variant="outline" className="count-badge"><span aria-live="polite">{filteredTimeline.length === 1 ? t("1 entry") : t("{n} entries", { n: filteredTimeline.length })}</span></Badge>
       </div>
       <div className="timeline-controls">
         <ToggleGroup
           type="single"
           value={filter}
           className="filter-row"
-          aria-label="Filter timeline"
+          aria-label={t("Filter timeline")}
           onValueChange={(value) => {
             if (!value) return;
             onFilterChange(value as TimelineFilter);
           }}
         >
-          {(["all", "photos", "bottle", "nursing", "pump", "diaper", "burp", "tummy", "sleep", "solid", "medicine", "growth", "health"] as const).map((option) => (
+          {FILTER_CHIPS.map((option) => (
             <ToggleGroupItem
               key={option}
               value={option}
-              aria-label={option === "photos" ? "Show entries with a photo" : `Show ${option === "tummy" ? "tummy time" : option === "pump" ? "pumping" : option} logs`}
+              aria-label={t(FILTER_ARIA[option])}
             >
-              {option === "all" ? "All" : option === "solid" ? "Solids" : option === "tummy" ? "Tummy time" : option === "pump" ? "Pumping" : option[0].toUpperCase() + option.slice(1)}
+              {t(FILTER_LABEL[option])}
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
         {filteredTimeline.length > 0 && (
-          <div className="timeline-date"><span>Latest first</span><span>Open any log to correct its details</span></div>
+          <div className="timeline-date"><span>{t("Latest first")}</span><span>{t("Open any log to correct its details")}</span></div>
         )}
       </div>
       <div className="timeline-groups">
@@ -114,7 +176,7 @@ export default function TimelineScreen({
           <section className="timeline-day" key={new Date(group[0].startedAt).toDateString()}>
             <div className="timeline-day-heading">
               <h2>{formatTimelineDay(group[0].startedAt)}</h2>
-              <span>{group.length} {group.length === 1 ? "entry" : "entries"}</span>
+              <span>{group.length === 1 ? t("1 entry") : t("{n} entries", { n: group.length })}</span>
             </div>
             {/* The day's totals sit below the sticky heading, not inside it —
                 a two-line sticky bar clips under the app header. */}
@@ -137,12 +199,12 @@ export default function TimelineScreen({
           <Card size="sm" className="activity-list timeline-list">
             <CardContent className="activity-list-content">
               {activities.length === 0 ? (
-                <EmptyState text="Nothing logged yet — your day builds here from the Today screen." />
+                <EmptyState text={t("Nothing logged yet — your day builds here from the Today screen.")} />
               ) : (
                 <>
-                  <EmptyState text={filter === "photos" ? "No photos yet." : `No ${filter} entries yet.`} />
+                  <EmptyState text={emptyFilterText(filter)} />
                   <Button variant="outline" className="timeline-clear-filter" onClick={() => onFilterChange("all")}>
-                    Show all entries
+                    {t("Show all entries")}
                   </Button>
                 </>
               )}
@@ -152,7 +214,7 @@ export default function TimelineScreen({
       </div>
       {filteredTimeline.length > limit && (
         <Button variant="outline" className="load-more" onClick={onShowMore}>
-          Show more entries
+          {t("Show more entries")}
         </Button>
       )}
     </section>

@@ -19,13 +19,15 @@ import {
   expectedWeightRange,
 } from "../domain/growthReference";
 import { Activity, Profile } from "../domain/types";
+import { currentLocale, t } from "../i18n";
 
 // The guide never grades the baby: the range bar shows where the WHO band
 // sits and places the latest logged weight as a neutral dot — no percentile
 // verdict, no normal/abnormal wording. Interpretation stays with the
 // paediatrician, which is exactly what the disclaimer card says first.
 
-const latestDateFormat = new Intl.DateTimeFormat("en", { month: "short", day: "numeric" });
+// Lazy: the locale is decided before first render, not at module load.
+const latestDateFormat = () => new Intl.DateTimeFormat(currentLocale(), { month: "short", day: "numeric" });
 
 // Number labels on the WHO band. The band's geometry stays in kilograms —
 // proportions have no unit — only the printed numbers convert.
@@ -35,7 +37,7 @@ function useKgLabel() {
     units,
     kg: (value: number) => (units === "metric" ? value.toFixed(1) : gramsToLb(value * 1_000).toFixed(1)),
     unitWord: units === "metric" ? "kg" : "lb",
-    longUnit: units === "metric" ? "kilograms" : "pounds",
+    longUnit: units === "metric" ? t("kilograms") : t("pounds"),
   };
 }
 
@@ -63,9 +65,9 @@ function CareCardView({ card }: { card: CareCard }) {
         <ActivityGlyph type={glyph} />
       </span>
       <div className="care-copy">
-        <h3 className="care-title">{card.title}</h3>
-        <p className="care-body">{card.body}</p>
-        <p className="care-action">{card.action}</p>
+        <h3 className="care-title">{t(card.title)}</h3>
+        <p className="care-body">{t(card.body)}</p>
+        <p className="care-action">{t(card.action)}</p>
         {[card.source, card.alsoSource].map((source) => source && (
           <a key={source.url} className="fact-source" onClick={() => track("source_opened", { name: source.name })} href={source.url} target="_blank" rel="noopener noreferrer">
             {source.name} <ExternalLink size={12} aria-hidden="true" />
@@ -100,11 +102,11 @@ function projectToBand(kg: number, from: WeightPercentiles, to: WeightPercentile
 function ageHeading(months: number) {
   if (months < 1) {
     const weeks = Math.floor((months * 30.4375) / 7);
-    if (weeks < 1) return "In the first week";
-    return weeks === 1 ? "At 1 week" : `At ${weeks} weeks`;
+    if (weeks < 1) return t("In the first week");
+    return weeks === 1 ? t("At 1 week") : t("At {n} weeks", { n: weeks });
   }
   const whole = Math.floor(months);
-  return whole === 1 ? "At 1 month" : `At ${whole} months`;
+  return whole === 1 ? t("At 1 month") : t("At {n} months", { n: whole });
 }
 
 // P3–P97 as a horizontal band on a hairline, P50 as a tick, the baby's latest
@@ -122,9 +124,12 @@ function RangeBar({ range, weightKg, markerKg, weighedOn }: {
   const lo = range.p3 - pad;
   const hi = range.p97 + pad;
   const at = (value: number) => `${Math.min(100, Math.max(0, ((value - lo) / (hi - lo)) * 100))}%`;
-  const description = `Reference band from ${kg(range.p3)} to ${kg(range.p97)} ${longUnit}, middle of the range ${kg(range.p50)} ${longUnit}${
-    weightKg === undefined ? "" : `. Latest logged weight ${kg(weightKg)} ${longUnit}${weighedOn ? ` on ${weighedOn}, placed where it sat for the age then` : ""}`
-  }.`;
+  const band = { low: kg(range.p3), high: kg(range.p97), mid: kg(range.p50), unit: longUnit };
+  const description = weightKg === undefined
+    ? t("Reference band from {low} to {high} {unit}, middle of the range {mid} {unit}.", band)
+    : weighedOn
+      ? t("Reference band from {low} to {high} {unit}, middle of the range {mid} {unit}. Latest logged weight {latest} {unit} on {date}, placed where it sat for the age then.", { ...band, latest: kg(weightKg), date: weighedOn })
+      : t("Reference band from {low} to {high} {unit}, middle of the range {mid} {unit}. Latest logged weight {latest} {unit}.", { ...band, latest: kg(weightKg) });
   return (
     <div className="range-bar" role="img" aria-label={description}>
       <div className="range-track">
@@ -182,7 +187,7 @@ export default function GrowthGuideScreen({
   onBack,
 }: GrowthGuideScreenProps) {
   const { kg, unitWord } = useKgLabel();
-  const name = profile.name.trim() || "Baby";
+  const name = profile.name.trim() || t("Baby");
   const careDays = ageInDays(profile.birthDate, minuteClock);
   const care = careDays === null ? null : careForAge(careDays);
   const play = careDays === null ? null : playForAge(careDays);
@@ -210,24 +215,23 @@ export default function GrowthGuideScreen({
               variant="ghost"
               size="sm"
               className="guide-back"
-              aria-label="Back to Insights"
+              aria-label={t("Back to Insights")}
               onClick={onBack}
             >
-              <ArrowLeft size={16} aria-hidden="true" /> Insights
+              <ArrowLeft size={16} aria-hidden="true" /> {t("Insights")}
             </Button>
           )}
-          <p className="eyebrow">Care guide</p>
-          <h1 id="growth-guide-heading">What to do today</h1>
+          <p className="eyebrow">{t("Care guide")}</p>
+          <h1 id="growth-guide-heading">{t("What to do today")}</h1>
         </div>
       </div>
 
       {care && (
         <section className="care-today" aria-labelledby="care-today-heading">
           <div className="care-heading">
-            <h2 id="care-today-heading" className="t-title-2">{care.stage}</h2>
+            <h2 id="care-today-heading" className="t-title-2">{t(care.stage)}</h2>
             <p className="t-meta">
-              What is expected for {name} right now, and what to do about it. Every line links
-              to the page it came from.
+              {t("What is expected for {name} right now, and what to do about it. Every line links to the page it came from.", { name })}
             </p>
           </div>
           <ul className="care-list">
@@ -242,9 +246,9 @@ export default function GrowthGuideScreen({
         <div className="watch-head">
           <span className="watch-icon" aria-hidden="true"><PhoneCall size={18} /></span>
           <div>
-            <h2 id="watch-heading" className="t-title-2">When to call someone</h2>
+            <h2 id="watch-heading" className="t-title-2">{t("When to call someone")}</h2>
             <p className="t-meta">
-              This app never decides any of these — you do. {WATCH_INSTINCT.text}
+              {t("This app never decides any of these — you do.")} {t(WATCH_INSTINCT.text)}
             </p>
           </div>
         </div>
@@ -253,12 +257,12 @@ export default function GrowthGuideScreen({
             beside a slow return to birthweight, at one level of urgency. */}
         {WATCH_TIERS.map(({ tier, heading, how }) => (
           <div key={tier} className="watch-tier">
-            <h3 className="watch-tier-heading">{heading}</h3>
-            {how && <p className="t-meta">{how}</p>}
+            <h3 className="watch-tier-heading">{t(heading)}</h3>
+            {how && <p className="t-meta">{t(how)}</p>}
             <ul className="watch-list">
               {WATCH_FOR.filter((item) => item.tier === tier).map((item) => (
                 <li key={item.sign}>
-                  <span>{item.sign}</span>
+                  <span>{t(item.sign)}</span>
                   {[item.source, item.alsoSource].map((source) => source && (
                     <a key={source.url} className="fact-source" href={source.url} target="_blank" rel="noopener noreferrer">
                       {source.name} <ExternalLink size={12} aria-hidden="true" />
@@ -276,12 +280,9 @@ export default function GrowthGuideScreen({
       <div className="surface-card guide-disclaimer">
         <ShieldCheck size={20} />
         <div>
-          <h2 className="t-title-2">Context, not a diagnosis</h2>
+          <h2 className="t-title-2">{t("Context, not a diagnosis")}</h2>
           <p className="t-body">
-            Everything in this guide — ranges, care notes and play ideas — is general
-            information from the sources listed below, not medical advice, and this app is
-            not a medical device. Babies grow in their own rhythm; your paediatrician’s
-            assessment always comes first.
+            {t("Everything in this guide — ranges, care notes and play ideas — is general information from the sources listed below, not medical advice, and this app is not a medical device. Babies grow in their own rhythm; your paediatrician’s assessment always comes first.")}
           </p>
         </div>
       </div>
@@ -294,42 +295,42 @@ export default function GrowthGuideScreen({
             {kg(range.p3)}–{kg(range.p97)}
             <span className="unit">{unitWord}</span>
           </p>
-          <p className="t-meta guide-range-sub">Typical weight range at this age (WHO P3–P97)</p>
+          <p className="t-meta guide-range-sub">{t("Typical weight range at this age (WHO P3–P97)")}</p>
           {exactAge !== null && exactAge > MAX_REFERENCE_MONTHS && (
-            <p className="t-meta">The WHO table covers the first 24 months, shown here at 24 months.</p>
+            <p className="t-meta">{t("The WHO table covers the first 24 months, shown here at 24 months.")}</p>
           )}
           <RangeBar
             range={range}
             weightKg={latestKg}
             markerKg={markerKg}
-            weighedOn={carried && latestGrowth ? latestDateFormat.format(new Date(latestGrowth.startedAt)) : undefined}
+            weighedOn={carried && latestGrowth ? latestDateFormat().format(new Date(latestGrowth.startedAt)) : undefined}
           />
           {latestGrowth && latestKg !== undefined && (
             <p className="guide-latest">
               <span className="guide-latest-dot" aria-hidden="true" />
-              {name}’s latest: <span className="guide-latest-value">{kg(latestKg)} {unitWord}</span> ({latestDateFormat.format(new Date(latestGrowth.startedAt))})
+              {t("{name}’s latest:", { name })} <span className="guide-latest-value">{kg(latestKg)} {unitWord}</span> ({latestDateFormat().format(new Date(latestGrowth.startedAt))})
             </p>
           )}
           {carried && (
-            <p className="t-meta">The dot shows where that weight sat for {name}’s age on the day it was taken.</p>
+            <p className="t-meta">{t("The dot shows where that weight sat for {name}’s age on the day it was taken.", { name })}</p>
           )}
-          {!profile.sex && <p className="t-meta">Range shown covers girls and boys.</p>}
+          {!profile.sex && <p className="t-meta">{t("Range shown covers girls and boys.")}</p>}
         </div>
       ) : (
         <div className="surface-card guide-range-card">
-          <p className="t-label">By age, 0–24 months</p>
-          <h2>Reference weights across the first two years.</h2>
+          <p className="t-label">{t("By age, 0–24 months")}</p>
+          <h2>{t("Reference weights across the first two years.")}</h2>
           <div className="guide-table-scroll">
             <table className="guide-table">
               <thead>
-                <tr><th scope="col">Age</th><th scope="col">P3</th><th scope="col">P50</th><th scope="col">P97</th></tr>
+                <tr><th scope="col">{t("Age")}</th><th scope="col">P3</th><th scope="col">P50</th><th scope="col">P97</th></tr>
               </thead>
               <tbody>
                 {tableMonths.map((month) => {
                   const row = expectedWeightRange(month, profile.sex);
                   return (
                     <tr key={month}>
-                      <th scope="row">{month} mo</th>
+                      <th scope="row">{t("{n} mo", { n: month })}</th>
                       <td>{kg(row.p3)}</td>
                       <td>{kg(row.p50)}</td>
                       <td>{kg(row.p97)} {unitWord}</td>
@@ -339,59 +340,58 @@ export default function GrowthGuideScreen({
               </tbody>
             </table>
           </div>
-          {!profile.sex && <p className="t-meta">Range shown covers girls and boys.</p>}
-          <p className="t-meta">Add a birth date in Settings to see the range for {name}’s exact age.</p>
+          {!profile.sex && <p className="t-meta">{t("Range shown covers girls and boys.")}</p>}
+          <p className="t-meta">{t("Add a birth date in Settings to see the range for {name}’s exact age.", { name })}</p>
         </div>
       )}
 
       <div className="surface-card guide-section">
-        <h2 className="t-label">Typical pattern</h2>
+        <h2 className="t-label">{t("Typical pattern")}</h2>
         <ul className="guide-rows">
           <li>
-            <p>Many newborns lose some weight in the first days, then regain it — most are back to birth weight by two weeks, nearly all by three.</p>
+            <p>{t("Many newborns lose some weight in the first days, then regain it — most are back to birth weight by two weeks, nearly all by three.")}</p>
             <span className="guide-authority">AAP · NHS</span>
           </li>
           {WEEKLY_GAIN_BANDS.map((band) => (
             <li key={band.fromMonth}>
               <p>
                 {band.fromMonth === 0
-                  ? "In the first month, roughly "
-                  : `From ${band.fromMonth} to ${band.toMonth} months, roughly `}
-                {band.minGramsPerWeek}–{band.maxGramsPerWeek} g a week is common.
+                  ? t("In the first month, roughly {min}–{max} g a week is common.", { min: band.minGramsPerWeek, max: band.maxGramsPerWeek })
+                  : t("From {from} to {to} months, roughly {min}–{max} g a week is common.", { from: band.fromMonth, to: band.toMonth, min: band.minGramsPerWeek, max: band.maxGramsPerWeek })}
               </p>
               <span className="guide-authority">{band.source}</span>
             </li>
           ))}
           <li>
-            <p>Many babies double their birth weight around six months and triple it around one year. After eight months, gains slow — following their own curve matters more than any weekly number.</p>
+            <p>{t("Many babies double their birth weight around six months and triple it around one year. After eight months, gains slow — following their own curve matters more than any weekly number.")}</p>
             <span className="guide-authority">AAP</span>
           </li>
           <li>
-            <p>Growth is usually fastest in the first six months, then gradually slows. A short illness can flatten gain for a couple of weeks — that usually settles on its own.</p>
+            <p>{t("Growth is usually fastest in the first six months, then gradually slows. A short illness can flatten gain for a couple of weeks — that usually settles on its own.")}</p>
             <span className="guide-authority">NHS</span>
           </li>
         </ul>
-        <p className="t-meta">These are population averages, not targets. A baby growing along a lower line on the chart gains less than one on a higher line — steadiness is the point.</p>
+        <p className="t-meta">{t("These are population averages, not targets. A baby growing along a lower line on the chart gains less than one on a higher line — steadiness is the point.")}</p>
       </div>
 
       <div className="surface-card guide-section">
-        <h2 className="t-label">When to ask your paediatrician</h2>
-        <p className="t-body guide-intro">Trust your instincts — reach out whenever you’re unsure. These are the moments the guidance names for a check-in:</p>
+        <h2 className="t-label">{t("When to ask your paediatrician")}</h2>
+        <p className="t-body guide-intro">{t("Trust your instincts — reach out whenever you’re unsure. These are the moments the guidance names for a check-in:")}</p>
         <ul className="guide-rows">
           <li>
-            <p>At two weeks, still under birth weight or gaining less than about 150 g a week.</p>
+            <p>{t("At two weeks, still under birth weight or gaining less than about 150 g a week.")}</p>
             <span className="guide-authority">AAP</span>
           </li>
           <li>
-            <p>Not back to birth weight by three weeks of age.</p>
+            <p>{t("Not back to birth weight by three weeks of age.")}</p>
             <span className="guide-authority">NHS · NICE</span>
           </li>
           <li>
-            <p>After the first week, urine that is dark or has reddish-orange marks in it.</p>
+            <p>{t("After the first week, urine that is dark or has reddish-orange marks in it.")}</p>
             <span className="guide-authority">AAP</span>
           </li>
           <li>
-            <p>Weight drifting across more than one line on their growth chart, in either direction.</p>
+            <p>{t("Weight drifting across more than one line on their growth chart, in either direction.")}</p>
             <span className="guide-authority">NHS</span>
           </li>
         </ul>
@@ -400,21 +400,21 @@ export default function GrowthGuideScreen({
             a check-in, a few inches below the "Get help now" list giving the
             same signs as "call your doctor immediately" — the AAP's word for
             every one of them. One screen, one urgency per sign. */}
-        <p className="t-body guide-intro">These cannot wait for a check-in. The AAP counts them as signs of dehydration and says to call your doctor immediately — they are on the “Get help now” list above:</p>
+        <p className="t-body guide-intro">{t("These cannot wait for a check-in. The AAP counts them as signs of dehydration and says to call your doctor immediately — they are on the “Get help now” list above:")}</p>
         <ul className="guide-rows">
           <li>
-            <p>After the first week, fewer than six wet diapers a day.</p>
+            <p>{t("After the first week, fewer than six wet diapers a day.")}</p>
             <span className="guide-authority">AAP</span>
           </li>
           <li>
-            <p>At any age, a dry mouth, fewer tears when crying, a sunken soft spot on the head, or unusual sleepiness.</p>
+            <p>{t("At any age, a dry mouth, fewer tears when crying, a sunken soft spot on the head, or unusual sleepiness.")}</p>
             <span className="guide-authority">AAP</span>
           </li>
         </ul>
       </div>
 
       <div className="surface-card guide-sources">
-        <h2 className="t-label">Sources</h2>
+        <h2 className="t-label">{t("Sources")}</h2>
         <ul className="guide-source-list">
           {GUIDE_SOURCES.map((source) => (
             <li key={source.url}>
@@ -422,13 +422,13 @@ export default function GrowthGuideScreen({
                 {source.name}
                 <ExternalLink size={13} aria-hidden="true" />
               </a>
-              <p className="t-meta">{source.note}</p>
+              <p className="t-meta">{t(source.note)}</p>
             </li>
           ))}
         </ul>
       </div>
 
-      <p className="figure-source">WHO Child Growth Standards · shown for context, not diagnosis · on this device</p>
+      <p className="figure-source">{t("WHO Child Growth Standards · shown for context, not diagnosis · on this device")}</p>
     </section>
   );
 }

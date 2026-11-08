@@ -49,6 +49,10 @@ export type Insight = {
   body: string;
   /** What to actually do. Never absent — sometimes it is "nothing". */
   advice: string;
+  /** Values for the {name}-style holes in title/body/advice, filled at
+      render — the sentences stay whole English templates so translation
+      swaps the sentence, not the grammar. */
+  vars?: Record<string, string | number>;
   sources: FactSource[];
 };
 
@@ -135,7 +139,7 @@ type Rule = {
   tone: InsightTone;
   priority: number;
   sources: FactSource[];
-  evaluate: (input: InsightInput) => { title: string; body: string; advice: string } | null;
+  evaluate: (input: InsightInput) => { title: string; body: string; advice: string; vars?: Record<string, string | number> } | null;
 };
 
 // ——— reading change ————————————————————————————————————————————————
@@ -205,11 +209,16 @@ const RULES: Rule[] = [
       const emergencyAt = ageDays === null ? null : ageDays < 90 ? 38 : ageDays < 183 ? 39 : null;
       return {
         title: "That temperature is worth a phone call",
-        body: `You logged ${formatTemperature(latestTemperatureC, units)}. AAP's call-the-doctor threshold changes with age and is ${formatTemperature(feverThresholdC(ageDays), units)} for yours.`,
+        body: "You logged {temp}. AAP's call-the-doctor threshold changes with age and is {threshold} for yours.",
         advice:
           emergencyAt !== null && latestTemperatureC >= emergencyAt
-            ? `Call an emergency number now — 911, 999 or 112 — even if your baby otherwise seems fine. NHS lists ${degrees(emergencyAt, units)} or more at this age among its reasons to call 999 or go to A&E.`
+            ? "Call an emergency number now — 911, 999 or 112 — even if your baby otherwise seems fine. NHS lists {emergency} or more at this age among its reasons to call 999 or go to A&E."
             : "Call your paediatrician today and describe how your baby is behaving, not just the number.",
+        vars: {
+          temp: formatTemperature(latestTemperatureC, units),
+          threshold: formatTemperature(feverThresholdC(ageDays), units),
+          ...(emergencyAt !== null && { emergency: degrees(emergencyAt, units) }),
+        },
       };
     },
   },
@@ -227,7 +236,8 @@ const RULES: Rule[] = [
       if (ageDays !== null && ageDays > 90) return null;
       return {
         title: "A low temperature matters as much as a fever",
-        body: `You logged ${formatTemperature(latestTemperatureC, units)}. NHS lists a temperature below ${degrees(36, units)} — or a baby who feels cold to the touch or is shivery — under “Call 999 or go to A&E”.`,
+        body: "You logged {temp}. NHS lists a temperature below {low} — or a baby who feels cold to the touch or is shivery — under “Call 999 or go to A&E”.",
+        vars: { temp: formatTemperature(latestTemperatureC, units), low: degrees(36, units) },
         // "Urgent advice" was softer than the page it cites, which files a
         // low temperature with the signs that cannot wait, not with NHS 111.
         advice:
@@ -245,7 +255,8 @@ const RULES: Rule[] = [
       if (ageDays === null || ageDays < 7 || !yesterday || yesterday.diapers === 0) return null;
       if (loggedDays(days, 7, hasDiaper) < 5 || yesterday.wet > 2) return null;
       return {
-        title: `Only ${yesterday.wet} wet ${yesterday.wet === 1 ? "nappy" : "nappies"} logged yesterday`,
+        title: yesterday.wet === 1 ? "Only 1 wet nappy logged yesterday" : "Only {n} wet nappies logged yesterday",
+        vars: { n: yesterday.wet },
         body:
           "AAP lists weeing only once or twice a day among the signs of serious dehydration. This counts what was logged — if changes went unrecorded, the real number is higher.",
         // "Today" was softer than the page this card cites, which says to
@@ -267,7 +278,8 @@ const RULES: Rule[] = [
       if (loggedDays(days, 7, hasDiaper) < 5) return null;
       if (yesterday.wet < 3 || yesterday.wet >= 6) return null;
       return {
-        title: `${yesterday.wet} wet nappies logged yesterday, against a floor of 6`,
+        title: "{n} wet nappies logged yesterday, against a floor of 6",
+        vars: { n: yesterday.wet },
         body:
           "After the first week, both AAP and NHS put at least 6 heavy wet nappies a day as the mark of a baby getting enough milk.",
         // "Watch today, ring today" could wait a whole day on a page that
@@ -292,7 +304,8 @@ const RULES: Rule[] = [
       if (last.weightGrams >= first.weightGrams) return null;
       return {
         title: "Still under the first weight you logged",
-        body: `You logged ${loggedWeight(first.weightGrams, units)} first and ${loggedWeight(last.weightGrams, units)} most recently. NHS: most babies are at, or above, their birthweight by 3 weeks.`,
+        body: "You logged {first} first and {last} most recently. NHS: most babies are at, or above, their birthweight by 3 weeks.",
+        vars: { first: loggedWeight(first.weightGrams, units), last: loggedWeight(last.weightGrams, units) },
         advice:
           "Home scales drift. Ask your midwife, health visitor or paediatrician to weigh your baby on theirs — do not change how you feed on the strength of this alone.",
       };
@@ -314,7 +327,8 @@ const RULES: Rule[] = [
       if (gain === null || gain >= 100) return null;
       return {
         title: "Weight gain looks slower than the usual range",
-        body: `About ${formatGrams(gain, units)} a week between your last two weights, ${round(span)} days apart. AAP treats a baby not gaining steadily as a reason to get weighed properly.`,
+        body: "About {gain} a week between your last two weights, {span} days apart. AAP treats a baby not gaining steadily as a reason to get weighed properly.",
+        vars: { gain: formatGrams(gain, units), span: round(span) },
         advice:
           "Ask your health visitor or paediatrician for a weigh-in on their scales before you change anything.",
       };
@@ -350,7 +364,8 @@ const RULES: Rule[] = [
       if (ageDays === null || ageDays > 28 || hours === null || hours < 5) return null;
       if (loggedDays(days, 3, hasFeed) < 3) return null;
       return {
-        title: `${Math.floor(hours)} hours since the last logged feed`,
+        title: "{h} hours since the last logged feed",
+        vars: { h: Math.floor(hours) },
         body:
           "AAP: if a newborn sleeps longer than 4 to 5 hours in the first weeks and starts missing feeds, wake them and offer one.",
         advice: "If you fed and did not log it, add it and this card goes away.",
@@ -369,7 +384,8 @@ const RULES: Rule[] = [
         feedingMode === "bottle" ? hours > 72 : ageDays >= 21 && hours > 7 * 24;
       if (!overdue) return null;
       return {
-        title: `${Math.floor(hours / 24)} days since the last logged poo`,
+        title: "{d} days since the last logged poo",
+        vars: { d: Math.floor(hours / 24) },
         body:
           "AAP: 5 to 7 days between poos is not necessarily a problem in a baby who has been pooing normally and is feeding and growing well. Past that is worth a mention.",
         advice:
@@ -390,7 +406,8 @@ const RULES: Rule[] = [
       if (typical <= 960) return null;
       return {
         title: "Bottle totals are running above the usual daily guide",
-        body: `Your median bottle day is about ${formatVolume(typical, units)}. AAP: babies generally do not need more than about ${formatVolume(960, units)} of formula in 24 hours.`,
+        body: "Your median bottle day is about {vol}. AAP: babies generally do not need more than about {max} of formula in 24 hours.",
+        vars: { vol: formatVolume(typical, units), max: formatVolume(960, units) },
         advice:
           "Mention the daily total at your next appointment. Keep following fullness cues — never push the last of a bottle to hit or avoid a number.",
       };
@@ -408,7 +425,8 @@ const RULES: Rule[] = [
       if (typical < 90) return null;
       return {
         title: "Worth a pause halfway through the bottle",
-        body: `Your typical bottle is about ${formatVolume(typical, units)}. AAP suggests burping about every ${formatVolume(60, units)} to ${formatVolume(90, units)} rather than once at the end.`,
+        body: "Your typical bottle is about {vol}. AAP suggests burping about every {low} to {high} rather than once at the end.",
+        vars: { vol: formatVolume(typical, units), low: formatVolume(60, units), high: formatVolume(90, units) },
         advice:
           "Try one pause halfway through the next bottle, and rotate the holds: on your shoulder, sitting on your lap, or face-down across your lap.",
       };
@@ -453,7 +471,8 @@ const RULES: Rule[] = [
       if (yesterday.feeds < 12 || yesterday.feeds < usual + 4) return null;
       return {
         title: "Yesterday looks like a cluster-feeding day",
-        body: `${yesterday.feeds} feeds, against your usual ${usual}. NHS: cluster feeding is very normal in the first 3 to 4 months and often comes with a growth spurt.`,
+        body: "{n} feeds, against your usual {usual}. NHS: cluster feeding is very normal in the first 3 to 4 months and often comes with a growth spurt.",
+        vars: { n: yesterday.feeds, usual },
         advice: "Nothing to fix. Eat, drink, get comfortable and let the feeds come — it passes.",
       };
     },
@@ -470,7 +489,8 @@ const RULES: Rule[] = [
       if (hours === null || hours < 48 || hours > 7 * 24) return null;
       if (loggedDays(days, 3, hasDiaper) < 3 || !yesterday || yesterday.wet < 5) return null;
       return {
-        title: `${Math.floor(hours / 24)} days without a poo — normal at this age`,
+        title: "{d} days without a poo — normal at this age",
+        vars: { d: Math.floor(hours / 24) },
         body:
           "NHS: after about 6 weeks a breastfed baby can go several days without one, and AAP agrees 5 to 7 days is not necessarily a problem when feeding and growing are fine.",
         advice:
@@ -495,11 +515,14 @@ const RULES: Rule[] = [
       if (gain === null || band === null || gain < band.minGramsPerWeek * 0.8) return null;
       return {
         title: "Weight is climbing at the usual rate",
-        body: `About ${formatGrams(gain, units)} a week between your last two weights. The typical band at this age is ${
-          units === "metric"
-            ? `${band.minGramsPerWeek}–${band.maxGramsPerWeek} g`
-            : `${formatGrams(band.minGramsPerWeek, units)}–${formatGrams(band.maxGramsPerWeek, units)}`
-        } a week.`,
+        body: "About {gain} a week between your last two weights. The typical band at this age is {band} a week.",
+        vars: {
+          gain: formatGrams(gain, units),
+          band:
+            units === "metric"
+              ? `${band.minGramsPerWeek}–${band.maxGramsPerWeek} g`
+              : `${formatGrams(band.minGramsPerWeek, units)}–${formatGrams(band.maxGramsPerWeek, units)}`,
+        },
         advice: "Nothing to do. Under 6 months, one weight a month is enough for this to stay meaningful.",
       };
     },
@@ -515,7 +538,8 @@ const RULES: Rule[] = [
       if (typical < 8 || typical > 14) return null;
       return {
         title: "That is a lot of feeds. It is also the normal number.",
-        body: `Your median is ${typical} feeds a day. AAP: breastfed newborns usually nurse about every 2 hours, so 10 to 12 in 24 hours is the norm and 8 is the minimum.`,
+        body: "Your median is {n} feeds a day. AAP: breastfed newborns usually nurse about every 2 hours, so 10 to 12 in 24 hours is the norm and 8 is the minimum.",
+        vars: { n: typical },
         advice:
           "Nothing to change. Keep following the early cues — rooting, hands to the mouth, lip smacking. Crying is the late one.",
       };
@@ -535,7 +559,8 @@ const RULES: Rule[] = [
       if (!moved || moved.ratio > 0.7 || moved.earlier < 5) return null;
       return {
         title: "Feeds have eased off this week",
-        body: `About ${moved.recent.toFixed(1)} a day recently, against ${moved.earlier.toFixed(1)} before. Appetite moves around, and a settled week can look like this.`,
+        body: "About {recent} a day recently, against {earlier} before. Appetite moves around, and a settled week can look like this.",
+        vars: { recent: moved.recent.toFixed(1), earlier: moved.earlier.toFixed(1) },
         advice:
           "Worth watching alongside nappies and weight rather than on its own. If wet nappies drop too, or your baby seems harder to rouse for a feed, ring your health visitor.",
       };
@@ -554,7 +579,8 @@ const RULES: Rule[] = [
       if (!moved || moved.ratio > 0.7 || moved.recent < 6) return null;
       return {
         title: "Fewer wet nappies than last week",
-        body: `About ${moved.recent.toFixed(1)} a day, from ${moved.earlier.toFixed(1)}. Still inside the usual range, so this is a note rather than a worry.`,
+        body: "About {recent} a day, from {earlier}. Still inside the usual range, so this is a note rather than a worry.",
+        vars: { recent: moved.recent.toFixed(1), earlier: moved.earlier.toFixed(1) },
         advice:
           "Keep offering feeds on cue. If it keeps falling and lands below six heavy wet nappies a day, that is the point to call.",
       };
@@ -576,7 +602,8 @@ const RULES: Rule[] = [
       if (!moved || moved.ratio < 1.2 || moved.recent - moved.earlier < 30) return null;
       return {
         title: "The longest stretch is getting longer",
-        body: `Best stretch is averaging ${humanDuration(Math.round(moved.recent))}, up from ${humanDuration(Math.round(moved.earlier))} the week before.`,
+        body: "Best stretch is averaging {recent}, up from {earlier} the week before.",
+        vars: { recent: humanDuration(Math.round(moved.recent)), earlier: humanDuration(Math.round(moved.earlier)) },
         advice:
           "Nothing to do. Nights move backwards as often as forwards at this age, so this is worth noticing rather than counting on.",
       };

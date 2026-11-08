@@ -40,6 +40,7 @@ import {
   readHandoffTarget,
   unpackHandoff,
 } from "./domain/handoff";
+import { t } from "./i18n";
 import { backupNudge } from "./domain/backupNudge";
 import { reminderNudge } from "./domain/reminderNudge";
 import { onConsentChange, readConsent } from "./domain/consent";
@@ -111,11 +112,16 @@ const bottomNavItems: Array<{ value: Tab; label: string; icon: React.ReactNode }
 ];
 
 // One fallback for every lazy screen: visible loading, announced to SR.
-const screenFallback = (
-  <div className="screen loading-screen screen-fallback" role="status" aria-label="Loading">
-    <SleepingBaby size={48} aria-hidden="true" />
-  </div>
-);
+// A component, not a bare element, so its label is read at render time —
+// after the dictionary has loaded — rather than when this module first runs.
+function ScreenFallback() {
+  return (
+    <div className="screen loading-screen screen-fallback" role="status" aria-label={t("Loading")}>
+      <SleepingBaby size={48} aria-hidden="true" />
+    </div>
+  );
+}
+const screenFallback = <ScreenFallback />;
 
 // The trigger's name must survive both states; SidebarTrigger alone can't
 // know them, so this tiny wrapper reads the provider.
@@ -124,7 +130,7 @@ function NavTrigger() {
   return (
     <SidebarTrigger
       className="sidebar-trigger"
-      aria-label="Toggle navigation"
+      aria-label={t("Toggle navigation")}
       aria-expanded={isMobile ? openMobile : open}
     />
   );
@@ -343,7 +349,7 @@ export default function HomePage() {
       // the dark, after the baby has been settled. (Its timer also pauses
       // while the app is in the background, or a finger rests on it.)
       duration: undo ? 8_000 : 4_200,
-      action: undo ? { label: "Undo", onClick: undo } : undefined,
+      action: undo ? { label: t("Undo"), onClick: undo } : undefined,
       // When its Undo is no longer on offer — whenever that turns out to be.
       onAutoClose: onGone,
       onDismiss: onGone,
@@ -450,7 +456,7 @@ export default function HomePage() {
     }
     void familySync.emailRedeem(tapped.token, "This phone").then((outcome) => {
       track("magic_link_redeemed", { purpose: tapped.purpose, ok: outcome !== null });
-      if (outcome === "confirmed") showToast("Recovery email confirmed — your log is protected.");
+      if (outcome === "confirmed") showToast(t("Recovery email confirmed — your log is protected."));
       if (outcome === "recovered") completeJoin();
     });
     // Runs once per tapped link, as soon as boot settles.
@@ -625,11 +631,17 @@ export default function HomePage() {
         const whose = arriving.profile.name.trim();
         mergeBackupText(
           text,
-          `Bring ${count} ${count === 1 ? "entry" : "entries"}${whose ? ` for ${whose}` : ""} across from the app's other address? Existing entries stay; newer versions win.`,
+          whose
+            ? count === 1
+              ? t("Bring 1 entry for {name} across from the app's other address? Existing entries stay; newer versions win.", { name: whose })
+              : t("Bring {n} entries for {name} across from the app's other address? Existing entries stay; newer versions win.", { n: count, name: whose })
+            : count === 1
+              ? t("Bring 1 entry across from the app's other address? Existing entries stay; newer versions win.")
+              : t("Bring {n} entries across from the app's other address? Existing entries stay; newer versions win.", { n: count }),
           "link",
         );
       })
-      .catch(() => showToast("That log could not be read"));
+      .catch(() => showToast(t("That log could not be read")));
     return () => { cancelled = true; };
     // Runs once the store is readable; mergeBackupText is stable for this.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -760,7 +772,7 @@ export default function HomePage() {
     if (delay <= 0 || delay > MAX_REMINDER_DELAY_MS) return;
     const timer = window.setTimeout(() => {
       // No name on a lock screen — the notification may show in a shared room.
-      ringReminder("Time to check feeding cues", "A feed reminder is due. Follow your baby’s cues and care plan.", "feed-reminder", new Date(feedReminderTargetAt).toISOString());
+      ringReminder(t("Time to check feeding cues"), t("A feed reminder is due. Follow your baby’s cues and care plan."), "feed-reminder", new Date(feedReminderTargetAt).toISOString());
     }, delay);
 
     return () => window.clearTimeout(timer);
@@ -779,7 +791,7 @@ export default function HomePage() {
     if (delay <= 0 || delay > MAX_REMINDER_DELAY_MS) return;
     const timer = window.setTimeout(() => {
       // No name on a lock screen — this may show in a shared room.
-      ringReminder("Diaper check", "It has been a while since the last change.", "diaper-reminder", new Date(diaperReminderTargetAt).toISOString());
+      ringReminder(t("Diaper check"), t("It has been a while since the last change."), "diaper-reminder", new Date(diaperReminderTargetAt).toISOString());
     }, delay);
 
     return () => window.clearTimeout(timer);
@@ -858,7 +870,7 @@ export default function HomePage() {
 
   if (bootState === "loading") {
     return (
-      <main className="loading-screen" aria-label="Loading Numalog">
+      <main className="loading-screen" aria-label={t("Loading Numalog")}>
         <SleepingBaby size={64} aria-hidden="true" />
         <span>Numalog</span>
       </main>
@@ -972,16 +984,16 @@ export default function HomePage() {
           <div className="topbar-start">
             <NavTrigger />
             <span className="topbar-page-title">
-              {activeTab === "more"
+              {t(activeTab === "more"
                 ? "Settings"
-                : activeTab[0].toUpperCase() + activeTab.slice(1)}
+                : activeTab[0].toUpperCase() + activeTab.slice(1))}
             </span>
           </div>
           <Button
             variant="ghost"
             size="icon"
             className="topbar-news"
-            aria-label={releasesToShow.length > 0 && !newsSeen ? "News and updates — something new" : "News and updates"}
+            aria-label={releasesToShow.length > 0 && !newsSeen ? t("News and updates — something new") : t("News and updates")}
             onClick={() => {
               track("news_opened", { from: "topbar" });
               setNewsOpen(true);
@@ -996,11 +1008,11 @@ export default function HomePage() {
             <Newspaper />
             {releasesToShow.length > 0 && !newsSeen && <span className="news-badge" aria-hidden="true" />}
           </Button>
-          <Button variant="ghost" className="baby-identity" aria-label="Baby profile" onClick={() => openSheet("profile")}>
+          <Button variant="ghost" className="baby-identity" aria-label={t("Baby profile")} onClick={() => openSheet("profile")}>
             <span className="baby-avatar"><BabyAvatar photo={profile.photo} size={22} /></span>
             <span>
               <strong>{profile.name}</strong>
-              <small>Baby profile</small>
+              <small>{t("Baby profile")}</small>
             </span>
             <ChevronRight size={16} />
           </Button>
@@ -1009,8 +1021,8 @@ export default function HomePage() {
         {debugMode && (
           <div className="banner-stack">
             <div className="debug-banner" role="status">
-              <span><Stethoscope /><span><strong>Debug preview</strong><small>Fake data only · your saved tracker is untouched</small></span></span>
-              <Button variant="outline" size="sm" onClick={exitDebugPreview}>Exit preview</Button>
+              <span><Stethoscope /><span><strong>{t("Debug preview")}</strong><small>{t("Fake data only · your saved tracker is untouched")}</small></span></span>
+              <Button variant="outline" size="sm" onClick={exitDebugPreview}>{t("Exit preview")}</Button>
             </div>
           </div>
         )}
@@ -1019,9 +1031,9 @@ export default function HomePage() {
           <div className="banner-stack">
             <div className="storage-banner" role="alert">
               <ShieldCheck size={19} />
-              <span><strong>Back up your entries.</strong> {storageWarning}</span>
+              <span><strong>{t("Back up your entries.")}</strong> {storageWarning}</span>
               <div>
-                <Button onClick={exportData}>Download backup</Button>
+                <Button onClick={exportData}>{t("Download backup")}</Button>
               </div>
             </div>
           </div>
@@ -1036,8 +1048,8 @@ export default function HomePage() {
                 wrong for a sentence explaining that entries could not be read.
                 A message about lost data must not itself be cut off. */}
             <div className="debug-banner recovered-banner" role="alert">
-              <span><ShieldCheck /><span><strong>Some entries were skipped</strong><small>{recoveredNotice}</small></span></span>
-              <Button variant="outline" size="sm" onClick={dismissRecoveredNotice}>OK</Button>
+              <span><ShieldCheck /><span><strong>{t("Some entries were skipped")}</strong><small>{recoveredNotice}</small></span></span>
+              <Button variant="outline" size="sm" onClick={dismissRecoveredNotice}>{t("OK")}</Button>
             </div>
           </div>
         )}
@@ -1238,7 +1250,7 @@ export default function HomePage() {
           )}
         </main>
 
-        <nav className="bottom-nav" aria-label="Primary navigation">
+        <nav className="bottom-nav" aria-label={t("Primary navigation")}>
           {bottomNavItems.map((item) => (
             <button
               key={item.value}
@@ -1248,7 +1260,7 @@ export default function HomePage() {
               onClick={() => navigateTo(item.value)}
             >
               {item.icon}
-              <span>{item.label}</span>
+              <span>{t(item.label)}</span>
             </button>
           ))}
         </nav>
@@ -1345,7 +1357,7 @@ export default function HomePage() {
               <button
                 type="button"
                 className="sheet-handle"
-                aria-label="Close"
+                aria-label={t("Close")}
                 onClick={() => setSheet(null)}
               />
               <Suspense fallback={null}>

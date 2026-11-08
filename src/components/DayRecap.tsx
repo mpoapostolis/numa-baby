@@ -10,6 +10,7 @@ import { ChevronLeft, ChevronRight, Share2 } from "lucide-react";
 import { ActivityGlyph } from "./ActivityGlyph";
 import { track } from "../domain/analytics";
 import { Button } from "./ui/button";
+import { t } from "../i18n";
 import { DaySummary } from "../domain/daySummary";
 import { shareLink } from "../domain/shareApp";
 import { formatTime, humanDuration } from "../domain/time";
@@ -21,9 +22,9 @@ function Duration({ minutes }: { minutes: number }) {
   if (minutes <= 0) return <span className="is-zero">—</span>;
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
-  if (hours === 0) return <>{mins}<span className="unit">m</span></>;
-  if (mins === 0) return <>{hours}<span className="unit">h</span></>;
-  return <>{hours}<span className="unit">h</span> {mins}<span className="unit">m</span></>;
+  if (hours === 0) return <>{mins}<span className="unit">{t("m")}</span></>;
+  if (mins === 0) return <>{hours}<span className="unit">{t("h")}</span></>;
+  return <>{hours}<span className="unit">{t("h")}</span> {mins}<span className="unit">{t("m")}</span></>;
 }
 
 function Count({ value }: { value: number }) {
@@ -61,20 +62,20 @@ function Stat({ glyph, label, children, sub }: StatProps) {
 // "3 stretches · longest 2h 30m" — the shape of the night, not just its total.
 function sleepSub(summary: DaySummary) {
   const parts: string[] = [];
-  if (summary.naps > 0) parts.push(`${summary.naps} ${summary.naps === 1 ? "stretch" : "stretches"}`);
-  if (summary.longestSleepMinutes > 0) parts.push(`longest ${humanDuration(summary.longestSleepMinutes)}`);
+  if (summary.naps > 0) parts.push(summary.naps === 1 ? t("1 stretch") : t("{n} stretches", { n: summary.naps }));
+  if (summary.longestSleepMinutes > 0) parts.push(t("longest {duration}", { duration: humanDuration(summary.longestSleepMinutes) }));
   return parts.join(" · ") || undefined;
 }
 
 function changesSub(summary: DaySummary) {
   if (summary.diapers === 0) return undefined;
-  return `of ${summary.diapers} ${summary.diapers === 1 ? "change" : "changes"}`;
+  return summary.diapers === 1 ? t("of 1 change") : t("of {n} changes", { n: summary.diapers });
 }
 
 function feedSub(summary: DaySummary) {
   const parts: string[] = [];
-  if (summary.bottles > 0) parts.push(`${summary.bottles} bottle${summary.bottles === 1 ? "" : "s"}`);
-  if (summary.nursings > 0) parts.push(`${summary.nursings} nursing`);
+  if (summary.bottles > 0) parts.push(summary.bottles === 1 ? t("1 bottle") : t("{n} bottles", { n: summary.bottles }));
+  if (summary.nursings > 0) parts.push(t("{n} nursing", { n: summary.nursings }));
   return parts.join(" · ");
 }
 
@@ -83,13 +84,13 @@ function feedSub(summary: DaySummary) {
 function milkSub(summary: DaySummary) {
   if (summary.nursings === 0) return undefined;
   return summary.nursingMinutes > 0
-    ? `bottles only · ${humanDuration(summary.nursingMinutes)} nursing`
-    : "bottles only";
+    ? t("bottles only · {duration} nursing", { duration: humanDuration(summary.nursingMinutes) })
+    : t("bottles only");
 }
 
 function nursedSub(summary: DaySummary) {
-  const sessions = `${summary.nursings} ${summary.nursings === 1 ? "session" : "sessions"}`;
-  return summary.hasRunningNursing ? `${sessions} · one still going` : sessions;
+  const sessions = summary.nursings === 1 ? t("1 session") : t("{n} sessions", { n: summary.nursings });
+  return summary.hasRunningNursing ? t("{sessions} · one still going", { sessions }) : sessions;
 }
 
 type DayRecapProps = {
@@ -119,7 +120,7 @@ export function DayRecap({ summary, title, name = "", stepper }: DayRecapProps) 
     void shareCardOnTap(
       (cards) => cards.dayCard(name, summary, units),
       `numalog-${dayKey}.png`,
-      `${name.trim() || "Baby"} · ${title.toLowerCase()} · ${shareLink("day")}`,
+      `${name.trim() || t("Baby")} · ${title.toLowerCase()} · ${shareLink("day")}`,
     );
   }
   const milk = volumeParts(summary.ml, units);
@@ -129,7 +130,7 @@ export function DayRecap({ summary, title, name = "", stepper }: DayRecapProps) 
       : null;
 
   return (
-    <section className="day-recap" aria-label={`${title} summary`}>
+    <section className="day-recap" aria-label={t("{title} summary", { title })}>
       <header className="recap-head">
         {/* The stepper walks whole calendar days: back only as far as the
             first thing ever logged, forward never past today. */}
@@ -139,7 +140,7 @@ export function DayRecap({ summary, title, name = "", stepper }: DayRecapProps) 
             className="recap-step"
             onClick={() => { track("recap_day_stepped", { direction: "back" }); stepper.onPrev(); }}
             disabled={!stepper.canPrev}
-            aria-label="Previous day"
+            aria-label={t("Previous day")}
           >
             <ChevronLeft size={16} aria-hidden="true" />
           </Button>
@@ -151,7 +152,7 @@ export function DayRecap({ summary, title, name = "", stepper }: DayRecapProps) 
             variant="ghost"
             className="recap-step recap-share"
             onClick={share}
-            aria-label={`Share ${title.toLowerCase()} as a picture`}
+            aria-label={t("Share {what} as a picture", { what: title.toLowerCase() })}
           >
             <Share2 size={16} aria-hidden="true" />
           </Button>
@@ -162,7 +163,7 @@ export function DayRecap({ summary, title, name = "", stepper }: DayRecapProps) 
             className="recap-step"
             onClick={() => { track("recap_day_stepped", { direction: "forward" }); stepper.onNext(); }}
             disabled={!stepper.canNext}
-            aria-label="Next day"
+            aria-label={t("Next day")}
           >
             <ChevronRight size={16} aria-hidden="true" />
           </Button>
@@ -173,14 +174,14 @@ export function DayRecap({ summary, title, name = "", stepper }: DayRecapProps) 
           {/* Only tummy time or a medicine so far is still something logged —
               Recent lists it just below, so "nothing" would contradict it. */}
           {summary.otherEntries > 0
-            ? summary.isToday ? "No feeds, changes or sleep logged yet today." : "No feeds, changes or sleep logged on this day."
-            : summary.isToday ? "Nothing logged yet today." : "Nothing logged on this day."}
+            ? summary.isToday ? t("No feeds, changes or sleep logged yet today.") : t("No feeds, changes or sleep logged on this day.")
+            : summary.isToday ? t("Nothing logged yet today.") : t("Nothing logged on this day.")}
         </p>
       ) : (
       <div className="recap-grid">
         <Stat
           glyph="nursing"
-          label={summary.feeds === 1 ? "Feed" : "Feeds"}
+          label={summary.feeds === 1 ? t("Feed") : t("Feeds")}
           sub={feedSub(summary)}
         >
           <Count value={summary.feeds} />
@@ -189,23 +190,23 @@ export function DayRecap({ summary, title, name = "", stepper }: DayRecapProps) 
             When both happen, the millilitres are labelled as bottles only —
             300 ml is not the day's whole intake if there was also nursing. */}
         {summary.bottles === 0 && summary.nursings > 0 ? (
-          <Stat glyph="nursing" label="Nursed" sub={nursedSub(summary)}>
+          <Stat glyph="nursing" label={t("Nursed")} sub={nursedSub(summary)}>
             <Duration minutes={summary.nursingMinutes} />
           </Stat>
         ) : (
-          <Stat glyph="bottle" label="Milk" sub={milkSub(summary)}>
+          <Stat glyph="bottle" label={t("Milk")} sub={milkSub(summary)}>
             {summary.ml > 0
               ? <>{milk.value}<span className="unit">{milk.unit}</span></>
               : <span className="is-zero">—</span>}
           </Stat>
         )}
-        <Stat glyph="diaper" label="Wet" sub={changesSub(summary)}>
+        <Stat glyph="diaper" label={t("Wet")} sub={changesSub(summary)}>
           <Count value={summary.wet} />
         </Stat>
-        <Stat glyph="diaper" label="Dirty" sub={changesSub(summary)}>
+        <Stat glyph="diaper" label={t("Dirty")} sub={changesSub(summary)}>
           <Count value={summary.dirty} />
         </Stat>
-        <Stat glyph="sleep" label="Sleep" sub={sleepSub(summary)}>
+        <Stat glyph="sleep" label={t("Sleep")} sub={sleepSub(summary)}>
           <Duration minutes={summary.sleepMinutes} />
         </Stat>
       </div>
@@ -221,12 +222,14 @@ export function DayRecap({ summary, title, name = "", stepper }: DayRecapProps) 
 export function DayRecapLine({ summary }: { summary: DaySummary }) {
   const units = useUnits();
   const parts: string[] = [];
-  if (summary.feeds > 0) parts.push(`${summary.feeds} ${summary.feeds === 1 ? "feed" : "feeds"}`);
+  // Each part is its own small sentence, so Greek can put the number where it
+  // belongs — "4 τσίσα", not a count glued to a translated noun.
+  if (summary.feeds > 0) parts.push(summary.feeds === 1 ? t("1 feed") : t("{n} feeds", { n: summary.feeds }));
   if (summary.ml > 0) parts.push(formatVolume(summary.ml, units));
-  if (summary.wet > 0) parts.push(`${summary.wet} wet`);
-  if (summary.dirty > 0) parts.push(`${summary.dirty} dirty`);
-  if (summary.sleepMinutes > 0) parts.push(`${humanDuration(summary.sleepMinutes)} sleep`);
-  if (summary.solids > 0) parts.push(`${summary.solids} ${summary.solids === 1 ? "solid" : "solids"}`);
+  if (summary.wet > 0) parts.push(t("{n} wet", { n: summary.wet }));
+  if (summary.dirty > 0) parts.push(t("{n} dirty", { n: summary.dirty }));
+  if (summary.sleepMinutes > 0) parts.push(t("{duration} sleep", { duration: humanDuration(summary.sleepMinutes) }));
+  if (summary.solids > 0) parts.push(summary.solids === 1 ? t("1 solid") : t("{n} solids", { n: summary.solids }));
   if (parts.length === 0) return null;
   return <p className="recap-line">{parts.join(" · ")}</p>;
 }

@@ -1,0 +1,2099 @@
+// Ελληνικά.
+//
+// The keys are the exact English sentences the components use — see
+// src/i18n/index.ts for why. Written to sound like a Greek said them, not
+// like an English sentence wearing Greek words: word order moves, articles
+// appear, and where English leans on "log" and "track" the Greek says what a
+// parent would actually say. Sentences with {name}-style holes are translated
+// whole, never assembled.
+//
+// Anything not in here shows in English — visible, harmless, and the test in
+// tests/unit/i18n.test.ts keeps entries from going stale when the English
+// changes.
+
+const el: Record<string, string> = {
+  // --- Navigation ---
+  "Today": "Σήμερα",
+  "Timeline": "Ιστορικό",
+  "Insights": "Εικόνα",
+  "Guide": "Οδηγός",
+  "Settings": "Ρυθμίσεις",
+
+  // --- Common ---
+  "Cancel": "Άκυρο",
+  "Undo": "Αναίρεση",
+  "Not now": "Όχι τώρα",
+  "Close": "Κλείσιμο",
+  "Add": "Προσθήκη",
+  "Start": "Έναρξη",
+  "Stop": "Στοπ",
+  "Done": "Τέλος",
+  "Edit": "Επεξεργασία",
+  "Loading": "Φορτώνει",
+
+  // --- Settings: appearance & language ---
+  "Appearance": "Εμφάνιση",
+  "Phone": "Κινητό",
+  "Follows your phone": "Ακολουθεί το κινητό",
+  "Light": "Φωτεινό",
+  "Bright and clear": "Φωτεινό και καθαρό",
+  "Night": "Νύχτα",
+  "Warm and dim for 3am": "Ζεστό και χαμηλό για τη νύχτα",
+  "Language": "Γλώσσα",
+  "The whole app, including reminders and the pictures you share.":
+    "Όλη η εφαρμογή, μαζί με τις υπενθυμίσεις και τις εικόνες που μοιράζεστε.",
+
+  // --- Time & durations ---
+  "Yesterday": "Χθες",
+  "You’re up late": "Ξενυχτάτε",
+  "Good morning": "Καλημέρα",
+  "Good afternoon": "Καλό απόγευμα",
+  "Good evening": "Καλησπέρα",
+  "just now": "μόλις τώρα",
+  "{m}m ago": "πριν {m}λ",
+  "{h}h {m}m ago": "πριν {h}ω {m}λ",
+  "{d}d ago": "πριν {d} μέρες",
+  "No entries yet": "Καμία καταχώριση ακόμα",
+  "{m}m": "{m}λ",
+  "{h}h": "{h}ω",
+  "{h}h {m}m": "{h}ω {m}λ",
+  "m": "λ",
+  "h": "ω",
+  "d": "ημ",
+  "Likely in {duration}": "Μάλλον σε {duration}",
+  "Past the usual window": "Πέρασε το συνηθισμένο",
+  "Check cues now": "Δες τα σημάδια τώρα",
+
+  // --- Today: hero ---
+  "Welcome, {name}": "Καλώς ήρθες, {name}",
+  "{name} — welcome to the world": "{name} — καλώς όρισες στον κόσμο",
+  "{name} is {age} old": "{name} είναι {age}",
+  "Day {n}": "Ημέρα {n}",
+
+  // --- Today: tiles & quick logging ---
+  "Bottle": "Μπιμπερό",
+  "Nursing": "Θηλασμός",
+  // The onboarding feeding toggle builds these from the mode name, so no
+  // literal t("Breast") exists for the extractor to find.
+  "Breast": "Θηλασμός",
+  "Mixed": "Μικτό",
+  "Diaper": "Πάνα",
+  "Sleep": "Ύπνος",
+  "Burp": "Ρέψιμο",
+  "Growth": "Ανάπτυξη",
+  "Solids": "Στερεές τροφές",
+  "Sounds": "Ήχοι",
+  "Medicine": "Φάρμακο",
+  "Health note": "Σημείωση υγείας",
+  "Feed": "Τάισμα",
+  "Log": "Καταχώριση",
+  "Wet": "Τσίσα",
+  "Dirty": "Κακά",
+  "Both": "Και τα δύο",
+  "Left": "Αριστερά",
+  "Right": "Δεξιά",
+  "left": "αριστερά",
+  "right": "δεξιά",
+  "Wake up": "Ξύπνησε",
+  "Sleeping": "Κοιμάται",
+  "Sleeping now": "Κοιμάται τώρα",
+  "Burping": "Ρέψιμο",
+  "Start the timer": "Ξεκινήστε το χρονόμετρο",
+  "Started {time}": "Ξεκίνησε {time}",
+  "Nursing · {side}": "Θηλασμός · {side}",
+  "Nursing · {side} · {duration}": "Θηλασμός · {side} · {duration}",
+  "Bottle · {amount}": "Μπιμπερό · {amount}",
+  "Log a bottle": "Καταγράψτε μπιμπερό",
+  "Log the first feed": "Καταγράψτε το πρώτο τάισμα",
+  "Log {amount} millilitres of {milk} now": "Καταγράψτε {amount} ml {milk} τώρα",
+  "breast milk": "μητρικό γάλα",
+  "formula": "φόρμουλα",
+  "Change bottle amount": "Αλλάξτε την ποσότητα",
+  "Start nursing timer on the left side": "Ξεκινήστε θηλασμό από τα αριστερά",
+  "Start nursing timer on the right side": "Ξεκινήστε θηλασμό από τα δεξιά",
+  "Start nursing timer on the left side — usually next": "Ξεκινήστε θηλασμό από τα αριστερά — συνήθως η επόμενη πλευρά",
+  "Start nursing timer on the right side — usually next": "Ξεκινήστε θηλασμό από τα δεξιά — συνήθως η επόμενη πλευρά",
+  "Add a completed nursing session manually": "Προσθέστε θηλασμό που έχει ήδη τελειώσει",
+  "Log wet diaper": "Καταγράψτε τσίσα",
+  "Log dirty diaper": "Καταγράψτε κακά",
+  "Log wet and dirty diaper": "Καταγράψτε τσίσα και κακά",
+  "Log a diaper change at a different time": "Καταγράψτε αλλαγή πάνας άλλη ώρα",
+  "Start sleep timer": "Ξεκινήστε χρονόμετρο ύπνου",
+  "Add a sleep that has already finished": "Προσθέστε ύπνο που έχει ήδη τελειώσει",
+  "Start burping timer": "Ξεκινήστε χρονόμετρο ρεψίματος",
+  "Weight, length, head": "Βάρος, μήκος, κεφάλι",
+  "First tastes, purées, finger food": "Πρώτες γεύσεις, πουρέδες, finger food",
+  "White noise and lullabies — back, and working": "Λευκός θόρυβος και νανουρίσματα",
+  "Vitamin D, paracetamol, drops": "Βιταμίνη D, παρακεταμόλη, σταγόνες",
+  "Temperature or note": "Θερμοκρασία ή σημείωση",
+  "Tell another parent": "Πείτε το σε άλλον γονιό",
+  "Numalog is free — pass it on": "Το Numalog είναι δωρεάν — δώστε το παρακάτω",
+  "Last food": "Τελευταίο φαγητό",
+  "Last dose": "Τελευταία δόση",
+  "{what} · {duration} ago": "{what} · πριν {duration}",
+
+  // --- Today: sections & hints ---
+  "Today so far": "Η μέρα μέχρι τώρα",
+  "Ready when you are": "Έτοιμο όποτε είστε",
+  "Since last feed": "Από το τελευταίο τάισμα",
+  "Recent": "Πρόσφατα",
+  "See all": "Όλα",
+  "Your day will appear here as you log it.": "Η μέρα σας θα εμφανίζεται εδώ όσο την καταγράφετε.",
+  "Still learning the rhythm": "Μαθαίνει ακόμα τον ρυθμό",
+  "No steady pattern": "Χωρίς σταθερό μοτίβο",
+  "Follow the cues — whenever works": "Ακολουθήστε τα σημάδια — όποτε ταιριάζει",
+  "Diapers come when they come — check whenever something seems off.": "Οι πάνες έρχονται όποτε έρθουν — ελέγξτε όποτε κάτι δεν σας κάθεται καλά.",
+  "Worth a check.": "Αξίζει ένα τσεκάρισμα.",
+  "{over} past the usual {gap} gap — follow the cues": "{over} πάνω από το συνηθισμένο κενό των {gap} — ακολούθησε τα σημάδια",
+  "Log a feed": "Καταγράψτε τάισμα",
+
+  // --- Toasts ---
+  "Sleep timer started": "Ξεκίνησε το χρονόμετρο ύπνου",
+  "Burping timer started": "Ξεκίνησε το χρονόμετρο ρεψίματος",
+  "Nursing started · {side} side": "Ξεκίνησε θηλασμός · {side}",
+  "{amount} bottle saved": "Αποθηκεύτηκε μπιμπερό {amount}",
+  "Wet diaper saved": "Αποθηκεύτηκε πάνα με τσίσα",
+  "Dirty diaper saved": "Αποθηκεύτηκε πάνα με κακά",
+  "Wet + dirty diaper saved": "Αποθηκεύτηκε πάνα — τσίσα και κακά",
+  "{name} done": "{name} — έγινε",
+
+  // --- Last night ---
+  "Baby": "Το μωρό",
+  "Last night": "Χθες το βράδυ",
+  "{duration} asleep": "{duration} ύπνου",
+  "1 waking": "1 ξύπνημα",
+  "{n} wakings": "{n} ξυπνήματα",
+  "1 night feed logged": "1 νυχτερινό τάισμα",
+  "{n} night feeds logged": "{n} νυχτερινά ταΐσματα",
+  "Share last night as a picture": "Μοιραστείτε τη νύχτα σαν εικόνα",
+  "longest stretch": "μεγαλύτερο διάστημα",
+  "feed": "τάισμα",
+  "feeds": "ταΐσματα",
+  "change": "αλλαγή",
+  "changes": "αλλαγές",
+  "first feed": "πρώτο τάισμα",
+  "{name} · last night · {link}": "{name} · χθες το βράδυ · {link}",
+
+  // --- Day recap ---
+  "1 stretch": "1 διάστημα",
+  "{n} stretches": "{n} διαστήματα",
+  "longest {duration}": "μεγαλύτερο {duration}",
+  "of 1 change": "από 1 αλλαγή",
+  "of {n} changes": "από {n} αλλαγές",
+  "1 bottle": "1 μπιμπερό",
+  "{n} bottles": "{n} μπιμπερό",
+  "{n} nursing": "{n} θηλασμοί",
+  "bottles only": "μόνο μπιμπερό",
+  "bottles only · {duration} nursing": "μόνο μπιμπερό · {duration} θηλασμός",
+  "1 session": "1 συνεδρία",
+  "{n} sessions": "{n} συνεδρίες",
+  "{sessions} · one still going": "{sessions} · μία σε εξέλιξη",
+  "Previous day": "Προηγούμενη μέρα",
+  "Next day": "Επόμενη μέρα",
+  "Share {what} as a picture": "Μοιραστείτε το «{what}» σαν εικόνα",
+  "Nothing logged yet today.": "Τίποτα καταγεγραμμένο ακόμα σήμερα.",
+  "Nothing logged on this day.": "Τίποτα καταγεγραμμένο αυτή τη μέρα.",
+  "Feeds": "Ταΐσματα",
+  "Nursed": "Θήλασε",
+  "Milk": "Γάλα",
+  "Nothing logged yet": "Τίποτα ακόμα",
+
+  // --- Is this normal? ---
+  "your baby": "το μωρό σας",
+  "Yesterday looks ordinary for {name}": "Η χθεσινή μέρα δείχνει συνηθισμένη για {name}",
+  "Yesterday: {what} sat outside the usual range": "Χθες: {what} εκτός του συνηθισμένου εύρους",
+  "Yesterday: {n} figures sat outside the usual range": "Χθες: {n} νούμερα εκτός του συνηθισμένου εύρους",
+  "usual {range}": "συνήθως {range}",
+  "any": "όσα να ’ναι",
+  "Wet nappies": "Πάνες με τσίσα",
+  "Dirty nappies": "Πάνες με κακά",
+  "AAP puts 8 to 12 feeds in 24 hours as usual in the first weeks.":
+    "Η AAP δίνει 8 έως 12 ταΐσματα το 24ωρο ως συνηθισμένα τις πρώτες εβδομάδες.",
+  "AAP puts 8 to 12 feeds in 24 hours as usual in the first weeks — babies feed to appetite, and a busy day or a quiet one is not a verdict.":
+    "Η AAP δίνει 8 έως 12 ταΐσματα το 24ωρο ως συνηθισμένα τις πρώτες εβδομάδες — τα μωρά τρώνε με την όρεξή τους, και μια γεμάτη ή μια ήσυχη μέρα δεν είναι ετυμηγορία.",
+  "Feeds usually space out to five to ten a day by this age.":
+    "Σε αυτή την ηλικία τα ταΐσματα συνήθως αραιώνουν στα πέντε έως δέκα τη μέρα.",
+  "Feeds usually space out to five to ten a day by this age — every baby settles somewhere of their own.":
+    "Σε αυτή την ηλικία τα ταΐσματα συνήθως αραιώνουν στα πέντε έως δέκα τη μέρα — κάθε μωρό βρίσκει τον δικό του ρυθμό.",
+  "Four to eight milk feeds a day is usual once solids have started.":
+    "Τέσσερα έως οκτώ γάλατα τη μέρα είναι τα συνηθισμένα όταν έχουν ξεκινήσει οι στερεές τροφές.",
+  "Four to eight milk feeds a day is usual once solids have started, alongside meals.":
+    "Τέσσερα έως οκτώ γάλατα τη μέρα είναι τα συνηθισμένα όταν έχουν ξεκινήσει οι στερεές τροφές, μαζί με τα γεύματα.",
+  "In the first 48 hours two or three wet nappies is the whole of it.":
+    "Στις πρώτες 48 ώρες δύο ή τρεις πάνες με τσίσα είναι όλο κι όλο.",
+  "In the first 48 hours two or three wet nappies is what to expect.":
+    "Στις πρώτες 48 ώρες δύο ή τρεις πάνες με τσίσα είναι το αναμενόμενο.",
+  "The count climbs with your milk over the first days.":
+    "Ο αριθμός ανεβαίνει μαζί με το γάλα σας τις πρώτες μέρες.",
+  "The count climbs with your milk over the first days, reaching six or more by day five.":
+    "Ο αριθμός ανεβαίνει μαζί με το γάλα σας τις πρώτες μέρες και φτάνει τις έξι ή περισσότερες ως την πέμπτη μέρα.",
+  "AAP and NHS both put six or more heavy wet nappies a day as the mark of a baby getting enough.":
+    "AAP και NHS δίνουν έξι ή περισσότερες βαριές πάνες με τσίσα τη μέρα ως το σημάδι ότι το μωρό παίρνει αρκετό γάλα.",
+  "From about day four, at least two soft yellow poos a day is usual for the first weeks.":
+    "Από την τέταρτη μέρα περίπου, τουλάχιστον δύο μαλακά κίτρινα κακά τη μέρα είναι τα συνηθισμένα για τις πρώτες εβδομάδες.",
+  "After about six weeks a gap of days between poos is ordinary, as long as feeding and weight are fine.":
+    "Μετά τις έξι εβδομάδες περίπου, κενό ημερών ανάμεσα στα κακά είναι συνηθισμένο, αρκεί το τάισμα και το βάρος να πηγαίνουν καλά.",
+  "Fourteen to seventeen hours a day, in stretches of every length, is usual under three months.":
+    "Δεκατέσσερις έως δεκαεπτά ώρες τη μέρα, σε διαστήματα κάθε μεγέθους, είναι τα συνηθισμένα κάτω από τους τρεις μήνες.",
+  "Fourteen to seventeen hours a day is the usual span under three months — and a day logged in pieces rarely adds up to all of it.":
+    "Δεκατέσσερις έως δεκαεπτά ώρες τη μέρα είναι το συνηθισμένο εύρος κάτω από τους τρεις μήνες — και μια μέρα καταγεγραμμένη κομματιαστά σπάνια τις πιάνει όλες.",
+  "Twelve to sixteen hours a day, naps included, is usual at this age.":
+    "Δώδεκα έως δεκαέξι ώρες τη μέρα, μαζί με τους μεσημεριανούς, είναι τα συνηθισμένα σε αυτή την ηλικία.",
+  "Twelve to sixteen hours a day, naps included, is the usual span at this age.":
+    "Δώδεκα έως δεκαέξι ώρες τη μέρα, μαζί με τους μεσημεριανούς, είναι το συνηθισμένο εύρος σε αυτή την ηλικία.",
+
+  // --- Rhythm ---
+  "Rhythm": "Ρυθμός",
+  "{name}’s rhythm": "Ο ρυθμός: {name}",
+  "Right every one of the last {n} times.": "Σωστό και τις {n} τελευταίες φορές.",
+  "Right {hits} of the last {n} — {name} is changing rhythm.": "Σωστό {hits} στις {n} τελευταίες — {name} αλλάζει ρυθμό.",
+  "Right {hits} of the last {n} times, on the minute.": "Σωστό {hits} στις {n} τελευταίες φορές, στο λεπτό.",
+  "Right {hits} of the last {n} times, within {miss} minutes.": "Σωστό {hits} στις {n} τελευταίες φορές, με απόκλιση {miss} λεπτά.",
+  "Share this run as a picture": "Μοιραστείτε το σερί σαν εικόνα",
+
+  // --- Daily routines ---
+  "Still to do today": "Μένουν για σήμερα",
+  "{done} of {total} done": "{done} από {total} έγιναν",
+  "Mark {name} as done": "Σημείωσε το «{name}» ως έγινε",
+
+  // --- Day band ---
+  "Last 24 hours": "Τελευταίο 24ωρο",
+  "24-hour overview": "Εικόνα 24ώρου",
+  "Health": "Υγεία",
+
+  // --- Today: leftovers the screenshot caught ---
+  "Change": "Αλλαγή",
+  "Past": "Πριν",
+  "{duration} ago": "πριν {duration}",
+  "On this phone only": "Μόνο σε αυτό το κινητό",
+  "Synced to the cloud": "Συγχρονισμένο στο cloud",
+  "Syncing…": "Συγχρονίζεται…",
+  "Offline — will catch up": "Εκτός σύνδεσης — θα προλάβει μετά",
+  "Sync disconnected — tap to fix": "Ο συγχρονισμός κόπηκε — πάτησε για διόρθωση",
+  "A few more feeds and the pattern appears.": "Λίγα ταΐσματα ακόμα και φαίνεται το μοτίβο.",
+  "A few more sleeps and the pattern appears.": "Λίγοι ύπνοι ακόμα και φαίνεται το μοτίβο.",
+
+  // --- Consent ---
+  "Numalog would like to count anonymous page views to see which parts get used. Nothing about your baby is ever sent — those entries stay on this device unless you turn on Family Sync.":
+    "Το Numalog θα ήθελε να μετράει ανώνυμες προβολές σελίδων, για να βλέπουμε ποια κομμάτια χρησιμοποιούνται. Τίποτα για το μωρό σας δεν αποστέλλεται ποτέ — οι καταχωρίσεις μένουν σε αυτή τη συσκευή, εκτός αν ενεργοποιήσετε το Family Sync.",
+  "No thanks": "Όχι, ευχαριστώ",
+  "Allow": "Επιτρέπεται",
+  "Cookie choice": "Επιλογή cookies",
+
+  // --- Entry titles & details ---
+  "Growth check": "Μέτρηση ανάπτυξης",
+  "Temperature": "Θερμοκρασία",
+  "Solid food": "Στερεά τροφή",
+  "Daily routine": "Καθημερινή ρουτίνα",
+  "Wet diaper": "Πάνα με τσίσα",
+  "Dirty diaper": "Πάνα με κακά",
+  "Wet + dirty diaper": "Πάνα — τσίσα και κακά",
+  "Entry": "Καταχώριση",
+  "Both sides": "Και οι δύο πλευρές",
+  "Left side": "Αριστερή πλευρά",
+  "Right side": "Δεξιά πλευρά",
+  "Note": "Σημείωση",
+  "{value} long": "μήκος {value}",
+  "{value} head": "κεφάλι {value}",
+
+  // --- Store toasts ---
+  "Could not save on this device. Nothing was changed.": "Δεν έγινε αποθήκευση σε αυτή τη συσκευή. Τίποτα δεν άλλαξε.",
+  "Storage was full — an older recovery copy was removed to make room.": "Ο χώρος γέμισε — αφαιρέθηκε ένα παλιότερο αντίγραφο ανάκτησης για να χωρέσει.",
+  "Last change undone": "Η τελευταία αλλαγή αναιρέθηκε",
+  "Entry removed": "Η καταχώριση αφαιρέθηκε",
+  "Entry restored": "Η καταχώριση επανήλθε",
+  "Timer discarded — nothing was added to the log": "Το χρονόμετρο απορρίφθηκε — δεν προστέθηκε τίποτα",
+  "{what} saved — {duration}": "{what}: αποθηκεύτηκε — {duration}",
+  "Another {what} is already running — stop that one first.": "Τρέχει ήδη άλλο {what} — σταματήστε πρώτα εκείνο.",
+  "Timer resumed": "Το χρονόμετρο συνεχίζει",
+  "Nursing session": "Συνεδρία θηλασμού",
+  "Session": "Συνεδρία",
+  "nursing timer": "χρονόμετρο θηλασμού",
+  "sleep timer": "χρονόμετρο ύπνου",
+  "burping timer": "χρονόμετρο ρεψίματος",
+  "timer": "χρονόμετρο",
+  "This {what} has been running for {duration}. That is usually a timer left on by mistake.":
+    "Αυτό το {what} τρέχει εδώ και {duration}. Συνήθως είναι χρονόμετρο που ξεχάστηκε ανοιχτό.",
+  "OK saves it as a {duration} session. Cancel discards it.":
+    "Το ΟΚ το αποθηκεύει ως συνεδρία {duration}. Το Άκυρο το πετάει.",
+  "{what} reminders off": "Υπενθυμίσεις: {what} — κλειστές",
+  "{what} reminders on": "Υπενθυμίσεις: {what} — ανοιχτές",
+  "Nappy": "Πάνα",
+  "Notifications are not supported in this browser": "Αυτός ο browser δεν υποστηρίζει ειδοποιήσεις",
+  "Notifications were not enabled. You can allow them in browser settings.": "Οι ειδοποιήσεις δεν ενεργοποιήθηκαν. Μπορείτε να τις επιτρέψεις από τις ρυθμίσεις του browser.",
+  "Recovery data is unavailable in this browser": "Τα δεδομένα ανάκτησης δεν είναι διαθέσιμα σε αυτόν τον browser",
+  "Local copy reset. Start with a clean tracker.": "Το τοπικό αντίγραφο μηδενίστηκε. Καθαρή αρχή.",
+  "This browser is still blocking local storage": "Ο browser εξακολουθεί να μπλοκάρει την τοπική αποθήκευση",
+  "That backup could not be read": "Αυτό το αντίγραφο δεν διαβάζεται",
+  "That backup is too large to import safely": "Αυτό το αντίγραφο είναι πολύ μεγάλο για ασφαλή εισαγωγή",
+  "That backup could not be opened": "Αυτό το αντίγραφο δεν άνοιξε",
+  "Everything erased. Starting fresh.": "Όλα σβήστηκαν. Ξεκινάμε από την αρχή.",
+  "This browser blocked the erase. Nothing was changed.": "Ο browser μπλόκαρε το σβήσιμο. Τίποτα δεν άλλαξε.",
+
+  // --- Forms (LogSheet & fields) ---
+  "Quick log": "Γρήγορη καταχώριση",
+  "Record the amount now; adjust details only if needed.": "Γράψτε την ποσότητα τώρα· λεπτομέρειες μόνο αν χρειάζεται.",
+  "Log a nursing session": "Καταγράψτε θηλασμό",
+  "Start a live timer or add a completed session.": "Ξεκινήστε χρονόμετρο ή προσθέστε συνεδρία που τελείωσε.",
+  "Log a dose": "Καταγράψτε δόση",
+  "So the next person knows it has already been given.": "Για να ξέρει ο επόμενος ότι έχει ήδη δοθεί.",
+  "Past sleep": "Ύπνος που πέρασε",
+  "Add a sleep": "Προσθέστε ύπνο",
+  "Log a food": "Καταγράψτε φαγητό",
+  "What went in, and roughly when — tastes count.": "Τι μπήκε, και περίπου πότε — και οι γεύσεις μετράνε.",
+  "Choose the closest match and save.": "Διαλέξτε το κοντινότερο και αποθηκεύστε.",
+  "Weight now, length and head if you have them.": "Βάρος τώρα· μήκος και κεφάλι αν τα έχετε.",
+  "Health log": "Καταγραφή υγείας",
+  "Keep a time-stamped note you can refer back to.": "Κρατήστε σημείωση με ώρα, να τη βρίσκετε μετά.",
+  "Edit log": "Επεξεργασία",
+  "Baby profile": "Προφίλ μωρού",
+  "Amount": "Ποσότητα",
+  "Entry method": "Τρόπος καταχώρισης",
+  "Side": "Πλευρά",
+  "Diaper type": "Τύπος πάνας",
+  "Fell asleep": "Κοιμήθηκε",
+  "Woke up": "Ξύπνησε",
+  "Or type a new one": "Ή γράψε καινούργιο",
+  "What was given": "Τι δόθηκε",
+  "What did they eat?": "Τι έφαγε;",
+  "Which medicine was it?": "Ποιο φάρμακο ήταν;",
+  "Name": "Όνομα",
+  "Date of birth": "Ημερομηνία γέννησης",
+  "Girl or boy": "Κορίτσι ή αγόρι",
+  "How are you feeding?": "Πώς ταΐζετε;",
+  "Used only for the growth guide’s reference ranges.": "Χρησιμοποιείται μόνο για τα εύρη αναφοράς του οδηγού ανάπτυξης.",
+  "Vitamin D drops, paracetamol…": "Σταγόνες βιταμίνης D, παρακεταμόλη…",
+  "Banana, carrot purée, rice cereal…": "Μπανάνα, πουρές καρότο, κρέμα ρυζιού…",
+  "How it went — loved it, spat it out, small rash…": "Πώς πήγε — το λάτρεψε, το έφτυσε, μικρό εξανθηματάκι…",
+  "Clinic, home scale, or anything useful": "Ιατρείο, ζυγαριά σπιτιού, ή ό,τι φανεί χρήσιμο",
+  "Medicine, spit-up, rash, question for the doctor…": "Φάρμακο, ξέρασμα, εξάνθημα, ερώτηση για τον γιατρό…",
+  "Baby’s name": "Το όνομα του μωρού",
+  "Formula": "Φόρμουλα",
+  "Breast milk": "Μητρικό γάλα",
+  "Girl": "Κορίτσι",
+  "Boy": "Αγόρι",
+  "Skip": "Παράλειψη",
+  "Save {amount} {unit}": "Αποθήκευση {amount} {unit}",
+  "Save session": "Αποθήκευση συνεδρίας",
+  "Save sleep": "Αποθήκευση ύπνου",
+  "Save dose": "Αποθήκευση δόσης",
+  "Save food": "Αποθήκευση φαγητού",
+  "Save wet diaper": "Αποθήκευση — τσίσα",
+  "Save dirty diaper": "Αποθήκευση — κακά",
+  "Save wet + dirty diaper": "Αποθήκευση — τσίσα και κακά",
+  "Save growth check": "Αποθήκευση μέτρησης",
+  "Save health log": "Αποθήκευση σημείωσης",
+  "Save changes": "Αποθήκευση αλλαγών",
+  "Save profile": "Αποθήκευση προφίλ",
+  "Sleep saved": "Ο ύπνος αποθηκεύτηκε",
+  "{what} logged": "Καταχωρήθηκε: {what}",
+  "Health note saved": "Η σημείωση αποθηκεύτηκε",
+  "Temperature saved": "Η θερμοκρασία αποθηκεύτηκε",
+  "When": "Πότε",
+  "How long ago": "Πριν πόση ώρα",
+  "Now": "Τώρα",
+  "15m ago": "πριν 15λ",
+  "30m ago": "πριν 30λ",
+  "1h ago": "πριν 1ω",
+  "15 minutes ago": "πριν 15 λεπτά",
+  "30 minutes ago": "πριν 30 λεπτά",
+  "1 hour ago": "πριν 1 ώρα",
+  "Anything worth remembering": "Ό,τι αξίζει να θυμάστε",
+  // ——— Settings screen ———
+  "Device & data": "Συσκευή και δεδομένα",
+  "Profile, privacy and backups in one place.": "Προφίλ, απόρρητο και αντίγραφα ασφαλείας σε ένα μέρος.",
+  "Choose the theme that is easiest on your eyes.": "Διαλέξτε το θέμα που ξεκουράζει τα μάτια σας.",
+  "Application appearance": "Εμφάνιση εφαρμογής",
+  "Measurement units": "Μονάδες μέτρησης",
+  "Metric": "Μετρικές",
+  "US": "ΗΠΑ",
+  "The details used to personalise your tracker.": "Τα στοιχεία που κάνουν την εφαρμογή δική σας.",
+  "Baby profile settings": "Ρυθμίσεις προφίλ μωρού",
+  "Breastfeeding": "Θηλασμός",
+  "Bottle feeding": "Μπιμπερό",
+  "Mixed feeding": "Μικτή διατροφή",
+  "Every day": "Κάθε μέρα",
+  "Vitamin drops, a medicine — the things whose difficulty is remembering whether they were done. They wait on Today until every one is ticked, then the card is gone until tomorrow. Ticks reach the other parent, so nobody has to guess whether it was already given.":
+    "Σταγόνες βιταμίνης, ένα φάρμακο — αυτά που το δύσκολο είναι να θυμάστε αν έγιναν. Περιμένουν στο Σήμερα μέχρι να τσεκαριστούν όλα, και μετά η κάρτα φεύγει μέχρι αύριο. Τα τικ φτάνουν και στον άλλο γονιό, ώστε κανείς να μη μαντεύει αν δόθηκε ήδη.",
+  "{label} is already on the list.": "{label} υπάρχει ήδη στη λίστα.",
+  "That needs some words.": "Γράψτε κάτι πρώτα.",
+  "Remove {label}": "Αφαίρεση: {label}",
+  "That is as many as fit": "Τόσα χωράνε",
+  "Vitamin D": "Βιταμίνη D",
+  "Add something to do every day": "Προσθήκη σε ό,τι γίνεται κάθε μέρα",
+  "Nothing yet, so nothing appears on Today.": "Τίποτα ακόμη, οπότε τίποτα δεν εμφανίζεται στο Σήμερα.",
+  "Six is the limit — a list nobody finishes is a card that never goes away.": "Έξι είναι το όριο — μια λίστα που δεν τελειώνει ποτέ είναι μια κάρτα που δεν φεύγει ποτέ.",
+  "Care reminders": "Υπενθυμίσεις φροντίδας",
+  "These now arrive with the app closed. Still a nudge and not an alarm — follow your baby’s cues and your clinician’s care plan.":
+    "Έρχονται πλέον και με την εφαρμογή κλειστή. Παραμένουν υπενθύμιση, όχι ξυπνητήρι — ακολουθήστε τα σημάδια του μωρού σας και τις οδηγίες του γιατρού σας.",
+  "Care reminder settings": "Ρυθμίσεις υπενθυμίσεων φροντίδας",
+  "Feed reminder": "Υπενθύμιση ταΐσματος",
+  "Diaper reminder": "Υπενθύμιση πάνας",
+  "This browser can’t show notifications": "Αυτό το πρόγραμμα δεν εμφανίζει ειδοποιήσεις",
+  "Blocked in browser settings": "Αποκλεισμένο στις ρυθμίσεις του προγράμματος",
+  "Around {time}, if this app is still open": "Γύρω στις {time}, αν η εφαρμογή είναι ακόμη ανοιχτή",
+  "Prompt after the next feed you log": "Ξεκινά μετά το επόμενο τάισμα που θα καταχωρίσετε",
+  "Prompt after the next change you log": "Ξεκινά μετά την επόμενη αλλαγή που θα καταχωρίσετε",
+  "Use feed reminders": "Χρήση υπενθυμίσεων ταΐσματος",
+  "Use diaper reminders": "Χρήση υπενθυμίσεων πάνας",
+  "Remind after": "Υπενθύμιση μετά από",
+  "Feed reminder interval": "Διάστημα υπενθύμισης ταΐσματος",
+  "Diaper reminder interval": "Διάστημα υπενθύμισης πάνας",
+  "90 min": "90 λεπτά",
+  "2 hours": "2 ώρες",
+  "3 hours": "3 ώρες",
+  "4 hours": "4 ώρες",
+  "Follow your baby’s cues and clinician’s care plan.": "Ακολουθήστε τα σημάδια του μωρού σας και τις οδηγίες του γιατρού σας.",
+  "A nudge, not a schedule — check whenever your baby seems uncomfortable.": "Υπενθύμιση, όχι πρόγραμμα — ελέγξτε όποτε το μωρό δείχνει ενοχλημένο.",
+  "Your data": "Τα δεδομένα σας",
+  "Portable backups you own and control.": "Αντίγραφα ασφαλείας που σας ανήκουν και ελέγχετε εσείς.",
+  "Backup actions": "Ενέργειες αντιγράφων ασφαλείας",
+  "Share with partner": "Μοιραστείτε με τον σύντροφό σας",
+  "Sends your whole log as a file — their app merges it, nothing gets replaced": "Στέλνει όλο το ημερολόγιο ως αρχείο — η εφαρμογή του το συγχωνεύει, τίποτα δεν αντικαθίσταται",
+  "Download backup": "Λήψη αντιγράφου ασφαλείας",
+  "Restore a backup": "Επαναφορά αντιγράφου",
+  "Merges a backup file from any device": "Συγχωνεύει ένα αρχείο αντιγράφου από οποιαδήποτε συσκευή",
+  "Share Numalog — free, no sign-up, works on any phone": "Μοιραστείτε το Numalog — δωρεάν, χωρίς εγγραφή, παίζει σε κάθε κινητό",
+  "Bring a log from {origin}": "Μεταφορά ημερολογίου από {origin}",
+  "Copies your entries across from the app's other web address — nothing is uploaded": "Αντιγράφει τις καταχωρίσεις από την άλλη διεύθυνση της εφαρμογής — τίποτα δεν ανεβαίνει",
+  "Erase everything and start over": "Διαγραφή όλων και νέα αρχή",
+  "Usage statistics": "Στατιστικά χρήσης",
+  "Anonymous page counts, so I can see which parts of the app get used. Never your baby’s entries. You can change this whenever you like.":
+    "Ανώνυμες μετρήσεις σελίδων, για να βλέπω ποια μέρη της εφαρμογής χρησιμοποιούνται. Ποτέ οι καταχωρίσεις του μωρού σας. Το αλλάζετε όποτε θέλετε.",
+  "Allowed": "Επιτρέπεται",
+  "Off": "Όχι",
+  "Shared with your family": "Κοινό με την οικογένειά σας",
+  "On this device": "Σε αυτή τη συσκευή",
+  "Numalog is a tracking tool and general information — not a medical device, and nothing in it is medical advice. For anything about your baby, your paediatrician, midwife or health visitor comes first.":
+    "Το Numalog είναι εργαλείο καταγραφής και γενικές πληροφορίες — όχι ιατρική συσκευή, και τίποτα μέσα του δεν αποτελεί ιατρική συμβουλή. Για οτιδήποτε αφορά το μωρό σας, προηγείται ο παιδίατρος ή η μαία σας.",
+  // ——— Banners: reminders, backup, night help, news ———
+  "Reminders now ring with the app closed": "Οι υπενθυμίσεις πλέον χτυπούν και με την εφαρμογή κλειστή",
+  "They used to be a timer inside this page, so closing the app silenced them. Now they arrive whether or not it is open. Your phone will ask you to allow notifications.":
+    "Παλιά ήταν ένα χρονόμετρο μέσα στη σελίδα, οπότε κλείνοντας την εφαρμογή σώπαιναν. Τώρα φτάνουν είτε είναι ανοιχτή είτε όχι. Το κινητό σας θα ζητήσει να επιτρέψετε τις ειδοποιήσεις.",
+  "Reminders can ring with the app closed": "Οι υπενθυμίσεις μπορούν να χτυπούν και με την εφαρμογή κλειστή",
+  "You have already allowed notifications. Switching the feed reminder on is the only step left.":
+    "Έχετε ήδη επιτρέψει τις ειδοποιήσεις. Το μόνο βήμα που απομένει είναι να ανάψετε την υπενθύμιση ταΐσματος.",
+  "Turn on reminders": "Ενεργοποίηση υπενθυμίσεων",
+  "This browser may delete your log": "Αυτό το πρόγραμμα μπορεί να διαγράψει το ημερολόγιό σας",
+  "It has not promised to keep it. Clearing site data, or the phone running low on space, would take every entry with it. A backup file or Family Sync fixes that for good.":
+    "Δεν έχει υποσχεθεί ότι θα το κρατήσει. Ένα καθάρισμα των δεδομένων του ιστότοπου, ή ένα κινητό που ξεμένει από χώρο, θα έπαιρνε μαζί του κάθε καταχώριση. Ένα αρχείο αντιγράφου ή το Family Sync το λύνει οριστικά.",
+  "{n} entries, on this phone only": "{n} καταχωρίσεις, μόνο σε αυτό το κινητό",
+  "There is no copy of them anywhere else. If this phone breaks or the browser is cleared, they go with it.":
+    "Δεν υπάρχει αντίγραφό τους πουθενά αλλού. Αν το κινητό χαλάσει ή καθαριστούν τα δεδομένα, χάνονται μαζί του.",
+  "Your last backup is over a month old. Everything since then exists only here.":
+    "Το τελευταίο σας αντίγραφο είναι πάνω από μήνα παλιό. Ό,τι έγινε από τότε υπάρχει μόνο εδώ.",
+  "Download a backup": "Λήψη αντιγράφου ασφαλείας",
+  "You have done a few of these alone": "Έχετε βγάλει μερικά από αυτά μόνοι σας",
+  "The other parent’s phone can hold the same log — so whoever wakes up next already knows when {who} last fed, without asking you.":
+    "Το κινητό του άλλου γονιού μπορεί να έχει το ίδιο ημερολόγιο — ώστε όποιος ξυπνήσει μετά να ξέρει ήδη πότε έφαγε τελευταία φορά {who}, χωρίς να σας ρωτήσει.",
+  "Add their phone": "Προσθήκη του άλλου κινητού",
+  "What’s new": "Τι νέο υπάρχει",
+  "Every update and announcement, from the dad who builds this": "Κάθε ενημέρωση και ανακοίνωση, από τον μπαμπά που το φτιάχνει",
+  // ——— Family Sync card ———
+  "Offline — will catch up on its own when you're back": "Εκτός σύνδεσης — θα συνεχίσει μόνο του όταν επιστρέψετε",
+  "Reconnect needed — ask the other phone for a fresh code": "Χρειάζεται επανασύνδεση — ζητήστε νέο κωδικό από το άλλο κινητό",
+  "Backing up 1 entry to the cloud · synced {time}": "1 καταχώριση στο cloud · συγχρονίστηκε {time}",
+  "Backing up {n} entries to the cloud · synced {time}": "{n} καταχωρίσεις στο cloud · συγχρονίστηκε {time}",
+  "Waiting for the first sync": "Αναμονή για τον πρώτο συγχρονισμό",
+  "{name}’s tracker": "Ημερολόγιο: {name}",
+  "This phone": "Αυτό το κινητό",
+  "Sign out every other phone? They will each need a fresh invite code to come back.":
+    "Αποσύνδεση όλων των άλλων κινητών; Καθένα θα χρειαστεί νέο κωδικό πρόσκλησης για να επιστρέψει.",
+  "Remove this phone from the family? It keeps its own data but stops syncing.":
+    "Αφαίρεση αυτού του κινητού από την οικογένεια; Κρατά τα δεδομένα του αλλά σταματά να συγχρονίζεται.",
+  "Leave Family Sync? This phone keeps its data but stops syncing.":
+    "Έξοδος από το Family Sync; Αυτό το κινητό κρατά τα δεδομένα του αλλά σταματά να συγχρονίζεται.",
+  "Both phones see the same log, automatically.": "Και τα δύο κινητά βλέπουν το ίδιο ημερολόγιο, αυτόματα.",
+  "Right now your log lives on this phone only. Sync it to keep it safe in the cloud and share it with a partner.":
+    "Αυτή τη στιγμή το ημερολόγιό σας ζει μόνο σε αυτό το κινητό. Συγχρονίστε το για να είναι ασφαλές στο cloud και να το μοιράζεστε με τον σύντροφό σας.",
+  "This phone is already in a family, so the scanned code was not used. To join the other family instead, leave this one below first, then scan the code again.":
+    "Αυτό το κινητό είναι ήδη σε οικογένεια, οπότε ο κωδικός που σαρώθηκε δεν χρησιμοποιήθηκε. Για να μπείτε στην άλλη οικογένεια, βγείτε πρώτα από αυτήν παρακάτω και σαρώστε ξανά τον κωδικό.",
+  "Create family": "Δημιουργία οικογένειας",
+  "Join with a code": "Είσοδος με κωδικό",
+  "Code from the other phone": "Ο κωδικός από το άλλο κινητό",
+  "Join": "Είσοδος",
+  "Back": "Πίσω",
+  "Scan this with the other phone": "Σαρώστε το με το άλλο κινητό",
+  "QR code containing the invite code {code}": "Κωδικός QR με τον κωδικό πρόσκλησης {code}",
+  "Open the camera on the other phone and point it here. No app to install.":
+    "Ανοίξτε την κάμερα στο άλλο κινητό και στρέψτε την εδώ. Καμία εφαρμογή για εγκατάσταση.",
+  "Or type this code": "Ή πληκτρολογήστε αυτόν τον κωδικό",
+  "Valid for 15 minutes · single use": "Ισχύει για 15 λεπτά · μίας χρήσης",
+  "Paired! Both phones are syncing.": "Συνδέθηκαν! Και τα δύο κινητά συγχρονίζονται.",
+  "Waiting for the other phone…": "Αναμονή για το άλλο κινητό…",
+  "Join {name}’s log in Numalog — open this on your phone, it works for 15 minutes: {link}":
+    "Μπείτε στο ημερολόγιο του μωρού {name} στο Numalog — ανοίξτε το στο κινητό σας, ισχύει για 15 λεπτά: {link}",
+  "Join our baby’s log in Numalog — open this on your phone, it works for 15 minutes: {link}":
+    "Μπείτε στο ημερολόγιο του μωρού μας στο Numalog — ανοίξτε το στο κινητό σας, ισχύει για 15 λεπτά: {link}",
+  "Join our baby’s log": "Το ημερολόγιο του μωρού μας",
+  "Invite copied — send it to the other phone.": "Η πρόσκληση αντιγράφηκε — στείλτε την στο άλλο κινητό.",
+  "Send the other phone this code: {code}": "Στείλτε στο άλλο κινητό αυτόν τον κωδικό: {code}",
+  "Send the link": "Αποστολή συνδέσμου",
+  "New code": "Νέος κωδικός",
+  "Family Sync on": "Family Sync ενεργό",
+  "just this phone": "μόνο αυτό το κινητό",
+  "{n} phones": "{n} κινητά",
+  "In step with the cloud — everything sent and received.": "Σε βήμα με το cloud — όλα στάλθηκαν και παραλήφθηκαν.",
+  "Could not finish a full sync — check the connection and try again.": "Ο συγχρονισμός δεν ολοκληρώθηκε — ελέγξτε τη σύνδεση και δοκιμάστε ξανά.",
+  "Sync now": "Συγχρονισμός τώρα",
+  "Show invite code": "Εμφάνιση κωδικού πρόσκλησης",
+  "Leave family": "Έξοδος από την οικογένεια",
+  "Phones in this family": "Κινητά σε αυτή την οικογένεια",
+  "A phone": "Ένα κινητό",
+  "this one": "αυτό εδώ",
+  "last synced {when}": "τελευταίος συγχρονισμός {when}",
+  "joined {when}": "μπήκε {when}",
+  "Remove": "Αφαίρεση",
+  "Lost a phone? Sign out all the others": "Χάσατε κινητό; Αποσυνδέστε όλα τα άλλα",
+  // ——— Install guide ———
+  "Install the app": "Εγκατάσταση της εφαρμογής",
+  "Install on this phone": "Εγκατάσταση σε αυτό το κινητό",
+  "Home-screen icon, full screen, works offline — and your log is safest there":
+    "Εικονίδιο στην αρχική οθόνη, πλήρης οθόνη, λειτουργεί εκτός σύνδεσης — και το ημερολόγιό σας είναι πιο ασφαλές εκεί",
+  "First, leave the {name} browser": "Πρώτα, βγείτε από το πρόγραμμα του {name}",
+  "Two taps away": "Δύο πατήματα δρόμος",
+  "Open in browser": "Άνοιγμα σε πρόγραμμα περιήγησης",
+  "Add to Home Screen": "Προσθήκη στην αρχική οθόνη",
+  "Add to Home Screen (iOS)": "Προσθήκη στην οθόνη Αφετηρίας",
+  "That’s the whole install — full screen, offline, and your log is safest there.":
+    "Αυτή είναι όλη η εγκατάσταση — πλήρης οθόνη, εκτός σύνδεσης, και το ημερολόγιό σας πιο ασφαλές εκεί.",
+  "Install app": "Εγκατάσταση εφαρμογής",
+  "Once installed it opens full screen, works offline, and your log is safest there.":
+    "Μετά την εγκατάσταση ανοίγει σε πλήρη οθόνη, λειτουργεί εκτός σύνδεσης, και το ημερολόγιό σας είναι πιο ασφαλές εκεί.",
+  "Link copied — paste it in Safari or Chrome": "Ο σύνδεσμος αντιγράφηκε — επικολλήστε τον στο Safari ή στο Chrome",
+  "Copy the app’s link": "Αντιγραφή του συνδέσμου της εφαρμογής",
+
+  // ——— Feedback ———
+  "Need anything?": "Χρειάζεστε κάτι;",
+  "Something broken, missing, or just annoying? It goes straight to the person who built this — two tired parents, evenings, between feeds.":
+    "Κάτι χαλασμένο, κάτι που λείπει, ή απλώς κάτι ενοχλητικό; Πάει κατευθείαν στον άνθρωπο που το έφτιαξε — δύο κουρασμένοι γονείς, τα βράδια, ανάμεσα στα ταΐσματα.",
+  "Your message": "Το μήνυμά σας",
+  "What would make this better?": "Τι θα το έκανε καλύτερο;",
+  "optional": "προαιρετικό",
+  "That did not send — you may be offline. Your text is still here, try again.":
+    "Δεν στάλθηκε — ίσως είστε εκτός σύνδεσης. Το κείμενό σας είναι ακόμη εδώ, δοκιμάστε ξανά.",
+  "Sending…": "Αποστολή…",
+  "Send": "Αποστολή",
+  "Send feedback to the developer": "Στείλτε σχόλια στον δημιουργό",
+
+  // ——— Tell another parent ———
+  "A calm, free baby tracker — no account, no ads, works offline.":
+    "Ένα ήρεμο, δωρεάν ημερολόγιο μωρού — χωρίς λογαριασμό, χωρίς διαφημίσεις, λειτουργεί εκτός σύνδεσης.",
+  "A baby tracker you might like": "Ένα ημερολόγιο μωρού που ίσως σας αρέσει",
+  "Numalog is free, needs no account and works on any phone — send it to someone in the thick of it.":
+    "Το Numalog είναι δωρεάν, δεν χρειάζεται λογαριασμό και παίζει σε κάθε κινητό — στείλτε το σε κάποιον που είναι στα βαθιά.",
+  "Link copied — send it however you like.": "Ο σύνδεσμος αντιγράφηκε — στείλτε τον όπως θέλετε.",
+  "numalog.app — that's the whole link.": "numalog.app — αυτός είναι όλος ο σύνδεσμος.",
+  "Copy link": "Αντιγραφή συνδέσμου",
+  "More apps…": "Περισσότερες εφαρμογές…",
+  // ——— Protect & restore (Google / email) ———
+  "You’re offline — {what} needs the internet. Your entries are safe on this phone meanwhile; this will wake up by itself when you’re back.":
+    "Είστε εκτός σύνδεσης — {what} χρειάζεται ίντερνετ. Οι καταχωρίσεις σας είναι ασφαλείς σε αυτό το κινητό στο μεταξύ· θα ξυπνήσει μόνο του όταν επιστρέψετε.",
+  "protecting your log": "η προστασία του ημερολογίου σας",
+  "restoring": "η επαναφορά",
+  "Google’s sign-in could not load — an ad blocker or offline moment, probably. The email link below works regardless, and so does a backup file.":
+    "Η σύνδεση της Google δεν φόρτωσε — μάλλον ad blocker ή στιγμή εκτός σύνδεσης. Ο σύνδεσμος μέσω email παρακάτω δουλεύει έτσι κι αλλιώς, όπως και ένα αρχείο αντιγράφου.",
+  "Check your inbox — the link works once and expires in 15 minutes.":
+    "Δείτε τα εισερχόμενά σας — ο σύνδεσμος δουλεύει μία φορά και λήγει σε 15 λεπτά.",
+  "Email address": "Διεύθυνση email",
+  "Protected — a lost phone can be recovered with": "Προστατευμένο — ένα χαμένο κινητό μπορεί να ανακτηθεί με το",
+  "Last time you used": "Την τελευταία φορά χρησιμοποιήσατε το",
+  "…or with any email address:": "…ή με οποιαδήποτε διεύθυνση email:",
+  "Send link": "Αποστολή συνδέσμου",
+  "Protect my log": "Προστασία του ημερολογίου μου",
+  "One tap guards your whole log: a lost or wiped phone can get everything back. Works with Google or any email address — and nothing from your log is ever shared with anyone. The guard is optional and removable.":
+    "Ένα πάτημα προστατεύει όλο το ημερολόγιο: ένα χαμένο ή σβησμένο κινητό μπορεί να τα πάρει όλα πίσω. Δουλεύει με Google ή με οποιοδήποτε email — και τίποτα από το ημερολόγιό σας δεν κοινοποιείται ποτέ σε κανέναν. Η προστασία είναι προαιρετική και αφαιρείται.",
+  "This phone has 1 entry of its own": "Αυτό το κινητό έχει 1 δική του καταχώριση",
+  "This phone has {n} entries of its own": "Αυτό το κινητό έχει {n} δικές του καταχωρίσεις",
+  "Your account’s log lives in the cloud. Choose what happens to the entries on this phone — nothing in the cloud is deleted either way.":
+    "Το ημερολόγιο του λογαριασμού σας ζει στο cloud. Διαλέξτε τι θα γίνει με τις καταχωρίσεις αυτού του κινητού — τίποτα στο cloud δεν διαγράφεται έτσι κι αλλιώς.",
+  "Merge them into my cloud log": "Συγχώνευση με το ημερολόγιο στο cloud",
+  "Take the cloud log only — discard these": "Μόνο το ημερολόγιο του cloud — απόρριψη αυτών",
+  "No log is protected by that Google account — check which address you used, or restore a backup file instead.":
+    "Κανένα ημερολόγιο δεν προστατεύεται από αυτόν τον λογαριασμό Google — ελέγξτε ποια διεύθυνση χρησιμοποιήσατε, ή επαναφέρετε ένα αρχείο αντιγράφου.",
+  "Restore with Google or email": "Επαναφορά με Google ή email",
+  "Email me a link": "Στείλτε μου σύνδεσμο",
+  "If this address protects a log, the link is on its way — check your inbox. It works once and expires in 15 minutes.":
+    "Αν αυτή η διεύθυνση προστατεύει ένα ημερολόγιο, ο σύνδεσμος είναι καθ’ οδόν — δείτε τα εισερχόμενα. Δουλεύει μία φορά και λήγει σε 15 λεπτά.",
+  "Could not reach the server — check your connection and try again.":
+    "Δεν ήταν δυνατή η επικοινωνία με τον διακομιστή — ελέγξτε τη σύνδεση και δοκιμάστε ξανά.",
+  // ——— Protect intro, recovery link, join screen ———
+  "Keep the log safe from day one": "Κρατήστε το ημερολόγιο ασφαλές από την πρώτη μέρα",
+  "Your log can live in the cloud now": "Το ημερολόγιό σας μπορεί πλέον να ζει στο cloud",
+  "Everything you log stays on this phone. If you like, sign in once with Google or any email and a new phone can get it all back — optional, free, removable, and nothing from your log is ever shared with anyone.":
+    "Ό,τι καταγράφετε μένει σε αυτό το κινητό. Αν θέλετε, συνδεθείτε μία φορά με Google ή με οποιοδήποτε email και ένα νέο κινητό μπορεί να τα πάρει όλα πίσω — προαιρετικό, δωρεάν, αφαιρείται, και τίποτα από το ημερολόγιό σας δεν κοινοποιείται ποτέ σε κανέναν.",
+  "Until today, everything lived only on this phone — a lost or wiped phone meant a lost history. Now, if you want, your log can also be protected in the cloud: sign in once with Google or any email, and any future phone can get everything back. Optional, free, removable — and nothing from your log is ever shared with anyone.":
+    "Μέχρι σήμερα, όλα ζούσαν μόνο σε αυτό το κινητό — ένα χαμένο ή σβησμένο κινητό σήμαινε χαμένη ιστορία. Τώρα, αν θέλετε, το ημερολόγιό σας μπορεί να προστατεύεται και στο cloud: συνδεθείτε μία φορά με Google ή με οποιοδήποτε email, και κάθε μελλοντικό κινητό μπορεί να τα πάρει όλα πίσω. Προαιρετικό, δωρεάν, αφαιρείται — και τίποτα από το ημερολόγιό σας δεν κοινοποιείται ποτέ σε κανέναν.",
+  "Two phones, one log: add the other parent and neither of you has to ask when the last feed was.":
+    "Δύο κινητά, ένα ημερολόγιο: προσθέστε τον άλλο γονιό και κανείς σας δεν χρειάζεται να ρωτά πότε ήταν το τελευταίο τάισμα.",
+  "Add the other parent’s phone": "Προσθήκη του κινητού του άλλου γονιού",
+  "Maybe later — it lives in Settings": "Ίσως αργότερα — υπάρχει στις Ρυθμίσεις",
+  "Restore your log on this phone?": "Επαναφορά του ημερολογίου σας σε αυτό το κινητό;",
+  "Your recovery link brings your cloud log onto this phone. Nothing happens until you tap Restore — if this isn’t your phone, just close this.":
+    "Ο σύνδεσμος ανάκτησης φέρνει το ημερολόγιό σας από το cloud σε αυτό το κινητό. Τίποτα δεν γίνεται μέχρι να πατήσετε Επαναφορά — αν αυτό δεν είναι το κινητό σας, απλώς κλείστε το.",
+  "Restore my log here": "Επαναφορά του ημερολογίου μου εδώ",
+  "Cancel — the link stays unused": "Άκυρο — ο σύνδεσμος μένει αχρησιμοποίητος",
+  "Restore here? This phone has 1 entry of its own": "Επαναφορά εδώ; Αυτό το κινητό έχει 1 δική του καταχώριση",
+  "Restore here? This phone has {n} entries of its own": "Επαναφορά εδώ; Αυτό το κινητό έχει {n} δικές του καταχωρίσεις",
+  "Your recovery link brings your cloud log onto this phone. Choose what happens to the entries already here — nothing in the cloud is deleted either way.":
+    "Ο σύνδεσμος ανάκτησης φέρνει το ημερολόγιό σας από το cloud σε αυτό το κινητό. Διαλέξτε τι θα γίνει με τις καταχωρίσεις που είναι ήδη εδώ — τίποτα στο cloud δεν διαγράφεται έτσι κι αλλιώς.",
+  "Invite scanned": "Η πρόσκληση σαρώθηκε",
+  "Join your family log": "Μπείτε στο οικογενειακό σας ημερολόγιο",
+  "This phone will share one log with the phone that showed you the code — every feed, diaper and note, on both.":
+    "Αυτό το κινητό θα μοιράζεται ένα ημερολόγιο με το κινητό που σας έδειξε τον κωδικό — κάθε τάισμα, πάνα και σημείωση, και στα δύο.",
+  "The 1 entry already on this phone will be merged into the family log — nothing is deleted.":
+    "Η 1 καταχώριση που είναι ήδη σε αυτό το κινητό θα συγχωνευτεί στο οικογενειακό ημερολόγιο — τίποτα δεν διαγράφεται.",
+  "The {n} entries already on this phone will be merged into the family log — nothing is deleted.":
+    "Οι {n} καταχωρίσεις που είναι ήδη σε αυτό το κινητό θα συγχωνευτούν στο οικογενειακό ημερολόγιο — τίποτα δεν διαγράφεται.",
+  "The join did not go through — the code may have expired (codes from a partner’s phone last 15 minutes and work once), or this phone may be offline. Nothing changed; try again or ask for a fresh code.":
+    "Η είσοδος δεν ολοκληρώθηκε — ο κωδικός μπορεί να έληξε (οι κωδικοί από το κινητό του συντρόφου ισχύουν 15 λεπτά και δουλεύουν μία φορά), ή αυτό το κινητό μπορεί να είναι εκτός σύνδεσης. Τίποτα δεν άλλαξε· δοκιμάστε ξανά ή ζητήστε νέο κωδικό.",
+  "Joining…": "Είσοδος…",
+  "Join the family": "Είσοδος στην οικογένεια",
+  "Set this phone up on its own": "Ρύθμιση αυτού του κινητού μόνου του",
+  // ——— In-app browser escape & news ———
+  "You’re in {name}’s built-in browser.": "Είστε στο ενσωματωμένο πρόγραμμα περιήγησης του {name}.",
+  "It can’t install the app, and it keeps your entries inside {name} — open this in Safari or Chrome so your baby’s log is safe. Tap":
+    "Δεν μπορεί να εγκαταστήσει την εφαρμογή, και κρατά τις καταχωρίσεις σας μέσα στο {name} — ανοίξτε το στο Safari ή στο Chrome για να είναι ασφαλές το ημερολόγιο του μωρού σας. Πατήστε",
+  ", or copy the link:": ", ή αντιγράψτε τον σύνδεσμο:",
+  "Continue here anyway": "Συνέχεια εδώ ούτως ή άλλως",
+  "News & updates": "Νέα και ενημερώσεις",
+  "Built by two parents, evenings, between feeds — here is everything that has changed and why.":
+    "Φτιαγμένο από δύο γονείς, τα βράδια, ανάμεσα στα ταΐσματα — εδώ είναι όλα όσα άλλαξαν και γιατί.",
+  "A thank-you, before the list": "Ένα ευχαριστώ, πριν από τη λίστα",
+  "I made this app for my own daughter. I never expected that something I built for us would end up in so many families’ hands — and I want to thank every one of you who wrote to me. I read everything you send. Your messages are literally the list below: almost every fix and feature started as someone’s feedback.":
+    "Έφτιαξα αυτή την εφαρμογή για τη δική μου κόρη. Δεν περίμενα ποτέ ότι κάτι που έφτιαξα για εμάς θα κατέληγε στα χέρια τόσων οικογενειών — και θέλω να ευχαριστήσω τον καθένα σας που μου έγραψε. Διαβάζω ό,τι στέλνετε. Τα μηνύματά σας είναι κυριολεκτικά η λίστα από κάτω: σχεδόν κάθε διόρθωση και λειτουργία ξεκίνησε από το σχόλιο κάποιου.",
+  "I write the code alone, mostly while the baby sleeps, so some things take an evening or two — but nothing you report is ignored. If something is broken, missing, or just annoying, tap the little message bubble and tell me. It comes straight to me.":
+    "Γράφω τον κώδικα μόνος, κυρίως όσο κοιμάται το μωρό, οπότε κάποια πράγματα παίρνουν ένα δυο βράδια — αλλά τίποτα από όσα αναφέρετε δεν αγνοείται. Αν κάτι είναι χαλασμένο, λείπει, ή απλώς ενοχλεί, πατήστε το μικρό συννεφάκι μηνύματος και πείτε μου. Έρχεται κατευθείαν σε μένα.",
+  "The code may be mine, but nothing else here happens alone — half of every night, and half of our own family’s log, is her mum’s. And one rule above all: an app can help, but your paediatrician always comes first. — Apostolis":
+    "Ο κώδικας μπορεί να είναι δικός μου, αλλά τίποτα άλλο εδώ δεν γίνεται μόνο του — η μισή κάθε νύχτα, και το μισό ημερολόγιο της δικής μας οικογένειας, είναι της μαμάς της. Και ένας κανόνας πάνω από όλα: μια εφαρμογή μπορεί να βοηθήσει, αλλά ο παιδίατρός σας έρχεται πάντα πρώτος. — Αποστόλης",
+  "Latest": "Νεότερο",
+  // ——— Timeline screen ———
+  "The full picture": "Η πλήρης εικόνα",
+  "1 entry": "1 καταχώριση",
+  "{n} entries": "{n} καταχωρίσεις",
+  "Filter timeline": "Φιλτράρισμα ιστορικού",
+  "All": "Όλα",
+  "Latest first": "Πρώτα τα πιο πρόσφατα",
+  "Open any log to correct its details": "Ανοίξτε οποιαδήποτε καταχώριση για να διορθώσετε τα στοιχεία της",
+  "Nothing logged yet — your day builds here from the Today screen.":
+    "Τίποτα καταγεγραμμένο ακόμη — η μέρα σας χτίζεται εδώ από την οθόνη Σήμερα.",
+  "No {what} entries yet.": "Καμία καταχώριση «{what}» ακόμη.",
+  "Show all entries": "Εμφάνιση όλων των καταχωρίσεων",
+  "Show more entries": "Εμφάνιση περισσότερων",
+  // ——— Insights screen ———
+  "Worth a phone call": "Αξίζει ένα τηλεφώνημα",
+  "Something to try": "Κάτι να δοκιμάσετε",
+  "This looks ordinary": "Αυτό δείχνει συνηθισμένο",
+  "Last 7 days": "Τελευταίες 7 ημέρες",
+  "What the log is telling you": "Τι σας λέει το ημερολόγιο",
+  "Summary for the paediatrician": "Σύνοψη για τον παιδίατρο",
+  "Share this week": "Μοιραστείτε την εβδομάδα",
+  "{name}’s week · {link}": "Η εβδομάδα του μωρού {name} · {link}",
+  "Card saved to your device": "Η κάρτα αποθηκεύτηκε στη συσκευή σας",
+  "Could not make the card on this phone": "Η κάρτα δεν μπόρεσε να φτιαχτεί σε αυτό το κινητό",
+  "Milk against weight": "Γάλα σε σχέση με το βάρος",
+  "At {weight}, the usual guide is about {vol} a day at most.": "Στα {weight}, ο συνήθης οδηγός είναι το πολύ περίπου {vol} την ημέρα.",
+  "At {weight}, the usual guide is about {range} a day.": "Στα {weight}, ο συνήθης οδηγός είναι περίπου {range} την ημέρα.",
+  "{ref}. Your typical day is {vol}, {where} the band.": "{ref}. Η τυπική σας μέρα είναι {vol}, {where} ζώνη.",
+  "Reference ceiling {vol} a day": "Οροφή αναφοράς {vol} την ημέρα",
+  "Reference band {low} to {high} a day": "Ζώνη αναφοράς {low} έως {high} την ημέρα",
+  "which is within": "που είναι μέσα στη",
+  "which is below": "που είναι κάτω από τη",
+  "which is above": "που είναι πάνω από τη",
+  "is your typical day — {where}.": "είναι η τυπική σας μέρα — {where}.",
+  "inside that range": "μέσα σε αυτό το εύρος",
+  "below it": "κάτω από αυτό",
+  "above it": "πάνω από αυτό",
+  "Capped at the {vol} a day AAP gives as the usual maximum, whatever the weight suggests.":
+    "Περιορισμένο στα {vol} την ημέρα που η AAP δίνει ως συνηθισμένο μέγιστο, ό,τι κι αν δείχνει το βάρος.",
+  "This counts bottles only, so any nursing sits outside it. Babies feed to appetite and a range is not a target — bring the number to your paediatrician rather than to a calculator.":
+    "Μετράει μόνο μπιμπερό, οπότε ο θηλασμός μένει απ’ έξω. Τα μωρά τρώνε με την όρεξή τους και ένα εύρος δεν είναι στόχος — πηγαίνετε τον αριθμό στον παιδίατρό σας, όχι σε αριθμομηχανή.",
+  "What your entries suggest": "Τι δείχνουν οι καταχωρίσεις σας",
+  "No data yet": "Χωρίς δεδομένα ακόμη",
+  "Typical feed gap": "Τυπικό κενό ταΐσματος",
+  "Feeds / day": "Ταΐσματα / ημέρα",
+  "Bottle total today": "Σύνολο μπιμπερό σήμερα",
+  "Latest weight": "Τελευταίο βάρος",
+  "a few more feeds": "μερικά ακόμη ταΐσματα",
+  "a day or two": "μια-δυο μέρες",
+  "a bottle today": "ένα μπιμπερό σήμερα",
+  "a weight": "ένα βάρος",
+  "and": "και",
+  "The dashes fill in on their own — they are waiting on {list}.": "Οι παύλες γεμίζουν μόνες τους — περιμένουν {list}.",
+  "Fig. 1 · Bottle volume": "Σχ. 1 · Ποσότητα μπιμπερό",
+  "Most bottle days total about {vol}.": "Οι περισσότερες μέρες με μπιμπερό φτάνουν συνολικά περίπου {vol}.",
+  "Bottle volume for the last seven days. Most bottle days total about {vol}. {days}.":
+    "Ποσότητα μπιμπερό για τις τελευταίες επτά ημέρες. Οι περισσότερες μέρες φτάνουν περίπου {vol}. {days}.",
+  "From 1 logged bottle · on this device": "Από 1 καταγεγραμμένο μπιμπερό · σε αυτή τη συσκευή",
+  "From {n} logged bottles · on this device": "Από {n} καταγεγραμμένα μπιμπερό · σε αυτή τη συσκευή",
+  "Fig. {n} · Feeding rhythm": "Σχ. {n} · Ρυθμός ταΐσματος",
+  "Feeds usually arrive about {gap} apart.": "Τα ταΐσματα έρχονται συνήθως με διαφορά περίπου {gap}.",
+  "Each day’s feeds on a 24-hour line.": "Τα ταΐσματα κάθε μέρας σε μια γραμμή 24 ωρών.",
+  "No feeds logged yet — the week’s rhythm will draw itself here.":
+    "Κανένα τάισμα ακόμη — ο ρυθμός της εβδομάδας θα σχεδιαστεί εδώ μόνος του.",
+  "{day}: no feeds logged": "{day}: κανένα καταγεγραμμένο τάισμα",
+  "{what} at {time}": "{what} στις {time}",
+  "From 1 logged feed · on this device": "Από 1 καταγεγραμμένο τάισμα · σε αυτή τη συσκευή",
+  "From {n} logged feeds · on this device": "Από {n} καταγεγραμμένα ταΐσματα · σε αυτή τη συσκευή",
+  "Useful, not judgmental.": "Χρήσιμο, όχι επικριτικό.",
+  "Numalog summarizes what you logged. It never scores your parenting or replaces medical advice.":
+    "Το Numalog συνοψίζει ό,τι καταγράψατε. Δεν βαθμολογεί ποτέ το πώς μεγαλώνετε το παιδί σας και δεν αντικαθιστά ιατρική συμβουλή.",
+
+  // ——— Insight cards (rules engine) ———
+  "That temperature is worth a phone call": "Αυτή η θερμοκρασία αξίζει ένα τηλεφώνημα",
+  "Call your paediatrician today and describe how your baby is behaving, not just the number.":
+    "Πάρτε τον παιδίατρό σας σήμερα και περιγράψτε πώς συμπεριφέρεται το μωρό, όχι μόνο τον αριθμό.",
+  "A low temperature matters as much as a fever": "Μια χαμηλή θερμοκρασία μετράει όσο και ο πυρετός",
+  "Only 1 wet nappy logged yesterday": "Μόνο 1 βρεγμένη πάνα καταγράφηκε χθες",
+  "Only {n} wet nappies logged yesterday": "Μόνο {n} βρεγμένες πάνες καταγράφηκαν χθες",
+  "AAP lists weeing only once or twice a day among the signs of serious dehydration. This counts what was logged — if changes went unrecorded, the real number is higher.":
+    "Η AAP αναφέρει το τσίσα μόνο μία ή δύο φορές την ημέρα ανάμεσα στα σημάδια σοβαρής αφυδάτωσης. Μετράει ό,τι καταγράφηκε — αν κάποιες αλλαγές δεν σημειώθηκαν, ο πραγματικός αριθμός είναι μεγαλύτερος.",
+  "{n} wet nappies logged yesterday, against a floor of 6": "{n} βρεγμένες πάνες καταγράφηκαν χθες, με ελάχιστο όριο τις 6",
+  "After the first week, both AAP and NHS put at least 6 heavy wet nappies a day as the mark of a baby getting enough milk.":
+    "Μετά την πρώτη εβδομάδα, τόσο η AAP όσο και το NHS βάζουν τουλάχιστον 6 βαριές βρεγμένες πάνες την ημέρα ως σημάδι ότι το μωρό παίρνει αρκετό γάλα.",
+  "Still under the first weight you logged": "Ακόμη κάτω από το πρώτο βάρος που καταγράψατε",
+  "Home scales drift. Ask your midwife, health visitor or paediatrician to weigh your baby on theirs — do not change how you feed on the strength of this alone.":
+    "Οι ζυγαριές του σπιτιού ξεφεύγουν. Ζητήστε από τη μαία ή τον παιδίατρό σας να ζυγίσει το μωρό στη δική τους — μην αλλάξετε το τάισμα μόνο με βάση αυτό.",
+  "Weight gain looks slower than the usual range": "Η αύξηση βάρους δείχνει πιο αργή από το συνηθισμένο εύρος",
+  "Ask your health visitor or paediatrician for a weigh-in on their scales before you change anything.":
+    "Ζητήστε ζύγισμα στη ζυγαριά του παιδιάτρου σας πριν αλλάξετε οτιδήποτε.",
+  "Three logged days with no poo": "Τρεις καταγεγραμμένες μέρες χωρίς κακά",
+  "NHS: from about the fourth day expect at least 2 soft yellow poos a day for the first few weeks. Long gaps become normal after about 6 weeks — your baby is not there yet.":
+    "NHS: από την τέταρτη μέρα περίπου περιμένετε τουλάχιστον 2 μαλακά κίτρινα κακά την ημέρα τις πρώτες εβδομάδες. Τα μεγάλα κενά γίνονται φυσιολογικά μετά τις 6 εβδομάδες περίπου — το μωρό σας δεν είναι ακόμη εκεί.",
+  "Ring your midwife, health visitor or GP today and mention the gap, and how feeds are going.":
+    "Πάρτε τη μαία ή τον γιατρό σας σήμερα και αναφέρετε το κενό, και πώς πάνε τα ταΐσματα.",
+  "{h} hours since the last logged feed": "{h} ώρες από το τελευταίο καταγεγραμμένο τάισμα",
+  "AAP: if a newborn sleeps longer than 4 to 5 hours in the first weeks and starts missing feeds, wake them and offer one.":
+    "AAP: αν ένα νεογέννητο κοιμάται πάνω από 4 με 5 ώρες τις πρώτες εβδομάδες και αρχίζει να χάνει ταΐσματα, ξυπνήστε το και προσφέρετε ένα.",
+  "If you fed and did not log it, add it and this card goes away.":
+    "Αν ταΐσατε και δεν το καταγράψατε, προσθέστε το και αυτή η κάρτα φεύγει.",
+  "{d} days since the last logged poo": "{d} μέρες από τα τελευταία καταγεγραμμένα κακά",
+  "AAP: 5 to 7 days between poos is not necessarily a problem in a baby who has been pooing normally and is feeding and growing well. Past that is worth a mention.":
+    "AAP: 5 έως 7 μέρες ανάμεσα στα κακά δεν είναι απαραίτητα πρόβλημα σε μωρό που τα έκανε κανονικά και τρώει και μεγαλώνει καλά. Πέρα από αυτό αξίζει μια αναφορά.",
+  "Mention it at your next check, or ring sooner if your baby seems in pain, or the poo when it comes is hard or bloody.":
+    "Αναφέρετέ το στο επόμενο ραντεβού, ή τηλεφωνήστε νωρίτερα αν το μωρό δείχνει να πονά, ή τα κακά όταν έρθουν είναι σκληρά ή με αίμα.",
+  "Bottle totals are running above the usual daily guide": "Τα σύνολα του μπιμπερό τρέχουν πάνω από τον συνήθη ημερήσιο οδηγό",
+  "Your median bottle day is about {vol}. AAP: babies generally do not need more than about {max} of formula in 24 hours.":
+    "Η διάμεση μέρα μπιμπερό σας είναι περίπου {vol}. AAP: τα μωρά γενικά δεν χρειάζονται πάνω από περίπου {max} φόρμουλα σε 24 ώρες.",
+  "Mention the daily total at your next appointment. Keep following fullness cues — never push the last of a bottle to hit or avoid a number.":
+    "Αναφέρετε το ημερήσιο σύνολο στο επόμενο ραντεβού. Συνεχίστε να ακολουθείτε τα σημάδια χορτασμού — μην πιέζετε ποτέ το τέλος του μπιμπερό για να πιάσετε ή να αποφύγετε έναν αριθμό.",
+  "Worth a pause halfway through the bottle": "Αξίζει μια παύση στη μέση του μπιμπερό",
+  "Your typical bottle is about {vol}. AAP suggests burping about every {low} to {high} rather than once at the end.":
+    "Το τυπικό σας μπιμπερό είναι περίπου {vol}. Η AAP προτείνει ρέψιμο περίπου κάθε {low} έως {high} αντί για μία φορά στο τέλος.",
+  "Try one pause halfway through the next bottle, and rotate the holds: on your shoulder, sitting on your lap, or face-down across your lap.":
+    "Δοκιμάστε μία παύση στη μέση του επόμενου μπιμπερό, και εναλλάξτε τις στάσεις: στον ώμο σας, καθιστό στα πόδια σας, ή μπρούμυτα πάνω στα πόδια σας.",
+  "Two or three wet nappies is what today should look like": "Δύο ή τρεις βρεγμένες πάνες είναι το αναμενόμενο για σήμερα",
+  "NHS: in the first 48 hours your baby is likely to have only 2 or 3 wet nappies.":
+    "NHS: στις πρώτες 48 ώρες το μωρό σας πιθανότατα θα έχει μόνο 2 ή 3 βρεγμένες πάνες.",
+  "Keep logging each one. From day 5 the count climbs sharply, and that ramp is what matters.":
+    "Συνεχίστε να καταγράφετε καθεμία. Από τη μέρα 5 ο αριθμός ανεβαίνει απότομα, και αυτή η άνοδος είναι που μετράει.",
+  "The nappy count climbs from about day 5": "Ο αριθμός στις πάνες ανεβαίνει από τη μέρα 5 περίπου",
+  "NHS: from day 5 onwards expect at least 6 heavy wet nappies every 24 hours, with the wee almost colourless or pale yellow.":
+    "NHS: από τη μέρα 5 και μετά περιμένετε τουλάχιστον 6 βαριές βρεγμένες πάνες κάθε 24 ώρες, με το τσίσα σχεδόν άχρωμο ή αχνοκίτρινο.",
+  "Nothing to change. Keep logging every nappy so the ramp is visible when your midwife asks.":
+    "Τίποτα προς αλλαγή. Συνεχίστε να καταγράφετε κάθε πάνα ώστε η άνοδος να φαίνεται όταν ρωτήσει η μαία.",
+  "Yesterday looks like a cluster-feeding day": "Η χθεσινή μοιάζει με μέρα πυκνών ταϊσμάτων",
+  "{n} feeds, against your usual {usual}. NHS: cluster feeding is very normal in the first 3 to 4 months and often comes with a growth spurt.":
+    "{n} ταΐσματα, με συνηθισμένο το {usual}. NHS: τα πυκνά ταΐσματα είναι πολύ φυσιολογικά τους πρώτους 3 με 4 μήνες και συχνά συνοδεύουν ένα άλμα ανάπτυξης.",
+  "Nothing to fix. Eat, drink, get comfortable and let the feeds come — it passes.":
+    "Τίποτα προς διόρθωση. Φάτε, πιείτε, βολευτείτε και αφήστε τα ταΐσματα να έρθουν — περνάει.",
+  "{d} days without a poo — normal at this age": "{d} μέρες χωρίς κακά — φυσιολογικό σε αυτή την ηλικία",
+  "NHS: after about 6 weeks a breastfed baby can go several days without one, and AAP agrees 5 to 7 days is not necessarily a problem when feeding and growing are fine.":
+    "NHS: μετά τις 6 εβδομάδες περίπου ένα θηλάζον μωρό μπορεί να περάσει αρκετές μέρες χωρίς κακά, και η AAP συμφωνεί ότι 5 έως 7 μέρες δεν είναι απαραίτητα πρόβλημα όταν το τάισμα και η ανάπτυξη πάνε καλά.",
+  "Nothing to do. Ring your GP or health visitor if your baby seems in pain, the poo when it comes is very hard or bloody, or the wet nappies drop off.":
+    "Τίποτα να κάνετε. Πάρτε τον γιατρό σας αν το μωρό δείχνει να πονά, τα κακά όταν έρθουν είναι πολύ σκληρά ή με αίμα, ή οι βρεγμένες πάνες λιγοστέψουν.",
+  "Weight is climbing at the usual rate": "Το βάρος ανεβαίνει με τον συνηθισμένο ρυθμό",
+  "Nothing to do. Under 6 months, one weight a month is enough for this to stay meaningful.":
+    "Τίποτα να κάνετε. Κάτω από τους 6 μήνες, ένα βάρος τον μήνα αρκεί για να μένει αυτό ουσιαστικό.",
+  "That is a lot of feeds. It is also the normal number.": "Είναι πολλά ταΐσματα. Είναι επίσης ο φυσιολογικός αριθμός.",
+  "Your median is {n} feeds a day. AAP: breastfed newborns usually nurse about every 2 hours, so 10 to 12 in 24 hours is the norm and 8 is the minimum.":
+    "Η διάμεσός σας είναι {n} ταΐσματα την ημέρα. AAP: τα θηλάζοντα νεογέννητα τρώνε συνήθως κάθε 2 ώρες περίπου, οπότε 10 με 12 στο 24ωρο είναι ο κανόνας και 8 το ελάχιστο.",
+  "Nothing to change. Keep following the early cues — rooting, hands to the mouth, lip smacking. Crying is the late one.":
+    "Τίποτα προς αλλαγή. Συνεχίστε να ακολουθείτε τα πρώιμα σημάδια — ψάξιμο, χεράκια στο στόμα, πλατάγισμα χειλιών. Το κλάμα είναι το αργοπορημένο.",
+  "Feeds have eased off this week": "Τα ταΐσματα έχουν αραιώσει αυτή την εβδομάδα",
+  "About {recent} a day recently, against {earlier} before. Appetite moves around, and a settled week can look like this.":
+    "Περίπου {recent} την ημέρα πρόσφατα, έναντι {earlier} πριν. Η όρεξη μετακινείται, και μια ήρεμη εβδομάδα μπορεί να μοιάζει έτσι.",
+  "Worth watching alongside nappies and weight rather than on its own. If wet nappies drop too, or your baby seems harder to rouse for a feed, ring your health visitor.":
+    "Αξίζει παρακολούθηση μαζί με τις πάνες και το βάρος, όχι μόνο του. Αν πέσουν και οι βρεγμένες πάνες, ή το μωρό ξυπνά πιο δύσκολα για τάισμα, πάρτε τον γιατρό σας.",
+  "Fewer wet nappies than last week": "Λιγότερες βρεγμένες πάνες από την περασμένη εβδομάδα",
+  "About {recent} a day, from {earlier}. Still inside the usual range, so this is a note rather than a worry.":
+    "Περίπου {recent} την ημέρα, από {earlier}. Ακόμη μέσα στο συνηθισμένο εύρος, οπότε είναι σημείωση, όχι ανησυχία.",
+  "Keep offering feeds on cue. If it keeps falling and lands below six heavy wet nappies a day, that is the point to call.":
+    "Συνεχίστε να προσφέρετε ταΐσματα στα σημάδια. Αν συνεχίσει να πέφτει και φτάσει κάτω από έξι βαριές βρεγμένες πάνες την ημέρα, εκεί είναι το σημείο να τηλεφωνήσετε.",
+  "The longest stretch is getting longer": "Το μεγαλύτερο συνεχόμενο διάστημα μεγαλώνει",
+  "Best stretch is averaging {recent}, up from {earlier} the week before.":
+    "Το καλύτερο διάστημα είναι κατά μέσο όρο {recent}, από {earlier} την προηγούμενη εβδομάδα.",
+  "Nothing to do. Nights move backwards as often as forwards at this age, so this is worth noticing rather than counting on.":
+    "Τίποτα να κάνετε. Οι νύχτες πάνε πίσω όσο συχνά πάνε και μπροστά σε αυτή την ηλικία, οπότε αξίζει να το προσέξετε, όχι να βασιστείτε πάνω του.",
+  // ——— Paediatrician summary (sheet, PDF, picture) ———
+  "For the paediatrician": "Για τον παιδίατρο",
+  "{name}, {age} old": "{name}, {age}",
+  "{n} days": "{n} ημέρες",
+  "printed {date}": "εκτυπώθηκε {date}",
+  "{logged} of {total} days have entries. 1 day was not logged, so the daily figures are medians over the logged days only.":
+    "{logged} από {total} ημέρες έχουν καταχωρίσεις. 1 ημέρα δεν καταγράφηκε, οπότε τα ημερήσια νούμερα είναι διάμεσοι μόνο των καταγεγραμμένων ημερών.",
+  "{logged} of {total} days have entries. {blank} days were not logged, so the daily figures are medians over the logged days only.":
+    "{logged} από {total} ημέρες έχουν καταχωρίσεις. {blank} ημέρες δεν καταγράφηκαν, οπότε τα ημερήσια νούμερα είναι διάμεσοι μόνο των καταγεγραμμένων ημερών.",
+  "{logged} of {total} days have entries — every day logged.": "{logged} από {total} ημέρες έχουν καταχωρίσεις — καταγράφηκε κάθε μέρα.",
+  "Feeding": "Τάισμα",
+  "feeds a day": "ταΐσματα την ημέρα",
+  "milk a day": "γάλα την ημέρα",
+  "nursing a day": "θηλασμός την ημέρα",
+  "{feeds} feeds and {vol} across the window. Bottle volumes are bottles only.":
+    "{feeds} ταΐσματα και {vol} σε όλο το διάστημα. Οι ποσότητες αφορούν μόνο μπιμπερό.",
+  "Nappies": "Πάνες",
+  "wet a day": "τσίσα την ημέρα",
+  "dirty a day": "κακά την ημέρα",
+  "{wet} wet and {dirty} dirty across the window. A change recorded as both counts in each.":
+    "{wet} τσίσα και {dirty} κακά σε όλο το διάστημα. Μια αλλαγή που καταγράφηκε και ως τα δύο μετράει και στα δύο.",
+  "latest weight": "τελευταίο βάρος",
+  "gained a week": "αύξηση την εβδομάδα",
+  "WHO reference at this age: {low}–{high} (P3–P97), midpoint {mid}.":
+    "Αναφορά ΠΟΥ σε αυτή την ηλικία: {low}–{high} (P3–P97), μέσο {mid}.",
+  "No age on file, so no WHO reference is shown.": "Δεν υπάρχει ηλικία στο προφίλ, οπότε δεν εμφανίζεται αναφορά ΠΟΥ.",
+  "Typical gain {min}–{max} g a week.": "Τυπική αύξηση {min}–{max} γρ. την εβδομάδα.",
+  "Recorded at home by a parent, not a clinical measurement. WHO Child Growth Standards; typical weekly gain per AAP.":
+    "Καταγράφηκε στο σπίτι από γονιό, δεν είναι κλινική μέτρηση. Πρότυπα ανάπτυξης ΠΟΥ· τυπική εβδομαδιαία αύξηση κατά AAP.",
+  "not logged": "δεν καταγράφηκε",
+  "Day by day": "Μέρα με τη μέρα",
+  "Day": "Ημέρα",
+  "{name} · summary for the paediatrician · {link}": "{name} · σύνοψη για τον παιδίατρο · {link}",
+  "PDF saved to your device": "Το PDF αποθηκεύτηκε στη συσκευή σας",
+  "Could not make the PDF on this phone": "Το PDF δεν μπόρεσε να φτιαχτεί σε αυτό το κινητό",
+  "Share PDF": "Κοινοποίηση PDF",
+  "Download PDF": "Λήψη PDF",
+  "Picture saved to your device": "Η εικόνα αποθηκεύτηκε στη συσκευή σας",
+  "Could not make the picture on this phone": "Η εικόνα δεν μπόρεσε να φτιαχτεί σε αυτό το κινητό",
+  "Share as a picture": "Κοινοποίηση ως εικόνα",
+
+  // ——— Growth chart ———
+  "Measurements over time": "Μετρήσεις στον χρόνο",
+  "{weight} at the first check.": "{weight} στην πρώτη μέτρηση.",
+  "Steady since the last check.": "Σταθερό από την τελευταία μέτρηση.",
+  "Fig. {n} · Growth": "Σχ. {n} · Ανάπτυξη",
+  "Add measurement": "Προσθήκη μέτρησης",
+  "Your baby’s weight trend will appear after the first measurement.":
+    "Η πορεία του βάρους θα εμφανιστεί μετά την πρώτη μέτρηση.",
+  "Since last check": "Από την τελευταία μέτρηση",
+  "First check": "Πρώτη μέτρηση",
+  "Length / head": "Μήκος / κεφάλι",
+  "Recent weight measurements": "Πρόσφατες μετρήσεις βάρους",
+  "A date-proportional line from {low} to {high} {unit}.": "Μια γραμμή ανάλογη των ημερομηνιών από {low} έως {high} {unit}.",
+  "Date": "Ημερομηνία",
+  "Weight": "Βάρος",
+  "Length": "Μήκος",
+  "Head": "Περίμετρος κεφαλιού",
+  "Not logged": "Δεν καταγράφηκε",
+  "From 1 logged measurement · on this device": "Από 1 καταγεγραμμένη μέτρηση · σε αυτή τη συσκευή",
+  "From {n} logged measurements · on this device": "Από {n} καταγεγραμμένες μετρήσεις · σε αυτή τη συσκευή",
+  "Trends are useful context for your paediatrician. A single measurement is not a diagnosis.":
+    "Οι τάσεις είναι χρήσιμο πλαίσιο για τον παιδίατρό σας. Μία μέτρηση δεν είναι διάγνωση.",
+  "What’s typical at this age?": "Τι είναι τυπικό σε αυτή την ηλικία;",
+  // ——— Guide screen (chrome; card libraries follow in a later batch) ———
+  "kilograms": "κιλά",
+  "pounds": "λίβρες",
+  "In the first week": "Την πρώτη εβδομάδα",
+  "At 1 week": "Στη 1 εβδομάδα",
+  "At {n} weeks": "Στις {n} εβδομάδες",
+  "At 1 month": "Στον 1 μήνα",
+  "At {n} months": "Στους {n} μήνες",
+  "Reference band from {low} to {high} {unit}, middle of the range {mid} {unit}.":
+    "Ζώνη αναφοράς από {low} έως {high} {unit}, μέσο του εύρους {mid} {unit}.",
+  "Reference band from {low} to {high} {unit}, middle of the range {mid} {unit}. Latest logged weight {latest} {unit}.":
+    "Ζώνη αναφοράς από {low} έως {high} {unit}, μέσο του εύρους {mid} {unit}. Τελευταίο καταγεγραμμένο βάρος {latest} {unit}.",
+  "Back to Insights": "Πίσω στην Εικόνα",
+  "Care guide": "Οδηγός φροντίδας",
+  "What to do today": "Τι να κάνετε σήμερα",
+  "What is expected for {name} right now, and what to do about it. Every line links to the page it came from.":
+    "{name} — τι αναμένεται αυτή τη στιγμή, και τι να κάνετε γι’ αυτό. Κάθε γραμμή οδηγεί στη σελίδα από όπου προήλθε.",
+  "When to call someone": "Πότε να πάρετε κάποιον τηλέφωνο",
+  "Context, not a diagnosis": "Πλαίσιο, όχι διάγνωση",
+  "Everything in this guide — ranges, care notes and play ideas — is general information from the sources listed below, not medical advice, and this app is not a medical device. Babies grow in their own rhythm; your paediatrician’s assessment always comes first.":
+    "Όλα σε αυτόν τον οδηγό — εύρη, σημειώσεις φροντίδας και ιδέες παιχνιδιού — είναι γενικές πληροφορίες από τις πηγές που αναφέρονται παρακάτω, όχι ιατρική συμβουλή, και η εφαρμογή δεν είναι ιατρική συσκευή. Τα μωρά μεγαλώνουν με τον δικό τους ρυθμό· η εκτίμηση του παιδιάτρου σας έρχεται πάντα πρώτη.",
+  "Typical weight range at this age (WHO P3–P97)": "Τυπικό εύρος βάρους σε αυτή την ηλικία (ΠΟΥ P3–P97)",
+  "The WHO table covers the first 24 months, shown here at 24 months.":
+    "Ο πίνακας του ΠΟΥ καλύπτει τους πρώτους 24 μήνες, εδώ εμφανίζεται στους 24 μήνες.",
+  "{name}’s latest:": "Η τελευταία μέτρηση για {name}:",
+  "Range shown covers girls and boys.": "Το εύρος που φαίνεται καλύπτει κορίτσια και αγόρια.",
+  "By age, 0–24 months": "Ανά ηλικία, 0–24 μηνών",
+  "Reference weights across the first two years.": "Βάρη αναφοράς στα δύο πρώτα χρόνια.",
+  "Age": "Ηλικία",
+  "{n} mo": "{n} μ.",
+  "Add a birth date in Settings to see the range for {name}’s exact age.":
+    "Προσθέστε ημερομηνία γέννησης στις Ρυθμίσεις για να δείτε το εύρος για την ακριβή ηλικία του μωρού {name}.",
+  "Typical pattern": "Τυπικό μοτίβο",
+  "Many newborns lose some weight in the first days, then regain it — most are back to birth weight by two weeks, nearly all by three.":
+    "Πολλά νεογέννητα χάνουν λίγο βάρος τις πρώτες μέρες και μετά το ξαναπαίρνουν — τα περισσότερα είναι πίσω στο βάρος γέννησης ως τις δύο εβδομάδες, σχεδόν όλα ως τις τρεις.",
+  "In the first month, roughly {min}–{max} g a week is common.":
+    "Τον πρώτο μήνα, περίπου {min}–{max} γρ. την εβδομάδα είναι συνηθισμένο.",
+  "From {from} to {to} months, roughly {min}–{max} g a week is common.":
+    "Από {from} έως {to} μηνών, περίπου {min}–{max} γρ. την εβδομάδα είναι συνηθισμένο.",
+  "Many babies double their birth weight around six months and triple it around one year. After eight months, gains slow — following their own curve matters more than any weekly number.":
+    "Πολλά μωρά διπλασιάζουν το βάρος γέννησης γύρω στους έξι μήνες και το τριπλασιάζουν γύρω στον χρόνο. Μετά τους οκτώ μήνες η αύξηση επιβραδύνεται — το να ακολουθούν τη δική τους καμπύλη μετράει πιο πολύ από κάθε εβδομαδιαίο νούμερο.",
+  "Growth is usually fastest in the first six months, then gradually slows. A short illness can flatten gain for a couple of weeks — that usually settles on its own.":
+    "Η ανάπτυξη είναι συνήθως ταχύτερη τους πρώτους έξι μήνες και μετά σταδιακά επιβραδύνεται. Μια σύντομη αρρώστια μπορεί να «παγώσει» την αύξηση για κάνα δυο εβδομάδες — συνήθως φτιάχνει μόνο του.",
+  "These are population averages, not targets. A baby growing along a lower line on the chart gains less than one on a higher line — steadiness is the point.":
+    "Αυτοί είναι μέσοι όροι πληθυσμού, όχι στόχοι. Ένα μωρό που μεγαλώνει σε χαμηλότερη γραμμή της καμπύλης παίρνει λιγότερο από ένα σε ψηλότερη — η σταθερότητα είναι το ζητούμενο.",
+  "When to ask your paediatrician": "Πότε να ρωτήσετε τον παιδίατρό σας",
+  "Trust your instincts — reach out whenever you’re unsure. These are the moments the guidance names for a check-in:":
+    "Εμπιστευτείτε το ένστικτό σας — απευθυνθείτε όποτε δεν είστε σίγουροι. Αυτές είναι οι στιγμές που οι οδηγίες ορίζουν για έναν έλεγχο:",
+  "At two weeks, still under birth weight or gaining less than about 150 g a week.":
+    "Στις δύο εβδομάδες, ακόμη κάτω από το βάρος γέννησης ή με αύξηση κάτω από περίπου 150 γρ. την εβδομάδα.",
+  "Not back to birth weight by three weeks of age.": "Δεν έχει επιστρέψει στο βάρος γέννησης ως τις τρεις εβδομάδες.",
+  "Weight drifting across more than one line on their growth chart, in either direction.":
+    "Βάρος που διασχίζει πάνω από μία γραμμή στην καμπύλη ανάπτυξης, προς οποιαδήποτε κατεύθυνση.",
+  "Sources": "Πηγές",
+  "WHO Child Growth Standards · shown for context, not diagnosis · on this device":
+    "Πρότυπα ανάπτυξης ΠΟΥ · για πλαίσιο, όχι διάγνωση · σε αυτή τη συσκευή",
+
+  // ——— When to call someone (signs) ———
+
+  // ——— Care stages (eyebrows) ———
+  "The first days": "Οι πρώτες μέρες",
+  "Milk in, weight climbing": "Το γάλα ήρθε, το βάρος ανεβαίνει",
+  "Finding the rhythm": "Βρίσκοντας τον ρυθμό",
+  "Six weeks to three months": "Έξι εβδομάδες έως τρεις μήνες",
+  "Three to six months": "Τρεις έως έξι μήνες",
+  "Six to twelve months": "Έξι έως δώδεκα μήνες",
+  "After the first year": "Μετά τον πρώτο χρόνο",
+
+  // ——— Going out checklist ———
+  "Going out": "Έξοδος",
+  "Tick as you pack. Reset before the next outing.": "Τσεκάρετε όσο ετοιμάζετε την τσάντα. Μηδενίστε πριν την επόμενη έξοδο.",
+  "Reset": "Μηδενισμός",
+  "Diapers — one per hour out, plus one": "Πάνες — μία για κάθε ώρα έξω, συν μία",
+  "Wipes and diaper bags": "Μωρομάντηλα και σακουλάκια για πάνες",
+  "Changing mat (a muslin works)": "Στρωματάκι αλλαγής (και μια μουσελίνα κάνει)",
+  "Full change of clothes — vest AND outfit": "Πλήρης αλλαξιά — ζιπουνάκι ΚΑΙ φορμάκι",
+  "A muslin or burp cloth": "Μια μουσελίνα ή πανάκι για ρέψιμο",
+  "One more feed than you think you need": "Ένα τάισμα παραπάνω από όσα νομίζετε ότι χρειάζεστε",
+  "Hat for the season": "Σκουφάκι ανάλογα με την εποχή",
+  "Blanket or extra layer": "Κουβερτούλα ή ένα ρούχο παραπάνω",
+  "Pacifier + clip, if used": "Πιπίλα + κλιπ, αν χρησιμοποιείται",
+  "Hand sanitiser": "Αντισηπτικό χεριών",
+  "Your own phone, keys, water": "Το κινητό σας, κλειδιά, νερό",
+
+  // ——— Play & development (chrome) ———
+  "Play & development": "Παιχνίδι και ανάπτυξη",
+  "Everyday play for {name} right now — {stage}. No grades, no milestones to pass: stop whenever either of you has had enough. Every card links to the page it came from.":
+    "{name} — καθημερινό παιχνίδι για αυτή τη στιγμή, {stage}. Χωρίς βαθμούς, χωρίς ορόσημα για να «περάσετε»: σταματήστε όποτε κάποιος από τους δυο σας κουραστεί. Κάθε κάρτα οδηγεί στη σελίδα από όπου προήλθε.",
+  "These are general play ideas, not medical or developmental advice — every baby moves at their own pace. For anything about {name}’s own development, your paediatrician or health visitor is the answer.":
+    "Αυτές είναι γενικές ιδέες παιχνιδιού, όχι ιατρική ή αναπτυξιακή συμβουλή — κάθε μωρό προχωρά με τον ρυθμό του. Για οτιδήποτε αφορά την ανάπτυξη του μωρού {name}, ο παιδίατρός σας είναι η απάντηση.",
+  "Movement": "Κίνηση",
+  "Seeing": "Όραση",
+  "Talking": "Ομιλία",
+  "Together": "Μαζί",
+  "Timer for {what}": "Χρονόμετρο για {what}",
+  "{n} min": "{n} λεπτά",
+  // ——— Onboarding ———
+  "Private family log": "Ιδιωτικό οικογενειακό ημερολόγιο",
+  "Night mode": "Νυχτερινή λειτουργία",
+  "Use night mode": "Χρήση νυχτερινής λειτουργίας",
+  "Your local log needs attention": "Το τοπικό ημερολόγιό σας χρειάζεται προσοχή",
+  "The saved copy could not be read, so Numalog left it untouched. Download it before starting over, or restore a valid backup.":
+    "Το αποθηκευμένο αντίγραφο δεν διαβάστηκε, οπότε το Numalog το άφησε ανέγγιχτο. Κατεβάστε το πριν ξεκινήσετε από την αρχή, ή επαναφέρετε ένα έγκυρο αντίγραφο.",
+  "Download the saved copy": "Λήψη του αποθηκευμένου αντιγράφου",
+  "Reset and start clean": "Μηδενισμός και καθαρή αρχή",
+  "Protected your log with Google or email? After downloading the saved copy, you can bring everything back from the cloud:":
+    "Προστατέψατε το ημερολόγιό σας με Google ή email; Αφού κατεβάσετε το αποθηκευμένο αντίγραφο, μπορείτε να τα φέρετε όλα πίσω από το cloud:",
+  "The whole day,": "Όλη η μέρα,",
+  "without the mental load.": "χωρίς το βάρος στο μυαλό.",
+  "Welcome back": "Καλώς ήρθατε πάλι",
+  "This device has used Numalog before — continue, and your log comes straight down from the cloud.":
+    "Αυτή η συσκευή έχει ξαναχρησιμοποιήσει το Numalog — συνεχίστε, και το ημερολόγιό σας κατεβαίνει κατευθείαν από το cloud.",
+  "Set up a new baby instead": "Ρύθμιση νέου μωρού αντ’ αυτού",
+  "Set up your baby": "Ρυθμίστε το μωρό σας",
+  "Everything is optional. You can change it later.": "Όλα είναι προαιρετικά. Μπορείτε να τα αλλάξετε αργότερα.",
+  "Powers the day counter and matches the guidance to this exact week. You can skip it.":
+    "Τροφοδοτεί τον μετρητή ημερών και ταιριάζει τις οδηγίες σε αυτή ακριβώς την εβδομάδα. Μπορείτε να το παραλείψετε.",
+  "Optional": "Προαιρετικό",
+  "Start tracking": "Ξεκινήστε την καταγραφή",
+  "I already have data — bring it back": "Έχω ήδη δεδομένα — φέρτε τα πίσω",
+  "One-tap logging": "Καταγραφή με ένα πάτημα",
+  "Details only when you need them.": "Λεπτομέρειες μόνο όταν τις χρειάζεστε.",
+  "Live timers and patterns": "Ζωντανά χρονόμετρα και μοτίβα",
+  "See what happened and what may be next.": "Δείτε τι έγινε και τι μπορεί να ακολουθήσει.",
+  "Yours by default": "Δικά σας εξ ορισμού",
+  "Entries stay on this device. Family Sync is opt-in.": "Οι καταχωρίσεις μένουν σε αυτή τη συσκευή. Το Family Sync είναι επιλογή σας.",
+  "Built by two parents, for our own daughter — we use it every day ourselves. It grows from what parents ask for: if anything is broken, missing or annoying, tap the message bubble inside and tell us. We read everything. And one rule above all: an app can help, but your paediatrician always comes first.":
+    "Φτιαγμένο από δύο γονείς, για τη δική μας κόρη — το χρησιμοποιούμε κι εμείς κάθε μέρα. Μεγαλώνει από όσα ζητούν οι γονείς: αν κάτι είναι χαλασμένο, λείπει ή ενοχλεί, πατήστε το συννεφάκι μηνύματος μέσα στην εφαρμογή και πείτε μας. Τα διαβάζουμε όλα. Και ένας κανόνας πάνω από όλα: μια εφαρμογή μπορεί να βοηθήσει, αλλά ο παιδίατρός σας έρχεται πάντα πρώτος.",
+  "Know another tired parent? Share Numalog": "Ξέρετε άλλον κουρασμένο γονιό; Μοιραστείτε το Numalog",
+  "Bring your log back": "Φέρτε πίσω το ημερολόγιό σας",
+  "However you kept it, there is a way home. Nothing here deletes anything, anywhere.":
+    "Όπως κι αν το κρατήσατε, υπάρχει δρόμος επιστροφής. Τίποτα εδώ δεν διαγράφει τίποτα, πουθενά.",
+  "or from this phone": "ή από αυτό το κινητό",
+  "Restore a backup file": "Επαναφορά αρχείου αντιγράφου",
+  "Entries inside an installed home-screen app can’t travel by link — for those, use a backup file or the cloud restore.":
+    "Οι καταχωρίσεις μέσα σε εγκατεστημένη εφαρμογή της αρχικής οθόνης δεν ταξιδεύουν με σύνδεσμο — γι’ αυτές, χρησιμοποιήστε αρχείο αντιγράφου ή επαναφορά από το cloud.",
+  // ——— Small components ———
+  "38 °C or higher": "38 °C ή υψηλότερη",
+  "(measured rectally) in a baby under 3 months needs urgent medical advice.":
+    "(από το ορθό) σε μωρό κάτω των 3 μηνών χρειάζεται επείγουσα ιατρική συμβουλή.",
+  "Add a birth date in Settings to tailor this advice.":
+    "Προσθέστε ημερομηνία γέννησης στις Ρυθμίσεις για να προσαρμοστεί αυτή η συμβουλή.",
+  "Temperature recorded.": "Η θερμοκρασία καταγράφηκε.",
+  "If your baby seems unwell or you are concerned, seek medical advice.":
+    "Αν το μωρό δείχνει αδιάθετο ή ανησυχείτε, ζητήστε ιατρική συμβουλή.",
+  "Below 36 °C": "Κάτω από 36 °C",
+  "can matter as much as a fever in a young baby. If it repeats or your baby seems unwell, seek medical advice.":
+    "μπορεί να μετράει όσο και ο πυρετός σε μικρό μωρό. Αν επαναληφθεί ή το μωρό δείχνει αδιάθετο, ζητήστε ιατρική συμβουλή.",
+  "New": "Νέο",
+  "Dismiss what's new": "Απόρριψη των νέων",
+  "What your baby is doing at this age": "Τι κάνει το μωρό σας σε αυτή την ηλικία",
+  "From day one": "Από την πρώτη μέρα",
+  "At {age}": "Σε ηλικία {age}",
+  "Right now, {name} may be:": "{name} — αυτή τη στιγμή μπορεί να:",
+  "Did you know?": "Το ξέρατε;",
+  "Every baby has their own pace.": "Κάθε μωρό έχει τον δικό του ρυθμό.",
+
+  // ——— Milestones ———
+  "Your baby": "Το μωρό σας",
+  "{who} is 1 week old today": "{who} έγινε 1 εβδομάδας σήμερα",
+  "Seven days of getting to know each other.": "Επτά μέρες γνωριμίας.",
+  "100 days of {who}": "100 μέρες με {who}",
+  "A hundred days — that deserves its own little party.": "Εκατό μέρες — αυτό αξίζει το δικό του πάρτι.",
+  "{who} is 1 year old today!": "{who} έγινε 1 χρονών σήμερα!",
+  "{who} is {years} years old today!": "{who} έγινε {years} χρονών σήμερα!",
+  "One whole year. Happy birthday, little one.": "Ένας ολόκληρος χρόνος. Χρόνια πολλά, μικρέ μου.",
+  "Happy birthday, little one.": "Χρόνια πολλά, μικρέ μου.",
+  "{who} is 1 month old today": "{who} έγινε 1 μηνός σήμερα",
+  "{who} is {months} months old today": "{who} έγινε {months} μηνών σήμερα",
+  "The first of many month-birthdays.": "Τα πρώτα από πολλά μηνιαία γενέθλια.",
+  "Happy month-birthday.": "Χρόνια πολλά για τα μηνιαία γενέθλια.",
+  "Share this milestone as a picture": "Κοινοποίηση του ορόσημου ως εικόνα",
+  "Dismiss the celebration": "Απόρριψη της γιορτής",
+
+  // ——— Share cards ———
+  "nappy": "πάνα",
+  "nappies": "πάνες",
+  "asleep": "ύπνος",
+  "of milk": "γάλα",
+  "nursed": "θηλασμός",
+  "wet": "τσίσα",
+  "dirty": "κακά",
+  "longest sleep": "μεγαλύτερος ύπνος",
+  "waking": "ξύπνημα",
+  "wakings": "ξυπνήματα",
+  "night feed": "νυχτερινό τάισμα",
+  "night feeds": "νυχτερινά ταΐσματα",
+  "All of it since day one, logged by hand — usually at 3am.":
+    "Όλα αυτά από την πρώτη μέρα, καταγραμμένα στο χέρι — συνήθως στις 3 τα ξημερώματα.",
+  "Feeds from {first} to {last}.": "Ταΐσματα από {first} έως {last}.",
+  "Today so far · {date}": "Σήμερα μέχρι τώρα · {date}",
+  "{who} {weekday}": "{weekday} — {who}",
+  "This week · {from} – {to}": "Αυτή η εβδομάδα · {from} – {to}",
+  "This week": "Αυτή η εβδομάδα",
+  "{who} week": "Η εβδομάδα — {who}",
+  "Every day logged.": "Καταγράφηκε κάθε μέρα.",
+  "{logged} of {total} days logged.": "{logged} από {total} ημέρες καταγράφηκαν.",
+  "{from} – {to} · {logged} of {total} days logged": "{from} – {to} · {logged} από {total} ημέρες καταγράφηκαν",
+  "Recorded at home by a parent, not a clinical measurement.":
+    "Καταγράφηκε στο σπίτι από γονιό, δεν είναι κλινική μέτρηση.",
+  "Last night · {date}": "Χθες το βράδυ · {date}",
+  "{who} night": "Η νύχτα — {who}",
+  "First feed at {time}.": "Πρώτο τάισμα στις {time}.",
+  "our baby": "το μωρό μας",
+  "calls right": "σωστές προβλέψεις",
+  "spot on": "ακριβώς",
+  "typical miss": "τυπική απόκλιση",
+  "It knew when the next sleep was coming": "Ήξερε πότε ερχόταν ο επόμενος ύπνος",
+  "It knew when the next feed was coming": "Ήξερε πότε ερχόταν το επόμενο τάισμα",
+  "Numalog called {who}’s last {n} sleeps": "Το Numalog βρήκε τους τελευταίους {n} ύπνους — {who}",
+  "Numalog called {who}’s last {n} feeds": "Το Numalog βρήκε τα τελευταία {n} ταΐσματα — {who}",
+  "Learned from our own log — no account, nothing sent anywhere.":
+    "Το έμαθε από το δικό μας ημερολόγιο — χωρίς λογαριασμό, τίποτα δεν στέλνεται πουθενά.",
+  "It works out the rhythm from what you have already logged.":
+    "Βγάζει τον ρυθμό από όσα έχετε ήδη καταγράψει.",
+
+  // ——— Thank-you card ———
+  "Thank you for being here": "Ευχαριστώ που είστε εδώ",
+  "Numalog started as two parents’ app for their own daughter, built in the evenings between feeds. I honestly never expected other families to find it — seeing it help with your baby means more than you’d guess. If anything is broken, missing, or just annoying, don’t hesitate to say so. It comes straight to me.":
+    "Το Numalog ξεκίνησε ως η εφαρμογή δύο γονιών για τη δική τους κόρη, φτιαγμένη τα βράδια ανάμεσα στα ταΐσματα. Ειλικρινά δεν περίμενα ποτέ ότι θα το έβρισκαν άλλες οικογένειες — το να βλέπω ότι βοηθά με το δικό σας μωρό σημαίνει περισσότερα απ’ όσα φαντάζεστε. Αν κάτι είναι χαλασμένο, λείπει, ή απλώς ενοχλεί, μη διστάσετε να το πείτε. Έρχεται κατευθείαν σε μένα.",
+  "Write to me": "Γράψτε μου",
+  "Say anything": "Πείτε ό,τι θέλετε",
+  "A bug, a wish, a hello — it all lands with the same person.":
+    "Ένα σφάλμα, μια ευχή, ένα γεια — όλα φτάνουν στον ίδιο άνθρωπο.",
+  // ——— Soothing sounds ———
+  "Keeps playing with the screen off. Set a timer — at 3am “I’ll turn it off in a minute” means it runs until morning.":
+    "Συνεχίζει να παίζει με την οθόνη κλειστή. Βάλτε χρονόμετρο — στις 3 τα ξημερώματα το «θα το κλείσω σε ένα λεπτό» σημαίνει ότι παίζει μέχρι το πρωί.",
+  "Kind of sound": "Είδος ήχου",
+  "White noise": "Λευκός θόρυβος",
+  "Lullaby": "Νανούρισμα",
+  "Lullabies": "Νανουρίσματα",
+  "Sound": "Ήχος",
+  "Rumble": "Βουητό",
+  "Deepest and softest — closest to the womb": "Το πιο βαθύ και απαλό — πιο κοντά στη μήτρα",
+  "Rain": "Βροχή",
+  "Balanced, like steady rainfall": "Ισορροπημένο, σαν σταθερή βροχή",
+  "Hush": "Σσσς",
+  "Brightest — the classic shhh": "Το πιο φωτεινό — το κλασικό σσσς",
+  "Wiegenlied, 1868 — the one everyone knows": "Wiegenlied, 1868 — αυτό που ξέρουν όλοι",
+  "Twinkle": "Twinkle",
+  "Traditional, slow and simple": "Παραδοσιακό, αργό και απλό",
+  "Rock-a-bye": "Rock-a-bye",
+  "Traditional, gentle three-time": "Παραδοσιακό, απαλό τρίσημο",
+  "Volume": "Ένταση",
+  "Stop after": "Διακοπή μετά από",
+  "Keep going": "Συνέχεια",
+  "Stop · {left} left": "Στοπ · απομένουν {left}",
+  "Play": "Έναρξη",
+  "Your phone would not start the sound. Turn the silent switch off, check the volume, and try once more — some browsers also block audio until you have interacted with the page.":
+    "Το κινητό σας δεν ξεκίνησε τον ήχο. Κλείστε τον διακόπτη σίγασης, ελέγξτε την ένταση, και δοκιμάστε άλλη μία φορά — κάποια προγράμματα μπλοκάρουν τον ήχο μέχρι να αλληλεπιδράσετε με τη σελίδα.",
+  "No sound? Turn up the volume, and on an iPhone check the switch on the side — it silences apps even when they are playing.":
+    "Δεν ακούγεται; Ανεβάστε την ένταση, και σε iPhone ελέγξτε τον διακόπτη στο πλάι — σιγάζει τις εφαρμογές ακόμη κι όταν παίζουν.",
+  "Rendered by the app, not a recording — traditional tunes, nothing to license.":
+    "Παράγεται από την εφαρμογή, δεν είναι ηχογράφηση — παραδοσιακοί σκοποί, χωρίς δικαιώματα.",
+  "Keep it quiet and across the room rather than beside the cot. The AAP has raised concerns about sound levels from infant sleep machines and suggests talking to your paediatrician about safe use.":
+    "Κρατήστε τον χαμηλά και απέναντι στο δωμάτιο, όχι δίπλα στην κούνια. Η AAP έχει εκφράσει ανησυχίες για τα επίπεδα ήχου από συσκευές ύπνου βρεφών και προτείνει να μιλήσετε με τον παιδίατρό σας για την ασφαλή χρήση.",
+
+  // ——— Handoff (moving a log between addresses) ———
+  "Move this log to {origin}?": "Μεταφορά αυτού του ημερολογίου στο {origin};",
+  "This log — {entries} — would be copied to the same app at its other address.":
+    "Αυτό το ημερολόγιο — {entries} — θα αντιγραφεί στην ίδια εφαρμογή, στην άλλη της διεύθυνση.",
+  "This browser’s copy is empty, so there is nothing to send from here. If you have been using the installed app from your home screen, your log lives inside it — open the installed app, go to Settings →":
+    "Το αντίγραφο αυτού του προγράμματος είναι άδειο, οπότε δεν υπάρχει τίποτα να σταλεί από εδώ. Αν χρησιμοποιούσατε την εγκατεστημένη εφαρμογή από την αρχική οθόνη, το ημερολόγιό σας ζει μέσα της — ανοίξτε την εγκατεστημένη εφαρμογή, πηγαίνετε στις Ρυθμίσεις →",
+  ", then choose “Restore a backup” at the new address. Everything comes across.":
+    ", και μετά επιλέξτε «Επαναφορά αντιγράφου» στη νέα διεύθυνση. Όλα περνούν απέναντι.",
+  "Nothing is uploaded. The entries travel inside the link, which no browser sends to a server.":
+    "Τίποτα δεν ανεβαίνει. Οι καταχωρίσεις ταξιδεύουν μέσα στον σύνδεσμο, τον οποίο κανένα πρόγραμμα δεν στέλνει σε διακομιστή.",
+  "This copy stays here too. Nothing is deleted from this address — and keep any installed icon until the new address shows your entries: deleting an installed app deletes its storage with it.":
+    "Αυτό το αντίγραφο μένει κι εδώ. Τίποτα δεν διαγράφεται από αυτή τη διεύθυνση — και κρατήστε το εγκατεστημένο εικονίδιο μέχρι η νέα διεύθυνση να δείξει τις καταχωρίσεις σας: η διαγραφή μιας εγκατεστημένης εφαρμογής διαγράφει μαζί και τον χώρο της.",
+  "You will be asked to confirm again on the other side before anything is merged.":
+    "Θα σας ζητηθεί να επιβεβαιώσετε ξανά στην άλλη πλευρά πριν συγχωνευτεί οτιδήποτε.",
+  "This log is too big to travel inside a link. Download a backup here and open it there instead — that route has no size limit.":
+    "Αυτό το ημερολόγιο είναι πολύ μεγάλο για να ταξιδέψει μέσα σε σύνδεσμο. Κατεβάστε ένα αντίγραφο εδώ και ανοίξτε το εκεί — αυτός ο δρόμος δεν έχει όριο μεγέθους.",
+  "Something went wrong packing the log. Nothing was sent, and nothing here has changed.":
+    "Κάτι πήγε στραβά στο πακετάρισμα του ημερολογίου. Τίποτα δεν στάλθηκε, και τίποτα εδώ δεν άλλαξε.",
+  "Send the log": "Αποστολή του ημερολογίου",
+  "If you did not ask for this, tap “Not now”. A link alone should never move your baby’s records anywhere.":
+    "Αν δεν το ζητήσατε εσείς, πατήστε «Όχι τώρα». Ένας σύνδεσμος από μόνος του δεν πρέπει ποτέ να μετακινεί τα αρχεία του μωρού σας πουθενά.",
+  // ——— App shell, error screen, update toast ———
+  "Toggle navigation": "Εναλλαγή πλοήγησης",
+  "Primary navigation": "Κύρια πλοήγηση",
+  "Loading Numalog": "Φόρτωση Numalog",
+  "Debug preview": "Προεπισκόπηση εντοπισμού",
+  "Fake data only · your saved tracker is untouched": "Μόνο ψεύτικα δεδομένα · το αποθηκευμένο σας ημερολόγιο δεν αγγίζεται",
+  "Exit preview": "Έξοδος από την προεπισκόπηση",
+  "Back up your entries.": "Κρατήστε αντίγραφο των καταχωρίσεών σας.",
+  "Some entries were skipped": "Κάποιες καταχωρίσεις παραλείφθηκαν",
+  "OK": "Εντάξει",
+  "Something didn’t load.": "Κάτι δεν φόρτωσε.",
+  "The app stopped before continuing. Reload to try again; if this repeats, restore your latest backup.":
+    "Η εφαρμογή σταματήστε πριν συνεχίσει. Ανανεώστε για να ξαναδοκιμάσετε· αν επαναληφθεί, επαναφέρετε το τελευταίο σας αντίγραφο.",
+  "Try again": "Δοκιμάστε ξανά",
+  "A newer version is ready.": "Μια νεότερη έκδοση είναι έτοιμη.",
+  "Ready to use offline.": "Έτοιμο για χρήση εκτός σύνδεσης.",
+  "Update now": "Ενημέρωση τώρα",
+  "Later": "Αργότερα",
+  "Measurements and notes": "Μετρήσεις και σημειώσεις",
+  "Choose what to chart": "Διαλέξτε τι θα απεικονιστεί",
+  "One-tap baby care logging": "Καταγραφή φροντίδας με ένα πάτημα",
+  "Safe sleep: back, firm flat surface, clear sleep space.":
+    "Ασφαλής ύπνος: ανάσκελα, σταθερή επίπεδη επιφάνεια, καθαρός χώρος ύπνου.",
+  "Bring my log from {origin}": "Φέρτε το ημερολόγιό μου από {origin}",
+  "Burping now": "Ρέψιμο τώρα",
+
+  // ——— Log sheet: labels the screen reader speaks ———
+  "Bottle amount": "Ποσότητα μπιμπερό",
+  "Decrease amount": "Μείωση ποσότητας",
+  "Increase amount": "Αύξηση ποσότητας",
+  "Preset amounts": "Έτοιμες ποσότητες",
+  "Milk type": "Είδος γάλακτος",
+  "Nursing entry method": "Τρόπος καταχώρισης θηλασμού",
+  "Nursing side": "Πλευρά θηλασμού",
+  "Past session": "Περασμένη συνεδρία",
+  "Medicines given before": "Φάρμακα που δόθηκαν στο παρελθόν",
+  "Feeding method": "Τρόπος ταΐσματος",
+  "How much": "Πόσο",
+  "2.5 ml, one drop…": "2,5 ml, μία σταγόνα…",
+  "A stretch that has already finished — the night you meant to log at the time.":
+    "Ένα διάστημα που έχει ήδη τελειώσει — η νύχτα που σκοπεύατε να καταγράψετε την ώρα της.",
+  "A stretch that crosses midnight is counted whole, on the evening it began.":
+    "Ένα διάστημα που περνά τα μεσάνυχτα μετράει ολόκληρο, στο βράδυ που ξεκίνησε.",
+  "Leave empty if still going.": "Αφήστε το κενό αν συνεχίζεται.",
+  "Measure consistently and use the trend as context for your paediatrician.":
+    "Μετράτε με τον ίδιο τρόπο και χρησιμοποιήστε την τάση ως πλαίσιο για τον παιδίατρό σας.",
+  // ——— Trend chart & day recap line ———
+  "{day}: not logged": "{day}: δεν καταγράφηκε",
+  "{what} over the last {n} days": "{what} τις τελευταίες {n} ημέρες",
+  "Last {n} days": "Τελευταίες {n} ημέρες",
+  "a day on average": "την ημέρα κατά μέσο όρο",
+  "peak": "κορυφή",
+  "1 feed": "1 τάισμα",
+  "{n} feeds": "{n} ταΐσματα",
+  "{n} wet": "{n} τσίσα",
+  "{n} dirty": "{n} κακά",
+  "{duration} sleep": "{duration} ύπνος",
+  "1 solid": "1 στερεά τροφή",
+  "{n} solids": "{n} στερεές τροφές",
+  // ——— Care guide cards (domain/careGuidance.ts) ———
+  //
+  // Medical-adjacent copy, so the Greek stays inside what the English says
+  // and inside what the cited page says — no rounder numbers, no softer
+  // hedges, no advice the source did not give.
+  "Follow the cues, not the clock": "Ακολουθήστε τα σημάδια, όχι το ρολόι",
+  "Rooting, hands to the mouth and lip smacking are the early signs. Crying is a late one.":
+    "Το ψάξιμο, τα χεράκια στο στόμα και το πλατάγισμα των χειλιών είναι τα πρώιμα σημάδια. Το κλάμα είναι αργοπορημένο.",
+  "Offer a feed at the first cue rather than waiting for the cry.":
+    "Προσφέρετε τάισμα στο πρώτο σημάδι, χωρίς να περιμένετε το κλάμα.",
+  "Burp through the feed, not just at the end": "Ρέψιμο μέσα στο τάισμα, όχι μόνο στο τέλος",
+  "With a bottle, pausing about every 60–90 ml works better than one burp at the end; when nursing, switching sides is the natural moment.":
+    "Με μπιμπερό, μια παύση περίπου κάθε 60–90 ml δουλεύει καλύτερα από ένα ρέψιμο στο τέλος· στον θηλασμό, η αλλαγή πλευράς είναι η φυσική στιγμή.",
+  "Rotate the three holds: on your shoulder, sitting on your lap, or face-down across your lap with the head above the chest.":
+    "Εναλλάξτε τις τρεις στάσεις: στον ώμο σας, καθιστό στα πόδια σας, ή μπρούμυτα πάνω στα πόδια σας με το κεφάλι πιο ψηλά από το στήθος.",
+  "Feed often — at least 8 to 12 times in 24 hours": "Ταΐστε συχνά — τουλάχιστον 8 με 12 φορές στο 24ωρο",
+  "In the first days it can be as often as every hour. That is the milk supply being built, not a problem.":
+    "Τις πρώτες μέρες μπορεί να είναι και κάθε ώρα. Έτσι χτίζεται η παραγωγή γάλακτος, δεν είναι πρόβλημα.",
+  "Offer the breast or bottle whenever the cues appear, day and night.":
+    "Προσφέρετε στήθος ή μπιμπερό όποτε εμφανίζονται τα σημάδια, μέρα και νύχτα.",
+  "In the first 48 hours the count is genuinely low. It climbs sharply once the milk comes in.":
+    "Στις πρώτες 48 ώρες ο αριθμός είναι πραγματικά χαμηλός. Ανεβαίνει απότομα μόλις κατέβει το γάλα.",
+  "Weight gain restarts around day 5": "Η αύξηση βάρους ξαναρχίζει γύρω στη μέρα 5",
+  "Birthweight is usually back by about 2 weeks, and almost all babies have regained it by 3 weeks.":
+    "Το βάρος γέννησης επιστρέφει συνήθως ως τις 2 εβδομάδες, και σχεδόν όλα τα μωρά το έχουν ξαναπάρει ως τις 3.",
+  "Log a weight when you have one — the trend across weeks is the useful part.":
+    "Καταγράψτε ένα βάρος όποτε έχετε — το χρήσιμο είναι η τάση μέσα στις εβδομάδες.",
+  "Tummy time: 3 to 5 minutes, 2 or 3 times a day": "Χρόνος μπρούμυτα: 3 με 5 λεπτά, 2 ή 3 φορές την ημέρα",
+  "Build toward 15–30 minutes a day by around 7 weeks.": "Χτίστε προς τα 15–30 λεπτά την ημέρα ως τις 7 εβδομάδες περίπου.",
+  "Cluster feeding is normal, and it is not a supply problem": "Τα πυκνά ταΐσματα είναι φυσιολογικά, και δεν σημαίνουν πρόβλημα παραγωγής",
+  "Feeds bunched close together are common in the first three to four months, and often come with a growth spurt.":
+    "Τα ταΐσματα που μαζεύονται κοντά-κοντά είναι συνηθισμένα τους πρώτους τρεις με τέσσερις μήνες, και συχνά συνοδεύουν ένα άλμα ανάπτυξης.",
+  "Ride it out and keep offering. It passes.": "Αντέξτε το και συνεχίστε να προσφέρετε. Περνάει.",
+  "Spit-up is not a problem to fix": "Οι αναγωγές δεν είναι πρόβλημα προς διόρθωση",
+  "All babies spit up, and it usually comes with no crying or discomfort. It settles on its own as the muscles mature — generally by their first birthday.":
+    "Όλα τα μωρά κάνουν αναγωγές, και συνήθως χωρίς κλάμα ή ενόχληση. Υποχωρεί μόνο του καθώς ωριμάζουν οι μύες — γενικά ως τα πρώτα γενέθλια.",
+  "If it is frequent, smaller and more frequent feeds help more than bigger, spaced-out ones — and hold upright for about 20 minutes after.":
+    "Αν είναι συχνές, τα μικρότερα και πιο συχνά ταΐσματα βοηθούν περισσότερο από τα μεγάλα και αραιά — και κρατήστε το όρθιο για περίπου 20 λεπτά μετά.",
+  "After about 6 weeks a breastfed baby can go several days without one. That alone is not constipation.":
+    "Μετά τις 6 εβδομάδες περίπου, ένα θηλάζον μωρό μπορεί να περάσει αρκετές μέρες χωρίς κακά. Αυτό από μόνο του δεν είναι δυσκοιλιότητα.",
+  "Keep an eye on comfort rather than counting — and ask your paediatrician about anything painful.":
+    "Προσέχετε την άνεσή του αντί να μετράτε — και ρωτήστε τον παιδίατρό σας για οτιδήποτε φαίνεται επώδυνο.",
+  "Tummy time is now 15 to 30 minutes a day": "Ο χρόνος μπρούμυτα είναι πλέον 15 με 30 λεπτά την ημέρα",
+  "Spread over short sessions, always awake and watched.": "Μοιρασμένος σε σύντομες φορές, πάντα ξύπνιο και υπό επίβλεψη.",
+  "Get down at their eye level — your face is still the favourite thing to look at.":
+    "Κατεβείτε στο ύψος των ματιών του — το πρόσωπό σας είναι ακόμη το αγαπημένο του θέαμα.",
+  "About every 3 to 4 hours by the end of the first month. Most babies stay under about 960 ml in 24 hours.":
+    "Περίπου κάθε 3 με 4 ώρες ως το τέλος του πρώτου μήνα. Τα περισσότερα μωρά μένουν κάτω από 960 ml περίπου στο 24ωρο.",
+  "Follow fullness cues and never push the last of a bottle.":
+    "Ακολουθήστε τα σημάδια χορτασμού και μην πιέζετε ποτέ για το τελευταίο του μπιμπερό.",
+  "Milk is still the whole meal until about 6 months": "Το γάλα είναι ακόμη ολόκληρο το γεύμα ως τους 6 μήνες περίπου",
+  "WHO recommends exclusive breastfeeding for the first 6 months — no other food or drink, not even water.":
+    "Ο ΠΟΥ συνιστά αποκλειστικό θηλασμό τους πρώτους 6 μήνες — καμία άλλη τροφή ή ποτό, ούτε καν νερό.",
+  "Keep feeding responsively, as often as your baby wants.":
+    "Συνεχίστε να ταΐζετε ανταποκρινόμενοι, όσο συχνά θέλει το μωρό σας.",
+  "Floor time earns the rolls": "Ο χρόνος στο πάτωμα φέρνει τις τούμπες",
+  "By around 7 months most babies roll both ways, and sitting without leaning on their arms follows.":
+    "Ως τους 7 μήνες περίπου τα περισσότερα μωρά γυρίζουν και προς τις δύο πλευρές, και ακολουθεί το κάθισμα χωρίς στήριξη στα χέρια.",
+  "Clear a safe patch of floor and let them work — supervised, on a firm flat surface.":
+    "Ελευθερώστε ένα ασφαλές κομμάτι πατώματος και αφήστε το να δουλέψει — υπό επίβλεψη, σε σταθερή επίπεδη επιφάνεια.",
+  "Reflux fades from here": "Η παλινδρόμηση υποχωρεί από εδώ και πέρα",
+  "It usually starts before 8 weeks and settles on its own by the first birthday.":
+    "Συνήθως ξεκινά πριν τις 8 εβδομάδες και υποχωρεί μόνη της ως τα πρώτα γενέθλια.",
+  "Keep feeds smaller and more frequent if spit-up is heavy, and keep sleep flat on the back.":
+    "Κρατήστε τα ταΐσματα μικρότερα και πιο συχνά αν οι αναγωγές είναι έντονες, και τον ύπνο ανάσκελα σε επίπεδη επιφάνεια.",
+  "From 6 months, safe and adequate complementary foods begin while breastfeeding continues.":
+    "Από τους 6 μήνες ξεκινούν ασφαλείς και επαρκείς συμπληρωματικές τροφές, ενώ ο θηλασμός συνεχίζεται.",
+  "Introduce foods one at a time and keep the milk feeds going.":
+    "Εισάγετε τις τροφές μία-μία και συνεχίστε τα γάλατα.",
+  "Play peekaboo — it is doing real work": "Παίξτε κου-κου — κάνει πραγματική δουλειά",
+  "Your baby is learning that things still exist when they cannot see them.":
+    "Το μωρό σας μαθαίνει ότι τα πράγματα εξακολουθούν να υπάρχουν όταν δεν τα βλέπει.",
+  "Vary the game: hide behind a cloth, behind furniture, or take turns covering your heads.":
+    "Αλλάξτε το παιχνίδι: κρυφτείτε πίσω από ένα πανί, πίσω από έπιπλα, ή σκεπάστε εναλλάξ τα κεφάλια σας.",
+  "Stools change with food, and that is expected": "Τα κακά αλλάζουν με το φαγητό, και αυτό είναι αναμενόμενο",
+  "Colour and consistency shift once solids begin.": "Το χρώμα και η σύσταση αλλάζουν μόλις ξεκινήσουν οι στερεές τροφές.",
+  "Family foods, with milk still welcome": "Οικογενειακό φαγητό, με το γάλα ακόμη ευπρόσδεκτο",
+  "WHO supports continued breastfeeding up to 2 years or beyond alongside family meals.":
+    "Ο ΠΟΥ στηρίζει τη συνέχιση του θηλασμού ως τα 2 χρόνια ή και παραπάνω, μαζί με τα οικογενειακά γεύματα.",
+  "Offer variety and let your child decide how much.": "Προσφέρετε ποικιλία και αφήστε το παιδί σας να αποφασίσει πόσο.",
+  "Hiding games stay favourites": "Τα παιχνίδια με κρυφτό παραμένουν αγαπημένα",
+  "Object permanence games keep their pull well past the first birthday.":
+    "Τα παιχνίδια μονιμότητας του αντικειμένου κρατούν το ενδιαφέρον πολύ μετά τα πρώτα γενέθλια.",
+  "Hide a toy under a cloth and let them find it.": "Κρύψτε ένα παιχνίδι κάτω από ένα πανί και αφήστε το να το βρει.",
+  "Follow fullness, always": "Ακολουθείτε πάντα τον χορτασμό",
+  "Pushing more food or milk than a child wants teaches them to ignore their own signals.":
+    "Το να πιέζετε για περισσότερο φαγητό ή γάλα απ’ όσο θέλει ένα παιδί το μαθαίνει να αγνοεί τα δικά του σήματα.",
+  "Serve, then let them stop when they stop.": "Σερβίρετε, και μετά αφήστε το να σταματήσει όταν σταματήσει.",
+  "Watch how your baby is feeding and growing rather than counting the days.":
+    "Κοιτάξτε πώς τρώει και πώς μεγαλώνει το μωρό σας, αντί να μετράτε τις μέρες.",
+  // ——— Play & development cards (domain/playIdeas.ts) ———
+  "Tummy time": "Χρόνος μπρούμυτα",
+  "Awake time on the tummy builds the muscles your baby will use for lifting their head, sliding on their belly and crawling.":
+    "Ο χρόνος μπρούμυτα σε ξύπνιο μωρό χτίζει τους μυς που θα χρησιμοποιήσει για να σηκώνει το κεφάλι, να σέρνεται στην κοιλιά και να μπουσουλάει.",
+  "While your baby is awake, lie on your back and place them on your chest — they'll lift their head and use their arms to try to see your face.":
+    "Όσο το μωρό είναι ξύπνιο, ξαπλώστε ανάσκελα και βάλτε το στο στήθος σας — θα σηκώσει το κεφάλι και θα χρησιμοποιήσει τα χέρια του για να δει το πρόσωπό σας.",
+  "Place yourself or a toy just out of reach so they try to reach for you or the toy.":
+    "Βάλτε τον εαυτό σας ή ένα παιχνίδι λίγο πιο πέρα από όσο φτάνει, ώστε να προσπαθήσει να απλώσει το χέρι.",
+  "Or place a few toys in a circle around your baby — reaching toward different spots builds the muscles they'll use to roll over, scoot on their belly and crawl.":
+    "Ή βάλτε μερικά παιχνίδια σε κύκλο γύρω του — το άπλωμα προς διαφορετικά σημεία χτίζει τους μυς για την τούμπα, το σύρσιμο και το μπουσούλημα.",
+  "Keep it short at first — a few minutes is plenty, then try again later in the day.":
+    "Κρατήστε το σύντομο στην αρχή — λίγα λεπτά αρκούν, και ξαναδοκιμάστε αργότερα μέσα στη μέρα.",
+  "2 to 3 times a day for 3 to 5 minutes to start, working up to 15 to 30 minutes a day by 7 weeks":
+    "2 με 3 φορές την ημέρα από 3 με 5 λεπτά στην αρχή, φτάνοντας στα 15 με 30 λεπτά την ημέρα ως τις 7 εβδομάδες",
+  "Tummy time is only for babies who are awake and being watched — sleep is always on the back.":
+    "Ο χρόνος μπρούμυτα είναι μόνο για μωρά ξύπνια και υπό επίβλεψη — ο ύπνος γίνεται πάντα ανάσκελα.",
+
+  "Watch and follow": "Κοιτάζει και ακολουθεί",
+  "In these months your baby is learning to focus on faces and close objects and to follow something moving with their eyes.":
+    "Αυτούς τους μήνες το μωρό σας μαθαίνει να εστιάζει σε πρόσωπα και κοντινά αντικείμενα και να ακολουθεί με τα μάτια κάτι που κινείται.",
+  "Hold your baby so your face is about 8 to 12 inches (20 to 30 cm) from theirs — that's the distance a newborn sees best.":
+    "Κρατήστε το μωρό ώστε το πρόσωπό σας να απέχει περίπου 20 με 30 εκατοστά από το δικό του — σε αυτή την απόσταση βλέπει καλύτερα ένα νεογέννητο.",
+  "Let them settle on your face and just look; talk softly while they study you.":
+    "Αφήστε το να καρφώσει το βλέμμα στο πρόσωπό σας και απλώς να κοιτάζει· μιλήστε του απαλά όσο σας μελετά.",
+  "Slowly move your face, or a small toy held at that same close distance, and let their eyes follow it.":
+    "Μετακινήστε αργά το πρόσωπό σας, ή ένα μικρό παιχνίδι στην ίδια κοντινή απόσταση, και αφήστε τα μάτια του να το ακολουθήσουν.",
+  "Pause whenever they need a break and try again another time.":
+    "Κάντε παύση όποτε χρειάζεται διάλειμμα και ξαναδοκιμάστε άλλη ώρα.",
+  "A few minutes, as long as it stays fun": "Λίγα λεπτά, όσο παραμένει διασκεδαστικό",
+  "Your face is the show — babies this age don't need screens or media.":
+    "Το πρόσωπό σας είναι το θέαμα — τα μωρά σε αυτή την ηλικία δεν χρειάζονται οθόνες.",
+
+  "Talk and sing": "Μιλήστε και τραγουδήστε",
+  "Hearing your voice up close helps your baby tune in to the rhythm of language and learn the back-and-forth of conversation.":
+    "Ακούγοντας τη φωνή σας από κοντά, το μωρό συντονίζεται με τον ρυθμό της γλώσσας και μαθαίνει το πήγαινε-έλα της συζήτησης.",
+  "Hold your baby close and look at them as you talk — babies love faces and will watch you and respond.":
+    "Κρατήστε το μωρό κοντά και κοιτάξτε το καθώς του μιλάτε — τα μωρά λατρεύουν τα πρόσωπα και θα σας κοιτούν και θα απαντούν.",
+  "Chat about whatever you're doing as you feed, change and bathe them.":
+    "Λέτε του τι κάνετε καθώς το ταΐζετε, το αλλάζετε και το κάνετε μπάνιο.",
+  "Sing to them, or talk in a sing-song voice — it helps keep their attention.":
+    "Τραγουδήστε του, ή μιλήστε με τραγουδιστή φωνή — βοηθά να κρατηθεί η προσοχή του.",
+  "When they make a sound, repeat it back to them; that's their first turn in a conversation.":
+    "Όταν βγάζει έναν ήχο, επαναλάβετέ τον· αυτή είναι η πρώτη του σειρά σε μια συζήτηση.",
+  "A few minutes, as long as it stays fun — it fits easily into feeds and nappy changes":
+    "Λίγα λεπτά, όσο παραμένει διασκεδαστικό — χωράει εύκολα στα ταΐσματα και στις αλλαγές πάνας",
+
+  "Toys within reach": "Παιχνίδια σε απόσταση χεριού",
+  "Putting a toy just within reach invites your baby to stretch out, swipe and grab — an easy play idea the NHS suggests from 4 months.":
+    "Ένα παιχνίδι ακριβώς εκεί που φτάνει καλεί το μωρό να απλωθεί, να το χτυπήσει και να το πιάσει — μια εύκολη ιδέα που το NHS προτείνει από τους 4 μήνες.",
+  "Put a toy near your baby, just within reach.": "Βάλτε ένα παιχνίδι κοντά του, ακριβώς εκεί που φτάνει.",
+  "Let them stretch, swipe and grab it in their own time.": "Αφήστε το να απλωθεί, να το χτυπήσει και να το πιάσει με τον δικό του ρυθμό.",
+  "Talk and sing to them cheerfully while you play.": "Μιλήστε και τραγουδήστε του χαρούμενα όσο παίζετε.",
+  "Swap in a different toy when they lose interest.": "Αλλάξτε παιχνίδι όταν χάσει το ενδιαφέρον του.",
+  "Awake time only — and clear away anything small they could choke on.":
+    "Μόνο σε ξύπνιο μωρό — και μαζέψτε ό,τι μικρό θα μπορούσε να πνιγεί.",
+
+  "Rolling floor time": "Χρόνος στο πάτωμα για τούμπες",
+  "Rolling both ways usually develops across this stretch — and the timing varies from baby to baby. Awake time on the tummy with a toy to look at gives yours room to practise.":
+    "Η τούμπα και προς τις δύο πλευρές αναπτύσσεται συνήθως σε αυτό το διάστημα — και ο χρόνος διαφέρει από μωρό σε μωρό. Ο χρόνος μπρούμυτα με ένα παιχνίδι να κοιτάζει του δίνει χώρο να εξασκηθεί.",
+  "During awake time, lay your baby on their tummy on the floor with their arms forward.":
+    "Σε ξύπνιο χρόνο, ξαπλώστε το μπρούμυτα στο πάτωμα με τα χέρια μπροστά.",
+  "Get their attention with a toy they like, held where they can see it.":
+    "Τραβήξτε την προσοχή του με ένα παιχνίδι που του αρέσει, κρατημένο εκεί που το βλέπει.",
+  "Use it to encourage them to lift their head and chest.": "Χρησιμοποιήστε το για να το ενθαρρύνετε να σηκώσει κεφάλι και στήθος.",
+  "Whichever way they roll first is fine — tummy-to-back usually comes first, and the reverse is normal too.":
+    "Όποια κατεύθυνση κι αν γυρίσει πρώτα είναι μια χαρά — συνήθως έρχεται πρώτα από μπρούμυτα σε ανάσκελα, αλλά και το αντίστροφο είναι φυσιολογικό.",
+  "A few minutes at a time, as long as it stays fun.": "Λίγα λεπτά κάθε φορά, όσο παραμένει διασκεδαστικό.",
+
+  "Smiles and mirrors": "Χαμόγελα και καθρέφτες",
+  "Looking at your face, trading smiles and copying sounds is how babies this age love to play — and closer to 6 months, a mirror joins the game.":
+    "Το να κοιτάζει το πρόσωπό σας, να ανταλλάσσετε χαμόγελα και να μιμείστε ήχους είναι το αγαπημένο παιχνίδι σε αυτή την ηλικία — και κοντά στους 6 μήνες, μπαίνει και ο καθρέφτης.",
+  "Get face to face — hold your baby or lie beside them so they can study you.":
+    "Ελάτε πρόσωπο με πρόσωπο — κρατήστε το ή ξαπλώστε δίπλα του ώστε να μπορεί να σας μελετά.",
+  "Smile and chat, and copy the new sounds they make back to them.":
+    "Χαμογελάστε και μιλήστε, και επαναλάβετέ του τους νέους ήχους που βγάζει.",
+  "Give them a pause to answer, then laugh along together.": "Δώστε του μια παύση για να απαντήσει, και μετά γελάστε μαζί.",
+  "Closer to 6 months, look into a baby-safe mirror together.": "Κοντά στους 6 μήνες, κοιταχτείτε μαζί σε έναν καθρέφτη ασφαλή για μωρά.",
+  "As long as it stays fun — follow your baby's lead.": "Όσο παραμένει διασκεδαστικό — ακολουθήστε το μωρό σας.",
+
+  "Sitting play": "Παιχνίδι σε καθιστή θέση",
+  "As the muscles in their trunk strengthen, babies this age sit more steadily and start leaning over to reach for things — relaxed floor time gives them room to work on it.":
+    "Καθώς δυναμώνουν οι μύες του κορμού, τα μωρά αυτής της ηλικίας κάθονται πιο σταθερά και αρχίζουν να γέρνουν για να φτάσουν πράγματα — ο χαλαρός χρόνος στο πάτωμα τους δίνει χώρο να το δουλέψουν.",
+  "Sit your baby on the floor and stay close — a topple now and then is normal, and they will usually catch themselves with their arms.":
+    "Καθίστε το μωρό στο πάτωμα και μείνετε κοντά — μια τούμπα πού και πού είναι φυσιολογική, και συνήθως συγκρατείται με τα χέρια του.",
+  "Put a toy just to the side so they can lean over and reach for it.":
+    "Βάλτε ένα παιχνίδι λίγο στο πλάι ώστε να γείρει και να το φτάσει.",
+  "Give them relaxed floor time to work out rolling onto their tummy and getting back up to sitting on their own.":
+    "Δώστε του χαλαρό χρόνο στο πάτωμα για να βρει μόνο του πώς γυρίζει μπρούμυτα και πώς ξανακάθεται.",
+  "If they are not sitting by themselves by nine months, ask your paediatrician.":
+    "Αν δεν κάθεται μόνο του ως τους εννέα μήνες, ρωτήστε τον παιδίατρό σας.",
+
+  "Pass and bang": "Δώσε-πάρε και χτυπήματα",
+  "Passing a toy back and forth and playing with blocks uses the hand skills most babies show by 9 months — banging two things together and moving things from one hand to the other.":
+    "Το να δίνετε και να παίρνετε ένα παιχνίδι και το παιχνίδι με τουβλάκια χρησιμοποιεί τις δεξιότητες των χεριών που τα περισσότερα μωρά δείχνουν ως τους 9 μήνες — να χτυπούν δύο πράγματα μεταξύ τους και να τα περνούν από το ένα χέρι στο άλλο.",
+  "Sit together with a couple of safe blocks or cups.": "Καθίστε μαζί με δυο ασφαλή τουβλάκια ή κυπελάκια.",
+  "Pass one toy back and forth — my turn, your turn.": "Δώστε και πάρτε ένα παιχνίδι — η σειρά μου, η σειρά σου.",
+  "Let your baby bang two things together; it is part of how they explore at this age.":
+    "Αφήστε το να χτυπά δύο πράγματα μεταξύ τους· έτσι εξερευνά σε αυτή την ηλικία.",
+  "Dump blocks out of a container and put them back in together.":
+    "Αδειάστε τουβλάκια από ένα δοχείο και ξαναβάλτε τα μαζί.",
+
+  "Peek-a-boo": "Κου-κου",
+  "Peekaboo helps your baby learn object permanence — that people and things still exist when they are out of sight.":
+    "Το κου-κου βοηθά το μωρό να μάθει τη μονιμότητα του αντικειμένου — ότι άνθρωποι και πράγματα εξακολουθούν να υπάρχουν όταν δεν φαίνονται.",
+  "Lay a soft cloth over your baby's head and ask, \"Where's the baby?\" — once they know the game, they will pull it off and pop up grinning.":
+    "Ρίξτε ένα απαλό πανί πάνω από το κεφάλι του και ρωτήστε «πού είναι το μωρό;» — μόλις μάθει το παιχνίδι, θα το τραβήξει και θα ξεπροβάλει χαμογελαστό.",
+  "Hide behind a door or a piece of furniture, leaving a foot or arm showing as a clue for them to find you.":
+    "Κρυφτείτε πίσω από μια πόρτα ή ένα έπιπλο, αφήνοντας ένα πόδι ή ένα χέρι να φαίνεται για να σας βρει.",
+  "Take turns \"hiding\" your head under a large towel and letting them pull it off.":
+    "Εναλλάξ «κρύψτε» το κεφάλι σας κάτω από μια μεγάλη πετσέτα και αφήστε το να την τραβήξει.",
+  "Switch between variations to keep the game interesting.": "Αλλάζετε παραλλαγές για να μένει ενδιαφέρον το παιχνίδι.",
+
+  "Cushion crawl course": "Διαδρομή με μαξιλάρια",
+  "Crawling toward things they want, over and around soft obstacles, gives your baby lots of practice moving on their own.":
+    "Το μπουσούλημα προς πράγματα που θέλει, πάνω και γύρω από μαλακά εμπόδια, του δίνει πολλή εξάσκηση στο να κινείται μόνο του.",
+  "Sit on the floor and place a toy your baby likes just beyond their reach.":
+    "Καθίστε στο πάτωμα και βάλτε ένα παιχνίδι που του αρέσει λίγο πιο πέρα από όσο φτάνει.",
+  "Build a little course from pillows, boxes and sofa cushions for them to crawl over and around.":
+    "Φτιάξτε μια μικρή διαδρομή από μαξιλάρια, κουτιά και μαξιλάρια καναπέ, για να μπουσουλήσει πάνω και γύρω τους.",
+  "Hide behind one of the obstacles and pop out with a \"peekaboo!\"":
+    "Κρυφτείτε πίσω από ένα εμπόδιο και ξεπροβάλτε με ένα «κου-κου!»",
+  "Stay right beside them the whole time.": "Μείνετε ακριβώς δίπλα του όλη την ώρα.",
+  "Never leave your baby unsupervised on the course — if they slip between pillows or under a box, they might not be able to get out.":
+    "Μην αφήνετε ποτέ το μωρό χωρίς επίβλεψη στη διαδρομή — αν γλιστρήσει ανάμεσα στα μαξιλάρια ή κάτω από ένα κουτί, μπορεί να μην μπορεί να βγει.",
+
+  "Pull up and cruise": "Σηκώνεται και περπατά κρατημένο",
+  "Pulling up to stand and stepping sideways along furniture is how babies build up to walking, one hold at a time.":
+    "Το να τραβιέται όρθιο και να κάνει πλάγια βήματα κρατημένο από τα έπιπλα είναι ο τρόπος που τα μωρά χτίζουν το περπάτημα, ένα κράτημα τη φορά.",
+  "Let your baby pull up on a sturdy piece of furniture whenever the mood strikes.":
+    "Αφήστε το να τραβιέται όρθιο σε ένα σταθερό έπιπλο όποτε του έρθει.",
+  "If they get stuck standing and cry for help, gently show them how to bend their knees to lower themselves back down.":
+    "Αν κολλήσει όρθιο και κλαίει για βοήθεια, δείξτε του απαλά πώς να λυγίσει τα γόνατα για να κατέβει.",
+  "Once they feel steady, offer your hands so they can try small steps while holding on.":
+    "Μόλις νιώσει σταθερό, δώστε του τα χέρια σας για να δοκιμάσει μικρά βήματα κρατημένο.",
+  "When your hands are busy, let them cruise sideways along the furniture at their own pace.":
+    "Όταν τα χέρια σας είναι πιασμένα, αφήστε το να προχωρά πλάγια κατά μήκος των επίπλων με τον δικό του ρυθμό.",
+  "Make sure whatever your baby uses for support has no sharp edges and is properly weighted or attached to the floor.":
+    "Βεβαιωθείτε ότι ό,τι χρησιμοποιεί για στήριξη δεν έχει αιχμηρές γωνίες και είναι σταθερό ή στερεωμένο στο πάτωμα.",
+
+  "Name it, read it": "Ονόμασέ το, διάβασέ το",
+  "Chatting about what your baby can see and looking at simple picture books together helps them connect words to the things around them.":
+    "Το να μιλάτε για ό,τι βλέπει και να κοιτάτε μαζί απλά εικονογραφημένα βιβλία το βοηθά να συνδέσει τις λέξεις με τα πράγματα γύρω του.",
+  "Point out things around you as you go: \"Look at the car.\"":
+    "Δείχνετε πράγματα γύρω σας καθώς προχωράτε: «κοίτα το αυτοκίνητο».",
+  "Sit together with a very simple picture book and describe the pictures to your baby.":
+    "Καθίστε μαζί με ένα πολύ απλό εικονογραφημένο βιβλίο και περιγράψτε του τις εικόνες.",
+  "Try books with textures your baby can feel as you talk about each page.":
+    "Δοκιμάστε βιβλία με υφές που μπορεί να αγγίξει όσο μιλάτε για κάθε σελίδα.",
+  "If your baby starts to copy you, encourage them and repeat what they say.":
+    "Αν αρχίσει να σας μιμείται, ενθαρρύνετέ το και επαναλάβετε ό,τι λέει.",
+
+  "birth to 3 months": "γέννηση έως 3 μηνών",
+  "3 to 6 months": "3 έως 6 μηνών",
+  "6 to 9 months": "6 έως 9 μηνών",
+  "9 to 12 months": "9 έως 12 μηνών",
+  // ——— Fact of the day and the age brackets (domain/babyFacts.ts) ———
+  //
+  // Both halves of the card: the "right now she may be…" bullets, which are
+  // fragments the card lists, and the "did you know" sentences.
+  "seeing you best from 20–30 cm — feeding distance": "σας βλέπει καλύτερα από 20–30 εκ. — απόσταση ταΐσματος",
+  "recognising your voice; hearing is fully mature": "αναγνωρίζει τη φωνή σας· η ακοή είναι πλήρως ώριμη",
+  "knowing the scent of their own mother's milk": "ξεχωρίζει τη μυρωδιά του γάλακτος της μαμάς του",
+  "preferring your face over any pattern": "προτιμά το πρόσωπό σας από κάθε σχέδιο",
+  "Your baby sees you best from 20–30 cm away — almost exactly the distance to your face during a feed.":
+    "Το μωρό σας σάς βλέπει καλύτερα από 20–30 εκατοστά — σχεδόν ακριβώς η απόσταση από το πρόσωπό σας στο τάισμα.",
+  "Hearing is fully mature at birth — your baby may already turn toward familiar voices.":
+    "Η ακοή είναι πλήρως ώριμη από τη γέννηση — το μωρό σας μπορεί ήδη να γυρίζει προς γνώριμες φωνές.",
+  "Your baby can recognise the scent of their own mother's milk — smell is working from day one.":
+    "Το μωρό σας αναγνωρίζει τη μυρωδιά του γάλακτος της μαμάς του — η όσφρηση δουλεύει από την πρώτη μέρα.",
+  "Losing a little weight in the first days is normal — most babies are back at birthweight by 3 weeks.":
+    "Το να χάσει λίγο βάρος τις πρώτες μέρες είναι φυσιολογικό — τα περισσότερα μωρά επιστρέφουν στο βάρος γέννησης ως τις 3 εβδομάδες.",
+  "Faces are your baby's favourite thing to look at — preferred over any other pattern.":
+    "Τα πρόσωπα είναι το αγαπημένο θέαμα του μωρού σας — τα προτιμά από κάθε άλλο σχέδιο.",
+  "Those fleeting newborn smiles are practice runs — the real social smile arrives by the end of month two.":
+    "Εκείνα τα φευγαλέα χαμόγελα του νεογέννητου είναι πρόβες — το αληθινό κοινωνικό χαμόγελο έρχεται ως το τέλος του δεύτερου μήνα.",
+  "Your baby prefers sweet smells and turns away from bitter ones — taste and smell arrived ready.":
+    "Το μωρό σας προτιμά τις γλυκές μυρωδιές και απομακρύνεται από τις πικρές — γεύση και όσφρηση ήρθαν έτοιμες.",
+  "Talk softly and watch the tiny lip movements — that's your baby holding their side of the conversation.":
+    "Μιλήστε απαλά και προσέξτε τις μικροσκοπικές κινήσεις των χειλιών — έτσι κρατά το μωρό σας τη δική του πλευρά στη συζήτηση.",
+
+  "starting tummy time — a few supervised minutes at a time": "ξεκινά τον χρόνο μπρούμυτα — λίγα λεπτά κάθε φορά, υπό επίβλεψη",
+  "loving bold, high-contrast patterns": "λατρεύει έντονα σχέδια με μεγάλη αντίθεση",
+  "warming up for the first real smile (by ~2 months)": "προθερμαίνεται για το πρώτο αληθινό χαμόγελο (ως τους ~2 μήνες)",
+  "still seeing best up close, 20–30 cm": "βλέπει ακόμη καλύτερα από κοντά, 20–30 εκ.",
+  "Tummy time can start small: 3–5 supervised minutes, 2–3 times a day, while your baby is awake.":
+    "Ο χρόνος μπρούμυτα μπορεί να ξεκινήσει μικρός: 3–5 λεπτά υπό επίβλεψη, 2–3 φορές την ημέρα, με το μωρό ξύπνιο.",
+  "A real social smile is on its way — it usually appears by the end of the second month.":
+    "Ένα αληθινό κοινωνικό χαμόγελο είναι καθ’ οδόν — εμφανίζεται συνήθως ως το τέλος του δεύτερου μήνα.",
+  "High-contrast patterns fascinate your baby right now — bold shapes are easiest for new eyes.":
+    "Τα σχέδια με μεγάλη αντίθεση μαγεύουν το μωρό σας αυτή την περίοδο — τα έντονα σχήματα είναι τα πιο εύκολα για νέα μάτια.",
+  "Your baby still sees best at 20–30 cm — keep your face close and chat away.":
+    "Το μωρό σας βλέπει ακόμη καλύτερα στα 20–30 εκατοστά — κρατήστε το πρόσωπό σας κοντά και μιλάτε του.",
+  "Newborn eyes sometimes wander or cross — completely normal now, and it settles by 2–3 months.":
+    "Τα μάτια του νεογέννητου καμιά φορά «φεύγουν» ή αλληθωρίζουν — απολύτως φυσιολογικό τώρα, και διορθώνεται ως τους 2–3 μήνες.",
+  "Keep narrating your day — by around 3 months your chat starts getting answered with smiles.":
+    "Συνεχίστε να αφηγείστε τη μέρα σας — γύρω στους 3 μήνες η κουβέντα σας αρχίζει να απαντιέται με χαμόγελα.",
+
+  "smiling back when you talk — the real social smile": "χαμογελά όταν του μιλάτε — το αληθινό κοινωνικό χαμόγελο",
+  "learning to follow moving things with their eyes": "μαθαίνει να ακολουθεί με τα μάτια ό,τι κινείται",
+  "settling the newborn eye-wander as both eyes team up": "σταθεροποιεί το βλέμμα καθώς τα δύο μάτια συντονίζονται",
+  "building toward 15–30 minutes of tummy time a day": "χτίζει προς τα 15–30 λεπτά μπρούμυτα την ημέρα",
+  "That smile is real: a baby's first social smile usually appears by the end of the second month.":
+    "Αυτό το χαμόγελο είναι αληθινό: το πρώτο κοινωνικό χαμόγελο εμφανίζεται συνήθως ως το τέλος του δεύτερου μήνα.",
+  "Around 2–3 months the newborn eye-wander settles — your baby's eyes are learning to work as a team.":
+    "Γύρω στους 2–3 μήνες το «φευγάτο» βλέμμα του νεογέννητου σταθεροποιείται — τα μάτια του μαθαίνουν να δουλεύουν μαζί.",
+  "By 3 months your baby can follow a moving object with their eyes — try a slow toy sweep.":
+    "Ως τους 3 μήνες το μωρό σας ακολουθεί με τα μάτια ένα αντικείμενο που κινείται — δοκιμάστε ένα αργό πέρασμα με παιχνίδι.",
+  "Tummy time can build toward 15–30 minutes a day around 7 weeks — short sessions still count.":
+    "Ο χρόνος μπρούμυτα μπορεί να φτάσει τα 15–30 λεπτά την ημέρα γύρω στις 7 εβδομάδες — και οι σύντομες φορές μετράνε.",
+  "Your voice alone can now raise a smile — babies this age smile when you talk to them.":
+    "Μόνο η φωνή σας φέρνει πλέον χαμόγελο — τα μωρά αυτής της ηλικίας χαμογελούν όταν τους μιλάτε.",
+  "A few calm minutes of solo play builds self-soothing — the skill that later helps with settling to sleep.":
+    "Λίγα ήρεμα λεπτά μόνο του παιχνιδιού χτίζουν την αυτοκαταπράυνση — τη δεξιότητα που αργότερα βοηθά στο να κοιμηθεί.",
+
+  "seeing colours — and their shades — much better": "βλέπει πολύ καλύτερα τα χρώματα — και τις αποχρώσεις τους",
+  "babbling chains of sounds: ba-ba-ba, ma-ma-ma": "βγάζει αλυσίδες ήχων: μπα-μπα-μπα, μα-μα-μα",
+  "starting to respond to their own name": "αρχίζει να ανταποκρίνεται στο όνομά του",
+  "grabbing whole-hand and practising rolling": "πιάνει με όλη την παλάμη και εξασκείται στις τούμπες",
+  "By 4 months your baby is much better at seeing colours — and the shades between them.":
+    "Ως τους 4 μήνες το μωρό σας βλέπει πολύ καλύτερα τα χρώματα — και τις αποχρώσεις ανάμεσά τους.",
+  "Babies of 4–12 months do best on 12–16 hours of sleep in 24, naps included.":
+    "Τα μωρά 4–12 μηνών είναι καλύτερα με 12–16 ώρες ύπνου στο 24ωρο, μαζί με τους υπνάκους.",
+  "Grabbing starts whole-hand, like a mitten — the neat finger-and-thumb grip arrives around 9 months.":
+    "Το πιάσιμο ξεκινά με όλη την παλάμη, σαν γάντι — η λαβή με δείκτη και αντίχειρα έρχεται γύρω στους 9 μήνες.",
+  "Rolling practice is underway — by around 7 months most babies can roll both directions.":
+    "Η εξάσκηση στις τούμπες είναι σε εξέλιξη — ως τους 7 μήνες περίπου τα περισσότερα μωρά γυρίζουν και προς τις δύο κατευθύνσεις.",
+  "Between 4 and 7 months some of the most important changes happen quietly — senses and movement start working as a team.":
+    "Ανάμεσα στους 4 και τους 7 μήνες κάποιες από τις σημαντικότερες αλλαγές γίνονται αθόρυβα — αισθήσεις και κίνηση αρχίζουν να δουλεύουν μαζί.",
+  "Babbled chains — ba-ba-ba, ma-ma-ma — are real language practice. Answer back!":
+    "Οι αλυσίδες ήχων — μπα-μπα-μπα, μα-μα-μα — είναι πραγματική εξάσκηση στη γλώσσα. Απαντήστε του!",
+  "Your baby is learning their own name — watch for the head turn when you say it.":
+    "Το μωρό σας μαθαίνει το όνομά του — προσέξτε το γύρισμα του κεφαλιού όταν το λέτε.",
+  "Your tone speaks before your words — babies this age tell emotions apart by how you sound.":
+    "Ο τόνος σας μιλά πριν από τις λέξεις σας — τα μωρά αυτής της ηλικίας ξεχωρίζουν συναισθήματα από το πώς ακούγεστε.",
+  "Following moving things keeps sharpening — a slowly rolling ball is prime entertainment.":
+    "Το να ακολουθεί κινούμενα πράγματα βελτιώνεται συνεχώς — μια μπάλα που κυλά αργά είναι κορυφαία διασκέδαση.",
+
+  "spotting you across the room — depth perception is in": "σας εντοπίζει από την άλλη άκρη του δωματίου — ήρθε η αντίληψη βάθους",
+  "getting ready for first foods around 6 months": "ετοιμάζεται για τις πρώτες τροφές γύρω στους 6 μήνες",
+  "learning to sit without leaning on their arms": "μαθαίνει να κάθεται χωρίς να στηρίζεται στα χέρια",
+  "rolling both ways": "γυρίζει και προς τις δύο πλευρές",
+  "Around 5 months depth perception arrives — your baby can now spot you across the room.":
+    "Γύρω στους 5 μήνες έρχεται η αντίληψη βάθους — το μωρό σας μπορεί πλέον να σας εντοπίσει από την άλλη άκρη του δωματίου.",
+  "Around 6 months babies are ready to start exploring first foods alongside their milk.":
+    "Γύρω στους 6 μήνες τα μωρά είναι έτοιμα να αρχίσουν να εξερευνούν τις πρώτες τροφές μαζί με το γάλα τους.",
+  "Between 6 and 8 months most babies learn to sit upright without leaning on their arms.":
+    "Ανάμεσα στους 6 και τους 8 μήνες τα περισσότερα μωρά μαθαίνουν να κάθονται όρθια χωρίς να στηρίζονται στα χέρια.",
+  "By around 7 months most babies roll both ways — clear floor, big adventures.":
+    "Ως τους 7 μήνες περίπου τα περισσότερα μωρά γυρίζουν και προς τις δύο πλευρές — καθαρό πάτωμα, μεγάλες περιπέτειες.",
+  "Hide a toy half under a blanket — finding partly hidden things is a brand-new skill this season.":
+    "Κρύψτε ένα παιχνίδι μισό κάτω από μια κουβέρτα — το να βρίσκει μισοκρυμμένα πράγματα είναι ολοκαίνουργια δεξιότητα αυτή την περίοδο.",
+  "Your baby reads the room now — responding to other people's emotions, and often simply joyful.":
+    "Το μωρό σας «διαβάζει» τώρα την ατμόσφαιρα — ανταποκρίνεται στα συναισθήματα των άλλων, και συχνά είναι απλώς χαρούμενο.",
+  "From 6 to 12 months, breastmilk can still provide half or more of a baby's nutritional needs.":
+    "Από τους 6 ως τους 12 μήνες, το μητρικό γάλα μπορεί ακόμη να καλύπτει τις μισές ή και περισσότερες από τις διατροφικές ανάγκες ενός μωρού.",
+
+  "playing peekaboo like it's science — object permanence": "παίζει κου-κου σαν επιστήμονας — μονιμότητα του αντικειμένου",
+  "working on the finger-and-thumb pincer grasp": "δουλεύει τη λαβή με δείκτη και αντίχειρα",
+  "judging distances well — crawling season": "κρίνει καλά τις αποστάσεις — εποχή μπουσουλήματος",
+  "sitting steadily, hands free for toys": "κάθεται σταθερά, με τα χέρια ελεύθερα για παιχνίδια",
+  "Peekaboo is brain-building: your baby is learning that things still exist when out of sight.":
+    "Το κου-κου χτίζει εγκέφαλο: το μωρό σας μαθαίνει ότι τα πράγματα υπάρχουν ακόμη κι όταν δεν φαίνονται.",
+  "The pincer grasp — finger and thumb — usually clicks in around 9 months. Tiny objects, big skill.":
+    "Η λαβή με δείκτη και αντίχειρα «κουμπώνει» συνήθως γύρω στους 9 μήνες. Μικροσκοπικά αντικείμενα, μεγάλη δεξιότητα.",
+  "By around 9 months babies judge distance well — handy for the crawling adventures ahead.":
+    "Ως τους 9 μήνες περίπου τα μωρά κρίνουν καλά τις αποστάσεις — χρήσιμο για τις περιπέτειες του μπουσουλήματος που έρχονται.",
+  "Sitting steadily without support usually lands in this stretch — hands finally free for toys.":
+    "Το σταθερό κάθισμα χωρίς στήριξη έρχεται συνήθως σε αυτό το διάστημα — επιτέλους ελεύθερα χέρια για παιχνίδια.",
+  "Your baby understands far more words than they can say — name a favourite toy and watch their eyes find it.":
+    "Το μωρό σας καταλαβαίνει πολύ περισσότερες λέξεις απ’ όσες λέει — ονομάστε ένα αγαπημένο παιχνίδι και δείτε τα μάτια του να το βρίσκουν.",
+  "Pointing and gesturing counts as talking — it's the bridge your baby crosses on the way to words.":
+    "Το δείξιμο και οι χειρονομίες μετράνε ως ομιλία — είναι η γέφυρα που περνά το μωρό σας προς τις λέξεις.",
+
+  "pulling up to stand and cruising the furniture": "τραβιέται όρθιο και προχωρά κρατημένο από τα έπιπλα",
+  "understanding far more words than they can say": "καταλαβαίνει πολύ περισσότερες λέξεις απ’ όσες λέει",
+  "pointing and gesturing to talk to you": "δείχνει και κάνει χειρονομίες για να σας μιλήσει",
+  "maybe trying first steps around the first birthday": "ίσως δοκιμάσει τα πρώτα βήματα γύρω στα πρώτα γενέθλια",
+  "Pulling up to stand, then cruising along the furniture — the pre-walking curriculum is in session.":
+    "Τραβιέται όρθιο, και μετά προχωρά κρατημένο από τα έπιπλα — το μάθημα πριν το περπάτημα έχει αρχίσει.",
+  "Many first steps arrive around the first birthday — earlier or later is completely normal.":
+    "Πολλά πρώτα βήματα έρχονται γύρω στα πρώτα γενέθλια — νωρίτερα ή αργότερα είναι απολύτως φυσιολογικό.",
+  "Keep switching up peekaboo — the game teaches your baby that hidden things still exist.":
+    "Συνεχίστε να αλλάζετε το κου-κου — το παιχνίδι μαθαίνει στο μωρό σας ότι τα κρυμμένα πράγματα εξακολουθούν να υπάρχουν.",
+  "That thumb-and-finger pickup of every crumb is the pincer grasp — right on schedule from about 9 months.":
+    "Εκείνο το μάζεμα κάθε ψίχουλου με αντίχειρα και δείκτη είναι η λαβή τσιμπίδας — ακριβώς στην ώρα της, από τους 9 μήνες περίπου.",
+  "'Mama' often first slips out by accident — then your baby notices the attention it wins and says it on purpose.":
+    "Το «μαμά» πρώτη φορά ξεφεύγει συνήθως κατά λάθος — και μετά το μωρό σας προσέχει την προσοχή που κερδίζει και το λέει επίτηδες.",
+  "Your baby is copying the gestures you make while you talk — you are the curriculum.":
+    "Το μωρό σας αντιγράφει τις χειρονομίες που κάνετε όσο μιλάτε — εσείς είστε το μάθημα.",
+  "Understanding runs ahead of speech — your baby comprehends more than you suspect.":
+    "Η κατανόηση τρέχει μπροστά από την ομιλία — το μωρό σας καταλαβαίνει περισσότερα απ’ όσα υποψιάζεστε.",
+
+  "walking wide-legged and wobbly — on purpose": "περπατά με ανοιχτά πόδια και τρεκλίζοντας — επίτηδες",
+  "turning first steps into confident walking fast": "μετατρέπει γρήγορα τα πρώτα βήματα σε σίγουρο περπάτημα",
+  "still loving hide-and-find games": "λατρεύει ακόμη τα παιχνίδια κρυφτού",
+  "understanding much more than they can say": "καταλαβαίνει πολύ περισσότερα απ’ όσα μπορεί να πει",
+  "From first steps to confident walking often takes just days — and starting later is normal too.":
+    "Από τα πρώτα βήματα ως το σίγουρο περπάτημα συχνά περνούν λίγες μόνο μέρες — και το να ξεκινήσει αργότερα είναι επίσης φυσιολογικό.",
+  "New walkers go wide-legged and wobbly on purpose — feet apart is how they balance.":
+    "Οι νέοι περιπατητές ανοίγουν τα πόδια και τρεκλίζουν επίτηδες — έτσι ισορροπούν.",
+  "WHO supports continued breastfeeding up to 2 years or beyond, alongside family foods.":
+    "Ο ΠΟΥ στηρίζει τη συνέχιση του θηλασμού ως τα 2 χρόνια ή και παραπάνω, μαζί με το οικογενειακό φαγητό.",
+  "Peekaboo, hide-the-toy, where-did-it-go — object permanence games stay favourites well past the first year.":
+    "Κου-κου, κρύψε-το-παιχνίδι, πού-πήγε — τα παιχνίδια μονιμότητας του αντικειμένου μένουν αγαπημένα πολύ μετά τον πρώτο χρόνο.",
+  "Toddlers of 1–2 years do best on 11–14 hours of sleep in 24, naps included.":
+    "Τα νήπια 1–2 ετών είναι καλύτερα με 11–14 ώρες ύπνου στο 24ωρο, μαζί με τους υπνάκους.",
+  "In the second year, breastmilk can still provide up to a third of a child's nutritional needs.":
+    "Τον δεύτερο χρόνο, το μητρικό γάλα μπορεί ακόμη να καλύπτει ως και το ένα τρίτο των διατροφικών αναγκών ενός παιδιού.",
+  // ——— Day band, forecast, and the guide's source notes ———
+  "Diapers": "Πάνες",
+  "now": "τώρα",
+  "every {duration}": "κάθε {duration}",
+  "The percentile tables behind the reference band (retrieved 7 Aug 2026).":
+    "Οι πίνακες εκατοστημορίων πίσω από τη ζώνη αναφοράς (ανακτήθηκαν 7 Αυγ. 2026).",
+  "Independent republication used to cross-check every value.":
+    "Ανεξάρτητη αναδημοσίευση, που χρησιμοποιήθηκε για διασταύρωση κάθε τιμής.",
+  "Typical newborn weight loss, regain and gain patterns.":
+    "Τυπικά μοτίβα απώλειας, ανάκτησης και αύξησης βάρους στα νεογέννητα.",
+  "Weighing guidance and when to talk to a professional.":
+    "Οδηγίες ζυγίσματος και πότε να απευθυνθείτε σε επαγγελματία.",
+  "Milestone pages behind several Play & development cards — each card also links its exact page.":
+    "Οι σελίδες οροσήμων πίσω από αρκετές κάρτες Παιχνιδιού και ανάπτυξης — κάθε κάρτα οδηγεί και στη δική της σελίδα.",
+  "Play ideas and learning-to-talk guidance behind the early Play & development cards.":
+    "Ιδέες παιχνιδιού και οδηγίες για την εκμάθηση της ομιλίας, πίσω από τις πρώιμες κάρτες Παιχνιδιού και ανάπτυξης.",
+  "a calm, private baby tracker · free, no ads": "ήρεμο, ιδιωτικό ημερολόγιο μωρού · δωρεάν",
+  // ——— The release that announces Greek (domain/changelog.ts) ———
+
+  // ===== Since September: everything main added, translated in November 2026 =====
+
+  // --- Forms: the log and edit sheets, fields, photos ---
+  "Enter an amount up to 33.8 oz, or leave it empty.": "Γράψτε ποσότητα έως 33.8 oz ή αφήστε το κενό.",
+  "Enter an amount between 1 and 1,000 ml, or leave it empty.": "Γράψτε ποσότητα από 1 έως 1000 ml ή αφήστε το κενό.",
+  "A nursing timer is already running. Stop it before starting another.": "Τρέχει ήδη χρονόμετρο θηλασμού. Σταματήστε το πριν ξεκινήσετε άλλο.",
+  "{side} nursing saved": "Αποθηκεύτηκε θηλασμός · {side}",
+  "{side} timer started": "Ξεκίνησε το χρονόμετρο θηλασμού · {side}",
+  "Choose when it finished — not in the future.": "Διαλέξτε πότε τελείωσε — όχι στο μέλλον.",
+  "Pump saved — {duration} · {amount}": "Η άντληση αποθηκεύτηκε — {duration} · {amount}",
+  "Pump saved — {duration}": "Η άντληση αποθηκεύτηκε — {duration}",
+  "{what} saved": "Αποθηκεύτηκε: {what}",
+  "{weight} saved": "Η μέτρηση αποθηκεύτηκε — {weight}",
+  "Another nursing timer is already running. Stop it first.": "Τρέχει ήδη άλλο χρονόμετρο θηλασμού. Σταματήστε το πρώτα.",
+  "Another sleep timer is already running. Stop it first.": "Τρέχει ήδη άλλο χρονόμετρο ύπνου. Σταματήστε το πρώτα.",
+  "Another burp timer is already running. Stop it first.": "Τρέχει ήδη άλλο χρονόμετρο ρεψίματος. Σταματήστε το πρώτα.",
+  "Another tummy timer is already running. Stop it first.": "Τρέχει ήδη άλλο χρονόμετρο για μπρούμυτα. Σταματήστε το πρώτα.",
+  "What was done?": "Τι έγινε;",
+  "{what} updated": "Ενημερώθηκε: {what}",
+  "How wet": "Πόση τσίσα",
+  "Light (how wet)": "Λίγη",
+  "Medium (how wet)": "Μέτρια",
+  "Heavy (how wet)": "Πολλή",
+  "Pumping side": "Πλευρά άντλησης",
+  "L": "Α",
+  "R": "Δ",
+  "LR": "ΑΔ",
+  "Not measured": "Δεν μετρήθηκε",
+  "Saved to {name}’s monthly photos": "{name}: αποθηκεύτηκε στις μηνιαίες φωτογραφίες",
+  "Saved to your baby’s monthly photos": "Αποθηκεύτηκε στις μηνιαίες φωτογραφίες του μωρού σας",
+  "Timer": "Χρονόμετρο",
+  "Started": "Ξεκίνησε",
+  "Ended": "Τελείωσε",
+  "The timer stays active if you close the app.": "Το χρονόμετρο συνεχίζει ακόμη κι αν κλείσετε την εφαρμογή.",
+  "This session saves straight to your timeline.": "Η συνεδρία αποθηκεύεται κατευθείαν στο ιστορικό σας.",
+  "Start left timer": "Έναρξη χρονομέτρου · αριστερά",
+  "Start right timer": "Έναρξη χρονομέτρου · δεξιά",
+  "Save left session": "Αποθήκευση συνεδρίας · αριστερά",
+  "Save right session": "Αποθήκευση συνεδρίας · δεξιά",
+  "Pumping": "Άντληση",
+  "Log a pump": "Καταγραφή άντλησης",
+  "When it finished, how long, and how much if you measured.": "Πότε τελείωσε, πόση ώρα κράτησε και πόσο γάλα βγήκε, αν το μετρήσατε.",
+  "Finished": "Τελείωσε",
+  "How long": "Πόση ώρα",
+  "{n} minutes": "{n} λεπτά",
+  "Save {amount} {unit} · {duration}": "Αποθήκευση {amount} {unit} · {duration}",
+  "Save pump · {duration}": "Αποθήκευση άντλησης · {duration}",
+  "Written down exactly as you gave it. This app never suggests a dose — that comes from the label or your doctor.": "Καταγράφεται ακριβώς όπως τη δώσατε. Η εφαρμογή δεν προτείνει ποτέ δόση — αυτή τη λέει η συσκευασία ή ο γιατρός σας.",
+  "A record of firsts and reactions, not a nutrition score. Note anything unusual — a rash or vomiting after a new food is worth telling your doctor about.": "Καταγραφή των πρώτων γεύσεων και των αντιδράσεων, όχι βαθμολογία διατροφής. Σημειώστε ό,τι ασυνήθιστο — ένα εξάνθημα ή εμετός μετά από νέα τροφή αξίζει να το πείτε στον γιατρό σας.",
+  "Diaper change": "Αλλαγή πάνας",
+  "Photo": "Φωτογραφία",
+  "Anything unusual — for you, or to show the doctor.": "Ό,τι ασυνήθιστο — για εσάς ή για να το δείξετε στον γιατρό.",
+  "{day} at {time}": "{day} στις {time}",
+  "What was done": "Τι έγινε",
+  "Delete this entry": "Διαγραφή καταχώρισης",
+  "Name, birthday and picture. Shared only with your family’s phones.": "Όνομα, γενέθλια και φωτογραφία. Μοιράζονται μόνο με τα κινητά της οικογένειάς σας.",
+  "Tap Save profile to keep this picture.": "Πατήστε «Αποθήκευση προφίλ» για να κρατήσετε αυτή τη φωτογραφία.",
+  "Kept on this phone — and, with Family Sync, on your family’s other phones. Never public.": "Μένει σε αυτό το κινητό — και, με το Family Sync, στα άλλα κινητά της οικογένειάς σας. Ποτέ δημόσια.",
+  "Bottle and Nursing are always on Today — this only decides which comes first.": "Το Μπιμπερό και ο Θηλασμός είναι πάντα στο Σήμερα — αυτό αποφασίζει μόνο ποιο έρχεται πρώτο.",
+  "Enter a bottle amount between {min} and {max} ml.": "Γράψτε ποσότητα μπιμπερό από {min} έως {max} ml.",
+  "Enter a weight between {min} and {max} grams.": "Γράψτε βάρος από {min} έως {max} γραμμάρια.",
+  "Enter a length between {min} and {max} centimetres.": "Γράψτε μήκος από {min} έως {max} εκατοστά.",
+  "Enter a head measurement between {min} and {max} centimetres.": "Γράψτε περίμετρο κεφαλιού από {min} έως {max} εκατοστά.",
+  "Enter a temperature between {min} and {max} °C.": "Γράψτε θερμοκρασία από {min} έως {max} °C.",
+  "Enter a weight between {min} and {max} lb.": "Γράψτε βάρος από {min} έως {max} lb.",
+  "Enter a length between {min} and {max} inches.": "Γράψτε μήκος από {min} έως {max} ίντσες.",
+  "Enter a head measurement between {min} and {max} inches.": "Γράψτε περίμετρο κεφαλιού από {min} έως {max} ίντσες.",
+  "Enter a temperature between {min} and {max} °F.": "Γράψτε θερμοκρασία από {min} έως {max} °F.",
+  "Add a photo": "Προσθήκη φωτογραφίας",
+  "Preparing photo…": "Ετοιμάζεται η φωτογραφία…",
+  "Photo added": "Η φωτογραφία προστέθηκε",
+  "Photo removed": "Η φωτογραφία αφαιρέθηκε",
+  "Preparing…": "Ετοιμάζεται…",
+  "Change photo": "Αλλαγή φωτογραφίας",
+  "Camera or gallery": "Κάμερα ή συλλογή",
+  "View photo full size": "Προβολή φωτογραφίας σε πλήρες μέγεθος",
+  "Photo not on this phone yet": "Η φωτογραφία δεν έχει φτάσει ακόμη σε αυτό το κινητό",
+  "Remove photo": "Αφαίρεση φωτογραφίας",
+  "That photo could not be prepared on this phone — try another one.": "Αυτή η φωτογραφία δεν μπόρεσε να ετοιμαστεί σε αυτό το κινητό — δοκιμάστε μια άλλη.",
+  "This photo hasn’t reached this phone yet.": "Αυτή η φωτογραφία δεν έχει φτάσει ακόμη σε αυτό το κινητό.",
+  "Choose a valid start time that is not in the future.": "Διαλέξτε σωστή ώρα έναρξης, όχι στο μέλλον.",
+  "The end time must be after the start and not in the future.": "Η ώρα λήξης πρέπει να είναι μετά την έναρξη και όχι στο μέλλον.",
+  "Add a temperature or a note.": "Προσθέστε θερμοκρασία ή σημείωση.",
+
+  // --- Today: tiles, diaper wetness, medicine, routines, recap ---
+  "both sides": "και οι δύο πλευρές",
+  "Nursing · {duration}": "Θηλασμός · {duration}",
+  "Add the 1‑year photo": "Προσθέστε τη φωτογραφία του πρώτου χρόνου",
+  "Add the {n}‑year photo": "Προσθέστε τη φωτογραφία των {n} χρόνων",
+  "Add the 1‑month photo": "Προσθέστε τη φωτογραφία του πρώτου μήνα",
+  "Add the {n}‑month photo": "Προσθέστε τη φωτογραφία των {n} μηνών",
+  "1 day late": "1 μέρα καθυστέρηση",
+  "{n} days late": "{n} μέρες καθυστέρηση",
+  "{name} vaccine · {when}": "Εμβόλιο {name} · {when}",
+  "Vaccine vaccine · {when}": "Εμβόλιο · {when}",
+  "Monthly photos": "Μηνιαίες φωτογραφίες",
+  "Done — stop tummy time timer": "Τέλος — σταμάτα το χρονόμετρο για μπρούμυτα",
+  "<1m": "<1λ",
+  "{done} today · start the timer": "{done} σήμερα · ξεκίνα το χρονόμετρο",
+  "Start the timer — awake, and watched": "Ξεκινήστε το χρονόμετρο — ξύπνιο και με επίβλεψη",
+  "None yet today · aim for {goal}, awake and watched": "Τίποτα ακόμα σήμερα · στόχος {goal}, ξύπνιο και με επίβλεψη",
+  "{sofar} of {goal} today · {left} to go": "{sofar} από {goal} σήμερα · μένουν {left}",
+  "{done} today · today’s {goal} done": "{done} σήμερα · ο σημερινός στόχος ({goal}) πιάστηκε",
+  "{label} — stop sleep timer": "{label} — σταμάτα το χρονόμετρο ύπνου",
+  "{label} — stop burp timer": "{label} — σταμάτα το χρονόμετρο ρεψίματος",
+  "{label} — stop nursing timer": "{label} — σταμάτα το χρονόμετρο θηλασμού",
+  "{label} — stop {type} timer": "{label} — σταμάτα το χρονόμετρο ({type})",
+  "Edit — change when this {type} started or ended": "Επεξεργασία — άλλαξε πότε ξεκίνησε ή τελείωσε ({type})",
+  "Tummy time started": "Ξεκίνησε ο χρόνος μπρούμυτα",
+  "Earlier": "Νωρίτερα",
+  "{name}’s profile and picture": "{name} — προφίλ και φωτογραφία",
+  "Log the first feed when it happens — one tap on Bottle, or Left or Right under Nursing.": "Καταγράψτε το πρώτο τάισμα όταν γίνει — ένα άγγιγμα στο Μπιμπερό, ή Αριστερά ή Δεξιά στον Θηλασμό.",
+  "Wet + dirty": "Τσίσα και κακά",
+  "Add photo": "Προσθήκη φωτογραφίας",
+  "Light wet": "Λίγη τσίσα",
+  "Medium wet": "Μέτρια τσίσα",
+  "Heavy wet": "Πολλή τσίσα",
+  "Pumped {ago}": "Άντληση {ago}",
+  "When, how long, how much": "Πότε, πόση ώρα, πόσο",
+  "Vaccines": "Εμβόλια",
+  "{name} 1 day late": "{name}: 1 μέρα καθυστέρηση",
+  "Vaccine": "Εμβόλιο",
+  "{name} {n} days late": "{name}: {n} μέρες καθυστέρηση",
+  "next: {name} {when}": "επόμενο: {name} {when}",
+  "vaccine": "εμβόλιο",
+  "Next: {name} {when}": "Επόμενο: {name} {when}",
+  "Last: {name} · {day}": "Τελευταίο: {name} · {day}",
+  "What was given, and what is next": "Τι έγινε και τι ακολουθεί",
+  "A photo and a note each month": "Μια φωτογραφία και μια σημείωση κάθε μήνα",
+  "{title} summary": "{title} — σύνοψη",
+  "No feeds, changes or sleep logged yet today.": "Δεν έχουν καταγραφεί ακόμα ταΐσματα, αλλαγές ή ύπνος σήμερα.",
+  "No feeds, changes or sleep logged on this day.": "Δεν καταγράφηκαν ταΐσματα, αλλαγές ή ύπνος αυτή τη μέρα.",
+  "1 diaper": "1 πάνα",
+  "{n} diapers": "{n} πάνες",
+  "1 burp": "1 ρέψιμο",
+  "{n} burps": "{n} ρεψίματα",
+  "1 measurement or note": "1 μέτρηση ή σημείωση",
+  "{n} measurements and notes": "{n} μετρήσεις και σημειώσεις",
+  "Burps": "Ρεψίματα",
+  "No feeds, nappies or sleep logged on {day}": "Δεν καταγράφηκαν ταΐσματα, πάνες ή ύπνος την {day}",
+  "so far today": "μέχρι τώρα σήμερα",
+  "on {day}": "την {day}",
+  "{what} per day — tap a day for its total": "{what} ανά ημέρα — πατήστε μια μέρα για το σύνολό της",
+  "avg": "μ.ό.",
+  "Today's routine": "Η ρουτίνα της ημέρας",
+  "Has a photo": "Έχει φωτογραφία",
+
+  // --- Settings, onboarding, Family Sync, recovery, install ---
+  "Around {time}": "Γύρω στις {time}",
+  "Saves a file with all your entries (not photos) — keep it in a synced folder to be safe": "Αποθηκεύει ένα αρχείο με όλες τις καταχωρίσεις (όχι τις φωτογραφίες) — φυλάξτε το σε συγχρονισμένο φάκελο για σιγουριά",
+  "Deletes every entry and photo on this device — a backup keeps entries, not photos": "Διαγράφει κάθε καταχώριση και φωτογραφία σε αυτή τη συσκευή — το αντίγραφο ασφαλείας κρατά τις καταχωρίσεις, όχι τις φωτογραφίες",
+  "Entries, and any photos you add, are stored in your family’s private space in the cloud so both phones stay in step — never public. Anonymous usage statistics help improve the app.": "Οι καταχωρίσεις, και όσες φωτογραφίες προσθέσετε, φυλάσσονται στον ιδιωτικό χώρο της οικογένειάς σας στο cloud ώστε τα δύο κινητά να μένουν συγχρονισμένα — ποτέ δημόσια. Ανώνυμα στατιστικά χρήσης βοηθούν στη βελτίωση της εφαρμογής.",
+  "Your baby’s entries and photos stay in this browser until you turn on Family Sync. Anonymous usage statistics help improve the app.": "Οι καταχωρίσεις και οι φωτογραφίες του μωρού σας μένουν σε αυτό το πρόγραμμα μέχρι να ενεργοποιήσετε το Family Sync. Ανώνυμα στατιστικά χρήσης βοηθούν στη βελτίωση της εφαρμογής.",
+  "Numalog · build {version}": "Numalog · έκδοση {version}",
+  "Free, private baby tracker": "Δωρεάν, ιδιωτικό ημερολόγιο μωρού",
+  "Log feeds, diapers, sleep, pumping and growth in seconds. Free, no account needed — your entries stay on this device until you choose to share them.": "Καταγράψτε ταΐσματα, πάνες, ύπνο, άντληση και ανάπτυξη σε δευτερόλεπτα. Δωρεάν, χωρίς λογαριασμό — οι καταχωρίσεις σας μένουν σε αυτή τη συσκευή μέχρι να επιλέξετε να τις μοιραστείτε.",
+  "Bottle and Nursing are always there — this only decides which comes first.": "Το Μπιμπερό και ο Θηλασμός είναι πάντα εκεί — αυτό αποφασίζει μόνο ποιο έρχεται πρώτο.",
+  "Also: pumping, WHO growth charts, vaccines, medicine, solids, monthly photos, white noise, reminders, a summary PDF for your pediatrician.": "Επίσης: άντληση, καμπύλες ανάπτυξης ΠΟΥ, εμβόλια, φάρμακα, στερεές τροφές, μηνιαίες φωτογραφίες, λευκός θόρυβος, υπενθυμίσεις και σύνοψη σε PDF για τον παιδίατρό σας.",
+  "Free guides": "Δωρεάν οδηγοί",
+  "Newborn": "Νεογέννητο",
+  "2–6 weeks": "2–6 εβδομάδες",
+  "6 weeks–3 months": "6 εβδομάδες–3 μήνες",
+  "3–4 months": "3–4 μήνες",
+  "5–6 months": "5–6 μήνες",
+  "7–8 months": "7–8 μήνες",
+  "9–11 months": "9–11 μήνες",
+  "1 year": "1 έτος",
+  "When to call a doctor": "Πότε να καλέσετε γιατρό",
+  "How much milk": "Πόσο γάλα",
+  "Diaper bag checklist": "Λίστα για την τσάντα του μωρού",
+  "Photos stay at this address. With Family Sync on, they come back on the new one once it joins your family too.": "Οι φωτογραφίες μένουν σε αυτή τη διεύθυνση. Με το Family Sync ενεργό, επιστρέφουν και στη νέα μόλις μπει κι αυτή στην οικογένειά σας.",
+  "{name}'s log — {entries} — would be copied to the same app at its other address.": "Το ημερολόγιο του μωρού {name} — {entries} — θα αντιγραφεί στην ίδια εφαρμογή, στην άλλη της διεύθυνση.",
+  "Download the saved copy first": "Πρώτα λήψη του αποθηκευμένου αντιγράφου",
+  "You’re inside {name}’s built-in browser, which can’t install apps — and worse, it keeps your entries inside its own storage.": "Είστε μέσα στο ενσωματωμένο πρόγραμμα περιήγησης του {name}, που δεν μπορεί να εγκαταστήσει εφαρμογές — και, ακόμη χειρότερα, κρατά τις καταχωρίσεις σας στον δικό του χώρο.",
+  "Tap the {dots} menu in the corner and choose {open} (or copy the link below and paste it into Safari or Chrome), then install from there.": "Πατήστε το μενού {dots} στη γωνία και επιλέξτε {open} (ή αντιγράψτε τον σύνδεσμο παρακάτω και επικολλήστε τον στο Safari ή στο Chrome) και εγκαταστήστε από εκεί.",
+  "Tap the {share} button {icon} below, then choose {add}.": "Πατήστε το κουμπί {share} {icon} κάτω και μετά επιλέξτε {add}.",
+  "On an iPhone or iPad the install lives in Safari: open {site} there, tap the {share} button {icon}, then {add}.": "Σε iPhone ή iPad η εγκατάσταση γίνεται από το Safari: ανοίξτε εκεί το {site}, πατήστε το κουμπί {share} {icon} και μετά {add}.",
+  "Open your browser’s menu and look for {install} or {add}.": "Ανοίξτε το μενού του προγράμματος περιήγησης και βρείτε το {install} ή το {add}.",
+  "Share": "Κοινοποίηση",
+  "Couldn't reach sync. Try again in a moment.": "Ο συγχρονισμός δεν απαντά. Δοκιμάστε ξανά σε λίγο.",
+  "Sync request failed": "Ο συγχρονισμός απέτυχε",
+  "Welcome back — your log is on its way.": "Καλώς ήρθατε πάλι — το ημερολόγιό σας έρχεται.",
+  "Could not remove that phone — try again when you have signal.": "Δεν ήταν δυνατή η αφαίρεση του κινητού — δοκιμάστε ξανά όταν έχετε σήμα.",
+  "Synced — 1 new from your partner": "Συγχρονίστηκε — 1 νέα καταχώριση από τον σύντροφό σας",
+  "Synced — {n} new from your partner": "Συγχρονίστηκε — {n} νέες καταχωρίσεις από τον σύντροφό σας",
+
+  // --- App shell: toasts, confirms, notifications ---
+  "Recovery email confirmed — your log is protected.": "Το email ανάκτησης επιβεβαιώθηκε — το ημερολόγιό σας προστατεύεται.",
+  "Bring 1 entry for {name} across from the app's other address? Existing entries stay; newer versions win.": "Να μεταφερθεί 1 καταχώριση του μωρού {name} από την άλλη διεύθυνση της εφαρμογής; Οι υπάρχουσες καταχωρίσεις μένουν· οι νεότερες εκδοχές υπερισχύουν.",
+  "Bring {n} entries for {name} across from the app's other address? Existing entries stay; newer versions win.": "Να μεταφερθούν {n} καταχωρίσεις του μωρού {name} από την άλλη διεύθυνση της εφαρμογής; Οι υπάρχουσες καταχωρίσεις μένουν· οι νεότερες εκδοχές υπερισχύουν.",
+  "Bring 1 entry across from the app's other address? Existing entries stay; newer versions win.": "Να μεταφερθεί 1 καταχώριση από την άλλη διεύθυνση της εφαρμογής; Οι υπάρχουσες καταχωρίσεις μένουν· οι νεότερες εκδοχές υπερισχύουν.",
+  "Bring {n} entries across from the app's other address? Existing entries stay; newer versions win.": "Να μεταφερθούν {n} καταχωρίσεις από την άλλη διεύθυνση της εφαρμογής; Οι υπάρχουσες καταχωρίσεις μένουν· οι νεότερες εκδοχές υπερισχύουν.",
+  "That log could not be read": "Αυτό το ημερολόγιο δεν διαβάζεται",
+  "Time to check feeding cues": "Ώρα να δείτε τα σημάδια πείνας",
+  "A feed reminder is due. Follow your baby’s cues and care plan.": "Ήρθε η ώρα της υπενθύμισης ταΐσματος. Ακολουθήστε τα σημάδια του μωρού σας και τις οδηγίες του γιατρού σας.",
+  "Diaper check": "Έλεγχος πάνας",
+  "It has been a while since the last change.": "Έχει περάσει αρκετή ώρα από την τελευταία αλλαγή.",
+  "News and updates — something new": "Νέα και ενημερώσεις — υπάρχει κάτι καινούργιο",
+  "News and updates": "Νέα και ενημερώσεις",
+  "Tracker": "Ημερολόγιο",
+  "1 saved entry could not be read and was skipped. Everything else loaded normally.": "1 αποθηκευμένη καταχώριση δεν μπόρεσε να διαβαστεί και παραλείφθηκε. Όλα τα υπόλοιπα φορτώθηκαν κανονικά.",
+  "{n} saved entries could not be read and were skipped. Everything else loaded normally.": "{n} αποθηκευμένες καταχωρίσεις δεν μπόρεσαν να διαβαστούν και παραλείφθηκαν. Όλα τα υπόλοιπα φορτώθηκαν κανονικά.",
+  "Your saved data could not be read. It was not overwritten.": "Τα αποθηκευμένα δεδομένα σας δεν μπόρεσαν να διαβαστούν. Δεν αντικαταστάθηκαν.",
+  "This browser is blocking local storage. New entries may not persist.": "Ο browser μπλοκάρει την τοπική αποθήκευση. Οι νέες καταχωρίσεις μπορεί να μη διατηρηθούν.",
+  "A change from another tab could not be read. This tab kept its current data.": "Μια αλλαγή από άλλη καρτέλα δεν μπόρεσε να διαβαστεί. Αυτή η καρτέλα κράτησε τα δεδομένα που είχε.",
+  "This browser could not save the latest change. Your previous data is still intact.": "Ο browser δεν μπόρεσε να αποθηκεύσει την τελευταία αλλαγή. Τα προηγούμενα δεδομένα σας είναι ανέπαφα.",
+  "Your log is getting large for this browser. Download a backup so nothing is ever lost.": "Το ημερολόγιό σας μεγαλώνει πολύ για αυτόν τον browser. Κατεβάστε ένα αντίγραφο ασφαλείας, για να μη χαθεί ποτέ τίποτα.",
+  "tummy time timer": "χρονόμετρο μπρούμυτα",
+  "Debug file saved — this is not your real log": "Το δοκιμαστικό αρχείο αποθηκεύτηκε — δεν είναι το πραγματικό σας ημερολόγιο",
+  "Backup saved to your device": "Το αντίγραφο ασφαλείας αποθηκεύτηκε στη συσκευή σας",
+  "Debug file shared — this is not your real log": "Το δοκιμαστικό αρχείο στάλθηκε — δεν είναι το πραγματικό σας ημερολόγιο",
+  "Shared — have your partner open it in their Numalog": "Στάλθηκε — ζητήστε από τον σύντροφό σας να το ανοίξει στο Numalog",
+  "Reset the unreadable local copy? Download recovery first if you may need it.": "Να μηδενιστεί το τοπικό αντίγραφο που δεν διαβάζεται; Κατεβάστε πρώτα το αρχείο ανάκτησης, αν μπορεί να το χρειαστείτε.",
+  "This browser cannot create a recovery copy. Merge the backup anyway without rollback?": "Ο browser δεν μπορεί να φτιάξει αντίγραφο ανάκτησης. Να γίνει η συγχώνευση του αντιγράφου χωρίς δυνατότητα επιστροφής;",
+  "Merged: {added} new, {updated} updated, {unchanged} unchanged — 1 unreadable entry skipped": "Συγχώνευση — νέες: {added}, ενημερωμένες: {updated}, χωρίς αλλαγή: {unchanged} — παραλείφθηκε 1 καταχώριση που δεν διαβαζόταν",
+  "Merged: {added} new, {updated} updated, {unchanged} unchanged — {n} unreadable entries skipped": "Συγχώνευση — νέες: {added}, ενημερωμένες: {updated}, χωρίς αλλαγή: {unchanged} — παραλείφθηκαν {n} καταχωρίσεις που δεν διαβάζονταν",
+  "Merged: {added} new, {updated} updated, {unchanged} unchanged": "Συγχώνευση — νέες: {added}, ενημερωμένες: {updated}, χωρίς αλλαγή: {unchanged}",
+  "Merge this backup into your timeline? Existing entries stay; newer versions win.": "Να συγχωνευτεί αυτό το αντίγραφο στο ιστορικό σας; Οι υπάρχουσες καταχωρίσεις μένουν· οι νεότερες εκδοχές υπερισχύουν.",
+  "{entries} and 1 photo": "{entries} και 1 φωτογραφία",
+  "{entries} and {n} photos": "{entries} και {n} φωτογραφίες",
+  "Erase all of {name}'s data from this device? {what} will be deleted.": "Να σβηστούν από αυτή τη συσκευή όλα τα δεδομένα του μωρού {name}; Η διαγραφή αφορά {what}.",
+  "Erase all of your baby's data from this device? {what} will be deleted.": "Να σβηστούν από αυτή τη συσκευή όλα τα δεδομένα του μωρού σας; Η διαγραφή αφορά {what}.",
+  "A backup keeps your entries but not photos, so save any photo you want to keep first. This cannot be undone.": "Το αντίγραφο ασφαλείας κρατά τις καταχωρίσεις αλλά όχι τις φωτογραφίες, οπότε αποθηκεύστε πρώτα όποια φωτογραφία θέλετε να κρατήσετε. Αυτό δεν αναιρείται.",
+  "Download a backup first if you may ever need it — this cannot be undone.": "Κατεβάστε πρώτα αντίγραφο ασφαλείας, αν μπορεί ποτέ να το χρειαστείτε — αυτό δεν αναιρείται.",
+
+  // --- Insights, Timeline, entry titles, the doctor's summary, sharing ---
+  "You logged {temp}. AAP's call-the-doctor threshold changes with age and is {threshold} for yours.": "Καταγράψατε {temp}. Το όριο της AAP για «πάρτε τον γιατρό» αλλάζει με την ηλικία· για το δικό σας μωρό είναι {threshold}.",
+  "Call an emergency number now — 911, 999 or 112 — even if your baby otherwise seems fine. NHS lists {emergency} or more at this age among its reasons to call 999 or go to A&E.": "Καλέστε τώρα αριθμό έκτακτης ανάγκης — 911, 999 ή 112 — ακόμη κι αν το μωρό δείχνει κατά τα άλλα καλά. Το NHS βάζει τους {emergency} ή περισσότερο σε αυτή την ηλικία ανάμεσα στους λόγους για να καλέσετε το 999 ή να πάτε στα Επείγοντα.",
+  "You logged {temp}. NHS lists a temperature below {low} — or a baby who feels cold to the touch or is shivery — under “Call 999 or go to A&E”.": "Καταγράψατε {temp}. Το NHS βάζει τη θερμοκρασία κάτω από {low} — ή ένα μωρό που είναι κρύο στην αφή ή τρέμει — στην ενότητα «Καλέστε το 999 ή πηγαίνετε στα Επείγοντα».",
+  "Call an emergency number now — 911 / 999 / 112 — or go to the nearest emergency department.": "Καλέστε τώρα αριθμό έκτακτης ανάγκης — 911 / 999 / 112 — ή πηγαίνετε στα πλησιέστερα Επείγοντα.",
+  "Look at your baby rather than at this screen: dry mouth, fewer tears when crying, a sunken soft spot, unusual sleepiness. Then call your paediatrician now — AAP says to tell them immediately.": "Κοιτάξτε το μωρό σας, όχι αυτή την οθόνη: στεγνό στόμα, λιγότερα δάκρυα όταν κλαίει, βαθουλωμένη πηγή, ασυνήθιστη υπνηλία. Και μετά πάρτε τον παιδίατρό σας τώρα — η AAP λέει να τον ενημερώσετε αμέσως.",
+  "Call your midwife, health visitor or paediatrician now — AAP says to get help right away when a baby past the first week has fewer than 6 wet nappies a day. If some changes went unlogged, tell them.": "Πάρτε τώρα τη μαία ή τον παιδίατρό σας — η AAP λέει να ζητήσετε βοήθεια αμέσως όταν ένα μωρό μετά την πρώτη εβδομάδα έχει λιγότερες από 6 βρεγμένες πάνες την ημέρα. Αν κάποιες αλλαγές δεν καταγράφηκαν, πείτε τους το.",
+  "You logged {first} first and {last} most recently. NHS: most babies are at, or above, their birthweight by 3 weeks.": "Καταγράψατε {first} στην αρχή και {last} πιο πρόσφατα. NHS: τα περισσότερα μωρά είναι στο βάρος γέννησης, ή πάνω από αυτό, ως τις 3 εβδομάδες.",
+  "About {gain} a week between your last two weights, {span} days apart. AAP treats a baby not gaining steadily as a reason to get weighed properly.": "Περίπου {gain} την εβδομάδα ανάμεσα στα δύο τελευταία βάρη, με διαφορά {span} ημερών. Η AAP θεωρεί ένα μωρό που δεν παίρνει σταθερά βάρος λόγο για σωστό ζύγισμα.",
+  "About {gain} a week between your last two weights. The typical band at this age is {band} a week.": "Περίπου {gain} την εβδομάδα ανάμεσα στα δύο τελευταία βάρη. Η τυπική ζώνη σε αυτή την ηλικία είναι {band} την εβδομάδα.",
+  "Up {weight} since the last check.": "Πήρε {weight} από την τελευταία μέτρηση.",
+  "Down {weight} since the last check.": "Έχασε {weight} από την τελευταία μέτρηση.",
+  "Photos": "Φωτογραφίες",
+  "Show all logs": "Εμφάνιση όλων των καταχωρίσεων",
+  "Show entries with a photo": "Εμφάνιση καταχωρίσεων με φωτογραφία",
+  "Show bottle logs": "Εμφάνιση καταχωρίσεων μπιμπερό",
+  "Show nursing logs": "Εμφάνιση καταχωρίσεων θηλασμού",
+  "Show pumping logs": "Εμφάνιση καταχωρίσεων άντλησης",
+  "Show diaper logs": "Εμφάνιση καταχωρίσεων πάνας",
+  "Show burp logs": "Εμφάνιση καταχωρίσεων ρεψίματος",
+  "Show tummy time logs": "Εμφάνιση καταχωρίσεων χρόνου μπρούμυτα",
+  "Show sleep logs": "Εμφάνιση καταχωρίσεων ύπνου",
+  "Show solid logs": "Εμφάνιση καταχωρίσεων στερεών τροφών",
+  "Show medicine logs": "Εμφάνιση καταχωρίσεων φαρμάκων",
+  "Show growth logs": "Εμφάνιση καταχωρίσεων ανάπτυξης",
+  "Show health logs": "Εμφάνιση καταχωρίσεων υγείας",
+  "No photos yet.": "Καμία φωτογραφία ακόμη.",
+  "No bottle entries yet.": "Καμία καταχώριση μπιμπερό ακόμη.",
+  "No nursing entries yet.": "Καμία καταχώριση θηλασμού ακόμη.",
+  "No pump entries yet.": "Καμία καταχώριση άντλησης ακόμη.",
+  "No diaper entries yet.": "Καμία καταχώριση πάνας ακόμη.",
+  "No burp entries yet.": "Καμία καταχώριση ρεψίματος ακόμη.",
+  "No tummy entries yet.": "Καμία καταχώριση χρόνου μπρούμυτα ακόμη.",
+  "No sleep entries yet.": "Καμία καταχώριση ύπνου ακόμη.",
+  "No solid entries yet.": "Καμία καταχώριση στερεών τροφών ακόμη.",
+  "No medicine entries yet.": "Καμία καταχώριση φαρμάκου ακόμη.",
+  "No growth entries yet.": "Καμία καταχώριση ανάπτυξης ακόμη.",
+  "No health entries yet.": "Καμία καταχώριση υγείας ακόμη.",
+  "Tummy time now": "Μπρούμυτα τώρα",
+  "Heavy wet diaper": "Πάνα με πολλή τσίσα",
+  "Medium wet diaper": "Πάνα με μέτρια τσίσα",
+  "Light wet diaper": "Πάνα με λίγη τσίσα",
+  "Heavy wet + dirty diaper": "Πάνα — πολλή τσίσα και κακά",
+  "Medium wet + dirty diaper": "Πάνα — μέτρια τσίσα και κακά",
+  "Light wet + dirty diaper": "Πάνα — λίγη τσίσα και κακά",
+  "{side} · started {time}": "{side} · ξεκίνησε {time}",
+  "Started {time} · {ago}": "Ξεκίνησε {time} · {ago}",
+  "WHO reference at the age on {date}, the latest weighing: {low}–{high} (P3–P97), midpoint {mid}.": "Αναφορά ΠΟΥ για την ηλικία στις {date}, το τελευταίο ζύγισμα: {low}–{high} (P3–P97), μέσο {mid}.",
+  "{d}d {h}h": "{d}ημ {h}ω",
+  "{d}d": "{d}ημ",
+  "Open this month’s page": "Άνοιγμα της σελίδας του μήνα",
+  "Add this month’s photo": "Προσθήκη φωτογραφίας του μήνα",
+
+  // --- Guide: care cards, watch signs, play ---
+  "Reference band from {low} to {high} {unit}, middle of the range {mid} {unit}. Latest logged weight {latest} {unit} on {date}, placed where it sat for the age then.": "Ζώνη αναφοράς από {low} έως {high} {unit}, μέσο του εύρους {mid} {unit}. Τελευταίο καταγεγραμμένο βάρος {latest} {unit} στις {date}, τοποθετημένο εκεί που βρισκόταν για την ηλικία εκείνης της μέρας.",
+  "This app never decides any of these — you do.": "Η εφαρμογή δεν αποφασίζει ποτέ κανένα από αυτά — εσείς αποφασίζετε.",
+  "The dot shows where that weight sat for {name}’s age on the day it was taken.": "Η κουκκίδα δείχνει πού βρισκόταν αυτό το βάρος για την ηλικία του μωρού {name} τη μέρα που μετρήθηκε.",
+  "After the first week, urine that is dark or has reddish-orange marks in it.": "Μετά την πρώτη εβδομάδα, τσίσα σκούρα ή με κοκκινοπορτοκαλί σημάδια.",
+  "These cannot wait for a check-in. The AAP counts them as signs of dehydration and says to call your doctor immediately — they are on the “Get help now” list above:": "Αυτά δεν μπορούν να περιμένουν έναν έλεγχο. Η AAP τα θεωρεί σημάδια αφυδάτωσης και λέει να πάρετε αμέσως τον γιατρό σας — είναι στη λίστα «Ζητήστε βοήθεια τώρα» παραπάνω:",
+  "After the first week, fewer than six wet diapers a day.": "Μετά την πρώτη εβδομάδα, λιγότερες από έξι βρεγμένες πάνες την ημέρα.",
+  "At any age, a dry mouth, fewer tears when crying, a sunken soft spot on the head, or unusual sleepiness.": "Σε οποιαδήποτε ηλικία, στεγνό στόμα, λιγότερα δάκρυα όταν κλαίει, βουλιαγμένη πηγή (το μαλακό σημείο του κεφαλιού), ή ασυνήθιστη υπνηλία.",
+  "Only 2 or 3 wet diapers is expected right now": "Μόνο 2 ή 3 βρεγμένες πάνες είναι το αναμενόμενο τώρα",
+  "Note each diaper as it happens — the ramp over the next days is what matters, not today's number.": "Σημειώνετε κάθε πάνα όπως έρχεται — αυτό που μετράει είναι η άνοδος των επόμενων ημερών, όχι ο σημερινός αριθμός.",
+  "From today, look for 6 or more heavy wet diapers a day": "Από σήμερα, περιμένετε 6 ή περισσότερες βαριές βρεγμένες πάνες την ημέρα",
+  "The pee should be almost colourless or pale yellow. Alongside them, at least 2 soft yellow stools a day.": "Το τσίσα πρέπει να είναι σχεδόν άχρωμο ή αχνοκίτρινο. Μαζί τους, τουλάχιστον 2 μαλακά κίτρινα κακά την ημέρα.",
+  "If the wet count sits below 6 for a day, call your midwife, health visitor or doctor now — the AAP counts fewer than six a day as a sign of dehydration.": "Αν οι βρεγμένες πάνες μείνουν κάτω από 6 για μια μέρα, πάρτε τώρα τη μαία ή τον γιατρό σας — η AAP θεωρεί τις λιγότερες από έξι την ημέρα σημάδι αφυδάτωσης.",
+  "Always awake and watched. After a diaper change or a nap is an easy moment to remember.": "Πάντα ξύπνιο και υπό επίβλεψη. Μετά από αλλαγή πάνας ή ύπνο είναι μια εύκολη στιγμή να το θυμάστε.",
+  "Long gaps between poops become normal now": "Τα μεγάλα κενά ανάμεσα στα κακά γίνονται φυσιολογικά τώρα",
+  "Formula climbs to roughly 90–120 ml (3–4 oz) a feed": "Η φόρμουλα ανεβαίνει σε περίπου 90–120 ml (3–4 oz) ανά τάισμα",
+  "First foods: alongside milk, not instead of it": "Πρώτες τροφές: μαζί με το γάλα, όχι στη θέση του",
+  "Get help now if your baby…": "Ζητήστε βοήθεια τώρα αν το μωρό σας…",
+  "Call an emergency number — 911 (US and Philippines), 999 (UK), 112 (EU and Greece) — unless the line itself says what to do.": "Καλέστε αριθμό έκτακτης ανάγκης — 911 (ΗΠΑ και Φιλιππίνες), 999 (Ηνωμένο Βασίλειο), 112 (ΕΕ και Ελλάδα) — εκτός αν η ίδια η γραμμή λέει τι να κάνετε.",
+  "Call your doctor today if your baby…": "Πάρτε τον γιατρό σας σήμερα αν το μωρό σας…",
+  "Trust your instincts: if your baby is unwell and you think something is seriously wrong, get help now, whether or not it is on this list.": "Εμπιστευτείτε το ένστικτό σας: αν το μωρό σας δεν είναι καλά και πιστεύετε ότι κάτι σοβαρό συμβαίνει, ζητήστε βοήθεια τώρα, είτε είναι σε αυτή τη λίστα είτε όχι.",
+  "is 3 months or younger and has a rectal temperature of 38.0 °C (100.4 °F) or higher, even with no other symptoms.": "είναι 3 μηνών ή μικρότερο και έχει θερμοκρασία από το ορθό 38,0 °C (100,4 °F) ή υψηλότερη, ακόμη και χωρίς άλλα συμπτώματα.",
+  "is 3 to 6 months old and has a temperature of 39 °C (102.2 °F) or higher.": "είναι 3 έως 6 μηνών και έχει θερμοκρασία 39 °C (102,2 °F) ή υψηλότερη.",
+  "is breathing very fast or has difficulty breathing — they may make grunting noises or suck in their tummy when they breathe.": "αναπνέει πολύ γρήγορα ή δυσκολεύεται να αναπνεύσει — μπορεί να βγάζει ήχους σαν γρύλισμα ή να ρουφάει την κοιλιά του προς τα μέσα όταν αναπνέει.",
+  "has blue, grey, pale or blotchy (mottled) skin, lips or tongue.": "έχει δέρμα, χείλη ή γλώσσα μπλε, γκρι, χλωμά ή με κηλίδες (μαρμαρώδη).",
+  "has a rash that does not fade when you press it.": "έχει εξάνθημα που δεν ξεθωριάζει όταν το πιέζετε.",
+  "is difficult to wake, or cannot be woken.": "ξυπνά δύσκολα ή δεν μπορείτε να το ξυπνήσετε.",
+  "is having a seizure (fit).": "έχει σπασμούς (κρίση).",
+  "has not had a pee in the past 12 hours.": "δεν έχει κάνει τσίσα τις τελευταίες 12 ώρες.",
+  "has yellow-green or green vomit, vomits blood, or has vomit that looks like ground coffee.": "κάνει κιτρινοπράσινο ή πράσινο εμετό, κάνει εμετό με αίμα, ή κάνει εμετό που μοιάζει με αλεσμένο καφέ.",
+  "has yellow skin or eyes (jaundice) and is less than 24 hours old, or has jaundice and is not feeding.": "έχει κίτρινο δέρμα ή μάτια (ίκτερο) και είναι κάτω από 24 ωρών, ή έχει ίκτερο και δεν τρώει.",
+  "shows signs of dehydration — fewer wet diapers than usual, a dry mouth, fewer tears when crying, a sunken soft spot on the head, or unusual sleepiness — call your doctor immediately.": "δείχνει σημάδια αφυδάτωσης — λιγότερες βρεγμένες πάνες από το συνηθισμένο, στεγνό στόμα, λιγότερα δάκρυα όταν κλαίει, βουλιαγμένη πηγή (το μαλακό σημείο του κεφαλιού), ή ασυνήθιστη υπνηλία — πάρτε αμέσως τον γιατρό σας.",
+  "has gone floppy, or does not respond like they usually would — get urgent medical help.": "έχει «μαλακώσει» και δεν κρατιέται, ή δεν αντιδρά όπως συνήθως — ζητήστε επείγουσα ιατρική βοήθεια.",
+  "is not feeding, or has not had a drink in the past 8 hours while awake — get urgent medical help.": "δεν τρώει, ή δεν έχει πιει τίποτα τις τελευταίες 8 ώρες ενώ είναι ξύπνιο — ζητήστε επείγουσα ιατρική βοήθεια.",
+  "has yellow skin or eyes (jaundice) after the first day, jaundice that is not getting better or is getting worse, or dark yellow or brown pee or pale, creamy poop.": "έχει κίτρινο δέρμα ή μάτια (ίκτερο) μετά την πρώτη μέρα, ίκτερο που δεν βελτιώνεται ή χειροτερεύει, ή σκούρο κίτρινο ή καφέ τσίσα ή ανοιχτόχρωμα, κρεμώδη κακά.",
+  "is not back to birthweight by 3 weeks, or is losing weight after the first week.": "δεν έχει επιστρέψει στο βάρος γέννησης ως τις 3 εβδομάδες, ή χάνει βάρος μετά την πρώτη εβδομάδα.",
+  "A few minutes, as long as it stays fun.": "Λίγα λεπτά, όσο παραμένει διασκεδαστικό.",
+  "Brahms": "Μπραμς",
+
+  // --- News chrome, conversation, Months, Vaccines ---
+  "Sidebar": "Μενού",
+  "Your messages and the replies": "Τα μηνύματά σας και οι απαντήσεις",
+  "Apostolis": "Αποστόλης",
+  "You": "Εσείς",
+  "Your reply": "Η απάντησή σας",
+  "Write a message…": "Γράψτε ένα μήνυμα…",
+  "Email": "Email",
+  "optional — replies show up here too": "προαιρετικό — οι απαντήσεις εμφανίζονται και εδώ",
+  "only if you also want them by email": "μόνο αν τις θέλετε και με email",
+  "Sent — thank you. The answer will show up right here, and the speech bubble gets a dot when it does.": "Στάλθηκε — ευχαριστώ. Η απάντηση θα εμφανιστεί ακριβώς εδώ, και το συννεφάκι θα δείξει μια κουκκίδα όταν έρθει.",
+  "That did not send: {reason} Your text is still here.": "Δεν στάλθηκε: {reason} Το κείμενό σας είναι ακόμη εδώ.",
+  "Messages — {n} new reply": "Μηνύματα — {n} νέα απάντηση",
+  "Messages — {n} new replies": "Μηνύματα — {n} νέες απαντήσεις",
+  "Messages": "Μηνύματα",
+  "Answers show up here, with a dot on the bubble when one arrives.": "Οι απαντήσεις εμφανίζονται εδώ, με μια κουκκίδα στο συννεφάκι όταν έρθει κάποια.",
+  "Apostolis replied to your message": "Ο Αποστόλης απάντησε στο μήνυμά σας",
+  "Read": "Ανάγνωση",
+  "Profile picture": "Φωτογραφία προφίλ",
+  "1 month": "1 μήνας",
+  "{n} months": "{n} μήνες",
+  "{n} years": "{n} έτη",
+  "{name}’s monthly photos": "Μηνιαίες φωτογραφίες: {name}",
+  "Your baby’s monthly photos": "Οι μηνιαίες φωτογραφίες του μωρού σας",
+  "{name} is {age} old today.": "{name} γίνεται σήμερα {age}.",
+  "{name} turned {age} on {date}.": "{name} έγινε {age}, {date}.",
+  "No photo yet": "Καμία φωτογραφία ακόμα",
+  "A first smile, a new sound, how the nights are going…": "Ένα πρώτο χαμόγελο, ένας καινούργιος ήχος, πώς πάνε οι νύχτες…",
+  "Save": "Αποθήκευση",
+  "A photo and a note each month. Only your family sees them.": "Μια φωτογραφία και μια σημείωση κάθε μήνα. Τις βλέπει μόνο η οικογένειά σας.",
+  "Add {name}’s date of birth and each month‑birthday gets its own page.": "{name} θα έχει μια σελίδα για κάθε μήνα που κλείνει — προσθέστε την ημερομηνία γέννησης.",
+  "Add the date of birth and each month‑birthday gets its own page.": "Προσθέστε την ημερομηνία γέννησης και κάθε μήνας που κλείνει το μωρό θα έχει τη δική του σελίδα.",
+  "Add date of birth": "Προσθήκη ημερομηνίας γέννησης",
+  "First page": "Πρώτη σελίδα",
+  "Its page opens here that morning.": "Η σελίδα του ανοίγει εδώ εκείνο το πρωί.",
+  "{name}’s first month‑birthday is {date}. Its page opens here that morning.": "{name} κλείνει τον πρώτο μήνα, {date}. Η σελίδα του ανοίγει εδώ εκείνο το πρωί.",
+  "Your baby’s first month‑birthday is {date}. Its page opens here that morning.": "Το μωρό σας κλείνει τον πρώτο μήνα, {date}. Η σελίδα του ανοίγει εδώ εκείνο το πρωί.",
+  "Last page": "Τελευταία σελίδα",
+  "This month": "Αυτός ο μήνας",
+  "Change photo or note": "Αλλαγή φωτογραφίας ή σημείωσης",
+  "{name} turns {age} tomorrow — a new page opens then.": "{name} γίνεται αύριο {age} — τότε ανοίγει μια νέα σελίδα.",
+  "{name} turns {age} on {date} — a new page opens then.": "{name} γίνεται {age}, {date} — τότε ανοίγει μια νέα σελίδα.",
+  ", with a photo": ", με φωτογραφία",
+  "Public health center": "Δημόσιο κέντρο υγείας",
+  "Health center": "Κέντρο υγείας",
+  "Private clinic": "Ιδιωτική κλινική",
+  "1st": "1η",
+  "2nd": "2η",
+  "3rd": "3η",
+  "Booster": "Αναμνηστική",
+  "{n}th dose": "{n}η δόση",
+  "today": "σήμερα",
+  "Tomorrow": "Αύριο",
+  "tomorrow": "αύριο",
+  "yesterday": "χθες",
+  "In {n} days": "Σε {n} μέρες",
+  "in {n} days": "σε {n} μέρες",
+  "Which vaccine?": "Ποιο εμβόλιο;",
+  "When is it due?": "Πότε είναι το ραντεβού;",
+  "When was it given?": "Πότε έγινε;",
+  "That date is still to come — add it with Add appointment.": "Αυτή η ημερομηνία δεν έχει έρθει ακόμα — προσθέστε τη με το «Προσθήκη ραντεβού».",
+  "Mark as given": "Καταγραφή ότι έγινε",
+  "Was due {when}": "Ραντεβού: {when}",
+  "Planned": "Προγραμματισμένο",
+  "Due {when}": "Ραντεβού: {when}",
+  "Given": "Έγιναν",
+  "Add appointment": "Προσθήκη ραντεβού",
+  "The next date from the health center or clinic card.": "Η επόμενη ημερομηνία από την κάρτα του κέντρου υγείας ή της κλινικής.",
+  "Record a vaccine": "Καταγραφή εμβολίου",
+  "One the baby has had — as written on the card.": "Ένα εμβόλιο που έχει ήδη κάνει το μωρό — όπως είναι γραμμένο στην κάρτα.",
+  "Save as given": "Αποθήκευση — έγινε",
+  "Save appointment": "Αποθήκευση ραντεβού",
+  "Save vaccine": "Αποθήκευση εμβολίου",
+  "On {date}": "Στις {date}",
+  "Late or this week": "Καθυστερημένα ή αυτή την εβδομάδα",
+  "Next dose of": "Επόμενη δόση για",
+  "Or type the name": "Ή γράψτε το όνομα",
+  "e.g. BCG, Pentavalent, MMR": "π.χ. BCG, πενταδύναμο, MMR",
+  "Given on": "Πότε έγινε",
+  "Where": "Πού",
+  "Dose": "Δόση",
+  "1st dose, booster…": "1η δόση, αναμνηστική…",
+  "Batch number, reaction, next visit…": "Αριθμός παρτίδας, αντίδραση, επόμενη επίσκεψη…",
+  "Remove from the schedule": "Αφαίρεση από το πρόγραμμα",
+  "Delete this vaccine": "Διαγραφή αυτού του εμβολίου",
+  "{vaccine} given today": "{vaccine}: έγινε σήμερα",
+  "{vaccine} is back on the schedule": "{vaccine}: ξανά στο πρόγραμμα",
+  "{vaccine} marked as given": "{vaccine}: καταγράφηκε ότι έγινε",
+  "{vaccine} updated": "{vaccine}: ενημερώθηκε",
+  "{vaccine} added to the schedule": "{vaccine}: προστέθηκε στο πρόγραμμα",
+  "{vaccine} saved": "{vaccine}: αποθηκεύτηκε",
+  "{vaccine} removed from the schedule": "{vaccine}: αφαιρέθηκε από το πρόγραμμα",
+  "{vaccine} removed": "{vaccine}: διαγράφηκε",
+  "1 appointment": "1 ραντεβού",
+  "1 appointment ({late} late)": "1 ραντεβού ({late} με καθυστέρηση)",
+  "{n} appointments": "{n} ραντεβού",
+  "{n} appointments ({late} late)": "{n} ραντεβού ({late} με καθυστέρηση)",
+  "1 given": "1 εμβόλιο έγινε",
+  "{n} given": "{n} εμβόλια έγιναν",
+  "{name}’s vaccines": "Εμβόλια: {name}",
+  "As written on the health center or clinic card.": "Όπως είναι γραμμένα στην κάρτα του κέντρου υγείας ή της κλινικής.",
+  "Appointments": "Ραντεβού",
+  "Mark {vaccine}, {dose}, as given today": "Καταγραφή ότι το {vaccine}, {dose}, έγινε σήμερα",
+  "Mark {vaccine} as given today": "Καταγραφή ότι το {vaccine} έγινε σήμερα",
+  "Mark given": "Έγινε",
+  "No appointments yet. Add the next date from the health center or clinic card with Add appointment.": "Κανένα ραντεβού ακόμα. Προσθέστε την επόμενη ημερομηνία από την κάρτα του κέντρου υγείας ή της κλινικής με το «Προσθήκη ραντεβού».",
+  "Plan the {dose}": "Κλείστε ραντεβού για τη {dose}",
+  "Earlier (months)": "Προηγούμενοι μήνες",
+
+  // --- The server's own words (worker/*.ts), shown through t(error.message) ---
+  "Enter the 6-digit code from the other phone.": "Γράψτε τον εξαψήφιο κωδικό από το άλλο κινητό.",
+  "Not paired. Create or join a family first.": "Το κινητό δεν είναι συνδεδεμένο. Δημιουργήστε πρώτα μια οικογένεια ή μπείτε σε μία.",
+  "Pairing is busy right now — wait a little while and try again.": "Η σύνδεση είναι απασχολημένη αυτή τη στιγμή — περιμένετε λίγο και δοκιμάστε ξανά.",
+  "Photo sharing is not set up here.": "Οι φωτογραφίες δεν μπορούν να μοιραστούν εδώ.",
+  "Something went wrong on our side. Nothing was lost — try again.": "Κάτι πήγε στραβά από τη δική μας πλευρά. Δεν χάθηκε τίποτα — δοκιμάστε ξανά.",
+  "That code expired. Ask for a fresh one.": "Ο κωδικός έληξε. Ζητήστε έναν καινούριο.",
+  "That code isn't valid. Ask for a fresh one.": "Ο κωδικός δεν είναι έγκυρος. Ζητήστε έναν καινούριο.",
+  "That code was already used. Ask for a fresh one.": "Ο κωδικός έχει ήδη χρησιμοποιηθεί. Ζητήστε έναν καινούριο.",
+  "Too many attempts from this connection — wait a while and try again.": "Πάρα πολλές προσπάθειες από αυτή τη σύνδεση — περιμένετε λίγο και δοκιμάστε ξανά.",
+  "Too many new families from this connection — wait a while and try again.": "Πάρα πολλές νέες οικογένειες από αυτή τη σύνδεση — περιμένετε λίγο και δοκιμάστε ξανά.",
+  "Too many messages from this connection — try again in an hour.": "Πάρα πολλά μηνύματα από αυτή τη σύνδεση — δοκιμάστε ξανά σε μία ώρα.",
+  "Too many messages are arriving right now — try again in an hour.": "Φτάνουν πάρα πολλά μηνύματα αυτή τη στιγμή — δοκιμάστε ξανά σε μία ώρα.",
+  "Too many reminder updates from this connection.": "Πάρα πολλές αλλαγές υπενθυμίσεων από αυτή τη σύνδεση.",
+  "Too many checks from this connection — try again later.": "Πάρα πολλοί έλεγχοι από αυτή τη σύνδεση — δοκιμάστε ξανά αργότερα.",
+  "Could not reach Google to check the sign-in. Try again in a minute.": "Δεν ήταν δυνατή η επικοινωνία με τη Google για τον έλεγχο της σύνδεσης. Δοκιμάστε ξανά σε ένα λεπτό.",
+  "No log is protected by this Google account. If you used a different address, sign in with that one.": "Κανένα ημερολόγιο δεν προστατεύεται με αυτόν τον λογαριασμό Google. Αν χρησιμοποιήσατε άλλη διεύθυνση, συνδεθείτε με εκείνη.",
+  "That doesn't look like an email address.": "Αυτό δεν μοιάζει με διεύθυνση email.",
+  "That link expired or was already used. Ask for a fresh one.": "Ο σύνδεσμος έληξε ή έχει ήδη χρησιμοποιηθεί. Ζητήστε έναν καινούριο.",
+  "That link is not valid.": "Ο σύνδεσμος δεν είναι έγκυρος.",
+  "That link is stale — the protection changed since it was sent. Ask for a fresh one.": "Ο σύνδεσμος είναι παλιός — η προστασία άλλαξε από τότε που στάλθηκε. Ζητήστε έναν καινούριο.",
+  "The service is not answering. Try again shortly.": "Η υπηρεσία δεν απαντά. Δοκιμάστε ξανά σε λίγο.",
+  "Too many attempts just now — try again in an hour.": "Πάρα πολλές προσπάθειες μόλις τώρα — δοκιμάστε ξανά σε μία ώρα.",
+  "Too many emails to that address just now — try again in an hour.": "Πάρα πολλά email σε αυτή τη διεύθυνση μόλις τώρα — δοκιμάστε ξανά σε μία ώρα.",
+  "Write a little more.": "Γράψτε λίγο περισσότερα.",
+};
+
+export default el;

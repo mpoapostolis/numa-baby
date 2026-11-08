@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { webcrypto as crypto } from "node:crypto";
 import { DatabaseSync, type SQLInputValue } from "node:sqlite";
 import { buildPushPayload } from "@block65/webcrypto-web-push";
-import { REMINDERS, type ScheduleBody, dueAt, isPushEndpoint, saveSchedule, sendDue } from "../../worker/push";
+import { REMINDERS, type ScheduleBody, dueAt, isPushEndpoint, reminderCopy, saveSchedule, sendDue } from "../../worker/push";
 import { type Schedule, scheduleFor } from "../../src/domain/pushClient";
 
 // A push nobody can decrypt is a reminder that never rings, and the failure
@@ -112,6 +112,26 @@ describe("the push a phone actually receives", () => {
     // people can see, and the server does not know any of it anyway.
     expect(words).not.toMatch(/\d/);
     expect(words.toLowerCase()).not.toMatch(/name|ago|hours since|ml|oz/);
+  });
+
+  it("rings in the language the phone asked for, and in English otherwise", () => {
+    // The app is closed when this text is chosen, so the only thing the
+    // Worker knows is what the phone said when it set the alarm.
+    expect(reminderCopy("feed", "el").title).toBe("Ώρα να δείτε τα σημάδια πείνας");
+    expect(reminderCopy("diaper", "el").body).toBe("Έχει περάσει αρκετή ώρα από την τελευταία αλλαγή.");
+    // The tag comes from the English row either way: it is what makes the
+    // closed-app push replace the one the open app already showed.
+    expect(reminderCopy("feed", "el").tag).toBe(REMINDERS.feed.tag);
+    for (const unknown of [null, "en", "tl", "", "nonsense"]) {
+      expect(reminderCopy("feed", unknown).title).toBe(REMINDERS.feed.title);
+    }
+  });
+
+  it("keeps the Greek reminders as quiet about the baby as the English ones", () => {
+    const greek = [reminderCopy("feed", "el"), reminderCopy("diaper", "el")]
+      .map((r) => `${r.title} ${r.body}`)
+      .join(" ");
+    expect(greek).not.toMatch(/\d/);
   });
 });
 
@@ -331,7 +351,7 @@ describe("an alarm the server accepts is an alarm the server keeps", () => {
           return { rows: [] };
         }
         if (sql.startsWith("INSERT INTO push_subscriptions")) {
-          const [endpoint, p256dh, auth, feed, diaper, created, updated, family, keepFeed, keepDiaper] = args as string[];
+          const [endpoint, p256dh, auth, feed, diaper, created, updated, family, lang, keepFeed, keepDiaper] = args as string[];
           const existing = rows.get(endpoint);
           rows.set(endpoint, {
             endpoint, p256dh, auth,
@@ -340,7 +360,7 @@ describe("an alarm the server accepts is an alarm the server keeps", () => {
             feed_due_at: keepFeed ? (existing?.feed_due_at ?? null) : feed,
             diaper_due_at: keepDiaper ? (existing?.diaper_due_at ?? null) : diaper,
             created_at: existing?.created_at ?? created, updated_at: updated,
-            failures: 0, family_id: family,
+            failures: 0, family_id: family, lang,
           });
           return { rows: [] };
         }
@@ -545,6 +565,38 @@ describe("an alarm the server accepts is an alarm the server keeps", () => {
     expect(stored()).toEqual({ feed_due_at: "2026-09-05T06:10:00.000Z", diaper_due_at: "2026-09-05T03:00:00.000Z" });
     await push.saveSchedule(client, { ...who, feedDueAt: null }, at("03:20"));
     expect(stored()).toEqual({ feed_due_at: null, diaper_due_at: "2026-09-05T03:00:00.000Z" });
+  });
+
+  it("stores the language a phone reads, and nothing it does not", async () => {
+    // On a real SQLite, so the added column and the order of the arguments
+    // are the real ones: the cron writes the lock screen with the app
+    // closed, and this column is all it knows about the person.
+    const push = await freshPush();
+    const db = new DatabaseSync(":memory:");
+    const client = {
+      execute: async (query: string | { sql: string; args?: SQLInputValue[] }) => {
+        const sql = typeof query === "string" ? query : query.sql;
+        const args = typeof query === "string" ? [] : (query.args ?? []);
+        const statement = db.prepare(sql);
+        if (/^\s*SELECT/i.test(sql)) return { rows: statement.all(...args) };
+        statement.run(...args);
+        return { rows: [] };
+      },
+    } as never;
+    const who = await subscriber();
+    const langs = async () => (await push.findDue(client, at("03:31"))).map((row) => row.lang);
+
+    await push.saveSchedule(client, { ...who, feedDueAt: "2026-09-05T03:30:00.000Z", lang: "el" }, at("01:00"));
+    expect(await langs()).toEqual(["el"]);
+    // Switched back to English: Greek must stop, not linger from the last write.
+    await push.saveSchedule(client, { ...who, feedDueAt: "2026-09-05T03:30:00.000Z", lang: "en" }, at("01:10"));
+    expect(await langs()).toEqual([null]);
+    // Anything that is not a language with words here reads as English.
+    await push.saveSchedule(client, { ...who, feedDueAt: "2026-09-05T03:30:00.000Z", lang: "el<script>" }, at("01:20"));
+    expect(await langs()).toEqual([null]);
+    // And so does an older build that never says.
+    await push.saveSchedule(client, { ...who, feedDueAt: "2026-09-05T03:30:00.000Z" }, at("01:30"));
+    expect(await langs()).toEqual([null]);
   });
 
   it("lets go of a family the phone has left", async () => {

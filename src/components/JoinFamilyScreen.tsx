@@ -15,6 +15,7 @@ import { Button } from "./ui/button";
 import { BabyFace } from "./illustrations";
 import { track } from "../domain/analytics";
 import { FamilySync } from "../hooks/useFamilySync";
+import { t } from "../i18n";
 
 type JoinFamilyScreenProps = {
   code: string;
@@ -45,33 +46,31 @@ export default function JoinFamilyScreen({ code, familySync, onJoined, onSkip }:
   return (
     <main className="screen join-screen" aria-labelledby="join-heading">
       <span className="join-art" aria-hidden="true"><BabyFace size={72} /></span>
-      <p className="t-label">Invite scanned</p>
-      <h1 id="join-heading" className="t-title-1">Join your family log</h1>
+      <p className="t-label">{t("Invite scanned")}</p>
+      <h1 id="join-heading" className="t-title-1">{t("Join your family log")}</h1>
       <p className="t-body join-copy">
-        This phone will share one log with the phone that showed you the code — every feed,
-        diaper and note, on both.
+        {t("This phone will share one log with the phone that showed you the code — every feed, diaper and note, on both.")}
       </p>
       <p className="join-code figure">{code}</p>
 
       {localCount > 0 && (
         <p className="t-meta">
-          The {localCount} {localCount === 1 ? "entry" : "entries"} already on this phone will be
-          merged into the family log — nothing is deleted.
+          {localCount === 1
+            ? t("The 1 entry already on this phone will be merged into the family log — nothing is deleted.")
+            : t("The {n} entries already on this phone will be merged into the family log — nothing is deleted.", { n: localCount })}
         </p>
       )}
 
       {failed && (
         <p className="join-error" role="alert">
-          The join did not go through — the code may have expired (codes from a partner&rsquo;s
-          phone last 15 minutes and work once), or this phone may be offline. Nothing changed;
-          try again or ask for a fresh code.
+          {t("The join did not go through — the code may have expired (codes from a partner’s phone last 15 minutes and work once), or this phone may be offline. Nothing changed; try again or ask for a fresh code.")}
         </p>
       )}
 
       <Button className="join-action" disabled={busy} onClick={() => void handleJoin()}>
-        <Users size={16} aria-hidden="true" /> {busy ? "Joining…" : "Join the family"}
+        <Users size={16} aria-hidden="true" /> {busy ? t("Joining…") : t("Join the family")}
       </Button>
-      <Button variant="ghost" onClick={onSkip}>Set this phone up on its own</Button>
+      <Button variant="ghost" onClick={onSkip}>{t("Set this phone up on its own")}</Button>
     </main>
   );
 }

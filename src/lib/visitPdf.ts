@@ -7,6 +7,7 @@
 // WhatsApp.
 
 import { VisitDocument, VisitFigure, VisitSection } from "../domain/visitDocument";
+import { t, tUpper } from "../i18n";
 import { FONT, PALETTE, drawFace, loadFonts, roundedRect, wrap } from "./shareCard";
 import { PdfPage, imagesToPdf } from "./pdf";
 
@@ -43,7 +44,7 @@ function caps(ctx: CanvasRenderingContext2D, text: string, x: number, y: number,
   ctx.fillStyle = color;
   ctx.font = `600 ${size}px ${FONT}`;
   ctx.letterSpacing = `${size * 0.08}px`;
-  ctx.fillText(text.toUpperCase(), x, y);
+  ctx.fillText(tUpper(text), x, y);
   ctx.letterSpacing = "0px";
 }
 
@@ -95,11 +96,11 @@ function section(ctx: CanvasRenderingContext2D, block: VisitSection, y: number, 
 
 function table(ctx: CanvasRenderingContext2D, doc: VisitDocument, y: number, width: number): number {
   const columns = [
-    { label: "Day", width: 0, align: "left" as const },
-    { label: "Feeds", width: 70, align: "right" as const },
+    { label: t("Day"), width: 0, align: "left" as const },
+    { label: t("Feeds"), width: 70, align: "right" as const },
     { label: doc.volumeUnit, width: 70, align: "right" as const },
-    { label: "Wet", width: 70, align: "right" as const },
-    { label: "Dirty", width: 70, align: "right" as const },
+    { label: t("Wet"), width: 70, align: "right" as const },
+    { label: t("Dirty"), width: 70, align: "right" as const },
   ];
   const fixed = columns.slice(1).reduce((sum, column) => sum + column.width, 0);
   columns[0].width = width - fixed;
@@ -115,7 +116,7 @@ function table(ctx: CanvasRenderingContext2D, doc: VisitDocument, y: number, wid
   ctx.fillStyle = INK_2;
   let x = MARGIN;
   for (const column of columns) {
-    cell(column.label.toUpperCase(), column, x, y + 10);
+    cell(tUpper(column.label), column, x, y + 10);
     x += column.width;
   }
   ctx.letterSpacing = "0px";
@@ -136,7 +137,7 @@ function table(ctx: CanvasRenderingContext2D, doc: VisitDocument, y: number, wid
     if (day.blank) {
       ctx.fillStyle = INK_3;
       ctx.font = `italic 500 9.5px ${FONT}`;
-      ctx.fillText("not logged", MARGIN + columns[0].width + 6, baseline);
+      ctx.fillText(t("not logged"), MARGIN + columns[0].width + 6, baseline);
     } else {
       let cx = MARGIN + columns[0].width;
       for (const [column, text] of [[columns[1], day.feeds], [columns[2], day.ml], [columns[3], day.wet], [columns[4], day.dirty]] as const) {
@@ -187,7 +188,7 @@ function drawPage(ctx: CanvasRenderingContext2D, doc: VisitDocument) {
 
   for (const block of doc.sections) y = section(ctx, block, y, width);
 
-  caps(ctx, "Day by day", MARGIN, y, 8, INK_2);
+  caps(ctx, t("Day by day"), MARGIN, y, 8, INK_2);
   y = table(ctx, doc, y + 6, width);
 
   // Footer, pinned to the page bottom.

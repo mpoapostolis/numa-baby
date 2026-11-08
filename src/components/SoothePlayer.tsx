@@ -14,6 +14,7 @@
 // where that API does not exist, the hint below is the honest fallback.
 
 import { useEffect, useRef, useState } from "react";
+import { t } from "../i18n";
 import { useCloseOnBack } from "../hooks/useCloseOnBack";
 import { useStableCallback } from "../hooks/useStableCallback";
 import "../styles/screens/soothe.css";
@@ -173,7 +174,7 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
     // in a dark room with a baby on one arm.
     if ("mediaSession" in navigator) {
       navigator.mediaSession.metadata = new MediaMetadata({
-        title: mode === "noise" ? "White noise" : "Lullaby",
+        title: mode === "noise" ? t("White noise") : t("Lullaby"),
         artist: "Numalog",
       });
       navigator.mediaSession.setActionHandler("pause", () => latestStop());
@@ -204,15 +205,14 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="soothe-dialog" onOpenAutoFocus={(event) => event.preventDefault()}>
-        <DialogTitle>Sounds</DialogTitle>
+        <DialogTitle>{t("Sounds")}</DialogTitle>
         <DialogDescription>
-          Keeps playing with the screen off. Set a timer — at 3am “I’ll turn it off in a minute”
-          means it runs until morning.
+          {t("Keeps playing with the screen off. Set a timer — at 3am “I’ll turn it off in a minute” means it runs until morning.")}
         </DialogDescription>
 
         {/* Plain toggle buttons, not the ARIA tabs pattern — no panels, no
             arrow-key promise to break. */}
-        <div className="soothe-modes" role="group" aria-label="Kind of sound">
+        <div className="soothe-modes" role="group" aria-label={t("Kind of sound")}>
           {(["noise", "lullaby"] as const).map((option) => (
             <button
               key={option}
@@ -221,12 +221,12 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
               className={mode === option ? "soothe-mode is-active" : "soothe-mode"}
               onClick={() => setMode(option)}
             >
-              {option === "noise" ? "White noise" : "Lullabies"}
+              {option === "noise" ? t("White noise") : t("Lullabies")}
             </button>
           ))}
         </div>
 
-        <div className="soothe-kinds" role="radiogroup" aria-label="Sound">
+        <div className="soothe-kinds" role="radiogroup" aria-label={t("Sound")}>
           {(mode === "noise" ? NOISE_KINDS : LULLABIES).map((option) => {
             const selected = mode === "noise" ? option.key === kind : option.key === tune;
             return (
@@ -246,15 +246,15 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
                   }
                 }}
               >
-                <strong>{option.label}</strong>
-                <small>{option.description}</small>
+                <strong>{t(option.label)}</strong>
+                <small>{t(option.description)}</small>
               </button>
             );
           })}
         </div>
 
         <label className="soothe-field">
-          <span className="t-label">Volume</span>
+          <span className="t-label">{t("Volume")}</span>
           <input
             type="range"
             min={0.05}
@@ -262,12 +262,12 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
             step={0.05}
             value={volume}
             onChange={(event) => setVolume(Number(event.target.value))}
-            aria-label="Volume"
+            aria-label={t("Volume")}
           />
         </label>
 
         <div className="soothe-field">
-          <span className="t-label">Stop after</span>
+          <span className="t-label">{t("Stop after")}</span>
           <div className="soothe-timers">
             {TIMER_CHOICES.map((minutes) => (
               <button
@@ -277,7 +277,7 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
                 className={timer === minutes ? "soothe-timer is-active" : "soothe-timer"}
                 onClick={() => chooseTimer(minutes, Date.now())}
               >
-                {minutes}m
+                {t("{m}m", { m: minutes })}
               </button>
             ))}
             <button
@@ -286,7 +286,7 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
               className={timer === null ? "soothe-timer is-active" : "soothe-timer"}
               onClick={() => chooseTimer(null, Date.now())}
             >
-              Keep going
+              {t("Keep going")}
             </button>
           </div>
         </div>
@@ -294,15 +294,13 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
         <Button className="soothe-action" onClick={() => (playing ? stop() : start())}>
           {playing ? <Pause size={16} aria-hidden="true" /> : <Play size={16} aria-hidden="true" />}
           {playing
-            ? secondsLeft === null ? "Stop" : `Stop · ${formatLeft(secondsLeft)} left`
-            : "Play"}
+            ? secondsLeft === null ? t("Stop") : t("Stop · {left} left", { left: formatLeft(secondsLeft) })
+            : t("Play")}
         </Button>
 
         {failed && (
           <p className="soothe-failed" role="alert">
-            Your phone would not start the sound. Turn the silent switch off, check the
-            volume, and try once more — some browsers also block audio until you have
-            interacted with the page.
+            {t("Your phone would not start the sound. Turn the silent switch off, check the volume, and try once more — some browsers also block audio until you have interacted with the page.")}
           </p>
         )}
 
@@ -310,16 +308,13 @@ export function SoothePlayer({ open, onOpenChange }: { open: boolean; onOpenChan
             a silenced phone is indistinguishable from a broken app. */}
         {playing && !failed && (
           <p className="soothe-hint">
-            No sound? Turn up the volume, and on an iPhone check the switch on the side —
-            it silences apps even when they are playing.
+            {t("No sound? Turn up the volume, and on an iPhone check the switch on the side — it silences apps even when they are playing.")}
           </p>
         )}
 
         <p className="soothe-safety">
-          {mode === "lullaby" && "Rendered by the app, not a recording — traditional tunes, nothing to license. "}
-          Keep it quiet and across the room rather than beside the cot. The AAP has raised
-          concerns about sound levels from infant sleep machines and suggests talking to your
-          paediatrician about safe use.{" "}
+          {mode === "lullaby" && `${t("Rendered by the app, not a recording — traditional tunes, nothing to license.")} `}
+          {t("Keep it quiet and across the room rather than beside the cot. The AAP has raised concerns about sound levels from infant sleep machines and suggests talking to your paediatrician about safe use.")}{" "}
           <a className="fact-source" href={AAP_NOISE.url} target="_blank" rel="noopener noreferrer"
              onClick={() => track("source_opened", { name: AAP_NOISE.name })}>
             {AAP_NOISE.name} <ExternalLink size={12} aria-hidden="true" />

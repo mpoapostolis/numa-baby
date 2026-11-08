@@ -138,11 +138,23 @@ export default defineConfig({
           "**/geist-cyrillic-*.woff2",
           "**/geist-cyrillic-ext-*.woff2",
           "**/geist-vietnamese-*.woff2",
+          // The Greek dictionary, ~66 kB: only a phone that chose Greek in
+          // Settings ever asks for it, so it is cached on that first load
+          // (below) instead of being downloaded by every English phone.
+          "**/assets/el-*.js",
         ],
         // The soothing sounds are ~11MB of media nobody should pay for at
         // install time — cached on first play instead, then they work
         // offline like everything else.
         runtimeCaching: [
+          {
+            urlPattern: /\/assets\/el-[\w-]+\.js$/,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "numalog-greek",
+              expiration: { maxEntries: 2 },
+            },
+          },
           {
             urlPattern: /\/sounds\/.*\.m4a$/,
             handler: "CacheFirst",

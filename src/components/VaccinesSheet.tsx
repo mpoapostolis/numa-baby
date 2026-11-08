@@ -30,8 +30,9 @@ import { NOTE_MAX_LENGTH } from "../domain/activitySchema";
 import { makeId } from "../domain/id";
 import { localDateInput } from "../domain/time";
 import { Activity } from "../domain/types";
-import { dueLabel, dueSoon, vaccineLabel } from "../domain/vaccines";
+import { dueLabel, dueSoon, dueWords, vaccineLabel } from "../domain/vaccines";
 import { nextDose } from "../domain/vaccineDoses";
+import { currentLocale, t } from "../i18n";
 
 type Place = "public" | "private";
 type Seed = { vaccine?: string; dose?: string; place?: Place };
@@ -44,7 +45,8 @@ const PLACES: { key: Place; label: string; short: string }[] = [
 const DOSES = ["1st", "2nd", "3rd", "Booster"];
 
 function placeShort(place: unknown) {
-  return PLACES.find((p) => p.key === place)?.short;
+  const short = PLACES.find((p) => p.key === place)?.short;
+  return short && t(short);
 }
 
 function isPlace(value: unknown): value is Place {
@@ -58,7 +60,24 @@ function dueDate(due: string) {
 /** "Jun 28" this year, "Jun 28, 2025" otherwise. */
 function shortDate(value: Date, now: number) {
   const sameYear = value.getFullYear() === new Date(now).getFullYear();
-  return value.toLocaleDateString("en", sameYear ? { month: "short", day: "numeric" } : { month: "short", day: "numeric", year: "numeric" });
+  return value.toLocaleDateString(currentLocale(), sameYear ? { month: "short", day: "numeric" } : { month: "short", day: "numeric", year: "numeric" });
+}
+
+/** The dose words the chips write — "2nd dose", "Booster" — in the app's
+    language. They stay English in the entry: it is the parents' record,
+    shared with the other phone, and nextDose counts from it. Anything a
+    parent typed is shown as typed. */
+function doseText(dose: string): string {
+  if (currentLocale() === "en") return dose;
+  if (dose === "Booster") return t("Booster");
+  const numbered = /^(\d+)(?:st|nd|rd|th) dose$/.exec(dose);
+  return numbered ? t("{n}th dose", { n: numbered[1] }) : dose;
+}
+
+/** vaccineLabel — "PCV · 2nd dose" — with the app's own words translated
+    and the vaccine's name as the card writes it. */
+function labelOf(entry: { vaccine?: string; dose?: string }): string {
+  return vaccineLabel({ vaccine: entry.vaccine ?? t("Vaccine"), dose: entry.dose && doseText(entry.dose) });
 }
 
 /** YYYY-MM-DD of a local day. */
@@ -146,7 +165,7 @@ function VaccineForm({
 
   function save() {
     const vaccine = name.trim().slice(0, 80);
-    if (!vaccine) return fail("name", "Which vaccine?");
+    if (!vaccine) return fail("name", t("Which vaccine?"));
     const entry: Activity = {
       ...(editing ?? {}),
       id: editing?.id ?? makeId(),
@@ -163,14 +182,14 @@ function VaccineForm({
     if (place) entry.place = place;
     if (note.trim()) entry.note = note.trim().slice(0, NOTE_MAX_LENGTH);
     if (mode.kind === "planned") {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(due)) return fail("due", "When is it due?");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(due)) return fail("due", t("When is it due?"));
       entry.planned = true;
       entry.due = due;
     } else {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(given)) return fail("given", "When was it given?");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(given)) return fail("given", t("When was it given?"));
       // A date still to come is an appointment, not a dose given: say so,
       // rather than quietly saving it as given today.
-      if (given > dayInput(new Date(now))) return fail("given", "That date is still to come — add it with Add appointment.");
+      if (given > dayInput(new Date(now))) return fail("given", t("That date is still to come — add it with Add appointment."));
       // Midday on that day; today, now — never a moment ahead of the clock.
       const midday = new Date(`${given}T12:00:00`).getTime();
       entry.startedAt = new Date(Math.min(midday, now)).toISOString();
@@ -178,25 +197,25 @@ function VaccineForm({
     if (onSave(entry)) onBack();
   }
 
-  const label = editing ? vaccineLabel(editing) : "";
+  const label = editing ? labelOf(editing) : "";
   const where = placeShort(editing?.place);
   const header = marking && editing?.due
-    ? { eyebrow: "Mark as given", title: label, description: `Was due ${dueLabel(editing.due, now).inline}${where ? ` · ${where}` : ""}` }
+    ? { eyebrow: t("Mark as given"), title: label, description: `${t("Was due {when}", { when: dueWords(editing.due, now).inline })}${where ? ` · ${where}` : ""}` }
     : editing?.planned && editing.due
-      ? { eyebrow: "Planned", title: label, description: `Due ${dueLabel(editing.due, now).inline}${where ? ` · ${where}` : ""}` }
+      ? { eyebrow: t("Planned"), title: label, description: `${t("Due {when}", { when: dueWords(editing.due, now).inline })}${where ? ` · ${where}` : ""}` }
       : editing
-        ? { eyebrow: "Given", title: label, description: `${shortDate(new Date(editing.startedAt), now)}${where ? ` · ${where}` : ""}` }
+        ? { eyebrow: t("Given"), title: label, description: `${shortDate(new Date(editing.startedAt), now)}${where ? ` · ${where}` : ""}` }
         : mode.kind === "planned"
-          ? { eyebrow: "Vaccines", title: "Add appointment", description: "The next date from the health center or clinic card." }
-          : { eyebrow: "Vaccines", title: "Record a vaccine", description: "One the baby has had — as written on the card." };
-  const saveLabel = marking ? "Save as given" : editing ? "Save changes" : mode.kind === "planned" ? "Save appointment" : "Save vaccine";
+          ? { eyebrow: t("Vaccines"), title: t("Add appointment"), description: t("The next date from the health center or clinic card.") }
+          : { eyebrow: t("Vaccines"), title: t("Record a vaccine"), description: t("One the baby has had — as written on the card.") };
+  const saveLabel = marking ? t("Save as given") : editing ? t("Save changes") : mode.kind === "planned" ? t("Save appointment") : t("Save vaccine");
 
   const givenShortcuts = [
-    { key: "today", label: "Today", value: dayInput(new Date(now)) },
-    { key: "yesterday", label: "Yesterday", value: dayInput(new Date(now - 86_400_000)) },
+    { key: "today", label: t("Today"), value: dayInput(new Date(now)) },
+    { key: "yesterday", label: t("Yesterday"), value: dayInput(new Date(now - 86_400_000)) },
     // A late dose was most likely given on the appointment day itself.
     ...(marking && editing?.due && dueLabel(editing.due, now).overdue
-      ? [{ key: "due", label: `On ${shortDate(dueDate(editing.due), now)}`, value: editing.due }]
+      ? [{ key: "due", label: t("On {date}", { date: shortDate(dueDate(editing.due), now) }), value: editing.due }]
       : []),
   ];
 
@@ -206,12 +225,12 @@ function VaccineForm({
 
       {fromSchedule.length > 0 && (
         <Field className="medicine-field">
-          <FieldLabel>Late or this week</FieldLabel>
-          <div className="medicine-presets" role="group" aria-label="Late or this week">
+          <FieldLabel>{t("Late or this week")}</FieldLabel>
+          <div className="medicine-presets" role="group" aria-label={t("Late or this week")}>
             {fromSchedule.map((v) => (
               <button key={v.id} type="button" className="medicine-preset" onClick={() => onPick(v)}>
-                <strong>{vaccineLabel(v)}</strong>
-                <small>{v.due ? dueLabel(v.due, now).text : ""}</small>
+                <strong>{labelOf(v)}</strong>
+                <small>{v.due ? dueWords(v.due, now).text : ""}</small>
               </button>
             ))}
           </div>
@@ -220,8 +239,8 @@ function VaccineForm({
 
       {creating && nextDoses.length > 0 && (
         <Field className="medicine-field">
-          <FieldLabel>Next dose of</FieldLabel>
-          <div className="medicine-presets" role="group" aria-label="Next dose of">
+          <FieldLabel>{t("Next dose of")}</FieldLabel>
+          <div className="medicine-presets" role="group" aria-label={t("Next dose of")}>
             {nextDoses.map((v) => (
               <button
                 key={v.id}
@@ -242,7 +261,7 @@ function VaccineForm({
               >
                 <strong>{v.vaccine}</strong>
                 {/* What the tap fills in: the dose after the last one given. */}
-                <small>{nextDose(v.dose)}</small>
+                <small>{doseText(nextDose(v.dose))}</small>
               </button>
             ))}
           </div>
@@ -250,14 +269,14 @@ function VaccineForm({
       )}
 
       <Field data-invalid={error?.field === "name" || undefined}>
-        <FieldLabel htmlFor={nameId}>{nextDoses.length > 0 && creating ? "Or type the name" : "Vaccine"}</FieldLabel>
+        <FieldLabel htmlFor={nameId}>{nextDoses.length > 0 && creating ? t("Or type the name") : t("Vaccine")}</FieldLabel>
         <InputGroup>
           <InputGroupInput
             id={nameId}
             ref={nameRef}
             value={name}
             maxLength={80}
-            placeholder="e.g. BCG, Pentavalent, MMR"
+            placeholder={t("e.g. BCG, Pentavalent, MMR")}
             aria-invalid={error?.field === "name"}
             aria-describedby={error?.field === "name" ? "sheet-error" : undefined}
             onChange={(event) => { setName(event.target.value); setError(null); }}
@@ -269,7 +288,7 @@ function VaccineForm({
 
       {mode.kind === "planned" && (
         <Field data-invalid={error?.field === "due" || undefined}>
-          <FieldLabel htmlFor={dateId}>Date</FieldLabel>
+          <FieldLabel htmlFor={dateId}>{t("Date")}</FieldLabel>
           <InputGroup>
             <InputGroupInput
               id={dateId}
@@ -287,7 +306,7 @@ function VaccineForm({
 
       {mode.kind === "given" && (
         <Field data-invalid={error?.field === "given" || undefined}>
-          <FieldLabel htmlFor={dateId}>Given on</FieldLabel>
+          <FieldLabel htmlFor={dateId}>{t("Given on")}</FieldLabel>
           <InputGroup>
             <InputGroupInput
               id={dateId}
@@ -303,7 +322,7 @@ function VaccineForm({
           <ToggleGroup
             type="single"
             className="preset-row quick-time"
-            aria-label="Given on"
+            aria-label={t("Given on")}
             value={givenShortcuts.find((shortcut) => shortcut.value === given)?.key ?? ""}
             onValueChange={(key) => {
               const shortcut = givenShortcuts.find((candidate) => candidate.key === key);
@@ -317,7 +336,7 @@ function VaccineForm({
 
 
       <Field>
-        <FieldLabel id={whereId}>Where <span className="optional-label">Optional</span></FieldLabel>
+        <FieldLabel id={whereId}>{t("Where")} <span className="optional-label">{t("Optional")}</span></FieldLabel>
         {/* Under the date, so both are seen before Save. The app's
             segmented control; a second tap clears it, because "Where" is
             optional. */}
@@ -329,8 +348,8 @@ function VaccineForm({
           onValueChange={(value) => { chipPlace.current = undefined; setPlace(isPlace(value) ? value : undefined); }}
         >
           {PLACES.map((option) => (
-            <ToggleGroupItem key={option.key} value={option.key} aria-label={option.label}>
-              {option.short}
+            <ToggleGroupItem key={option.key} value={option.key} aria-label={t(option.label)}>
+              {t(option.short)}
               <Check className="choice-check" />
             </ToggleGroupItem>
           ))}
@@ -338,35 +357,35 @@ function VaccineForm({
       </Field>
 
       <Field>
-        <FieldLabel htmlFor={doseId}>Dose <span className="optional-label">Optional</span></FieldLabel>
+        <FieldLabel htmlFor={doseId}>{t("Dose")} <span className="optional-label">{t("Optional")}</span></FieldLabel>
         <InputGroup>
-          <InputGroupInput id={doseId} value={dose} maxLength={40} placeholder="1st dose, booster…" onChange={(event) => setDose(event.target.value)} />
+          <InputGroupInput id={doseId} value={dose} maxLength={40} placeholder={t("1st dose, booster…")} onChange={(event) => setDose(event.target.value)} />
         </InputGroup>
         <ToggleGroup
           type="single"
           className="preset-row quick-time"
-          aria-label="Dose"
+          aria-label={t("Dose")}
           value={DOSES.find((d) => dose === (d === "Booster" ? d : `${d} dose`)) ?? ""}
           onValueChange={(value) => value && setDose(value === "Booster" ? value : `${value} dose`)}
         >
-          {DOSES.map((d) => <ToggleGroupItem key={d} value={d}>{d}</ToggleGroupItem>)}
+          {DOSES.map((d) => <ToggleGroupItem key={d} value={d}>{t(d)}</ToggleGroupItem>)}
         </ToggleGroup>
       </Field>
 
-      <NoteField value={note} onChange={setNote} placeholder="Batch number, reaction, next visit…" />
+      <NoteField value={note} onChange={setNote} placeholder={t("Batch number, reaction, next visit…")} />
       <FormError message={error?.message ?? null} />
 
       {onDelete && (
         <div className="edit-danger">
           <Button type="button" variant="ghost" onClick={onDelete}>
-            <Trash2 size={17} aria-hidden="true" /> {editing?.planned ? "Remove from the schedule" : "Delete this vaccine"}
+            <Trash2 size={17} aria-hidden="true" /> {editing?.planned ? t("Remove from the schedule") : t("Delete this vaccine")}
           </Button>
         </div>
       )}
 
       {/* The sheet's own sticky footer; Back returns to the card. */}
       <DialogFooter>
-        <Button type="button" variant="ghost" className="sheet-cancel" onClick={onBack}>Back</Button>
+        <Button type="button" variant="ghost" className="sheet-cancel" onClick={onBack}>{t("Back")}</Button>
         <Button type="submit" className="primary-button sheet-primary">
           {saveLabel}
         </Button>
@@ -417,7 +436,7 @@ export function VaccinesSheet({
     const next: Activity = { ...v, startedAt: new Date(now).toISOString() };
     delete next.planned;
     delete next.due;
-    if (onUpdate(next, `${vaccineLabel(v)} given today`, () => onUpdate(v, `${vaccineLabel(v)} is back on the schedule`))) {
+    if (onUpdate(next, t("{vaccine} given today", { vaccine: labelOf(v) }), () => onUpdate(v, t("{vaccine} is back on the schedule", { vaccine: labelOf(v) })))) {
       setJustGiven(v.id);
       setReturnTo(`open-${v.id}`);
     }
@@ -425,13 +444,13 @@ export function VaccinesSheet({
 
   function saveForm(entry: Activity): boolean {
     const previous = mode?.editing;
-    const label = vaccineLabel(entry);
+    const label = labelOf(entry);
     if (previous) {
       const turnedGiven = Boolean(previous.planned && !entry.planned);
       const ok = onUpdate(
         entry,
-        turnedGiven ? `${label} marked as given` : `${label} updated`,
-        turnedGiven ? () => onUpdate(previous, `${label} is back on the schedule`) : undefined,
+        turnedGiven ? t("{vaccine} marked as given", { vaccine: label }) : t("{vaccine} updated", { vaccine: label }),
+        turnedGiven ? () => onUpdate(previous, t("{vaccine} is back on the schedule", { vaccine: label })) : undefined,
       );
       if (ok && turnedGiven) setJustGiven(entry.id);
       if (ok) setReturnTo(`open-${entry.id}`);
@@ -453,7 +472,7 @@ export function VaccinesSheet({
         dueSoon(p, now) && day(entry.startedAt) >= day(p.startedAt) && same(p.vaccine, entry.vaccine) && same(p.dose, entry.dose),
       );
       if (match) {
-        const ok = onUpdate({ ...entry, id: match.id }, `${label} marked as given`, () => onUpdate(match, `${label} is back on the schedule`));
+        const ok = onUpdate({ ...entry, id: match.id }, t("{vaccine} marked as given", { vaccine: label }), () => onUpdate(match, t("{vaccine} is back on the schedule", { vaccine: label })));
         if (ok) {
           setJustGiven(match.id);
           setReturnTo(`open-${match.id}`);
@@ -461,7 +480,7 @@ export function VaccinesSheet({
         return ok;
       }
     }
-    const ok = onAdd(entry, entry.planned ? `${label} added to the schedule` : `${label} saved`);
+    const ok = onAdd(entry, entry.planned ? t("{vaccine} added to the schedule", { vaccine: label }) : t("{vaccine} saved", { vaccine: label }));
     if (ok) setReturnTo(`open-${entry.id}`);
     return ok;
   }
@@ -477,8 +496,8 @@ export function VaccinesSheet({
         onSave={saveForm}
         onPick={(v) => setMode({ kind: "given", editing: v })}
         onDelete={existing ? () => {
-          const label = vaccineLabel(existing);
-          if (onRemove(existing, existing.planned ? `${label} removed from the schedule` : `${label} removed`)) {
+          const label = labelOf(existing);
+          if (onRemove(existing, existing.planned ? t("{vaccine} removed from the schedule", { vaccine: label }) : t("{vaccine} removed", { vaccine: label }))) {
             setReturnTo("log");
             setMode(null);
           }
@@ -489,9 +508,12 @@ export function VaccinesSheet({
   }
 
   // Counted the way the list shows them: every appointment, late ones too.
+  const appointments = planned.length === 1
+    ? late ? t("1 appointment ({late} late)", { late }) : t("1 appointment")
+    : late ? t("{n} appointments ({late} late)", { n: planned.length, late }) : t("{n} appointments", { n: planned.length });
   const summary = [
-    planned.length > 0 && `${planned.length} appointment${planned.length === 1 ? "" : "s"}${late ? ` (${late} late)` : ""}`,
-    given.length > 0 && `${given.length} given`,
+    planned.length > 0 && appointments,
+    given.length > 0 && (given.length === 1 ? t("1 given") : t("{n} given", { n: given.length })),
   ]
     .filter(Boolean)
     .join(" · ");
@@ -501,21 +523,21 @@ export function VaccinesSheet({
       <LogDialogHeader
         icon={<Syringe />}
         tone="glyph-medicine"
-        eyebrow="Vaccines"
-        title={who ? `${who}’s vaccines` : "Vaccines"}
-        description={summary || "As written on the health center or clinic card."}
+        eyebrow={t("Vaccines")}
+        title={who ? t("{name}’s vaccines", { name: who }) : t("Vaccines")}
+        description={summary || t("As written on the health center or clinic card.")}
       />
 
       <section className="coming-up vaccine-card" aria-labelledby="vaccines-coming">
-        <h3 className="t-label" id="vaccines-coming">Appointments</h3>
+        <h3 className="t-label" id="vaccines-coming">{t("Appointments")}</h3>
         <ul>
           {planned.map((v) => {
-            const due = dueLabel(v.due!, now);
+            const due = dueWords(v.due!, now);
             return (
               <li key={v.id} className={due.overdue ? "coming-row is-late" : "coming-row"}>
                 <button type="button" className="vaccine-open" data-focus-key={`open-${v.id}`} onClick={() => open({ kind: "planned", editing: v }, `open-${v.id}`)}>
                   <span className="log-copy">
-                    <strong>{vaccineLabel(v)}</strong>
+                    <strong>{labelOf(v)}</strong>
                     <small>
                       <span className={due.overdue ? "vaccine-when is-late" : "vaccine-when"}>{due.text}</span>
                       {due.days >= -13 && due.days < 14 ? ` · ${shortDate(dueDate(v.due!), now)}` : ""}
@@ -533,10 +555,12 @@ export function VaccinesSheet({
                     type="button"
                     variant="outline"
                     data-focus-key={`mark-${v.id}`}
-                    aria-label={`Mark ${v.vaccine}${v.dose ? `, ${v.dose},` : ""} as given today`}
+                    aria-label={v.dose
+                      ? t("Mark {vaccine}, {dose}, as given today", { vaccine: String(v.vaccine), dose: doseText(v.dose) })
+                      : t("Mark {vaccine} as given today", { vaccine: String(v.vaccine) })}
                     onClick={() => markGiven(v)}
                   >
-                    Mark given
+                    {t("Mark given")}
                   </Button>
                 )}
               </li>
@@ -544,19 +568,19 @@ export function VaccinesSheet({
           })}
         </ul>
         {planned.length === 0 && (
-          <p className="vaccine-card-note t-meta">No appointments yet. Add the next date from the health center or clinic card with Add appointment.</p>
+          <p className="vaccine-card-note t-meta">{t("No appointments yet. Add the next date from the health center or clinic card with Add appointment.")}</p>
         )}
       </section>
 
       {given.length > 0 && (
         <section className="coming-up vaccine-card" aria-labelledby="vaccines-given">
-          <h3 className="t-label" id="vaccines-given">Given</h3>
+          <h3 className="t-label" id="vaccines-given">{t("Given")}</h3>
           <ul>
             {given.map((v) => (
               <li key={v.id} className={v.id === justGiven ? "coming-row is-new" : "coming-row"}>
                 <button type="button" className="vaccine-open" data-focus-key={`open-${v.id}`} onClick={() => open({ kind: "given", editing: v }, `open-${v.id}`)}>
                   <span className="log-copy">
-                    <strong>{vaccineLabel(v)}</strong>
+                    <strong>{labelOf(v)}</strong>
                     <small>
                       {shortDate(new Date(v.startedAt), now)}
                       {placeShort(v.place) ? ` · ${placeShort(v.place)}` : ""}
@@ -571,7 +595,7 @@ export function VaccinesSheet({
                     className="vaccine-next"
                     onClick={() => open({ kind: "planned", seed: { vaccine: v.vaccine, dose: nextDose(v.dose), place: isPlace(v.place) ? v.place : undefined } }, `open-${v.id}`)}
                   >
-                    <Plus size={14} aria-hidden="true" /> Plan the {nextDose(v.dose)}
+                    <Plus size={14} aria-hidden="true" /> {t("Plan the {dose}", { dose: doseText(nextDose(v.dose)) })}
                   </Button>
                 )}
               </li>
@@ -585,10 +609,10 @@ export function VaccinesSheet({
           closes with its X, or back.) */}
       <DialogFooter className="vaccine-footer">
         <Button type="button" variant="outline" className="sheet-primary" data-focus-key="plan" onClick={() => open({ kind: "planned" }, "plan")}>
-          <Plus size={16} aria-hidden="true" /> Add appointment
+          <Plus size={16} aria-hidden="true" /> {t("Add appointment")}
         </Button>
         <Button type="button" className="primary-button sheet-primary" data-initial-focus="" data-focus-key="log" onClick={() => open({ kind: "given" }, "log")}>
-          <Plus size={16} aria-hidden="true" /> Record a vaccine
+          <Plus size={16} aria-hidden="true" /> {t("Record a vaccine")}
         </Button>
       </DialogFooter>
     </div>

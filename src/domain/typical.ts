@@ -13,6 +13,7 @@
 //    "ordinary" or "worth a look, here is the page", and stays silent about
 //    the day still being lived, because a morning is not a day.
 
+import { t } from "../i18n";
 import { DaySummary } from "./daySummary";
 // AAP_TUMMY_TIME is the safe-sleep page, the citable home for the hours.
 import { AAP_FIRST_DAYS, AAP_HOW_OFTEN, AAP_POOPING, AAP_TUMMY_TIME as AAP_SLEEP, FactSource, NHS_NAPPY } from "./sources";
@@ -49,7 +50,7 @@ export type TypicalVerdict = {
   ordinary: boolean;
 };
 
-const hours = (minutes: number) => `${Math.round(minutes / 60)}h`;
+const hours = (minutes: number) => t("{h}h", { h: Math.round(minutes / 60) });
 
 /** Feeds in 24 hours. AAP: 8–12 for a newborn, easing as they grow. */
 function feedBand(ageDays: number): TypicalBand {
@@ -166,7 +167,7 @@ const inside = (value: number, band: TypicalBand) => value >= band.low && (band.
 const rangeLabel = (band: TypicalBand, asHours: boolean) => {
   // "0+" is not a range, it is a shrug. After six weeks there genuinely is
   // no expected number of poos, and saying so is the reassurance.
-  if (band.low === 0 && band.high === null) return "any";
+  if (band.low === 0 && band.high === null) return t("any");
   const low = asHours ? hours(band.low) : String(band.low);
   if (band.high === null) return `${low}+`;
   return `${asHours ? Math.round(band.low / 60) : band.low}–${asHours ? hours(band.high) : band.high}`;
@@ -212,9 +213,11 @@ export function typicalVerdict(day: DaySummary | undefined, ageDays: number | nu
 
 /** The headline over the verdict — the answer, before the evidence. */
 export function verdictHeadline(verdict: TypicalVerdict, name: string): string {
-  const who = name.trim() || "your baby";
-  if (verdict.ordinary) return `Yesterday looks ordinary for ${who}`;
+  const who = name.trim() || t("your baby");
+  if (verdict.ordinary) return t("Yesterday looks ordinary for {name}", { name: who });
   const outside = verdict.checks.filter((check) => !check.within);
-  if (outside.length === 1) return `Yesterday: ${outside[0].label.toLowerCase()} sat outside the usual range`;
-  return `Yesterday: ${outside.length} figures sat outside the usual range`;
+  if (outside.length === 1) {
+    return t("Yesterday: {what} sat outside the usual range", { what: t(outside[0].label).toLowerCase() });
+  }
+  return t("Yesterday: {n} figures sat outside the usual range", { n: outside.length });
 }

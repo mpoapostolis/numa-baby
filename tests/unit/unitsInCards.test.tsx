@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { GrowthChart } from "@/components/GrowthChart";
 import { InsightInput, insightsFor } from "@/domain/insightRules";
 import { Activity } from "@/domain/types";
+import { t } from "@/i18n";
 import { fToC, formatGrams, setUnits } from "@/domain/units";
 
 // A parent on US units typed 100.8 °F and was read back "You logged 38.2 °C",
@@ -80,7 +81,12 @@ describe("insight cards on US units", () => {
     ...overrides,
   });
   const weight = (id: string, startedAt: string, weightGrams: number): Activity => ({ id, type: "growth", startedAt, weightGrams });
-  const card = (id: string, overrides: Partial<InsightInput>) => insightsFor(input(overrides)).find((found) => found.id === id)!;
+  // The rules return sentences with {holes}; the card fills them at render,
+  // so the test reads them the way the card shows them.
+  const card = (id: string, overrides: Partial<InsightInput>) => {
+    const found = insightsFor(input(overrides)).find((insight) => insight.id === id)!;
+    return { ...found, title: t(found.title, found.vars), body: t(found.body, found.vars), advice: t(found.advice, found.vars) };
+  };
 
   it("reads a fever back in the degrees the parent typed", () => {
     const fever = card("fever-for-age", { latestTemperatureC: fToC(100.8), latestTemperatureAt: "2026-08-22T17:30:00" });

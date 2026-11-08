@@ -18,6 +18,7 @@ import { Button } from "./ui/button";
 import { Milestone, markMilestoneSeen, milestoneSeen } from "../domain/milestones";
 import { track } from "../domain/analytics";
 import { useUnits } from "../domain/units";
+import { t } from "../i18n";
 
 const COLORS = ["var(--glyph-bottle)", "var(--glyph-nursing)", "var(--glyph-diaper)", "var(--glyph-sleep)", "var(--glyph-burp)"];
 const PIECES = Array.from({ length: 28 }, (_, i) => ({
@@ -62,10 +63,10 @@ export function MilestoneParty({ milestone, totals, onDismiss, onAddMonth, month
     track("milestone_shared", { id: milestone.id });
     try {
       const blob = await renderCard(milestoneCard(milestone, Date.now(), totals, units));
-      const outcome = await shareImage(blob, `numalog-${milestone.id}.png`, `${milestone.title} · ${shareLink("milestone")}`);
-      if (outcome === "saved") toast("Card saved to your device");
+      const outcome = await shareImage(blob, `numalog-${milestone.id}.png`, `${t(milestone.title, milestone.vars)} · ${shareLink("milestone")}`);
+      if (outcome === "saved") toast(t("Card saved to your device"));
     } catch {
-      toast("Could not make the card on this phone");
+      toast(t("Could not make the card on this phone"));
     }
   }
 
@@ -98,16 +99,16 @@ export function MilestoneParty({ milestone, totals, onDismiss, onAddMonth, month
       <div className="milestone-card" role="status">
         <span className="milestone-icon" aria-hidden="true"><PartyPopper /></span>
         <div className="milestone-copy">
-          <strong>{milestone.title}</strong>
-          <small>{milestone.sub}</small>
+          <strong>{t(milestone.title, milestone.vars)}</strong>
+          <small>{t(milestone.sub)}</small>
           {month !== null && onAddMonth && (
             <button type="button" className="milestone-month" onClick={() => onAddMonth(month)}>
-              <Camera size={14} aria-hidden="true" /> {monthHasPhoto ? "Open this month’s page" : "Add this month’s photo"}
+              <Camera size={14} aria-hidden="true" /> {monthHasPhoto ? t("Open this month’s page") : t("Add this month’s photo")}
             </button>
           )}
         </div>
-        <Button variant="ghost" size="sm" aria-label="Share this milestone as a picture" onClick={() => void share()}><Share2 size={18} aria-hidden="true" /></Button>
-        <Button variant="ghost" size="sm" aria-label="Dismiss the celebration" onClick={() => { setDismissed(true); onDismiss?.(); }}>🎉</Button>
+        <Button variant="ghost" size="sm" aria-label={t("Share this milestone as a picture")} onClick={() => void share()}><Share2 size={18} aria-hidden="true" /></Button>
+        <Button variant="ghost" size="sm" aria-label={t("Dismiss the celebration")} onClick={() => { setDismissed(true); onDismiss?.(); }}>🎉</Button>
       </div>
     </>
   );

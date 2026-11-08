@@ -1,5 +1,6 @@
 import { Droplet, Milk, Moon, Stethoscope, Wind } from "lucide-react";
 import { activityTitle } from "../domain/activityDisplay";
+import { t } from "../i18n";
 import { formatTime, humanDuration, isSameDay, minutesOnDay } from "../domain/time";
 import { Activity } from "../domain/types";
 
@@ -124,13 +125,13 @@ export function DayBand({
     ticks.push({ pct: 0, label: "00" }, { pct: 25, label: "06" }, { pct: 50, label: "12" }, { pct: 75, label: "18" });
   }
 
-  const parts = [`${feeds.length} ${feeds.length === 1 ? "feed" : "feeds"}`];
+  const parts = [feeds.length === 1 ? t("1 feed") : t("{n} feeds", { n: feeds.length })];
   if (!feedsOnly) {
-    parts.push(`${diapers.length} ${diapers.length === 1 ? "diaper" : "diapers"}`);
-    parts.push(burps.length === 1 ? "1 burp" : `${burps.length} burps`);
-    if (sleepMinutes > 0) parts.push(`${humanDuration(sleepMinutes)} sleep`);
+    parts.push(diapers.length === 1 ? t("1 diaper") : t("{n} diapers", { n: diapers.length }));
+    parts.push(burps.length === 1 ? t("1 burp") : t("{n} burps", { n: burps.length }));
+    if (sleepMinutes > 0) parts.push(t("{duration} sleep", { duration: humanDuration(sleepMinutes) }));
     if (marks.length > 0) {
-      parts.push(`${marks.length} ${marks.length === 1 ? "measurement or note" : "measurements and notes"}`);
+      parts.push(marks.length === 1 ? t("1 measurement or note") : t("{n} measurements and notes", { n: marks.length }));
     }
   }
   const hasNursing = feeds.some((activity) => activity.type === "nursing");
@@ -140,7 +141,7 @@ export function DayBand({
     <div
       className={`day-band ${className}`.trim()}
       role="img"
-      aria-label={`${rolling ? "Last 24 hours" : "24-hour overview"}: ${parts.join(", ")}.`}
+      aria-label={`${rolling ? t("Last 24 hours") : t("24-hour overview")}: ${parts.join(", ")}.`}
       style={{ "--band-gutter": feedsOnly ? "0px" : "24px" } as React.CSSProperties}
     >
       <div className="day-band-lanes">
@@ -152,7 +153,7 @@ export function DayBand({
           />
         ))}
         <div className="band-lane lane-feed">
-          {!feedsOnly && <span className="band-lane-icon" title="Feeds"><Milk size={14} /></span>}
+          {!feedsOnly && <span className="band-lane-icon" title={t("Feeds")}><Milk size={14} /></span>}
           <div className="band-track">
             {sortedFeeds.map((activity) => (
               <span
@@ -160,7 +161,7 @@ export function DayBand({
                 className={`${activity.type === "nursing" ? "band-dot is-nursing" : "band-dot is-bottle"}${
                   isFresh(activity.startedAt) ? " is-new" : ""
                 }`}
-                title={`${activity.type === "nursing" ? "Nursing" : "Bottle"} · ${formatTime(activity.startedAt)}`}
+                title={`${activity.type === "nursing" ? t("Nursing") : t("Bottle")} · ${formatTime(activity.startedAt)}`}
                 style={
                   {
                     left: `${pct(new Date(activity.startedAt).getTime())}%`,
@@ -174,13 +175,13 @@ export function DayBand({
         {!feedsOnly && (
           <>
             <div className="band-lane lane-diaper">
-              <span className="band-lane-icon" title="Diapers"><Droplet size={14} /></span>
+              <span className="band-lane-icon" title={t("Diapers")}><Droplet size={14} /></span>
               <div className="band-track">
                 {diapers.map((activity) => (
                   <span
                     key={activity.id}
                     className={`band-square${isFresh(activity.startedAt) ? " is-new" : ""}`}
-                    title={`Diaper · ${formatTime(activity.startedAt)}`}
+                    title={`${t("Diaper")} · ${formatTime(activity.startedAt)}`}
                     style={{ left: `${pct(new Date(activity.startedAt).getTime())}%` }}
                   />
                 ))}
@@ -188,13 +189,13 @@ export function DayBand({
             </div>
             {burps.length > 0 && (
               <div className="band-lane lane-burp">
-                <span className="band-lane-icon" title="Burps"><Wind size={14} /></span>
+                <span className="band-lane-icon" title={t("Burps")}><Wind size={14} /></span>
                 <div className="band-track">
                   {burps.map((activity) => (
                     <span
                       key={activity.id}
                       className={`band-dot burp-dot${isFresh(activity.startedAt) ? " is-new" : ""}`}
-                      title={`Burp · ${formatTime(activity.startedAt)}`}
+                      title={`${t("Burp")} · ${formatTime(activity.startedAt)}`}
                       style={{ left: `${pct(new Date(activity.startedAt).getTime())}%` }}
                     />
                   ))}
@@ -205,7 +206,7 @@ export function DayBand({
                 change still draw their lane so old days read correctly. */}
             {sleeps.length > 0 && (
             <div className="band-lane lane-sleep">
-              <span className="band-lane-icon" title="Sleep"><Moon size={14} /></span>
+              <span className="band-lane-icon" title={t("Sleep")}><Moon size={14} /></span>
               <div className="band-track">
                 {sleeps.map((activity) => {
                   const from = Math.max(new Date(activity.startedAt).getTime(), startMs);
@@ -221,8 +222,8 @@ export function DayBand({
                           ? `band-span${isFresh(activity.endedAt) ? " is-just-closed" : ""}`
                           : "band-span is-open"
                       }
-                      title={`Sleep · ${formatTime(activity.startedAt)}–${
-                        activity.endedAt ? formatTime(activity.endedAt) : "now"
+                      title={`${t("Sleep")} · ${formatTime(activity.startedAt)}–${
+                        activity.endedAt ? formatTime(activity.endedAt) : t("now")
                       }`}
                       style={{ left: `${pct(from)}%`, width: `${Math.max(0.8, pct(to) - pct(from))}%` }}
                     />
@@ -233,7 +234,7 @@ export function DayBand({
             )}
             {marks.length > 0 && (
               <div className="band-lane lane-mark">
-                <span className="band-lane-icon" title="Measurements and notes"><Stethoscope size={14} /></span>
+                <span className="band-lane-icon" title={t("Measurements and notes")}><Stethoscope size={14} /></span>
                 <div className="band-track">
                   {/* Named as its row is named: everything that is not a
                       growth check used to say "Health" here — tummy time,
@@ -256,7 +257,7 @@ export function DayBand({
             className={rolling ? "band-now is-edge" : "band-now"}
             style={{ left: `calc(var(--band-gutter) + (100% - var(--band-gutter)) * ${nowPct / 100})` }}
           >
-            <i>now</i>
+            <i>{t("now")}</i>
           </span>
         )}
       </div>
@@ -270,7 +271,7 @@ export function DayBand({
               {tick.label}
             </span>
           ))}
-          <span className="scale-now" style={{ left: "100%" }}>now</span>
+          <span className="scale-now" style={{ left: "100%" }}>{t("now")}</span>
         </div>
       ) : (
         <div className="day-band-scale">
@@ -281,11 +282,11 @@ export function DayBand({
       )}
       {!feedsOnly && (
         <p className="day-band-legend">
-          {hasBottle && <span><i className="key-swatch key-bottle" /> Bottle</span>}
-          {hasNursing && <span><i className="key-swatch key-nursing" /> Nursing</span>}
-          {diapers.length > 0 && <span><i className="key-swatch key-diaper" /> Diaper</span>}
-          {burps.length > 0 && <span><i className="key-swatch key-burp" /> Burp</span>}
-          {sleeps.length > 0 && <span><i className="key-swatch key-sleep" /> Sleep</span>}
+          {hasBottle && <span><i className="key-swatch key-bottle" /> {t("Bottle")}</span>}
+          {hasNursing && <span><i className="key-swatch key-nursing" /> {t("Nursing")}</span>}
+          {diapers.length > 0 && <span><i className="key-swatch key-diaper" /> {t("Diaper")}</span>}
+          {burps.length > 0 && <span><i className="key-swatch key-burp" /> {t("Burp")}</span>}
+          {sleeps.length > 0 && <span><i className="key-swatch key-sleep" /> {t("Sleep")}</span>}
         </p>
       )}
     </div>

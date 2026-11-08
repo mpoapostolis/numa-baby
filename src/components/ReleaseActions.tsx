@@ -7,6 +7,7 @@ import "../styles/screens/news-actions.css";
 import { Camera, Droplets, Images, Syringe } from "lucide-react";
 import type { ReleaseAction } from "../domain/changelog";
 import { track } from "../domain/analytics";
+import { t } from "../i18n";
 
 const ICON = { months: Images, vaccines: Syringe, profile: Camera, pump: Droplets } as const;
 
@@ -35,7 +36,9 @@ export function ReleaseActions({
             }}
           >
             <Icon size={14} aria-hidden="true" />
-            {action.label}
+            {/* A button, not news: it reads in the app's language even
+                though the release note above it stays in English. */}
+            {t(action.label)}
           </button>
         );
       })}

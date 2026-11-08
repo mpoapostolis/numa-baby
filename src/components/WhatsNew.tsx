@@ -17,6 +17,7 @@ import { ChevronDown, Sparkles, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { RELEASES, type ReleaseAction } from "../domain/changelog";
 import { ReleaseActions } from "./ReleaseActions";
+import { t } from "../i18n";
 
 type WhatsNewProps = {
   /** Which releases to tell; the words are looked up here, in this lazy
@@ -52,7 +53,7 @@ export function WhatsNew({ releaseIds, onDismiss, onAction }: WhatsNewProps) {
             aria-expanded={open}
             onClick={() => setOpen((wasOpen) => !wasOpen)}
           >
-            <span className="whats-new-tag">New</span>
+            <span className="whats-new-tag">{t("New")}</span>
             <span className="whats-new-headline">{releases[0].title}</span>
             <ChevronDown
               size={14}
@@ -74,7 +75,7 @@ export function WhatsNew({ releaseIds, onDismiss, onAction }: WhatsNewProps) {
       <Button
         variant="ghost"
         className="whats-new-dismiss"
-        aria-label="Dismiss what's new"
+        aria-label={t("Dismiss what's new")}
         onClick={onDismiss}
       >
         <X size={14} aria-hidden="true" />

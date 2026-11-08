@@ -9,6 +9,7 @@ import {
 import { saveAuthHint } from "../domain/authHint";
 import { nextPullCursor, selectPushDelta } from "../domain/syncCursor";
 import * as transport from "../domain/syncTransport";
+import { t } from "../i18n";
 import { hasQueuedPhotos } from "../domain/photoRef";
 
 /** Retry photo uploads that failed — loading the photo code only if any did. */
@@ -271,7 +272,11 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
           : next;
       });
       // Remote arrivals surface exactly once per pull, and only real ones.
-      if (added > 0) showToast(`Synced — ${added} new from your partner`);
+      if (added > 0) {
+        showToast(added === 1
+          ? t("Synced — 1 new from your partner")
+          : t("Synced — {n} new from your partner", { n: added }));
+      }
       // We're clearly online: flush anything the partner is still missing.
       schedulePush();
     } catch (error) {
@@ -549,7 +554,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
       return true;
     } catch (error) {
       markFailed(error);
-      showToast(OFFLINE_MESSAGE);
+      showToast(t(OFFLINE_MESSAGE));
       return false;
     }
   }
@@ -566,7 +571,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     } catch (error) {
       markFailed(error);
       // The server's own copy is the calmest guidance for a bad/expired code.
-      showToast(error instanceof transport.ApiError ? error.message : OFFLINE_MESSAGE);
+      showToast(error instanceof transport.ApiError ? t(error.message) : t(OFFLINE_MESSAGE));
       return false;
     }
   }
@@ -586,7 +591,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
     } catch (error) {
       if (error instanceof transport.ApiError && error.status === 409) return "elsewhere";
       markFailed(error);
-      showToast(error instanceof transport.ApiError ? error.message : OFFLINE_MESSAGE);
+      showToast(error instanceof transport.ApiError ? t(error.message) : t(OFFLINE_MESSAGE));
       return null;
     }
   }
@@ -628,7 +633,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
       return (await transport.googleProbe(credential)).guarded;
     } catch (error) {
       markFailed(error);
-      showToast(error instanceof transport.ApiError ? error.message : OFFLINE_MESSAGE);
+      showToast(error instanceof transport.ApiError ? t(error.message) : t(OFFLINE_MESSAGE));
       return null;
     }
   }
@@ -667,12 +672,12 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
       saveAuthHint({ method: "google" });
       // The parent must SEE the rescue working, not deduce it from entries
       // trickling in. The pull that follows fills the screen underneath.
-      showToast("Welcome back — your log is on its way.");
+      showToast(t("Welcome back — your log is on its way."));
       return "joined";
     } catch (error) {
       if (error instanceof transport.ApiError && error.status === 404) return "none";
       markFailed(error);
-      showToast(error instanceof transport.ApiError ? error.message : OFFLINE_MESSAGE);
+      showToast(error instanceof transport.ApiError ? t(error.message) : t(OFFLINE_MESSAGE));
       return "failed";
     }
   }
@@ -686,7 +691,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
       return true;
     } catch (error) {
       markFailed(error);
-      showToast(error instanceof transport.ApiError ? error.message : OFFLINE_MESSAGE);
+      showToast(error instanceof transport.ApiError ? t(error.message) : t(OFFLINE_MESSAGE));
       return false;
     }
   }
@@ -710,11 +715,11 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
       if (options.discardLocal) dropLocalForAdoption();
       else demoteProfileForJoin();
       beginPairing(outcome, label);
-      showToast("Welcome back — your log is on its way.");
+      showToast(t("Welcome back — your log is on its way."));
       return "recovered";
     } catch (error) {
       markFailed(error);
-      showToast(error instanceof transport.ApiError ? error.message : OFFLINE_MESSAGE);
+      showToast(error instanceof transport.ApiError ? t(error.message) : t(OFFLINE_MESSAGE));
       return null;
     }
   }
@@ -726,7 +731,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
       return await transport.createInvite(p.token);
     } catch (error) {
       markFailed(error);
-      if (!(error instanceof transport.PairingRevokedError)) showToast(OFFLINE_MESSAGE);
+      if (!(error instanceof transport.PairingRevokedError)) showToast(t(OFFLINE_MESSAGE));
       return null;
     }
   }
@@ -765,7 +770,7 @@ export function useFamilySync({ debugMode, bootState, persistVersion, backfillVe
       await transport.revokeDevice(pairing.token, target);
       return true;
     } catch {
-      showToast("Could not remove that phone — try again when you have signal.");
+      showToast(t("Could not remove that phone — try again when you have signal."));
       return false;
     }
   }

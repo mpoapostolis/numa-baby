@@ -1,4 +1,5 @@
 import { BarChart3, ChevronRight, Clock, Home, Ruler, Settings } from "lucide-react";
+import { t } from "../i18n";
 import { BabyFace } from "./illustrations";
 import { BabyAvatar } from "./BabyAvatar";
 import {
@@ -56,7 +57,7 @@ export function AppSidebar({
               <span className="wordmark-mark"><BabyFace /></span>
               <span className="app-sidebar-brand-copy">
                 <strong>Numalog</strong>
-                <small>Private family log</small>
+                <small>{t("Private family log")}</small>
               </span>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -64,20 +65,20 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Tracker</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("Tracker")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.value}>
                   <SidebarMenuButton
                     size="lg"
-                    aria-label={item.label}
+                    aria-label={t(item.label)}
                     aria-current={activeTab === item.value ? "page" : undefined}
                     isActive={activeTab === item.value}
                     onClick={() => navigate(item.value)}
                   >
                     {item.icon}
-                    <span>{item.label}</span>
+                    <span>{t(item.label)}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -88,11 +89,11 @@ export function AppSidebar({
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" className="sidebar-profile-button" aria-label="Baby profile" onClick={onProfile}>
+            <SidebarMenuButton size="lg" className="sidebar-profile-button" aria-label={t("Baby profile")} onClick={onProfile}>
               <span className="baby-avatar"><BabyAvatar photo={profile.photo} /></span>
               <span className="sidebar-profile-copy">
                 <strong>{profile.name}</strong>
-                <small>Baby profile</small>
+                <small>{t("Baby profile")}</small>
               </span>
               <ChevronRight />
             </SidebarMenuButton>

@@ -1,4 +1,5 @@
 import { ChangeEvent, useEffect, useRef, useState } from "react";
+import { t } from "../i18n";
 import { applyRemote, mergeStored, summarizeMerge } from "../domain/merge";
 import { activityUpdatedAt, liveActivities, parseStoredData } from "../domain/validate";
 import { Activity, BootState, Profile, ReminderSettings } from "../domain/types";
@@ -287,7 +288,9 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
                   // The filtered rows survive only in memory; the notice still reports them.
                 }
                 setRecoveredNotice(
-                  `${parsed.droppedActivities} saved ${parsed.droppedActivities === 1 ? "entry" : "entries"} could not be read and ${parsed.droppedActivities === 1 ? "was" : "were"} skipped. Everything else loaded normally.`,
+                  parsed.droppedActivities === 1
+                    ? t("1 saved entry could not be read and was skipped. Everything else loaded normally.")
+                    : t("{n} saved entries could not be read and were skipped. Everything else loaded normally.", { n: parsed.droppedActivities }),
                 );
               }
             }
@@ -297,14 +300,14 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
             } catch {
               // The original value remains untouched when recovery storage is unavailable.
             }
-            setStorageWarning("Your saved data could not be read. It was not overwritten.");
+            setStorageWarning(t("Your saved data could not be read. It was not overwritten."));
             applyLoadedState({ activities: [], profile: EMPTY_PROFILE, bootState: "recovery" });
           }
         } else {
           applyLoadedState({ activities: [], profile: EMPTY_PROFILE, bootState: "onboarding" });
         }
       } catch {
-        setStorageWarning("This browser is blocking local storage. New entries may not persist.");
+        setStorageWarning(t("This browser is blocking local storage. New entries may not persist."));
         applyLoadedState({ activities: [], profile: EMPTY_PROFILE, bootState: "onboarding" });
       }
       navigator.storage
@@ -350,7 +353,7 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
           });
         }
       } catch {
-        setStorageWarning("A change from another tab could not be read. This tab kept its current data.");
+        setStorageWarning(t("A change from another tab could not be read. This tab kept its current data."));
       }
     };
     window.addEventListener("storage", syncFromAnotherTab);
@@ -388,8 +391,8 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     const text = JSON.stringify({ activities: sweptActivities, profile: nextProfile, nightMode: nextNightMode, reminders: nextReminders, onboardingComplete: nextOnboardingComplete, profileUpdatedAt: nextProfileUpdatedAt });
     const outcome = writeBlob(text, persistedStateRef.current.bootState === "ready");
     if (outcome === "failed") {
-      setStorageWarning("This browser could not save the latest change. Your previous data is still intact.");
-      showToast("Could not save on this device. Nothing was changed.");
+      setStorageWarning(t("This browser could not save the latest change. Your previous data is still intact."));
+      showToast(t("Could not save on this device. Nothing was changed."));
       return false;
     }
     persistedStateRef.current = nextPersisted;
@@ -407,8 +410,8 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     // The warning is the one surface that speaks before quota does: a log
     // that has grown to most of the browser's budget gets a standing
     // "download a backup" long before a tap fails.
-    setStorageWarning(text.length > STORAGE_WATERMARK_CHARS ? LARGE_LOG_WARNING : null);
-    if (outcome === "freed") showToast("Storage was full — an older recovery copy was removed to make room.");
+    setStorageWarning(text.length > STORAGE_WATERMARK_CHARS ? t(LARGE_LOG_WARNING) : null);
+    if (outcome === "freed") showToast(t("Storage was full — an older recovery copy was removed to make room."));
     setPersistVersion((version) => version + 1);
     return true;
   }
@@ -446,7 +449,7 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
         const photo = stamped.photo;
         void import("../lib/photos").then((photos) => photos.forgetPhoto(photo));
       }
-      showToast("Last change undone");
+      showToast(t("Last change undone"));
     });
     return true;
   }
@@ -476,7 +479,7 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
     return true;
   }
 
-  function removeActivity(activity: Activity, message = "Entry removed") {
+  function removeActivity(activity: Activity, message = t("Entry removed")) {
     // Delete is a tombstone write, not a filter-out: the row stays in storage
     // (deleted: true) so a future sync can merge the deletion, and the UI only
     // ever sees the live view.
@@ -523,7 +526,7 @@ export function useTrackerStore({ debugMode, showToast, onNotificationPermission
       });
       if (!persistSnapshot(restored)) return;
       syncActivitiesFromRef();
-      showToast("Entry restored");
+      showToast(t("Entry restored"));
     }, releasePhoto);
     return true;
   }
@@ -565,8 +568,8 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
       // an explicit Cancel discards — the previous mapping put a genuine
       // overnight sleep one habitual OK away from a tombstone.
       const savedIt = window.confirm(
-        `This ${TIMER_NOUN[target.type] ?? "timer"} has been running for ${humanDuration(ranForMinutes)}. ` +
-          `That is usually a timer left on by mistake.\n\nOK saves it as a ${humanDuration(ranForMinutes)} session. Cancel discards it.`,
+        t("This {what} has been running for {duration}. That is usually a timer left on by mistake.", { what: t(TIMER_NOUN[target.type] ?? "timer"), duration: humanDuration(ranForMinutes) }) +
+          "\n\n" + t("OK saves it as a {duration} session. Cancel discards it.", { duration: humanDuration(ranForMinutes) }),
       );
       if (!savedIt) {
         // Discarded, not deleted-and-forgotten: it becomes a tombstone like any
@@ -579,12 +582,12 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
         // Cancel is also how people back out of a dialog, so the discard gets
         // the Undo every other removal has: the timer comes back running,
         // and the next tap on stop can choose OK to save it.
-        showToast("Timer discarded — nothing was added to the log", () => {
+        showToast(t("Timer discarded — nothing was added to the log"), () => {
           const anotherRunning = persistedStateRef.current.activities.some(
             (activity) => activity.id !== id && activity.type === target.type && !activity.endedAt && !activity.deleted,
           );
           if (anotherRunning) {
-            showToast(`Another ${TIMER_NOUN[target.type] ?? "timer"} is already running — stop that one first.`);
+            showToast(t("Another {what} is already running — stop that one first.", { what: t(TIMER_NOUN[target.type] ?? "timer") }));
             return;
           }
           // Revived like removeActivity's Undo: a fresh stamp, so it wins
@@ -597,7 +600,7 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
           });
           if (!persistSnapshot(revived)) return;
           syncActivitiesFromRef();
-          showToast("Timer resumed");
+          showToast(t("Timer resumed"));
         });
         return;
       }
@@ -616,14 +619,14 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     // and wrote it to the log — and the way back was a datetime field in the
     // edit sheet, not a one-handed 3am operation. Now it is the same Undo
     // every other tap has.
-    showToast(`${TIMER_LABEL[target.type] ?? "Session"} saved — ${humanDuration(ranForMinutes)}`, () => {
+    showToast(t("{what} saved — {duration}", { what: t(TIMER_LABEL[target.type] ?? "Session"), duration: humanDuration(ranForMinutes) }), () => {
       // Not while another timer of the same kind has started since: two open
       // sleeps is a mess the stop button cannot untangle.
       const anotherRunning = persistedStateRef.current.activities.some(
         (activity) => activity.id !== id && activity.type === target.type && !activity.endedAt && !activity.deleted,
       );
       if (anotherRunning) {
-        showToast(`Another ${TIMER_NOUN[target.type] ?? "timer"} is already running — stop that one first.`);
+        showToast(t("Another {what} is already running — stop that one first.", { what: t(TIMER_NOUN[target.type] ?? "timer") }));
         return;
       }
       const reopened = persistedStateRef.current.activities.map((activity) => {
@@ -634,7 +637,7 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
       });
       if (!persistSnapshot(reopened)) return;
       syncActivitiesFromRef();
-      showToast("Timer resumed");
+      showToast(t("Timer resumed"));
     });
   }
 
@@ -744,13 +747,13 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
       const next = { ...reminders, [key]: false };
       if (!persistSnapshot(persistedStateRef.current.activities, profile, nightMode, next)) return;
       setReminders(next);
-      showToast(`${label} reminders off`);
+      showToast(t("{what} reminders off", { what: t(label) }));
       return;
     }
 
     if (!("Notification" in window) || !("serviceWorker" in navigator)) {
       onNotificationPermission("unsupported");
-      showToast("Notifications are not supported in this browser");
+      showToast(t("Notifications are not supported in this browser"));
       return;
     }
 
@@ -759,7 +762,7 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
       : Notification.permission;
     onNotificationPermission(permission);
     if (permission !== "granted") {
-      showToast("Notifications were not enabled. You can allow them in browser settings.");
+      showToast(t("Notifications were not enabled. You can allow them in browser settings."));
       return;
     }
 
@@ -768,7 +771,7 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     const next = { ...persistedStateRef.current.reminders, [key]: true };
     if (!persistSnapshot(persistedStateRef.current.activities, undefined, undefined, next)) return;
     setReminders(next);
-    showToast(`${label} reminders on`);
+    showToast(t("{what} reminders on", { what: t(label) }));
   }
 
   function changeFeedReminders(enabled: boolean) {
@@ -943,7 +946,7 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     anchor.download = name;
     anchor.click();
     URL.revokeObjectURL(url);
-    showToast(debugMode ? "Debug file saved — this is not your real log" : "Backup saved to your device");
+    showToast(debugMode ? t("Debug file saved — this is not your real log") : t("Backup saved to your device"));
   }
 
   function exportData() {
@@ -975,8 +978,8 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     try {
       await navigator.share({ files: [file] });
       showToast(debugMode
-        ? "Debug file shared — this is not your real log"
-        : "Shared — have your partner open it in their Numalog");
+        ? t("Debug file shared — this is not your real log")
+        : t("Shared — have your partner open it in their Numalog"));
     } catch (error) {
       // Closing the share sheet is a decision, not a failure — stay silent.
       if (error instanceof DOMException && error.name === "AbortError") return;
@@ -997,12 +1000,12 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
       anchor.click();
       URL.revokeObjectURL(url);
     } catch {
-      showToast("Recovery data is unavailable in this browser");
+      showToast(t("Recovery data is unavailable in this browser"));
     }
   }
 
   function resetUnreadableData() {
-    if (!window.confirm("Reset the unreadable local copy? Download recovery first if you may need it.")) return;
+    if (!window.confirm(t("Reset the unreadable local copy? Download recovery first if you may need it."))) return;
     try {
       const doomed = window.localStorage.getItem(STORAGE_KEY);
       window.localStorage.removeItem(STORAGE_KEY);
@@ -1018,9 +1021,9 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
       }
       applyLoadedState({ activities: [], profile: EMPTY_PROFILE, bootState: "onboarding" });
       setStorageWarning(null);
-      showToast("Local copy reset. Start with a clean tracker.");
+      showToast(t("Local copy reset. Start with a clean tracker."));
     } catch {
-      showToast("This browser is still blocking local storage");
+      showToast(t("This browser is still blocking local storage"));
     }
   }
 
@@ -1069,7 +1072,7 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
             recoveryCreated = false;
           }
         }
-        if (!recoveryCreated && !window.confirm("This browser cannot create a recovery copy. Merge the backup anyway without rollback?")) {
+        if (!recoveryCreated && !window.confirm(t("This browser cannot create a recovery copy. Merge the backup anyway without rollback?"))) {
           return false;
         }
         const localActivities = persistedStateRef.current.activities;
@@ -1129,13 +1132,15 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
           setBackfillOldestAt(oldest);
           setBackfillVersion((v) => v + 1);
         }
-        const counts = `Merged: ${summary.added} new, ${summary.updated} updated, ${summary.unchanged} unchanged`;
+        const counts = { added: summary.added, updated: summary.updated, unchanged: summary.unchanged };
         showToast(parsed.droppedActivities > 0
-          ? `${counts} — ${parsed.droppedActivities} unreadable ${parsed.droppedActivities === 1 ? "entry" : "entries"} skipped`
-          : counts);
+          ? parsed.droppedActivities === 1
+            ? t("Merged: {added} new, {updated} updated, {unchanged} unchanged — 1 unreadable entry skipped", counts)
+            : t("Merged: {added} new, {updated} updated, {unchanged} unchanged — {n} unreadable entries skipped", { ...counts, n: parsed.droppedActivities })
+          : t("Merged: {added} new, {updated} updated, {unchanged} unchanged", counts));
         return true;
       } catch {
-        showToast("That backup could not be read");
+        showToast(t("That backup could not be read"));
         return false;
       }
   }
@@ -1147,7 +1152,7 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     // megabytes, so this is a hundred years of logging, and the earlier
     // 2 MB cap refused the app's own year-old backups.
     if (file.size > 25_000_000) {
-      showToast("That backup is too large to import safely");
+      showToast(t("That backup is too large to import safely"));
       event.target.value = "";
       return;
     }
@@ -1155,11 +1160,11 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     reader.onload = () => {
       mergeBackupText(
         String(reader.result),
-        "Merge this backup into your timeline? Existing entries stay; newer versions win.",
+        t("Merge this backup into your timeline? Existing entries stay; newer versions win."),
         "file",
       );
     };
-    reader.onerror = () => showToast("That backup could not be opened");
+    reader.onerror = () => showToast(t("That backup could not be opened"));
     reader.readAsText(file);
     event.target.value = "";
   }
@@ -1177,14 +1182,22 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     // A backup file carries the entries but not the photos, so "download a
     // backup first" alone was advice that lost every photo it was followed by.
     const photoCount = live.filter((activity) => activity.photo).length + (persistedStateRef.current.profile.photo ? 1 : 0);
-    const name = persistedStateRef.current.profile.name.trim() || "your baby";
-    const what = `${count} ${count === 1 ? "entry" : "entries"}${photoCount ? ` and ${photoCount} ${photoCount === 1 ? "photo" : "photos"}` : ""}`;
+    const name = persistedStateRef.current.profile.name.trim();
+    const entries = count === 1 ? t("1 entry") : t("{n} entries", { n: count });
+    const what = photoCount
+      ? photoCount === 1
+        ? t("{entries} and 1 photo", { entries })
+        : t("{entries} and {n} photos", { entries, n: photoCount })
+      : entries;
     if (
       !window.confirm(
-        `Erase all of ${name}'s data from this device? ${what} will be deleted. ` +
+        (name
+          ? t("Erase all of {name}'s data from this device? {what} will be deleted.", { name, what })
+          : t("Erase all of your baby's data from this device? {what} will be deleted.", { what })) +
+          " " +
           (photoCount
-            ? "A backup keeps your entries but not photos, so save any photo you want to keep first. This cannot be undone."
-            : "Download a backup first if you may ever need it — this cannot be undone."),
+            ? t("A backup keeps your entries but not photos, so save any photo you want to keep first. This cannot be undone.")
+            : t("Download a backup first if you may ever need it — this cannot be undone.")),
       )
     ) return false;
     try {
@@ -1199,10 +1212,10 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
         bootState: "onboarding",
       });
       setStorageWarning(null);
-      showToast("Everything erased. Starting fresh.");
+      showToast(t("Everything erased. Starting fresh."));
       return true;
     } catch {
-      showToast("This browser blocked the erase. Nothing was changed.");
+      showToast(t("This browser blocked the erase. Nothing was changed."));
       return false;
     }
   }

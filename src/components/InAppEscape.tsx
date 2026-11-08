@@ -13,6 +13,7 @@ import { SquareArrowOutUpRight } from "lucide-react";
 import { Button } from "./ui/button";
 import { inAppBrowser, inAppBrowserName } from "../domain/install";
 import { track } from "../domain/analytics";
+import { t } from "../i18n";
 
 const DISMISSED_KEY = "numalog-inapp-dismissed-v1";
 
@@ -33,10 +34,9 @@ export function InAppEscape() {
     <div className="banner-stack">
       <div className="inapp-escape" role="status">
       <p>
-        <strong>You’re in {inAppBrowserName()}’s built-in browser.</strong> It
-        can’t install the app, and it keeps your entries inside {inAppBrowserName()} —
-        open this in Safari or Chrome so your baby’s log is safe. Tap{" "}
-        <strong>⋯</strong> → <strong>Open in browser</strong>, or copy the link:
+        <strong>{t("You’re in {name}’s built-in browser.", { name: inAppBrowserName() })}</strong>{" "}
+        {t("It can’t install the app, and it keeps your entries inside {name} — open this in Safari or Chrome so your baby’s log is safe. Tap", { name: inAppBrowserName() })}{" "}
+        <strong>⋯</strong> → <strong>{t("Open in browser")}</strong>{t(", or copy the link:")}
       </p>
       <div className="inapp-escape-actions">
         <Button
@@ -45,7 +45,7 @@ export function InAppEscape() {
             track("inapp_copy_link");
             if (navigator.clipboard) {
               void navigator.clipboard.writeText(window.location.origin).then(
-                () => toast("Link copied — paste it in Safari or Chrome"),
+                () => toast(t("Link copied — paste it in Safari or Chrome")),
                 () => toast(window.location.origin),
               );
             } else {
@@ -53,7 +53,7 @@ export function InAppEscape() {
             }
           }}
         >
-          <SquareArrowOutUpRight /> Copy link
+          <SquareArrowOutUpRight /> {t("Copy link")}
         </Button>
         <Button
           variant="ghost"
@@ -67,7 +67,7 @@ export function InAppEscape() {
             }
           }}
         >
-          Continue here anyway
+          {t("Continue here anyway")}
         </Button>
       </div>
       </div>

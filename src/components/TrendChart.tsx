@@ -4,6 +4,7 @@
 //
 // Deliberately not a judgement: no target line, no green/red, no "goal". The
 // only emphasised point is today, because that is where the parent is.
+import { currentLocale, t } from "../i18n";
 
 import { useState } from "react";
 import { track } from "../domain/analytics";
@@ -53,9 +54,14 @@ function rememberSeries(key: string) {
   }
 }
 
-const dayFormat = new Intl.DateTimeFormat("en", { weekday: "short" });
-const fullDayFormat = new Intl.DateTimeFormat("en", { month: "short", day: "numeric" });
-const pickedDayFormat = new Intl.DateTimeFormat("en", { weekday: "short", month: "short", day: "numeric" });
+// Lazy, like every formatter in this app: the locale is settled before the
+// first render, but not before this module's body runs.
+let dayFormatter: Intl.DateTimeFormat | null = null;
+let fullDayFormatter: Intl.DateTimeFormat | null = null;
+let pickedDayFormatter: Intl.DateTimeFormat | null = null;
+const dayFormat = () => (dayFormatter ??= new Intl.DateTimeFormat(currentLocale(), { weekday: "short" }));
+const fullDayFormat = () => (fullDayFormatter ??= new Intl.DateTimeFormat(currentLocale(), { month: "short", day: "numeric" }));
+const pickedDayFormat = () => (pickedDayFormatter ??= new Intl.DateTimeFormat(currentLocale(), { weekday: "short", month: "short", day: "numeric" }));
 
 // Geometry in percentages, laid out with CSS rather than a stretched viewBox.
 // The old chart used preserveAspectRatio="none", which distorted every slope
@@ -121,40 +127,40 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
   const withUnit = (value: number) => `${fmt(value)}${unitLabel ? ` ${unitLabel}` : ""}`;
 
   return (
-    <section className="trend-card" aria-label={`${series.label} over the last ${days.length} days`}>
+    <section className="trend-card" aria-label={t("{what} over the last {n} days", { what: t(series.label), n: days.length })}>
       <header className="trend-head">
         <div className="trend-titles">
-          <span className="t-label">Last {days.length} days</span>
+          <span className="t-label">{t("Last {n} days", { n: days.length })}</span>
           <p className="trend-average" aria-live="polite">
             {shown ? (
               !hasRoutineCare(shown) ? (
-                <span>No feeds, nappies or sleep logged on {pickedDayFormat.format(shown.date)}</span>
+                <span>{t("No feeds, nappies or sleep logged on {day}", { day: pickedDayFormat().format(shown.date) })}</span>
               ) : (
                 <>
                   <strong className="figure">{fmt(series.value(shown))}{unitLabel && <span className="unit">{unitLabel}</span>}</strong>
-                  <span>{shown.isToday ? " so far today" : ` on ${pickedDayFormat.format(shown.date)}`}</span>
+                  <span>{shown.isToday ? ` ${t("so far today")}` : ` ${t("on {day}", { day: pickedDayFormat().format(shown.date) })}`}</span>
                 </>
               )
             ) : trackedDays > 0 ? (
               <>
                 <strong className="figure">{fmt(average)}{unitLabel && <span className="unit">{unitLabel}</span>}</strong>
-                <span> a day on average</span>
+                <span> {t("a day on average")}</span>
               </>
             ) : (
-              <span>Nothing logged yet</span>
+              <span>{t("Nothing logged yet")}</span>
             )}
           </p>
         </div>
         {trackedDays > 0 && (
           <span className="trend-peak">
-            peak {fmt(peak)}{unitLabel && <span className="unit">{unitLabel}</span>}
+            {t("peak")} {fmt(peak)}{unitLabel && <span className="unit">{unitLabel}</span>}
           </span>
         )}
       </header>
 
       {/* Plain toggle buttons, not the ARIA tabs pattern: tabs promise
           arrow-key navigation and panels this chart does not have. */}
-      <div className="trend-tabs" role="group" aria-label="Choose what to chart">
+      <div className="trend-tabs" role="group" aria-label={t("Choose what to chart")}>
         {SERIES.map((option) => (
           <button
             key={option.key}
@@ -168,7 +174,7 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
               rememberSeries(option.key);
             }}
           >
-            {option.label}
+            {t(option.label)}
           </button>
         ))}
       </div>
@@ -177,7 +183,7 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
         className="trend-plot"
         style={{ "--trend-hue": series.hue, height: `${BAR_HEIGHT}px` } as React.CSSProperties}
         role="group"
-        aria-label={`${series.label} per day — tap a day for its total`}
+        aria-label={t("{what} per day — tap a day for its total", { what: t(series.label) })}
       >
         <div className="trend-bars">
           {values.map((value, index) => {
@@ -187,7 +193,9 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
               type="button"
               className={`trend-bar${index === todayIndex ? " is-today" : ""}${index === shownIndex ? " is-picked" : ""}`}
               key={days[index].date.toISOString()}
-              aria-label={`${fullDayFormat.format(days[index].date)}: ${hasRoutineCare(days[index]) ? withUnit(value) : "not logged"}`}
+              aria-label={hasRoutineCare(days[index])
+                ? `${fullDayFormat().format(days[index].date)}: ${withUnit(value)}`
+                : t("{day}: not logged", { day: fullDayFormat().format(days[index].date) })}
               aria-pressed={pinned === at}
               onClick={() => {
                 if (pinned !== at) track("trend_day_picked", { series: series.key });
@@ -220,15 +228,15 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
               opaque bar can no longer erase the "avg" label. */}
           {trackedDays > 0 && (
             <div className="trend-mean" style={{ bottom: `${(average / scaleMax) * 100}%` }}>
-              <span>avg</span>
+              <span>{t("avg")}</span>
             </div>
           )}
         </div>
       </div>
 
       <div className="trend-axis" aria-hidden="true">
-        <span>{dayFormat.format(days[0].date)}</span>
-        <span>Today</span>
+        <span>{dayFormat().format(days[0].date)}</span>
+        <span>{t("Today")}</span>
       </div>
     </section>
   );

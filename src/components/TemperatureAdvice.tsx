@@ -1,4 +1,5 @@
 import { Thermometer } from "lucide-react";
+import { t } from "../i18n";
 
 export function TemperatureAdvice({ value, ageMonths }: { value: string; ageMonths: number | null }) {
   const temperature = value ? Number(value) : null;
@@ -14,13 +15,13 @@ export function TemperatureAdvice({ value, ageMonths }: { value: string; ageMont
           // An unknown age fails SAFE: the blank-birth-date case is exactly the
           // newborn-in-hospital case, so the urgent wording is shown, not hidden.
           <>
-            <strong>38 °C or higher</strong> (measured rectally) in a baby under 3 months needs urgent medical advice.
-            {ageMonths === null && <> Add a birth date in Settings to tailor this advice.</>}
+            <strong>{t("38 °C or higher")}</strong> {t("(measured rectally) in a baby under 3 months needs urgent medical advice.")}
+            {ageMonths === null && <> {t("Add a birth date in Settings to tailor this advice.")}</>}
           </>
         ) : high ? (
-          <><strong>Temperature recorded.</strong> If your baby seems unwell or you are concerned, seek medical advice.</>
+          <><strong>{t("Temperature recorded.")}</strong> {t("If your baby seems unwell or you are concerned, seek medical advice.")}</>
         ) : (
-          <><strong>Below 36 °C</strong> can matter as much as a fever in a young baby. If it repeats or your baby seems unwell, seek medical advice.</>
+          <><strong>{t("Below 36 °C")}</strong> {t("can matter as much as a fever in a young baby. If it repeats or your baby seems unwell, seek medical advice.")}</>
         )}
       </p>
     </div>

@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { currentLocale, t } from "../../i18n";
 import { Button } from "../ui/button";
 import {
   DialogClose,
@@ -63,7 +64,7 @@ const QUICK_OFFSETS = [
 export function TimeField({
   value,
   onChange,
-  label = "When",
+  label = t("When"),
   description,
   inputRef,
   error = false,
@@ -97,7 +98,7 @@ export function TimeField({
         <ToggleGroup
           type="single"
           className="preset-row quick-time"
-          aria-label="How long ago"
+          aria-label={t("How long ago")}
           value={preset}
           onValueChange={(next) => {
             // A tap on the lit chip arrives as "" (deselect). Read it as that
@@ -110,8 +111,8 @@ export function TimeField({
           }}
         >
           {QUICK_OFFSETS.map((offset) => (
-            <ToggleGroupItem key={offset.minutes} value={String(offset.minutes)} aria-label={offset.spoken}>
-              {offset.label}
+            <ToggleGroupItem key={offset.minutes} value={String(offset.minutes)} aria-label={t(offset.spoken)}>
+              {t(offset.label)}
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
@@ -131,7 +132,7 @@ export function SheetFooter({ children }: { children: React.ReactNode }) {
   return (
     <DialogFooter>
       <DialogClose asChild>
-        <Button type="button" variant="ghost" className="sheet-cancel">Cancel</Button>
+        <Button type="button" variant="ghost" className="sheet-cancel">{t("Cancel")}</Button>
       </DialogClose>
       {children}
     </DialogFooter>
@@ -141,7 +142,7 @@ export function SheetFooter({ children }: { children: React.ReactNode }) {
 export function NoteField({
   value,
   onChange,
-  placeholder = "Anything worth remembering",
+  placeholder = t("Anything worth remembering"),
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -150,7 +151,7 @@ export function NoteField({
   const id = useId();
   return (
     <Field className="note-field">
-      <FieldLabel htmlFor={id}>Note <span className="optional-label">Optional</span></FieldLabel>
+      <FieldLabel htmlFor={id}>{t("Note")} <span className="optional-label">{t("Optional")}</span></FieldLabel>
       <InputGroup>
         <InputGroupTextarea
         id={id}
@@ -197,7 +198,7 @@ export function UnitField({
   const id = useId();
   return (
     <Field className={`unit-field ${className}`} data-invalid={invalid || undefined}>
-      <FieldLabel htmlFor={id}>{label}{optional && <span className="optional-label">Optional</span>}</FieldLabel>
+      <FieldLabel htmlFor={id}>{label}{optional && <span className="optional-label">{t("Optional")}</span>}</FieldLabel>
       <InputGroup>
         <InputGroupInput
           id={id}
@@ -221,6 +222,40 @@ export function UnitField({
   );
 }
 
+// The shared validator's refusals stay English in the domain, where they are
+// compared and tested, and are put into the reader's language here, where
+// they are shown. Most are whole sentences and are looked up as they stand.
+// The range refusals are assembled from parts (activitySchema
+// numericFieldError, units usMeasurementError), so no whole sentence of
+// theirs exists to look up: each shape is named here, whole, and only its two
+// numbers travel as holes.
+const RANGE_REFUSALS = [
+  "Enter a bottle amount between {min} and {max} ml.",
+  "Enter a weight between {min} and {max} grams.",
+  "Enter a length between {min} and {max} centimetres.",
+  "Enter a head measurement between {min} and {max} centimetres.",
+  "Enter a temperature between {min} and {max} °C.",
+  "Enter a weight between {min} and {max} lb.",
+  "Enter a length between {min} and {max} inches.",
+  "Enter a head measurement between {min} and {max} inches.",
+  "Enter a temperature between {min} and {max} °F.",
+];
+
+function refusalText(message: string): string {
+  for (const shape of RANGE_REFUSALS) {
+    const [before, rest] = shape.split("{min}");
+    const [middle, after] = rest.split("{max}");
+    if (!message.startsWith(before) || !message.endsWith(after)) continue;
+    const bounds = message.slice(before.length, message.length - after.length).split(middle);
+    if (bounds.length !== 2) continue;
+    // "30,000" is thirty in Greek, where the comma is the decimal point; the
+    // thousands comma goes, and the number stays the one the domain gave.
+    const plain = (bound: string) => (currentLocale() === "el" ? bound.replaceAll(",", "") : bound);
+    return t(shape, { min: plain(bounds[0]), max: plain(bounds[1]) });
+  }
+  return t(message);
+}
+
 export function FormError({ message }: { message: string | null }) {
   // The tall sheets (past nursing, timed edits) overflow their scrollport
   // before this ever renders, and it renders at the very bottom — measured
@@ -234,7 +269,7 @@ export function FormError({ message }: { message: string | null }) {
     if (message) ref.current?.scrollIntoView({ block: "nearest" });
   }, [message]);
   if (!message) return null;
-  return <FieldError ref={ref} className="form-error" id="sheet-error">{message}</FieldError>;
+  return <FieldError ref={ref} className="form-error" id="sheet-error">{refusalText(message)}</FieldError>;
 }
 
 export function SheetForm({ children, onSubmit }: { children: React.ReactNode; onSubmit: () => void }) {

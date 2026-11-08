@@ -30,13 +30,21 @@ import { NOTE_MAX_LENGTH } from "../domain/activitySchema";
 import { resolvePhotoSave } from "../domain/photoSave";
 import { Activity, Profile } from "../domain/types";
 import { forgetPhoto, sharePhoto } from "../lib/photos";
+import { currentLocale, t, tAge, tAs, tName } from "../i18n";
 
-const longDate = new Intl.DateTimeFormat("en", { weekday: "long", month: "long", day: "numeric" });
-const longDateYear = new Intl.DateTimeFormat("en", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+// Lazy: the locale is not decided when this module evaluates.
+let longDates: { thisYear: Intl.DateTimeFormat; otherYear: Intl.DateTimeFormat } | null = null;
+function longDate(sameYear: boolean) {
+  longDates ??= {
+    thisYear: new Intl.DateTimeFormat(currentLocale(), { weekday: "long", month: "long", day: "numeric" }),
+    otherYear: new Intl.DateTimeFormat(currentLocale(), { weekday: "long", month: "long", day: "numeric", year: "numeric" }),
+  };
+  return sameYear ? longDates.thisYear : longDates.otherYear;
+}
 
 /** "Tuesday, September 15", with the year when it is not this one. */
 function dayName(value: Date, now: number) {
-  return (value.getFullYear() === new Date(now).getFullYear() ? longDate : longDateYear).format(value);
+  return longDate(value.getFullYear() === new Date(now).getFullYear()).format(value);
 }
 
 function sameDay(a: Date, b: Date) {
@@ -46,14 +54,39 @@ function sameDay(a: Date, b: Date) {
 /** "Jun 15" this year, "Jun 15, 2025" otherwise. */
 function shortDate(value: Date, now: number) {
   const sameYear = value.getFullYear() === new Date(now).getFullYear();
-  return value.toLocaleDateString("en", sameYear ? { month: "short", day: "numeric" } : { month: "short", day: "numeric", year: "numeric" });
+  return value.toLocaleDateString(currentLocale(), sameYear ? { month: "short", day: "numeric" } : { month: "short", day: "numeric", year: "numeric" });
+}
+
+/** monthLabel's "4 months" / "1 year", in the app's language. monthLabel
+    itself stays English: it is tested, and Greek wants the genitive inside
+    a sentence anyway (tAge), not this word. */
+function monthName(month: number) {
+  const label = monthLabel(month);
+  const n = Number.parseInt(label, 10);
+  if (label.endsWith(" years")) return t("{n} years", { n });
+  if (label.endsWith(" year")) return t("1 year");
+  if (label.endsWith(" months")) return t("{n} months", { n });
+  return t("1 month");
+}
+
+/** Who the album belongs to: the name, or "Your baby" without one. */
+type Who = { name: string; sex?: Profile["sex"] };
+
+/** The baby as the subject of a sentence — «Η Μία» in Greek. */
+function subject({ name, sex }: Who) {
+  return name ? tName(name, sex) : t("Your baby");
+}
+
+/** "Mia’s monthly photos" — or "Your baby’s", without a name. */
+function albumTitle({ name }: Who) {
+  return name ? t("{name}’s monthly photos", { name }) : t("Your baby’s monthly photos");
 }
 
 /** "Mia is 4 months old today." / "Mia turned 4 months on Tuesday, September 15." */
-function turned(who: string, slot: MonthSlot, now: number) {
-  const label = monthLabel(slot.month);
-  if (sameDay(slot.date, new Date(now))) return `${who} is ${label} old today.`;
-  return `${who} turned ${label} on ${dayName(slot.date, now)}.`;
+function turned(who: Who, slot: MonthSlot, now: number) {
+  const age = tAge(monthLabel(slot.month));
+  if (sameDay(slot.date, new Date(now))) return t("{name} is {age} old today.", { name: subject(who), age });
+  return t("{name} turned {age} on {date}.", { name: subject(who), age, date: dayName(slot.date, now) });
 }
 
 /** A month's photo — or, without one, a camera and "No photo yet", which no
@@ -65,7 +98,7 @@ function MonthMedia({ photo, className }: { photo: string | undefined; className
       {url ? (
         <img src={url} alt="" loading="lazy" decoding="async" />
       ) : (
-        <span className="months-no-photo"><Camera size={22} />No photo yet</span>
+        <span className="months-no-photo"><Camera size={22} />{t("No photo yet")}</span>
       )}
     </span>
   );
@@ -79,7 +112,7 @@ function MonthEditor({
   onUpsert,
   onDone,
 }: {
-  who: string;
+  who: Who;
   slot: MonthSlot;
   entry: Activity | undefined;
   now: number;
@@ -135,28 +168,28 @@ function MonthEditor({
       <LogDialogHeader
         icon={<Images />}
         tone="glyph-growth"
-        eyebrow={`${who}’s monthly photos`}
-        title={monthLabel(slot.month)}
+        eyebrow={albumTitle(who)}
+        title={monthName(slot.month)}
         description={turned(who, slot, now)}
         titleRef={titleRef}
       />
       <PhotoField
         variant="hero"
-        label="Photo"
-        addLabel="Add a photo"
+        label={t("Photo")}
+        addLabel={t("Add a photo")}
         photoId={photo}
         onChange={setPhoto}
         onBusyChange={setPhotoBusy}
       />
       <Field className="note-field">
-        <FieldLabel htmlFor={noteId}>Note <span className="optional-label">Optional</span></FieldLabel>
+        <FieldLabel htmlFor={noteId}>{t("Note")} <span className="optional-label">{t("Optional")}</span></FieldLabel>
         <InputGroup>
           <InputGroupTextarea
             id={noteId}
             value={note}
             maxLength={NOTE_MAX_LENGTH}
             rows={4}
-            placeholder="A first smile, a new sound, how the nights are going…"
+            placeholder={t("A first smile, a new sound, how the nights are going…")}
             onChange={(event) => setNote(event.target.value)}
           />
         </InputGroup>
@@ -164,13 +197,13 @@ function MonthEditor({
       {/* The sheet's own sticky footer — but Back returns to the album, it
           does not close the sheet. */}
       <DialogFooter>
-        <Button type="button" variant="ghost" className="sheet-cancel" onClick={onDone}>Back</Button>
+        <Button type="button" variant="ghost" className="sheet-cancel" onClick={onDone}>{t("Back")}</Button>
         {/* Looking back through the album is not editing it: nothing
             changed, nothing to save. */}
         {!noteTouched && photo === openedPhoto ? (
-          <Button type="button" className="primary-button sheet-primary" disabled={photoBusy} onClick={onDone}>Done</Button>
+          <Button type="button" className="primary-button sheet-primary" disabled={photoBusy} onClick={onDone}>{t("Done")}</Button>
         ) : (
-          <Button type="submit" className="primary-button sheet-primary" disabled={photoBusy}>Save</Button>
+          <Button type="submit" className="primary-button sheet-primary" disabled={photoBusy}>{t("Save")}</Button>
         )}
       </DialogFooter>
     </SheetForm>
@@ -207,7 +240,7 @@ export function MonthsSheet({
 
   const slots = monthSlots(profile.birthDate, now);
   const byMonth = new Map(months.filter((m) => m.month).map((m) => [m.month as number, m]));
-  const who = profile.name.trim() || "Your baby";
+  const who: Who = { name: profile.name.trim(), sex: profile.sex };
   const editing = slots.find((slot) => slot.month === open);
   const openMonth = (month: number) => {
     setReturnTo(month);
@@ -222,9 +255,9 @@ export function MonthsSheet({
     <LogDialogHeader
       icon={<Images />}
       tone="glyph-growth"
-      eyebrow="Monthly photos"
-      title={`${who}’s monthly photos`}
-      description="A photo and a note each month. Only your family sees them."
+      eyebrow={t("Monthly photos")}
+      title={albumTitle(who)}
+      description={t("A photo and a note each month. Only your family sees them.")}
     />
   );
 
@@ -234,9 +267,13 @@ export function MonthsSheet({
         {header}
         <div className="empty-state months-empty">
           <Images aria-hidden="true" />
-          <p>Add {profile.name.trim() ? `${profile.name.trim()}’s` : "the"} date of birth and each month‑birthday gets its own page.</p>
+          <p>
+            {who.name
+              ? t("Add {name}’s date of birth and each month‑birthday gets its own page.", { name: tName(who.name, who.sex) })
+              : t("Add the date of birth and each month‑birthday gets its own page.")}
+          </p>
           {onOpenProfile && (
-            <Button type="button" variant="outline" data-initial-focus="" onClick={onOpenProfile}>Add date of birth</Button>
+            <Button type="button" variant="outline" data-initial-focus="" onClick={onOpenProfile}>{t("Add date of birth")}</Button>
           )}
         </div>
       </div>
@@ -259,9 +296,15 @@ export function MonthsSheet({
         <div className="months-now is-waiting" tabIndex={-1} data-initial-focus="">
           <span className="months-now-media is-empty" aria-hidden="true"><span className="months-numeral">1</span></span>
           <span className="months-now-copy">
-            <span className="t-label">First page</span>
-            <strong>1 month</strong>
-            <small>{first ? `${who}’s first month‑birthday is ${dayName(first, now)}. ` : ""}Its page opens here that morning.</small>
+            <span className="t-label">{t("First page")}</span>
+            <strong>{t("1 month")}</strong>
+            <small>
+              {!first
+                ? t("Its page opens here that morning.")
+                : who.name
+                  ? t("{name}’s first month‑birthday is {date}. Its page opens here that morning.", { name: tName(who.name, who.sex), date: dayName(first, now) })
+                  : t("Your baby’s first month‑birthday is {date}. Its page opens here that morning.", { date: dayName(first, now) })}
+            </small>
           </span>
         </div>
       ) : (
@@ -277,14 +320,14 @@ export function MonthsSheet({
             >
               <MonthMedia photo={entry?.photo} className="months-now-media" />
               <span className="months-now-copy">
-                <span className="t-label">{pastAlbum ? "Last page" : "This month"}</span>
-                <strong>{monthLabel(current.month)}</strong>
+                <span className="t-label">{pastAlbum ? t("Last page") : t("This month")}</span>
+                <strong>{monthName(current.month)}</strong>
                 <small>{turned(who, current, now)}</small>
                 {entry?.note && <span className="months-now-note">{entry.note}</span>}
                 {/* Says what a tap does, photo or not: the card is the way in. */}
                 <span className="months-invite">
                   <Camera size={14} aria-hidden="true" />{" "}
-                  {entry?.photo ? "Change photo or note" : pastAlbum ? "Add a photo" : "Add this month’s photo"}
+                  {entry?.photo ? t("Change photo or note") : pastAlbum ? t("Add a photo") : t("Add this month’s photo")}
                 </span>
               </span>
             </button>
@@ -294,14 +337,15 @@ export function MonthsSheet({
 
       {next && (
         <p className="months-next t-meta">
-          {who} turns {monthLabel(current!.month + 1)}{" "}
-          {sameDay(next, new Date(now + 86_400_000)) ? "tomorrow" : `on ${dayName(next, now)}`} — a new page opens then.
+          {sameDay(next, new Date(now + 86_400_000))
+            ? t("{name} turns {age} tomorrow — a new page opens then.", { name: subject(who), age: tAge(monthLabel(current!.month + 1)) })
+            : t("{name} turns {age} on {date} — a new page opens then.", { name: subject(who), age: tAge(monthLabel(current!.month + 1)), date: dayName(next, now) })}
         </p>
       )}
 
       {earlier.length > 0 && (
         <section className="months-earlier" aria-labelledby="months-earlier">
-          <h3 className="t-label" id="months-earlier">Earlier</h3>
+          <h3 className="t-label" id="months-earlier">{tAs("Earlier (months)", "Earlier")}</h3>
           {/* An album: the photos large, two to a row, so the months can be
               seen side by side. A month without one shows its number. */}
           <ul className="months-grid">
@@ -312,11 +356,11 @@ export function MonthsSheet({
                   <button type="button" className="month-tile" data-focus-key={`month-${slot.month}`} onClick={() => openMonth(slot.month)}>
                     <MonthMedia photo={entry?.photo} className="month-tile-media" />
                     <span className="month-tile-copy">
-                      <strong>{monthLabel(slot.month)}</strong>
+                      <strong>{monthName(slot.month)}</strong>
                       <small>{shortDate(slot.date, now)}</small>
                       {entry?.note && <span className="month-tile-note">{entry.note}</span>}
                     </span>
-                    {entry?.photo && <span className="sr-only">, with a photo</span>}
+                    {entry?.photo && <span className="sr-only">{t(", with a photo")}</span>}
                   </button>
                 </li>
               );

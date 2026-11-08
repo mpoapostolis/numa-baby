@@ -23,20 +23,24 @@ import {
   unreadReplies,
   type ThreadMessage,
 } from "../domain/feedbackInbox";
+import { currentLocale, t } from "../i18n";
 
 type State = "idle" | "sending" | "sent" | "failed";
 
-const stampFormat = new Intl.DateTimeFormat("en", {
-  day: "numeric",
-  month: "short",
-  hour: "2-digit",
-  minute: "2-digit",
-  hour12: false,
-});
+// Lazy: the locale is not decided when this module evaluates.
+let stampFormatCache: Intl.DateTimeFormat | null = null;
+const stampFormat = () =>
+  (stampFormatCache ??= new Intl.DateTimeFormat(currentLocale(), {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }));
 
 function stamp(at: string): string {
   const date = new Date(at);
-  return Number.isNaN(date.getTime()) ? "" : stampFormat.format(date);
+  return Number.isNaN(date.getTime()) ? "" : stampFormat().format(date);
 }
 
 function Thread({ thread }: { thread: ThreadMessage[] }) {
@@ -90,11 +94,11 @@ function Thread({ thread }: { thread: ThreadMessage[] }) {
   }, [unread, thread.length]);
 
   return (
-    <ol className="feedback-thread" ref={listRef} aria-label="Your messages and the replies">
+    <ol className="feedback-thread" ref={listRef} aria-label={t("Your messages and the replies")}>
       {thread.map((message) => (
         <li key={message.id} className={message.from === "dev" ? "feedback-said dev" : "feedback-said you"}>
           <span className="feedback-who">
-            {message.from === "dev" ? "Apostolis" : "You"} · {stamp(message.at)}
+            {message.from === "dev" ? t("Apostolis") : t("You")} · {stamp(message.at)}
           </span>
           <p>{message.text}</p>
         </li>
@@ -157,13 +161,13 @@ export function FeedbackForm({ onSent }: { onSent?: () => void } = {}) {
     <>
       {talking && <Thread thread={thread} />}
       <form className="feedback-form" onSubmit={(event) => void submit(event)}>
-        <label className="sr-only" htmlFor="feedback-message">{talking ? "Your reply" : "Your message"}</label>
+        <label className="sr-only" htmlFor="feedback-message">{talking ? t("Your reply") : t("Your message")}</label>
         <textarea
           id="feedback-message"
           className="feedback-input"
           rows={talking ? 3 : 4}
           maxLength={2000}
-          placeholder={talking ? "Write a message…" : "What would make this better?"}
+          placeholder={talking ? t("Write a message…") : t("What would make this better?")}
           value={message}
           onChange={(event) => {
             setMessage(event.target.value);
@@ -175,7 +179,7 @@ export function FeedbackForm({ onSent }: { onSent?: () => void } = {}) {
         {!talking && (
           <>
             <label className="t-label" htmlFor="feedback-contact">
-              Email <span className="feedback-optional">optional — replies show up here too</span>
+              {t("Email")} <span className="feedback-optional">{t("optional — replies show up here too")}</span>
             </label>
             <input
               id="feedback-contact"
@@ -183,7 +187,7 @@ export function FeedbackForm({ onSent }: { onSent?: () => void } = {}) {
               type="text"
               maxLength={200}
               autoComplete="email"
-              placeholder="only if you also want them by email"
+              placeholder={t("only if you also want them by email")}
               value={contact}
               onChange={(event) => setContact(event.target.value)}
             />
@@ -191,36 +195,37 @@ export function FeedbackForm({ onSent }: { onSent?: () => void } = {}) {
         )}
         {state === "sent" && (
           <p className="feedback-thanks" role="status">
-            Sent — thank you. The answer will show up right here, and the
-            speech bubble gets a dot when it does.
+            {t("Sent — thank you. The answer will show up right here, and the speech bubble gets a dot when it does.")}
           </p>
         )}
         {state === "failed" && (
           <p className="feedback-error" role="alert">
+            {/* The refusal is the server's own sentence, so it stays as sent. */}
             {refusal
-              ? `That did not send: ${refusal} Your text is still here.`
-              : "That did not send — you may be offline. Your text is still here, try again."}
+              ? t("That did not send: {reason} Your text is still here.", { reason: refusal })
+              : t("That did not send — you may be offline. Your text is still here, try again.")}
           </p>
         )}
         <Button type="submit" disabled={message.trim().length < 3 || state === "sending"}>
           <MessageCircle size={16} aria-hidden="true" />
-          {state === "sending" ? "Sending…" : "Send"}
+          {state === "sending" ? t("Sending…") : t("Send")}
         </Button>
       </form>
     </>
   );
 }
 
+// One literal, deliberately: this string is a dictionary key, and a key
+// assembled from halves is one no tool can match against the translations.
 export const FEEDBACK_BLURB =
-  "Something broken, missing, or just annoying? It goes straight to the person who built " +
-  "this — two tired parents, evenings, between feeds.";
+  "Something broken, missing, or just annoying? It goes straight to the person who built this — two tired parents, evenings, between feeds.";
 
 export function FeedbackCard() {
   return (
     <Card className="settings-group">
       <CardHeader>
-        <CardTitle asChild><h2>Need anything?</h2></CardTitle>
-        <CardDescription>{FEEDBACK_BLURB}</CardDescription>
+        <CardTitle asChild><h2>{t("Need anything?")}</h2></CardTitle>
+        <CardDescription>{t(FEEDBACK_BLURB)}</CardDescription>
       </CardHeader>
       <CardContent>
         <FeedbackForm />
