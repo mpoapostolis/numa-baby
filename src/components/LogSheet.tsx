@@ -11,7 +11,7 @@ import {
 } from "./ui/field";
 import { InputGroup, InputGroupInput } from "./ui/input-group";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
-import { activityTitle } from "../domain/activityDisplay";
+import { activityTitle, formulaBrand } from "../domain/activityDisplay";
 import { DEFAULT_BOTTLE_ML, numericFieldProps } from "../domain/activitySchema";
 import {
   MeasurementName,
@@ -33,7 +33,7 @@ import { minuteBucket, mlBucket, track } from "../domain/analytics";
 import { formatTime, formatTimelineDay, humanDuration, localDateInput, minutesBetween } from "../domain/time";
 import { isTimedType } from "../domain/timers";
 import { DraftErrorField, isWetness, validateDraft } from "../domain/validate";
-import { NOTE_MAX_LENGTH } from "../domain/activitySchema";
+import { BRAND_MAX_LENGTH, NOTE_MAX_LENGTH } from "../domain/activitySchema";
 import { Activity, DiaperKind, FeedingMode, Profile, Sheet, Wetness } from "../domain/types";
 import { PhotoField } from "./PhotoField";
 import { MonthsSheet } from "./MonthsSheet";
@@ -65,6 +65,9 @@ type SheetError = { message: string; field: SheetErrorField };
 type SheetDraft = {
   bottleAmount: string;
   milkType: "formula" | "expressed";
+  /** Which formula, "" for not said. Kept while Breast milk is picked (a
+      slip of the toggle loses nothing) and saved only on a formula bottle. */
+  formulaBrand: string;
   note: string;
   weightGrams: string;
   lengthCm: string;
@@ -89,6 +92,41 @@ type SheetDraft = {
   pumpAmount: string;
 };
 
+/** Which formula: the tins named before as chips — tap one, tap it again to
+    take it back — and a field for a new one. Optional, and only under
+    Formula; asked for by a parent who gives two brands. */
+function FormulaBrandField({ brands, value, onChange }: { brands: string[]; value: string; onChange: (value: string) => void }) {
+  const id = useId();
+  const picked = value.trim().toLowerCase();
+  return (
+    <Field className="medicine-field brand-field">
+      <FieldLabel htmlFor={id}>{t("Formula brand")} <span className="optional-label">{t("Optional")}</span></FieldLabel>
+      {brands.length > 0 && (
+        <div className="medicine-presets" role="group" aria-label={t("Brands used before")}>
+          {brands.map((brand) => {
+            const active = picked === brand.toLowerCase();
+            return (
+              <button key={brand} type="button" aria-pressed={active} className={active ? "medicine-preset is-active" : "medicine-preset"} onClick={() => onChange(active ? "" : brand)}>
+                <strong>{brand}</strong>
+              </button>
+            );
+          })}
+        </div>
+      )}
+      <InputGroup>
+        <InputGroupInput
+          id={id}
+          value={value}
+          maxLength={BRAND_MAX_LENGTH}
+          autoComplete="off"
+          placeholder={brands.length > 0 ? t("Or type another") : t("As written on the tin")}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      </InputGroup>
+    </Field>
+  );
+}
+
 function sheetOpenedAt() {
   return Date.now();
 }
@@ -110,6 +148,8 @@ function initialSheetDraft(
     // typed is what the field shows — and crosses to metric once, on save.
     bottleAmount: mlToBottleDraft(Math.min(400, Math.max(10, lastBottle?.amount ?? DEFAULT_BOTTLE_ML)), units),
     milkType: lastBottle?.milkType ?? "formula",
+    // The last bottle's tin, as the amount is the last bottle's amount.
+    formulaBrand: (lastBottle && formulaBrand(lastBottle)) ?? "",
     note: "",
     weightGrams: "",
     lengthCm: "",
@@ -133,6 +173,7 @@ function initialSheetDraft(
       // carry a bottle amount into the draft.
       bottleAmount: editing.type === "bottle" ? mlToBottleDraft(editing.amount ?? DEFAULT_BOTTLE_ML, units) : base.bottleAmount,
       milkType: editing.type === "bottle" ? editing.milkType ?? "formula" : base.milkType,
+      formulaBrand: formulaBrand(editing) ?? "",
       note: editing.note ?? "",
       weightGrams: editing.weightGrams ? metricToMeasurementDraft("weightGrams", editing.weightGrams, units) : "",
       lengthCm: editing.lengthCm ? metricToMeasurementDraft("lengthCm", editing.lengthCm, units) : "",
@@ -397,6 +438,30 @@ export function LogSheet({
     }));
   }
 
+  // Formula tins named before, newest first — the families who asked switch
+  // between two. Derived from the log like the medicines: name one once and
+  // it is a chip from then on.
+  const savedBrands = (() => {
+    if (sheet !== "bottle" && editing?.type !== "bottle") return [] as string[];
+    const seen = new Map<string, string>();
+    const bottles = [...activities]
+      .filter((a) => a.type === "bottle" && !a.deleted && formulaBrand(a))
+      .sort((a, b) => (a.startedAt < b.startedAt ? 1 : -1));
+    for (const bottle of bottles) {
+      const brand = formulaBrand(bottle) ?? "";
+      const key = brand.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.set(key, brand);
+      if (seen.size >= 4) break;
+    }
+    return [...seen.values()];
+  })();
+
+  /** The brand this save stores: formula only, trimmed, "" for none. */
+  function savedBrand() {
+    return draft.milkType === "formula" ? draft.formulaBrand.trim().slice(0, BRAND_MAX_LENGTH) : "";
+  }
+
   function saveBottle() {
     // Clamp to the storage schema's own bounds — persisting an amount that
     // isValidActivity rejects would strand the whole store behind recovery.
@@ -413,6 +478,7 @@ export function LogSheet({
       startedAt: outcome.value.startedAt,
       amount: outcome.value.amount,
       milkType: draft.milkType,
+      ...(savedBrand() ? { brand: savedBrand() } : {}),
       note: outcome.value.note,
     };
     if (onAdd(entry, t("{amount} bottle saved", { amount: formatVolume(outcome.value.amount ?? 0, units) }))) onClose();
@@ -707,6 +773,10 @@ export function LogSheet({
     if (next.type === "bottle") {
       next.amount = outcome.value.amount;
       next.milkType = draft.milkType;
+      // A brand that is not a string came from a newer build and this
+      // sheet never showed it: kept, unless the bottle stopped being formula.
+      if (savedBrand()) next.brand = savedBrand();
+      else if (draft.milkType !== "formula" || typeof editing.brand === "string") delete next.brand;
     }
     if (next.type === "nursing") next.side = draft.nursingSide;
     if (next.type === "pump") {
@@ -883,6 +953,7 @@ export function LogSheet({
               <ToggleGroupItem value="expressed">{t("Breast milk")}<Check className="choice-check" /></ToggleGroupItem>
             </ToggleGroup>
           </Field>
+          {draft.milkType === "formula" && <FormulaBrandField brands={savedBrands} value={draft.formulaBrand} onChange={(value) => patch({ formulaBrand: value })} />}
           <TimeField quick value={draft.logTime} onChange={(value) => patch({ logTime: value })} />
           <NoteField value={draft.note} onChange={(value) => patch({ note: value })} />
           <SheetFooter><Button type="submit" className="primary-button sheet-primary">{t("Save {amount} {unit}", { amount: draft.bottleAmount, unit: stepper.unit })}</Button></SheetFooter>
@@ -1234,6 +1305,7 @@ export function LogSheet({
                   <ToggleGroupItem value="expressed">{t("Breast milk")}<Check className="choice-check" /></ToggleGroupItem>
                 </ToggleGroup>
               </Field>
+              {draft.milkType === "formula" && <FormulaBrandField brands={savedBrands} value={draft.formulaBrand} onChange={(value) => patch({ formulaBrand: value })} />}
             </>
           )}
 

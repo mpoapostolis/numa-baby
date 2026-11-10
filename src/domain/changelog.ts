@@ -24,6 +24,15 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-11-10",
+    title: "Which formula, on each bottle",
+    items: [
+      "“I use two brands of formula. Could I enter the brand for each bottle?” Now you can: under Formula, the bottle sheet has an optional Formula brand.",
+      "Write a brand once and it becomes a button, so next time it is one tap. Each bottle starts with the brand of the last one; tap the other to switch.",
+      "The brand shows on the Timeline and on the Bottle tile (“120 ml · your brand”), and the tile's repeat logs the same one again.",
+    ],
+  },
+  {
     id: "2026-11-08.3",
     title: "Nursing by side, on Insights too",
     items: [

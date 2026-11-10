@@ -31,6 +31,11 @@ export type Activity = {
       from a later build reads as not said, not as a reason to drop the row. */
   wetness?: Wetness;
   milkType?: "formula" | "expressed";
+  /** Which formula, for a formula bottle, as the parent writes it: free
+      text like a medicine name, for families who switch between two. Not
+      checked on load (like `wetness`): readers take it only when it is a
+      string, so a later build's longer one is never a dropped row. */
+  brand?: string;
   weightGrams?: number;
   lengthCm?: number;
   headCm?: number;

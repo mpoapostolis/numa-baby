@@ -27,6 +27,8 @@ export const NUMERIC_FIELDS: Record<NumericFieldName, NumericFieldSpec> = {
 };
 
 export const NOTE_MAX_LENGTH = 240;
+/** A formula brand: a name on a tin, not a note. */
+export const BRAND_MAX_LENGTH = 60;
 export const DEFAULT_BOTTLE_ML = 90;
 
 const boundFormat = new Intl.NumberFormat("en-US");

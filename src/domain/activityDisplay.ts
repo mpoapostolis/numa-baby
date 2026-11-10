@@ -34,6 +34,20 @@ export function activityTitle(activity: Activity) {
   return t("Entry");
 }
 
+/** The formula a bottle was, when the parent named it: only on a formula
+    bottle, only a string (brand is not checked on load), trimmed. */
+export function formulaBrand(activity: Activity) {
+  if (activity.type !== "bottle" || activity.milkType === "expressed" || typeof activity.brand !== "string") return undefined;
+  return activity.brand.trim() || undefined;
+}
+
+/** What was in a bottle, in a word or a name: "breast milk", "formula", or
+    the brand, which says formula by itself. */
+export function bottleMilk(activity: Activity) {
+  if (activity.milkType === "expressed") return t("breast milk");
+  return formulaBrand(activity) ?? t("formula");
+}
+
 /** One wording for a side, nursing or pumping. No side saved is no side
     shown — not a guess of "Right". */
 const SIDE_LABEL = { left: "Left side", right: "Right side", both: "Both sides" } as const;
@@ -51,7 +65,7 @@ export function detailReadsClock(activity: Activity) {
 export function activityDetail(activity: Activity, units: UnitSystem = "metric", now = Date.now()) {
   if (activity.type === "bottle") {
     return includeNote(
-      `${formatVolume(activity.amount ?? 0, units)} · ${activity.milkType === "expressed" ? t("breast milk") : t("formula")}`,
+      `${formatVolume(activity.amount ?? 0, units)} · ${bottleMilk(activity)}`,
       activity.note,
     );
   }

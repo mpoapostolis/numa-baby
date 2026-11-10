@@ -2082,6 +2082,12 @@ const el: Record<string, string> = {
   "Sessions on both sides add {both} a day, not split between them.": "Οι θηλασμοί και από τις δύο πλευρές προσθέτουν {both} τη μέρα, χωρίς να χωρίζονται ανάμεσά τους.",
   "Notifications": "Ειδοποιήσεις",
 
+  // --- Added 2026-11-10: the formula brand on a bottle ---
+  "Formula brand": "Μάρκα γάλακτος",
+  "Brands used before": "Μάρκες που έχετε δώσει",
+  "Or type another": "Ή γράψτε άλλη",
+  "As written on the tin": "Όπως γράφει η συσκευασία",
+
   // --- The server's own words (worker/*.ts), shown through t(error.message) ---
   "Enter the 6-digit code from the other phone.": "Γράψτε τον εξαψήφιο κωδικό από το άλλο κινητό.",
   "Not paired. Create or join a family first.": "Το κινητό δεν είναι συνδεδεμένο. Δημιουργήστε πρώτα μια οικογένεια ή μπείτε σε μία.",

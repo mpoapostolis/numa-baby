@@ -18,7 +18,7 @@ import { EmptyState } from "../components/EmptyState";
 import { LittleBottle } from "../components/illustrations";
 import { BabyCompanion, CompanionMood } from "../components/BabyCompanion";
 import { mlBucket, track } from "../domain/analytics";
-import { detailReadsClock } from "../domain/activityDisplay";
+import { bottleMilk, detailReadsClock, formulaBrand } from "../domain/activityDisplay";
 import { hasRoutineCare, summarizeDay } from "../domain/daySummary";
 import { makeId } from "../domain/id";
 import {
@@ -588,6 +588,8 @@ function TodayScreen({
       startedAt: new Date().toISOString(),
       amount: lastBottle.amount,
       milkType: lastBottle.milkType ?? "formula",
+      // The same tin as last time, which is what "repeat" means.
+      ...(formulaBrand(lastBottle) ? { brand: formulaBrand(lastBottle) } : {}),
     };
     if (onAdd(entry, t("{amount} bottle saved", { amount: formatVolume(lastBottle.amount ?? 0, units) }))) {
       setReactionKey(entry.id);
@@ -764,14 +766,14 @@ function TodayScreen({
         className="tile-main"
         onClick={quickLogBottle}
         aria-label={lastBottle?.amount
-          ? t("Log {amount} millilitres of {milk} now", { amount: lastBottle.amount, milk: lastBottle.milkType === "expressed" ? t("breast milk") : t("formula") })
+          ? t("Log {amount} millilitres of {milk} now", { amount: lastBottle.amount, milk: bottleMilk(lastBottle) })
           : t("Log a bottle")}
       >
         <span className="activity-glyph glyph-bottle" aria-hidden="true"><ActivityGlyph type="bottle" /></span>
         <span className="tile-title">{t("Bottle")}</span>
         <span className="tile-sub">
           {lastBottle?.amount
-            ? `${formatVolume(lastBottle.amount, units)} · ${lastBottle.milkType === "expressed" ? t("breast milk") : t("formula")}`
+            ? `${formatVolume(lastBottle.amount, units)} · ${bottleMilk(lastBottle)}`
             : t("Log the first feed")}
         </span>
       </button>
