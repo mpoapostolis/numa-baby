@@ -8,10 +8,12 @@ import { shareLink } from "../domain/shareApp";
 import { renderCard, shareImage } from "../lib/shareCard";
 import { EmptyState } from "../components/EmptyState";
 import { GrowthChart } from "../components/GrowthChart";
-import { TrendChart } from "../components/TrendChart";
+import { TrendChart, TrendGroup } from "../components/TrendChart";
 import { LittleBottle } from "../components/illustrations";
 import { activityTitle } from "../domain/activityDisplay";
-import { hasRoutineCare } from "../domain/daySummary";
+import { DaySummary, hasRoutineCare, summarizeDays } from "../domain/daySummary";
+import { InsightRange, averageDay, groupDays, rangeDayCount, rangeGrain, rememberRange, rememberedRange } from "../domain/insightRange";
+import { ToggleGroup, ToggleGroupItem } from "../components/ui/toggle-group";
 import { nursingSideAverage } from "../domain/nursingSides";
 import { formatVolume, formatWeight, useUnits, volumeParts, weightParts } from "../domain/units";
 import { formatShortDay, formatTime, humanDuration, median } from "../domain/time";
@@ -24,7 +26,7 @@ import { Button } from "../components/ui/button";
 import { AAP_FORMULA_AMOUNT, NHS_ENOUGH_MILK } from "../domain/sources";
 import { Activity, FeedingMode, Profile } from "../domain/types";
 import { ActivityStats } from "../hooks/useActivityStats";
-import { t } from "../i18n";
+import { currentLocale, t } from "../i18n";
 
 type InsightsScreenProps = {
   stats: ActivityStats;
@@ -80,6 +82,36 @@ function DurationFigure({ minutes }: { minutes: number }) {
   return <>{hours}<span className="unit">{t("h")}</span> {mins}<span className="unit">{t("m")}</span></>;
 }
 
+// Lazy, like every formatter here: the locale is settled before the first
+// render, not before this module runs.
+let shortDateFormatter: Intl.DateTimeFormat | null = null;
+let monthFormatter: Intl.DateTimeFormat | null = null;
+const shortDate = (at: number) => (shortDateFormatter ??= new Intl.DateTimeFormat(currentLocale(), { month: "short", day: "numeric" })).format(at);
+const monthName = (at: number) => (monthFormatter ??= new Intl.DateTimeFormat(currentLocale(), { month: "long" })).format(at);
+
+/** The heading over everything the range governs. */
+function rangeHeading(range: InsightRange) {
+  if (range === "30d") return t("Last 30 days");
+  if (range === "3m") return t("Last 3 months");
+  if (range === "1y") return t("Last 12 months");
+  return t("Last 7 days");
+}
+
+/** The range's days as bars, named for the readout: a day, a week, a month. */
+function namedGroups(days: DaySummary[], range: InsightRange): TrendGroup[] {
+  const grain = rangeGrain(range);
+  return groupDays(days, grain).map((group) => {
+    if (grain === "day") return { ...group, label: shortDate(group.at) };
+    const name = grain === "week" ? t("week of {date}", { date: shortDate(group.at) }) : monthName(group.at);
+    return {
+      ...group,
+      label: grain === "week" ? t("Week of {date}", { date: shortDate(group.at) }) : name,
+      reading: `${t("a day")} · ${name}`,
+      empty: `${t("Nothing logged")} · ${name}`,
+    };
+  });
+}
+
 export default function InsightsScreen({
   stats,
   activities,
@@ -91,6 +123,19 @@ export default function InsightsScreen({
   onOpenGuide,
 }: InsightsScreenProps) {
   const units = useUnits();
+  // How far back: the week unless this phone chose otherwise. The week keeps
+  // the figures it always had; a longer range re-reads the same log.
+  const [range, setRange] = useState<InsightRange>(rememberedRange);
+  const rangeDays = useMemo(
+    () => (range === "7d"
+      ? stats.recentDays.slice(-7)
+      : summarizeDays(stats.sortedActivities, new Date(minuteClock), rangeDayCount(range, minuteClock), minuteClock)),
+    [range, stats.recentDays, stats.sortedActivities, minuteClock],
+  );
+  // Days before anything was logged are days the app was not in use, not
+  // empty days: the charts start where the record does.
+  const firstLogged = rangeDays.findIndex(hasRoutineCare);
+  const recordDays = firstLogged <= 0 ? rangeDays : rangeDays.slice(firstLogged);
   // Milk against this baby's own weight, rather than a stranger's average.
   // Complete days only: this morning's two bottles are not a typical day.
   const intake = useMemo(() => {
@@ -137,7 +182,10 @@ export default function InsightsScreen({
   } = stats;
 
   const showBottles = weekly.some((day) => day.ml > 0);
-  const sides = nursingSideAverage(stats.recentDays.slice(-7));
+  const sides = nursingSideAverage(rangeDays);
+  // Feeds a day over the range, by the same rule as the week's.
+  const rangeFeeds = range === "7d" ? averageFeeds : averageDay(rangeDays, (day) => day.feeds);
+  const shownFeeds = rangeFeeds === null ? null : Math.round(rangeFeeds * 10) / 10;
   const weekFeeds = weekly.reduce((sum, day) => sum + day.feeds.length, 0);
   const weekBottles = weekly.reduce(
     (sum, day) => sum + day.feeds.filter((feed) => feed.type === "bottle").length,
@@ -148,7 +196,23 @@ export default function InsightsScreen({
   // "most days" down. It counts only while it is the only bottle day.
   const bottleDays = weekly.filter((day) => day.ml > 0);
   const completeBottleDays = bottleDays.filter((day) => day !== weekly[todayIndex]);
-  const medianMl = median((completeBottleDays.length > 0 ? completeBottleDays : bottleDays).map((day) => day.ml));
+  const weekMedianMl = median((completeBottleDays.length > 0 ? completeBottleDays : bottleDays).map((day) => day.ml));
+  // A longer range: a bar per day (30 days), or the average bottle day of
+  // each week or month — over the days that had bottles, so a nursing-only
+  // day is not a day of zero millilitres.
+  const isWeek = range === "7d";
+  const bottleBars = isWeek ? [] : namedGroups(recordDays, range).map((group) => ({
+    ...group,
+    ml: Math.round(averageDay(group.days, (day) => day.ml, (day) => day.ml > 0) ?? 0),
+  }));
+  const rangeBottleDays = rangeDays.filter((day) => day.ml > 0);
+  const rangeCompleteBottleDays = rangeBottleDays.filter((day) => !day.isToday);
+  const medianMl = isWeek ? weekMedianMl : median((rangeCompleteBottleDays.length > 0 ? rangeCompleteBottleDays : rangeBottleDays).map((day) => day.ml));
+  const showRangeBottles = !isWeek && rangeBottleDays.length > 0;
+  // Whether a bottle figure is on screen, for the numbering of the others.
+  const bottleFigure = isWeek ? showBottles : showRangeBottles;
+  const rangeMaxMl = Math.max(...bottleBars.map((bar) => bar.ml), 1);
+  const rangeBottles = rangeDays.reduce((sum, day) => sum + day.bottles, 0);
   // "a, b and c" — an Oxford-comma-free list, because this is a sentence a
   // person reads, not a data dump.
   const listOf = (items: string[]) =>
@@ -156,7 +220,7 @@ export default function InsightsScreen({
   // Fresh install: with nothing in any tile, the strip would lead with four
   // dashes — skip it and let the rhythm card's EmptyState lead instead.
   const hasSummaryData = Boolean(
-    typicalGap || averageFeeds || bottleMlToday > 0 || latestGrowth?.weightGrams,
+    typicalGap || shownFeeds || bottleMlToday > 0 || latestGrowth?.weightGrams,
   );
 
   // Partial data keeps the full four-tile grid (per-tile hiding causes daily
@@ -165,7 +229,7 @@ export default function InsightsScreen({
   // so when any tile is waiting the strip says what it is waiting FOR.
   const waitingFor = [
     typicalGap ? null : t("a few more feeds"),
-    averageFeeds ? null : t("a day or two"),
+    shownFeeds ? null : t("a day or two"),
     // A breastfeeding-only family will rightly never log a bottle — promising
     // that dash "fills in on its own" would be a promise broken daily.
     bottleMlToday > 0 || feedingMode === "breast" ? null : t("a bottle today"),
@@ -183,10 +247,30 @@ export default function InsightsScreen({
     <section className="screen insights-screen" aria-labelledby="insights-heading">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">{t("Last 7 days")}</p>
+          <p className="eyebrow">{rangeHeading(range)}</p>
           <h1 id="insights-heading">{t("What the log is telling you")}</h1>
         </div>
       </div>
+
+      {/* Asked for from the feedback box: "the option of customizing it,
+          like 7 days, 1 month, year". */}
+      <ToggleGroup
+        type="single"
+        value={range}
+        className="segmented range-picker"
+        aria-label={t("Show the last")}
+        onValueChange={(value) => {
+          if (!value) return;
+          track("insights_range_changed", { range: value });
+          setRange(value as InsightRange);
+          rememberRange(value as InsightRange);
+        }}
+      >
+        <ToggleGroupItem value="7d">{t("7 days")}</ToggleGroupItem>
+        <ToggleGroupItem value="30d">{t("30 days")}</ToggleGroupItem>
+        <ToggleGroupItem value="3m">{t("3 months")}</ToggleGroupItem>
+        <ToggleGroupItem value="1y">{t("Year")}</ToggleGroupItem>
+      </ToggleGroup>
 
       {/* The answer first, the evidence below it. Cards only appear when the
           log can support them honestly — silence here is a good sign, not a
@@ -321,8 +405,8 @@ export default function InsightsScreen({
             <span className="t-label">{t("Typical feed gap")}</span>
           </div>
           <div>
-            {averageFeeds ? (
-              <strong className="t-numeral">{averageFeeds.toFixed(1)}</strong>
+            {shownFeeds ? (
+              <strong className="t-numeral">{shownFeeds.toFixed(1)}</strong>
             ) : (
               emptyTile
             )}
@@ -360,8 +444,14 @@ export default function InsightsScreen({
           track in the insights page, for example, sleep". The same chart as
           Today's, and the same remembered choice — pick Sleep on either and
           both open on Sleep. Shown once there are two days to compare. */}
-      {stats.recentDays.filter(hasRoutineCare).length > 1 && (
-        <TrendChart days={stats.recentDays} />
+      {rangeDays.filter(hasRoutineCare).length > 1 && (
+        isWeek
+          ? <TrendChart days={rangeDays} />
+          : <TrendChart
+              days={rangeDays}
+              groups={(days) => namedGroups(days, range)}
+              title={range === "30d" ? undefined : rangeHeading(range)}
+            />
       )}
 
       {/* Asked for from the feedback box: "a statistic of how long she
@@ -381,13 +471,15 @@ export default function InsightsScreen({
             {sides.right > 0 && <span className="side-right" style={{ flexGrow: sides.right }}>{t("Right")}</span>}
           </div>
           <p className="side-note">
-            {sides.days === 1 ? t("From the one day with nursing this week.") : t("An average of the {n} days with nursing this week.", { n: sides.days })}
+            {isWeek
+              ? sides.days === 1 ? t("From the one day with nursing this week.") : t("An average of the {n} days with nursing this week.", { n: sides.days })
+              : sides.days === 1 ? t("From the one day with nursing.") : t("An average of the {n} days with nursing.", { n: sides.days })}
             {sides.both > 0 && ` ${t("Sessions on both sides add {both} a day, not split between them.", { both: humanDuration(sides.both) })}`}
           </p>
         </figure>
       )}
 
-      {showBottles && (
+      {isWeek && showBottles && (
         <figure className="chart-card insight-figure">
           <figcaption>
             <div>
@@ -434,10 +526,57 @@ export default function InsightsScreen({
         </figure>
       )}
 
-      <figure className={`chart-card rhythm-card insight-figure${showBottles ? "" : " is-solo"}`}>
+      {/* The same figure over a longer range: too many bars for a number
+          on each, so the readout is the headline, the median line, and the
+          list a screen reader hears. */}
+      {showRangeBottles && (
+        <figure className="chart-card insight-figure">
+          <figcaption>
+            <div>
+              <p className="t-label">{t("Fig. 1 · Bottle volume")}</p>
+              <h2>{t("Most bottle days total about {vol}.", { vol: formatVolume(medianMl, units) })}</h2>
+            </div>
+          </figcaption>
+          <div
+            className="bar-chart is-dense"
+            role="img"
+            aria-label={t("Bottle volume, {range}. Most bottle days total about {vol}. {days}.", {
+              range: rangeHeading(range),
+              vol: formatVolume(medianMl, units),
+              days: bottleBars.map((bar) => `${bar.label}: ${formatVolume(bar.ml, units)}`).join(", "),
+            })}
+          >
+            <div className="bar-plot" style={{ gridTemplateColumns: `repeat(${bottleBars.length}, minmax(0, 1fr))` }} aria-hidden="true">
+              <div className="bar-median" style={{ bottom: `${(medianMl / rangeMaxMl) * 100}%` }} />
+              {bottleBars.map((bar, index) => (
+                <div className="bar-column" key={bar.at}>
+                  <div
+                    className={index === bottleBars.length - 1 ? "bar-fill is-today" : "bar-fill"}
+                    style={{ height: `${(bar.ml / rangeMaxMl) * 100}%` }}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="bar-ends" aria-hidden="true">
+              <span>{bottleBars[0]?.label}</span>
+              <span>{t("Today")}</span>
+            </div>
+          </div>
+          <p className="figure-source">
+            {range !== "30d" && `${t("Each bar is the average bottle day.")} `}
+            {rangeBottles === 1 ? t("From 1 logged bottle · on this device") : t("From {n} logged bottles · on this device", { n: rangeBottles })}
+          </p>
+        </figure>
+      )}
+
+      <figure className={`chart-card rhythm-card insight-figure${bottleFigure ? "" : " is-solo"}`}>
         <figcaption>
           <div>
-            <p className="t-label">{t("Fig. {n} · Feeding rhythm", { n: showBottles ? 2 : 1 })}</p>
+            <p className="t-label">
+              {t("Fig. {n} · Feeding rhythm", { n: bottleFigure ? 2 : 1 })}
+              {/* Each day's feeds on a line: a week of rows, whatever the range. */}
+              {!isWeek && ` · ${t("Last 7 days")}`}
+            </p>
             <h2>
               {typicalGap
                 ? t("Feeds usually arrive about {gap} apart.", { gap: humanDuration(typicalGap) })
@@ -500,7 +639,7 @@ export default function InsightsScreen({
       <GrowthChart
         activities={growthEntries}
         change={weightChange}
-        figure={showBottles ? 3 : 2}
+        figure={bottleFigure ? 3 : 2}
         onAdd={onAddGrowth}
         onOpenGuide={onOpenGuide}
       />

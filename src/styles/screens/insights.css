@@ -12,6 +12,7 @@
    and tears a hole beside it. New blocks default to full width by being
    listed here; a figure opts into a column instead. */
 .insights-screen > .section-heading,
+.insights-screen > .range-picker,
 .insights-screen > .visit-open,
 .insights-screen > .intake-card,
 .insights-screen > .insight-deck,
@@ -23,6 +24,18 @@
 
 .insights-screen > .section-heading {
   margin-bottom: 0;
+}
+
+/* How far back: four even choices under the heading, on the shared
+   segmented track. */
+.segmented.range-picker {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.range-picker [data-slot="toggle-group-item"] {
+  min-height: 44px;
+  padding: 0 4px;
+  font-size: 0.875rem;
 }
 
 /* Summary tiles: numeral + label. The whole strip is skipped when every tile
@@ -136,6 +149,23 @@
 .bar-chart {
   display: grid;
   gap: 8px;
+}
+
+/* A longer range: thirty days, thirteen weeks or twelve months of bars,
+   too narrow for a number each — the ends are named instead. */
+.bar-chart.is-dense .bar-plot {
+  gap: 3px;
+}
+
+.bar-chart.is-dense .bar-fill {
+  width: min(22px, 100%);
+}
+
+.bar-ends {
+  display: flex;
+  justify-content: space-between;
+  color: var(--ink-3);
+  font-size: 0.75rem;
 }
 
 .bar-plot {

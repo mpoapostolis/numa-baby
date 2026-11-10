@@ -180,6 +180,7 @@ export function UnitField({
   autoFocus = false,
   invalid = false,
   className = "",
+  labelAside,
 }: {
   label: string;
   value: string | number;
@@ -194,11 +195,14 @@ export function UnitField({
   autoFocus?: boolean;
   invalid?: boolean;
   className?: string;
+  /** Beside the label, at the row's end: the weight field's kg | g. */
+  labelAside?: React.ReactNode;
 }) {
   const id = useId();
+  const fieldLabel = <FieldLabel htmlFor={id}>{label}{optional && <span className="optional-label">{t("Optional")}</span>}</FieldLabel>;
   return (
     <Field className={`unit-field ${className}`} data-invalid={invalid || undefined}>
-      <FieldLabel htmlFor={id}>{label}{optional && <span className="optional-label">{t("Optional")}</span>}</FieldLabel>
+      {labelAside ? <div className="unit-field-head">{fieldLabel}{labelAside}</div> : fieldLabel}
       <InputGroup>
         <InputGroupInput
           id={id}
@@ -236,6 +240,7 @@ const RANGE_REFUSALS = [
   "Enter a head measurement between {min} and {max} centimetres.",
   "Enter a temperature between {min} and {max} °C.",
   "Enter a weight between {min} and {max} lb.",
+  "Enter a weight between {min} and {max} kg.",
   "Enter a length between {min} and {max} inches.",
   "Enter a head measurement between {min} and {max} inches.",
   "Enter a temperature between {min} and {max} °F.",

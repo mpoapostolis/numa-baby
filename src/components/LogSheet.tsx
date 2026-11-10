@@ -36,6 +36,7 @@ import { DraftErrorField, isWetness, validateDraft } from "../domain/validate";
 import { BRAND_MAX_LENGTH, NOTE_MAX_LENGTH } from "../domain/activitySchema";
 import { Activity, DiaperKind, FeedingMode, Profile, Sheet, Wetness } from "../domain/types";
 import { PhotoField } from "./PhotoField";
+import { KG_FIELD, WeightEntry, convertWeightDraft, gramsToKgDraft, kgDraftToGrams, setWeightEntry, useWeightEntry } from "../domain/weightEntry";
 import { MonthsSheet } from "./MonthsSheet";
 import { VaccinesSheet } from "./VaccinesSheet";
 import { forgetPhoto, sharePhoto } from "../lib/photos";
@@ -140,6 +141,7 @@ function initialSheetDraft(
   lastBottle: Activity | undefined,
   units: ReturnType<typeof useUnits>,
   lastPump: Activity | undefined,
+  weightInKg: boolean,
 ): SheetDraft {
   const now = new Date();
   const base: SheetDraft = {
@@ -175,7 +177,9 @@ function initialSheetDraft(
       milkType: editing.type === "bottle" ? editing.milkType ?? "formula" : base.milkType,
       formulaBrand: formulaBrand(editing) ?? "",
       note: editing.note ?? "",
-      weightGrams: editing.weightGrams ? metricToMeasurementDraft("weightGrams", editing.weightGrams, units) : "",
+      weightGrams: editing.weightGrams
+        ? weightInKg ? gramsToKgDraft(editing.weightGrams) : metricToMeasurementDraft("weightGrams", editing.weightGrams, units)
+        : "",
       lengthCm: editing.lengthCm ? metricToMeasurementDraft("lengthCm", editing.lengthCm, units) : "",
       headCm: editing.headCm ? metricToMeasurementDraft("headCm", editing.headCm, units) : "",
       temperatureC: editing.temperatureC ? metricToMeasurementDraft("temperatureC", editing.temperatureC, units) : "",
@@ -282,6 +286,9 @@ export function LogSheet({
   const [photoBusy, setPhotoBusy] = useState(false);
   const editing = sheet === "edit" ? editingActivity : null;
   const units = useUnits();
+  // Kilograms or grams in the weight field: metric only — pounds are pounds.
+  const weightEntry = useWeightEntry();
+  const weightInKg = units === "metric" && weightEntry === "kg";
   const stepper = bottleStepper(units);
   // 4.1 + 0.5 is 4.6000000000000005 in floating point, and String() would put
   // that on the Save button. One decimal is the resolution of the whole scale.
@@ -293,7 +300,7 @@ export function LogSheet({
   // The label comes from the domain in English ("Weight") and is put into
   // the reader's language here, at render.
   const measureProps = (name: MeasurementName) => {
-    const props = units === "metric" ? numericFieldProps(name) : usMeasurementProps(name);
+    const props = name === "weightGrams" && weightInKg ? KG_FIELD : units === "metric" ? numericFieldProps(name) : usMeasurementProps(name);
     return { ...props, label: t(props.label) };
   };
   // The crossing for measurements, plus the error text in the units the
@@ -309,6 +316,10 @@ export function LogSheet({
   // still IS its own seed keeps the original stored value, exactly.
   function metricMeasurement(name: MeasurementName) {
     const original = editing?.[name];
+    if (name === "weightGrams" && weightInKg) {
+      if (original !== undefined && draft.weightGrams === gramsToKgDraft(original)) return String(original);
+      return kgDraftToGrams(draft.weightGrams);
+    }
     if (original !== undefined && draft[name] === metricToMeasurementDraft(name, original, units)) {
       return String(original);
     }
@@ -339,6 +350,9 @@ export function LogSheet({
     return bottleDraftToMl(draft.pumpAmount, units);
   }
   function localiseError(outcome: SheetError) {
+    if (weightInKg && outcome.field === "weightGrams") {
+      return { ...outcome, message: `Enter a weight between ${KG_FIELD.min} and ${KG_FIELD.max} kg.` };
+    }
     if (units === "us" && (outcome.field === "weightGrams" || outcome.field === "lengthCm" || outcome.field === "headCm")) {
       return { ...outcome, message: usMeasurementError(outcome.field) };
     }
@@ -364,7 +378,7 @@ export function LogSheet({
       .sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt))[0]
     : undefined;
   const [draft, setDraft] = useState<SheetDraft>(() =>
-    initialSheetDraft(sheet, editing, initialNursingMode, lastBottle, units, lastPump),
+    initialSheetDraft(sheet, editing, initialNursingMode, lastBottle, units, lastPump, weightInKg),
   );
   // The lengths on offer. A last pump of a length not among them (25
   // minutes) brings its own chip, in order — fixed for the open, so tapping
@@ -405,6 +419,20 @@ export function LogSheet({
   // timer, so it is never offered "leave empty if still going".
   const hasSpan = isTimed || editing?.type === "pump";
 
+  // kg | g beside the weight label. A number already typed is carried
+  // across (3520 becomes 3.52), so flipping it never changes the weight.
+  function changeWeightEntry(next: WeightEntry) {
+    if (next === weightEntry) return;
+    setDraft((current) => ({ ...current, weightGrams: convertWeightDraft(current.weightGrams, next) }));
+    setWeightEntry(next);
+    setFormError(null);
+  }
+  const weightToggle = units === "metric" ? (
+    <ToggleGroup type="single" value={weightEntry} className="weight-entry" aria-label={t("Weigh in")} onValueChange={(value) => value && changeWeightEntry(value as WeightEntry)}>
+      <ToggleGroupItem value="kg">kg</ToggleGroupItem>
+      <ToggleGroupItem value="g">g</ToggleGroupItem>
+    </ToggleGroup>
+  ) : undefined;
   function patch(partial: Partial<SheetDraft>) {
     setDraft((current) => ({ ...current, ...partial }));
   }
@@ -1242,7 +1270,7 @@ export function LogSheet({
         <SheetForm onSubmit={saveGrowth}>
           <LogDialogHeader icon={<Weight />} tone="glyph-growth" eyebrow={t("Growth check")} title={t("Add measurement")} description={t("Weight now, length and head if you have them.")} />
           <FieldGroup className="measurement-fields">
-            <UnitField {...measureProps("weightGrams")} value={draft.weightGrams} inputRef={weightRef} autoFocus invalid={formError?.field === "weightGrams"} onChange={(value) => { patch({ weightGrams: value }); setFormError(null); }} placeholder={measurementPlaceholder("weightGrams", units)} className="measurement-primary" />
+            <UnitField {...measureProps("weightGrams")} labelAside={weightToggle} value={draft.weightGrams} inputRef={weightRef} autoFocus invalid={formError?.field === "weightGrams"} onChange={(value) => { patch({ weightGrams: value }); setFormError(null); }} placeholder={weightInKg ? "3.5" : measurementPlaceholder("weightGrams", units)} className="measurement-primary" />
             <div className="measurement-row">
               <UnitField {...measureProps("lengthCm")} optional value={draft.lengthCm} inputRef={lengthRef} invalid={formError?.field === "lengthCm"} onChange={(value) => { patch({ lengthCm: value }); setFormError(null); }} placeholder={measurementPlaceholder("lengthCm", units)} />
               <UnitField {...measureProps("headCm")} optional value={draft.headCm} inputRef={headRef} invalid={formError?.field === "headCm"} onChange={(value) => { patch({ headCm: value }); setFormError(null); }} placeholder={measurementPlaceholder("headCm", units)} />
@@ -1411,7 +1439,7 @@ export function LogSheet({
 
           {editing.type === "growth" && (
             <FieldGroup className="measurement-fields">
-              <UnitField {...measureProps("weightGrams")} value={draft.weightGrams} inputRef={weightRef} autoFocus invalid={formError?.field === "weightGrams"} onChange={(value) => { patch({ weightGrams: value }); setFormError(null); }} className="measurement-primary" />
+              <UnitField {...measureProps("weightGrams")} labelAside={weightToggle} value={draft.weightGrams} inputRef={weightRef} autoFocus invalid={formError?.field === "weightGrams"} onChange={(value) => { patch({ weightGrams: value }); setFormError(null); }} className="measurement-primary" />
               <div className="measurement-row">
                 <UnitField {...measureProps("lengthCm")} optional value={draft.lengthCm} inputRef={lengthRef} invalid={formError?.field === "lengthCm"} onChange={(value) => { patch({ lengthCm: value }); setFormError(null); }} />
                 <UnitField {...measureProps("headCm")} optional value={draft.headCm} inputRef={headRef} invalid={formError?.field === "headCm"} onChange={(value) => { patch({ headCm: value }); setFormError(null); }} />

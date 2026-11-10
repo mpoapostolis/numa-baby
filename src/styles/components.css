@@ -844,6 +844,43 @@
   min-width: 0;
 }
 
+/* The weight label with its kg | g at the row's end: a small track like the
+   segmented choices, each half still a 44px target for a thumb. */
+.unit-field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.weight-entry {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--muted);
+}
+
+.weight-entry [data-slot="toggle-group-item"] {
+  min-width: 44px;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: calc(var(--radius-md) - 2px);
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.weight-entry [data-slot="toggle-group-item"][data-state="on"] {
+  border-color: color-mix(in oklab, var(--signal) 40%, var(--border));
+  background: var(--signal-quiet);
+  color: var(--signal);
+  box-shadow: none;
+}
+
 .sheet-advice {
   color: var(--ink-3);
   font-size: 0.8125rem;

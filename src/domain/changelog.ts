@@ -24,6 +24,14 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-11-10.2",
+    title: "Weight in kg, and Insights over a month or a year",
+    items: [
+      "“I prefer using kg.” The weight field now has kg | g beside it: pick kg and type 5.48 instead of 5480. Your phone remembers the choice, and nothing already saved changes.",
+      "“Could Insights show 7 days, 1 month, a year?” Insights now has 7 days, 30 days, 3 months and Year at the top. The charts, Feeds / day and Nursing by side follow your choice; over 3 months each bar is a week, over a year each bar is a month, both as the average day.",
+    ],
+  },
+  {
     id: "2026-11-10",
     title: "Which formula, on each bottle",
     items: [

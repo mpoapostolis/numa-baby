@@ -2088,6 +2088,28 @@ const el: Record<string, string> = {
   "Or type another": "Ή γράψτε άλλη",
   "As written on the tin": "Όπως γράφει η συσκευασία",
 
+  // --- Added 2026-11-10: weighing in kilograms ---
+  "Weigh in": "Μονάδα βάρους",
+  "Enter a weight between {min} and {max} kg.": "Γράψτε βάρος από {min} έως {max} kg.",
+
+  // --- Added 2026-11-10: how far back Insights looks ---
+  "Show the last": "Εμφάνιση των τελευταίων",
+  "7 days": "7 ημέρες",
+  "30 days": "30 ημέρες",
+  "3 months": "3 μήνες",
+  "Year": "Έτος",
+  "Last 30 days": "Τελευταίες 30 ημέρες",
+  "Last 3 months": "Τελευταίοι 3 μήνες",
+  "Last 12 months": "Τελευταίοι 12 μήνες",
+  "week of {date}": "εβδομάδα από {date}",
+  "Week of {date}": "Εβδομάδα από {date}",
+  "a day": "τη μέρα",
+  "Nothing logged": "Καμία καταγραφή",
+  "From the one day with nursing.": "Από τη μία μέρα με θηλασμό.",
+  "An average of the {n} days with nursing.": "Μέσος όρος από τις {n} μέρες με θηλασμό.",
+  "Bottle volume, {range}. Most bottle days total about {vol}. {days}.": "Ποσότητα μπιμπερό, {range}. Οι περισσότερες μέρες φτάνουν περίπου {vol}. {days}.",
+  "Each bar is the average bottle day.": "Κάθε μπάρα είναι η μέση μέρα με μπιμπερό.",
+
   // --- The server's own words (worker/*.ts), shown through t(error.message) ---
   "Enter the 6-digit code from the other phone.": "Γράψτε τον εξαψήφιο κωδικό από το άλλο κινητό.",
   "Not paired. Create or join a family first.": "Το κινητό δεν είναι συνδεδεμένο. Δημιουργήστε πρώτα μια οικογένεια ή μπείτε σε μία.",

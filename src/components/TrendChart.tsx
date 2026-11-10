@@ -69,7 +69,16 @@ const pickedDayFormat = () => (pickedDayFormatter ??= new Intl.DateTimeFormat(cu
 // that lies. Bars have no slope to distort.
 const BAR_HEIGHT = 108;
 
-export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
+/** A bar drawn from several days — Insights' weeks and months — as their
+    average day: the days, its name, and the words that follow its figure
+    or stand in for it. Today's chart passes none: a bar per day. */
+export type TrendGroup = { at: number; days: DaySummary[]; label: string; reading?: string; empty?: string };
+
+export function TrendChart({ days: allDays, groups, title }: {
+  days: DaySummary[];
+  groups?: (days: DaySummary[]) => TrendGroup[];
+  title?: string;
+}) {
   const [activeKey, setActiveKey] = useState(rememberedSeries);
   const series = SERIES.find((s) => s.key === activeKey) ?? SERIES[0];
   const units = useUnits();
@@ -94,12 +103,26 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
   const firstLogged = allDays.findIndex(hasRoutineCare);
   const days = firstLogged <= 0 ? allDays : allDays.slice(firstLogged);
 
-  const values = days.map(series.value);
+  const bars: Array<Partial<TrendGroup> & { at: number; days: DaySummary[] }> = groups
+    ? groups(days)
+    : days.map((day) => ({ at: day.date.getTime(), days: [day] }));
+  // A group's figure is its average logged day, by the rule of the average
+  // below; a day's is the day's own.
+  const barValue = (barDays: DaySummary[]) => {
+    if (barDays.length === 1) return series.value(barDays[0]);
+    const logged = barDays.filter(hasRoutineCare);
+    const complete = logged.filter((day) => !day.isToday);
+    const counted = complete.length > 0 ? complete : logged;
+    if (counted.length === 0) return 0;
+    const mean = counted.reduce((sum, day) => sum + series.value(day), 0) / counted.length;
+    return series.unit ? Math.round(mean) : Math.round(mean * 10) / 10;
+  };
+  const values = bars.map((bar) => barValue(bar.days));
   // Headroom so the tallest bar never touches the average label above it.
   const peak = Math.max(...values, 0);
   // Headroom so the tallest bar never collides with the average label.
   const scaleMax = Math.max(peak, 1) * 1.15;
-  const todayIndex = days.length - 1;
+  const todayIndex = bars.length - 1;
   // Averaged over the days that were LOGGED, not the days that happened to be
   // non-zero. A day with feeds but no dirty nappy is a real zero and belongs
   // in the denominator; leaving it out quietly inflates every average.
@@ -122,23 +145,25 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
   const [pinned, setPinned] = useState<number | null>(null);
   const [hovered, setHovered] = useState<number | null>(null);
   const shownAt = hovered ?? pinned;
-  const shownIndex = shownAt === null ? -1 : days.findIndex((day) => day.date.getTime() === shownAt);
-  const shown = shownIndex >= 0 ? days[shownIndex] : null;
+  const shownIndex = shownAt === null ? -1 : bars.findIndex((bar) => bar.at === shownAt);
+  const shownBar = shownIndex >= 0 ? bars[shownIndex] : null;
+  const shown = shownBar?.days[0] ?? null;
+  const shownLogged = shownBar ? shownBar.days.some(hasRoutineCare) : false;
   const withUnit = (value: number) => `${fmt(value)}${unitLabel ? ` ${unitLabel}` : ""}`;
 
   return (
     <section className="trend-card" aria-label={t("{what} over the last {n} days", { what: t(series.label), n: days.length })}>
       <header className="trend-head">
         <div className="trend-titles">
-          <span className="t-label">{t("Last {n} days", { n: days.length })}</span>
+          <span className="t-label">{title ?? t("Last {n} days", { n: days.length })}</span>
           <p className="trend-average" aria-live="polite">
-            {shown ? (
-              !hasRoutineCare(shown) ? (
-                <span>{t("No feeds, nappies or sleep logged on {day}", { day: pickedDayFormat().format(shown.date) })}</span>
+            {shownBar && shown ? (
+              !shownLogged ? (
+                <span>{shownBar.empty ?? t("No feeds, nappies or sleep logged on {day}", { day: pickedDayFormat().format(shown.date) })}</span>
               ) : (
                 <>
-                  <strong className="figure">{fmt(series.value(shown))}{unitLabel && <span className="unit">{unitLabel}</span>}</strong>
-                  <span>{shown.isToday ? ` ${t("so far today")}` : ` ${t("on {day}", { day: pickedDayFormat().format(shown.date) })}`}</span>
+                  <strong className="figure">{fmt(values[shownIndex])}{unitLabel && <span className="unit">{unitLabel}</span>}</strong>
+                  <span> {shownBar.reading ?? (shown.isToday ? t("so far today") : t("on {day}", { day: pickedDayFormat().format(shown.date) }))}</span>
                 </>
               )
             ) : trackedDays > 0 ? (
@@ -187,15 +212,16 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
       >
         <div className="trend-bars">
           {values.map((value, index) => {
-            const at = days[index].date.getTime();
+            const { at, label = fullDayFormat().format(bars[index].days[0].date) } = bars[index];
+            const logged = bars[index].days.some(hasRoutineCare);
             return (
             <button
               type="button"
               className={`trend-bar${index === todayIndex ? " is-today" : ""}${index === shownIndex ? " is-picked" : ""}`}
-              key={days[index].date.toISOString()}
-              aria-label={hasRoutineCare(days[index])
-                ? `${fullDayFormat().format(days[index].date)}: ${withUnit(value)}`
-                : t("{day}: not logged", { day: fullDayFormat().format(days[index].date) })}
+              key={at}
+              aria-label={logged
+                ? `${label}: ${withUnit(value)}`
+                : t("{day}: not logged", { day: label })}
               aria-pressed={pinned === at}
               onClick={() => {
                 if (pinned !== at) track("trend_day_picked", { series: series.key });
@@ -207,7 +233,7 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
               {/* Three distinct states, because a day nobody logged is not a
                   day with none: a bar, a hairline for a logged zero, and
                   nothing at all for a day with no feeds, nappies or sleep. */}
-              {!hasRoutineCare(days[index]) ? null : (
+              {!logged ? null : (
                 <span
                   className={value > 0 ? "trend-fill" : "trend-fill is-zero"}
                   style={{ height: value > 0 ? `${Math.max(3, (value / scaleMax) * 100)}%` : "2px" }}
@@ -235,7 +261,7 @@ export function TrendChart({ days: allDays }: { days: DaySummary[] }) {
       </div>
 
       <div className="trend-axis" aria-hidden="true">
-        <span>{dayFormat().format(days[0].date)}</span>
+        <span>{bars[0].label ?? dayFormat().format(days[0].date)}</span>
         <span>{t("Today")}</span>
       </div>
     </section>
