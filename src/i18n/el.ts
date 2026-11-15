@@ -2110,6 +2110,26 @@ const el: Record<string, string> = {
   "Bottle volume, {range}. Most bottle days total about {vol}. {days}.": "Ποσότητα μπιμπερό, {range}. Οι περισσότερες μέρες φτάνουν περίπου {vol}. {days}.",
   "Each bar is the average bottle day.": "Κάθε μπάρα είναι η μέση μέρα με μπιμπερό.",
 
+  // --- Added 2026-11-15: the paediatrician's amount, and diapers counted ---
+  "The amount a day your paediatrician gave": "Η ποσότητα την ημέρα που έδωσε ο παιδίατρος",
+  "Enter an amount between 25 and 2000 ml.": "Γράψτε ποσότητα από 25 έως 2000 ml.",
+  "Enter an amount between 1 and 67 oz.": "Γράψτε ποσότητα από 1 έως 67 oz.",
+  "Milk against your paediatrician’s amount": "Γάλα σε σχέση με την ποσότητα του παιδιάτρου",
+  "Your paediatrician’s amount: {vol} a day.": "Η ποσότητα του παιδιάτρου: {vol} την ημέρα.",
+  "Your paediatrician’s amount is {target} a day. Your typical day is {vol}, {where}.": "Η ποσότητα του παιδιάτρου είναι {target} την ημέρα. Η τυπική σας μέρα είναι {vol}, {where}.",
+  "at or above that amount": "ίση ή πάνω από αυτή την ποσότητα",
+  "below that amount": "κάτω από αυτή την ποσότητα",
+  "The amount you set from your paediatrician, in place of the general guide. This counts bottles only, so any nursing sits outside it.": "Η ποσότητα που ορίσατε από τον παιδίατρο, στη θέση της γενικής οδηγίας. Μετράει μόνο τα μπιμπερό, οπότε ο θηλασμός δεν περιλαμβάνεται.",
+  "Change amount": "Αλλαγή ποσότητας",
+  "Use the general guide": "Χρήση της γενικής οδηγίας",
+  "Did your paediatrician give a different amount?": "Σας έδωσε ο παιδίατρος άλλη ποσότητα;",
+  "of {vol}": "από {vol}",
+  "About {n} a day.": "Περίπου {n} την ημέρα.",
+  "A day": "Την ημέρα",
+  "A week": "Την εβδομάδα",
+  "A month": "Τον μήνα",
+  "Every change counts once. A day, a week and a month are averages over the days you logged.": "Κάθε αλλαγή μετράει μία φορά. Η ημέρα, η εβδομάδα και ο μήνας είναι μέσοι όροι από τις μέρες που καταγράψατε.",
+
   // --- The server's own words (worker/*.ts), shown through t(error.message) ---
   "Enter the 6-digit code from the other phone.": "Γράψτε τον εξαψήφιο κωδικό από το άλλο κινητό.",
   "Not paired. Create or join a family first.": "Το κινητό δεν είναι συνδεδεμένο. Δημιουργήστε πρώτα μια οικογένεια ή μπείτε σε μία.",

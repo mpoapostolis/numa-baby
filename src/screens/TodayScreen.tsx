@@ -19,6 +19,7 @@ import { LittleBottle } from "../components/illustrations";
 import { BabyCompanion, CompanionMood } from "../components/BabyCompanion";
 import { mlBucket, track } from "../domain/analytics";
 import { bottleMilk, detailReadsClock, formulaBrand } from "../domain/activityDisplay";
+import { activeMilkTarget } from "../domain/validate";
 import { hasRoutineCare, summarizeDay } from "../domain/daySummary";
 import { makeId } from "../domain/id";
 import {
@@ -951,6 +952,7 @@ function TodayScreen({
               summary={daySummary}
               title={recapTitle}
               name={profile.name}
+              milkTargetMl={activeMilkTarget(profile)}
               stepper={maxDayOffset > 0 ? {
                 onPrev: () => setDayOffset((value) => Math.min(maxDayOffset, value + 1)),
                 onNext: () => setDayOffset((value) => Math.max(0, value - 1)),

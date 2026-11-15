@@ -163,7 +163,25 @@ export function sanitizeProfile(value: unknown): Profile | null {
     routines: value.routines === undefined ? undefined : sanitizeRoutines(value.routines),
     // Same rule as routines: absent is "nothing to say", not "none".
     photo: sanitizePhotoRef(value.photo),
+    // And again: 0 is the family going back to the general guide.
+    milkTargetMl: sanitizeMilkTarget(value.milkTargetMl),
   };
+}
+
+/** The paediatrician's daily amount (types.ts): whole millilitres in a range
+    a baby's day can be, or 0 for "removed". Anything else is "nothing to
+    say" — dropped, never a reason to refuse the profile. */
+export function sanitizeMilkTarget(value: unknown): number | undefined {
+  if (value === 0) return 0;
+  return typeof value === "number" && Number.isInteger(value) && value >= MILK_TARGET_MIN && value <= MILK_TARGET_MAX ? value : undefined;
+}
+export const MILK_TARGET_MIN = 25;
+export const MILK_TARGET_MAX = 2_000;
+
+/** The amount to work to, if the family set one: a removal is none. */
+export function activeMilkTarget(profile: Pick<Profile, "milkTargetMl">): number | undefined {
+  const target = sanitizeMilkTarget(profile.milkTargetMl);
+  return target ? target : undefined;
 }
 
 function isValidReminderSettings(value: unknown): value is ReminderSettings {
@@ -223,6 +241,7 @@ export function parseStoredData(value: string, { ownLog = false }: { ownLog?: bo
       sex: storedProfile.sex === "girl" || storedProfile.sex === "boy" ? storedProfile.sex : undefined,
       routines: sanitizeRoutines(storedProfile.routines),
       photo: sanitizePhotoRef(storedProfile.photo),
+      milkTargetMl: sanitizeMilkTarget(storedProfile.milkTargetMl),
     },
     activities,
     nightMode: typeof parsed.nightMode === "boolean" ? parsed.nightMode : undefined,

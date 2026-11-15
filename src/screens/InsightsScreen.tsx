@@ -1,6 +1,6 @@
 // Ships with this lazy chunk, not the app shell — the budget rule.
 import "../styles/screens/insights.css";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { ExternalLink, PhoneCall, Share2, ShieldCheck, Sparkles, Stethoscope } from "lucide-react";
 import { toast } from "../lib/toast";
 import { weekCard } from "../domain/shareCards";
@@ -15,7 +15,9 @@ import { DaySummary, hasRoutineCare, summarizeDays } from "../domain/daySummary"
 import { InsightRange, averageDay, groupDays, rangeDayCount, rangeGrain, rememberRange, rememberedRange } from "../domain/insightRange";
 import { ToggleGroup, ToggleGroupItem } from "../components/ui/toggle-group";
 import { nursingSideAverage } from "../domain/nursingSides";
-import { formatVolume, formatWeight, useUnits, volumeParts, weightParts } from "../domain/units";
+import { UnitSystem, bottleDraftToMl, formatVolume, formatWeight, mlToBottleDraft, useUnits, volumeParts, weightParts } from "../domain/units";
+import { MILK_TARGET_MAX, MILK_TARGET_MIN, activeMilkTarget } from "../domain/validate";
+import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "../components/ui/input-group";
 import { formatShortDay, formatTime, humanDuration, median } from "../domain/time";
 import { track } from "../domain/analytics";
 import { Insight, buildInsightInput, insightsFor } from "../domain/insightRules";
@@ -39,6 +41,8 @@ type InsightsScreenProps = {
   minuteClock: number;
   onAddGrowth: () => void;
   onOpenGuide: () => void;
+  /** For the paediatrician's daily amount, which lives on the profile. */
+  onSaveProfile: (profile: Profile) => boolean;
 };
 
 // Tone is the whole design language of a card: what it looks like, what icon
@@ -112,6 +116,56 @@ function namedGroups(days: DaySummary[], range: InsightRange): TrendGroup[] {
   });
 }
 
+/** The paediatrician's amount, typed in the phone's own units. */
+function MilkTargetForm({ initialMl, units, onSave, onCancel }: {
+  initialMl?: number;
+  units: UnitSystem;
+  onSave: (ml: number) => void;
+  onCancel: () => void;
+}) {
+  const id = useId();
+  const [value, setValue] = useState(initialMl ? mlToBottleDraft(initialMl, units) : "");
+  const [invalid, setInvalid] = useState(false);
+  return (
+    <form
+      className="intake-form"
+      noValidate
+      onSubmit={(event) => {
+        event.preventDefault();
+        const ml = Math.round(bottleDraftToMl(value, units));
+        if (!Number.isFinite(ml) || ml < MILK_TARGET_MIN || ml > MILK_TARGET_MAX) {
+          setInvalid(true);
+          return;
+        }
+        onSave(ml);
+      }}
+    >
+      <label htmlFor={id}>{t("The amount a day your paediatrician gave")}</label>
+      <div className="intake-form-row">
+        <InputGroup>
+          <InputGroupInput
+            id={id}
+            type="number"
+            inputMode="decimal"
+            autoFocus
+            value={value}
+            aria-invalid={invalid}
+            onChange={(event) => { setValue(event.target.value); setInvalid(false); }}
+          />
+          <InputGroupAddon align="inline-end"><InputGroupText>{units === "metric" ? "ml" : "oz"}</InputGroupText></InputGroupAddon>
+        </InputGroup>
+        <Button type="submit">{t("Save")}</Button>
+        <Button type="button" variant="ghost" onClick={onCancel}>{t("Cancel")}</Button>
+      </div>
+      {invalid && (
+        <p className="intake-form-error" role="alert">
+          {units === "metric" ? t("Enter an amount between 25 and 2000 ml.") : t("Enter an amount between 1 and 67 oz.")}
+        </p>
+      )}
+    </form>
+  );
+}
+
 export default function InsightsScreen({
   stats,
   activities,
@@ -121,6 +175,7 @@ export default function InsightsScreen({
   minuteClock,
   onAddGrowth,
   onOpenGuide,
+  onSaveProfile,
 }: InsightsScreenProps) {
   const units = useUnits();
   // How far back: the week unless this phone chose otherwise. The week keeps
@@ -138,15 +193,28 @@ export default function InsightsScreen({
   const recordDays = firstLogged <= 0 ? rangeDays : rangeDays.slice(firstLogged);
   // Milk against this baby's own weight, rather than a stranger's average.
   // Complete days only: this morning's two bottles are not a typical day.
-  const intake = useMemo(() => {
+  const bottleWindow = useMemo(() => {
     const bottleDays = stats.recentDays.filter((day) => !day.isToday && day.ml > 0);
-    return guidanceFor(
-      stats.latestGrowth?.weightGrams,
-      median(bottleDays.map((day) => day.ml)),
-      bottleDays.length,
-      feedingMode,
-    );
-  }, [stats.recentDays, stats.latestGrowth, feedingMode]);
+    return { typicalMl: median(bottleDays.map((day) => day.ml)), days: bottleDays.length };
+  }, [stats.recentDays]);
+  const intake = useMemo(
+    () => guidanceFor(stats.latestGrowth?.weightGrams, bottleWindow.typicalMl, bottleWindow.days, feedingMode),
+    [bottleWindow, stats.latestGrowth, feedingMode],
+  );
+  // Asked for from the feedback box: "the required daily average of formula
+  // is 800 ml but my daughter's body can't take it, so her paediatrician
+  // only required at least 600 ml." A number the doctor gave outranks the
+  // general guide, so when the family sets one it takes the card's place.
+  const milkTarget = activeMilkTarget(profile);
+  const [targetEditing, setTargetEditing] = useState(false);
+  function saveMilkTarget(ml: number) {
+    if (!onSaveProfile({ ...profile, milkTargetMl: ml })) return;
+    track(ml ? "milk_target_set" : "milk_target_removed");
+    setTargetEditing(false);
+  }
+  const targetForm = (
+    <MilkTargetForm initialMl={milkTarget} units={units} onSave={saveMilkTarget} onCancel={() => setTargetEditing(false)} />
+  );
 
   const [visitOpen, setVisitOpen] = useState(false);
   // Five-minute granularity for the two heavy derivations: the rules speak
@@ -186,6 +254,13 @@ export default function InsightsScreen({
   // Feeds a day over the range, by the same rule as the week's.
   const rangeFeeds = range === "7d" ? averageFeeds : averageDay(rangeDays, (day) => day.feeds);
   const shownFeeds = rangeFeeds === null ? null : Math.round(rangeFeeds * 10) / 10;
+  // Asked for from the feedback box: "the number of diapers we have used a
+  // day, a week, a month". Every change counts once — a wet-and-dirty one is
+  // one diaper. The total is what was logged in the range; the rates are
+  // the average logged day, so a day the app was not opened is not a day
+  // with none.
+  const diaperTotal = rangeDays.reduce((sum, day) => sum + day.diapers, 0);
+  const diaperDay = averageDay(rangeDays, (day) => day.diapers);
   const weekFeeds = weekly.reduce((sum, day) => sum + day.feeds.length, 0);
   const weekBottles = weekly.reduce(
     (sum, day) => sum + day.feeds.filter((feed) => feed.type === "bottle").length,
@@ -313,7 +388,50 @@ export default function InsightsScreen({
         now={minuteClock}
       />
 
-      {intake && (
+      {milkTarget && (
+        <figure className="chart-card intake-card">
+          <figcaption>
+            <p className="t-label">{t("Milk against your paediatrician’s amount")}</p>
+            <h2>{t("Your paediatrician’s amount: {vol} a day.", { vol: formatVolume(milkTarget, units) })}</h2>
+          </figcaption>
+          {bottleWindow.days > 0 && (() => {
+            const span = Math.max(milkTarget * 1.35, bottleWindow.typicalMl * 1.15);
+            const at = (value: number) => `${Math.min(100, (value / span) * 100)}%`;
+            const reached = bottleWindow.typicalMl >= milkTarget;
+            return (
+              <>
+                <div
+                  className="intake-bar"
+                  role="img"
+                  aria-label={t("Your paediatrician’s amount is {target} a day. Your typical day is {vol}, {where}.", {
+                    target: formatVolume(milkTarget, units),
+                    vol: formatVolume(bottleWindow.typicalMl, units),
+                    where: reached ? t("at or above that amount") : t("below that amount"),
+                  })}
+                >
+                  <div className="intake-band intake-cap" style={{ left: `calc(${at(milkTarget)} - 6px)`, width: "12px" }} />
+                  <span className="intake-marker" style={{ left: at(bottleWindow.typicalMl) }} />
+                </div>
+                <p className="intake-reading">
+                  <strong className="figure">{volumeParts(bottleWindow.typicalMl, units).value}<span className="unit">{volumeParts(bottleWindow.typicalMl, units).unit}</span></strong>
+                  <span> {t("is your typical day — {where}.", { where: reached ? t("at or above that amount") : t("below that amount") })}</span>
+                </p>
+              </>
+            );
+          })()}
+          <p className="intake-caveat">
+            {t("The amount you set from your paediatrician, in place of the general guide. This counts bottles only, so any nursing sits outside it.")}
+          </p>
+          {targetEditing ? targetForm : (
+            <div className="intake-actions">
+              <Button variant="outline" onClick={() => setTargetEditing(true)}>{t("Change amount")}</Button>
+              <Button variant="ghost" onClick={() => saveMilkTarget(0)}>{t("Use the general guide")}</Button>
+            </div>
+          )}
+        </figure>
+      )}
+
+      {!milkTarget && intake && (
         <figure className="chart-card intake-card">
           <figcaption>
             <p className="t-label">{t("Milk against weight")}</p>
@@ -385,6 +503,11 @@ export default function InsightsScreen({
               {NHS_ENOUGH_MILK.name} <ExternalLink size={12} aria-hidden="true" />
             </a>
           </p>
+          {targetEditing ? targetForm : (
+            <button type="button" className="intake-own" onClick={() => setTargetEditing(true)}>
+              {t("Did your paediatrician give a different amount?")}
+            </button>
+          )}
         </figure>
       )}
 
@@ -476,6 +599,24 @@ export default function InsightsScreen({
               : sides.days === 1 ? t("From the one day with nursing.") : t("An average of the {n} days with nursing.", { n: sides.days })}
             {sides.both > 0 && ` ${t("Sessions on both sides add {both} a day, not split between them.", { both: humanDuration(sides.both) })}`}
           </p>
+        </figure>
+      )}
+
+      {diaperTotal > 0 && diaperDay !== null && (
+        <figure className="chart-card insight-figure diaper-card">
+          <figcaption>
+            <div>
+              <p className="t-label">{t("Diapers")}</p>
+              <h2>{t("About {n} a day.", { n: Math.round(diaperDay * 10) / 10 })}</h2>
+            </div>
+          </figcaption>
+          <dl className="diaper-figures">
+            <div><dt>{rangeHeading(range)}</dt><dd className="t-numeral">{diaperTotal}</dd></div>
+            <div><dt>{t("A day")}</dt><dd className="t-numeral">{Math.round(diaperDay * 10) / 10}</dd></div>
+            <div><dt>{t("A week")}</dt><dd className="t-numeral">{Math.round(diaperDay * 7)}</dd></div>
+            <div><dt>{t("A month")}</dt><dd className="t-numeral">{Math.round(diaperDay * 30)}</dd></div>
+          </dl>
+          <p className="side-note">{t("Every change counts once. A day, a week and a month are averages over the days you logged.")}</p>
         </figure>
       )}
 

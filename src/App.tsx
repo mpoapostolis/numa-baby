@@ -1179,6 +1179,7 @@ export default function HomePage() {
                 stats={stats}
                 onAddGrowth={() => openSheet("growth")}
                 onOpenGuide={() => navigateTo("guide")}
+                onSaveProfile={saveProfile}
               />
             </Suspense>
           )}

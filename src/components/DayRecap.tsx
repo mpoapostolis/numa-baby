@@ -14,7 +14,7 @@ import { t } from "../i18n";
 import { DaySummary } from "../domain/daySummary";
 import { shareLink } from "../domain/shareApp";
 import { formatTime, humanDuration } from "../domain/time";
-import { useUnits, volumeParts } from "../domain/units";
+import { formatVolume, useUnits, volumeParts } from "../domain/units";
 import { shareCardOnTap } from "../lib/shareOnTap";
 
 // Unit demotion, the house rule: digits speak, units recede.
@@ -100,6 +100,8 @@ type DayRecapProps = {
   name?: string;
   /** Omitted entirely when there is no history to walk; otherwise both arrows
       always render and disable at the ends, so the header never reflows. */
+  /** The paediatrician's daily amount (Profile.milkTargetMl), if set. */
+  milkTargetMl?: number;
   stepper?: {
     onPrev: () => void;
     onNext: () => void;
@@ -108,7 +110,7 @@ type DayRecapProps = {
   };
 };
 
-export function DayRecap({ summary, title, name = "", stepper }: DayRecapProps) {
+export function DayRecap({ summary, title, name = "", stepper, milkTargetMl }: DayRecapProps) {
   const units = useUnits();
   // The day as one picture — "how did Tuesday go" for the parent at work
   // and the grandmother who asks every evening, in any language.
@@ -124,6 +126,12 @@ export function DayRecap({ summary, title, name = "", stepper }: DayRecapProps) 
     );
   }
   const milk = volumeParts(summary.ml, units);
+  // "450 ml, of 600": the paediatrician's amount beside the day's milk, when
+  // the family set one. A number to read against, not a score.
+  const milkLine = [
+    milkTargetMl ? t("of {vol}", { vol: formatVolume(milkTargetMl, units) }) : undefined,
+    milkSub(summary),
+  ].filter(Boolean).join(" · ") || undefined;
   const bracket =
     summary.firstFeedAt && summary.lastFeedAt && summary.firstFeedAt !== summary.lastFeedAt
       ? `${formatTime(summary.firstFeedAt)} → ${formatTime(summary.lastFeedAt)}`
@@ -194,7 +202,7 @@ export function DayRecap({ summary, title, name = "", stepper }: DayRecapProps) 
             <Duration minutes={summary.nursingMinutes} />
           </Stat>
         ) : (
-          <Stat glyph="bottle" label={t("Milk")} sub={milkSub(summary)}>
+          <Stat glyph="bottle" label={t("Milk")} sub={milkLine}>
             {summary.ml > 0
               ? <>{milk.value}<span className="unit">{milk.unit}</span></>
               : <span className="is-zero">—</span>}

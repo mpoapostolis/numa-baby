@@ -99,6 +99,14 @@ export type Profile = {
       removed. Only the id rides the profile — the profile goes out with
       every pull and is capped at 8 KB; the picture itself does not. */
   photo?: string;
+  /** The day's milk the paediatrician asked for, in ml, when they gave a
+      number ("at least 600 ml, not the 800 of the general guide"). It takes
+      the general weight-based guide's place on Insights and is shown beside
+      the day's milk on Today. On the PROFILE so both parents work to the
+      same number. 0 is "removed, back to the general guide" — a real edit
+      that must travel; absent is "this copy has nothing to say", the rule
+      the photo and the routines follow. */
+  milkTargetMl?: number;
 };
 
 export type BootState = "loading" | "onboarding" | "ready" | "recovery";

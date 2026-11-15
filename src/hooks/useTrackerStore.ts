@@ -849,11 +849,16 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     // again under a newer stamp.
     const samePhotoStripped = remoteProfile !== undefined && remoteMs >= 0 && remoteMs === localMs
       && current.profile.photo === undefined && remoteProfile.photo !== undefined;
-    const adoptProfile = remoteProfile !== undefined && (emptyDefault || remoteMs > localMs || samePhotoStripped);
+    // The paediatrician's amount arrived later still, and is taken back the
+    // same way.
+    const sameTargetStripped = remoteProfile !== undefined && remoteMs >= 0 && remoteMs === localMs
+      && current.profile.milkTargetMl === undefined && remoteProfile.milkTargetMl !== undefined;
+    const adoptProfile = remoteProfile !== undefined && (emptyDefault || remoteMs > localMs || samePhotoStripped || sameTargetStripped);
     // A photo only counts as this phone's own while its profile does: a
     // phone joining a family (or mirroring the cloud) had its stamp taken
     // away, and its old picture must not become the family's.
     const localPhoto = current.profileUpdatedAt ? current.profile.photo : undefined;
+    const localTarget = current.profileUpdatedAt ? current.profile.milkTargetMl : undefined;
     // Decided by the list, not the counts: a page of nothing but deletions
     // counts nothing as added and must still be saved.
     if (merged === current.activities && !adoptProfile) return { added: 0, updated: 0, persisted: true };
@@ -870,6 +875,8 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
           // The profile photo arrived later still, and is kept for the same
           // reason: an older phone's silence is not a removal ("" is).
           photo: remoteProfile.photo ?? localPhoto,
+          // And the paediatrician's amount: silence is not "back to the guide" (0 is).
+          milkTargetMl: remoteProfile.milkTargetMl ?? localTarget,
         }
       : current.profile;
     // Kept a photo (or a removal) the incoming profile says nothing about:
@@ -880,8 +887,9 @@ const TIMER_NOUN: Partial<Record<Activity["type"], string>> = {
     // ahead would otherwise win every round, and the photo would be re-kept,
     // re-stamped and refused on every pull.
     const keptLocalPhoto = adoptProfile && remoteProfile?.photo === undefined && localPhoto !== undefined;
+    const keptLocalTarget = adoptProfile && remoteProfile?.milkTargetMl === undefined && localTarget !== undefined;
     const nextStamp = adoptProfile && remoteProfileUpdatedAt
-      ? (keptLocalPhoto
+      ? (keptLocalPhoto || keptLocalTarget
           ? new Date(Math.max(Date.now(), Number.isFinite(remoteMs) ? remoteMs + 1 : 0)).toISOString()
           : remoteProfileUpdatedAt)
       : current.profileUpdatedAt;

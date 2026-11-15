@@ -83,6 +83,7 @@ test("on day two, this morning does not count as a whole day", () => {
       feedingMode="bottle"
       minuteClock={now}
       onAddGrowth={() => {}}
+      onSaveProfile={() => true}
       onOpenGuide={() => {}}
     />,
   );

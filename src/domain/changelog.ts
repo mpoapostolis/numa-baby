@@ -24,6 +24,22 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-11-15.2",
+    title: "Diapers, counted",
+    items: [
+      "“Could you add how many diapers we use a day, a week, a month?” Insights now has a Diapers card: how many you logged over the range you picked, and the usual day, week and month.",
+      "Every change counts once, so a wet-and-dirty one is one diaper. Pick 30 days at the top of Insights to see the month.",
+    ],
+  },
+  {
+    id: "2026-11-15",
+    title: "Your paediatrician’s amount of milk",
+    items: [
+      "“The general guide says 800 ml a day, but her paediatrician asked for at least 600 ml.” On Insights, under the milk card, tap “Did your paediatrician give a different amount?” and enter it.",
+      "That amount then takes the general guide’s place, and Today shows the day’s milk against it (“450 ml, of 600 ml”). It reaches the other parent’s phone too, and “Use the general guide” takes it away again.",
+    ],
+  },
+  {
     id: "2026-11-10.2",
     title: "Weight in kg, and Insights over a month or a year",
     items: [

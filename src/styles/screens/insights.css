@@ -663,6 +663,82 @@
   color: var(--ink-3);
 }
 
+/* The paediatrician's amount: set from the general card, changed or let go
+   of from its own. */
+.intake-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.intake-own {
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--signal);
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.intake-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.intake-form label {
+  color: var(--ink-2);
+  font-size: 0.8125rem;
+}
+
+.intake-form-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.intake-form-row [data-slot="input-group"] {
+  flex: 1;
+  min-width: 0;
+}
+
+.intake-form-error {
+  margin: 0;
+  color: var(--alert);
+  font-size: 0.8125rem;
+}
+
+/* Diapers: the range's count, then the usual day, week and month. */
+.diaper-figures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 12px;
+  margin: 16px 0 0;
+}
+
+.diaper-figures > div {
+  display: grid;
+  gap: 2px;
+}
+
+.diaper-figures dt {
+  color: var(--ink-3);
+  font-size: 0.75rem;
+}
+
+.diaper-figures dd {
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
 .intake-card .figure-source {
   display: flex;
   flex-wrap: wrap;
