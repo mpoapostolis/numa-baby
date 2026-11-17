@@ -24,6 +24,8 @@ import {
   measurementToMetric,
   metricToMeasurementDraft,
   mlToBottleDraft,
+  ozMilk,
+  usBody,
   usMeasurementError,
   usMeasurementProps,
   useUnits,
@@ -129,7 +131,7 @@ function FormulaBrandField({ brands, value, onChange }: { brands: string[]; valu
 }
 
 function halfOunceSeed(draft: string, units: ReturnType<typeof useUnits>) {
-  return units === "us" ? String(Math.min(13.5, Math.max(0.5, Math.round(Number(draft) * 2) / 2))) : draft;
+  return ozMilk(units) ? String(Math.min(13.5, Math.max(0.5, Math.round(Number(draft) * 2) / 2))) : draft;
 }
 
 function sheetOpenedAt() {
@@ -294,7 +296,7 @@ export function LogSheet({
   const units = useUnits();
   // Kilograms or grams in the weight field: metric only — pounds are pounds.
   const weightEntry = useWeightEntry();
-  const weightInKg = units === "metric" && weightEntry === "kg";
+  const weightInKg = !usBody(units) && weightEntry === "kg";
   const stepper = bottleStepper(units);
   // + and − land on the scale's own marks. A 150 ml bottle is 5.1 oz, and
   // stepping from it by half an ounce went 5.6, 6.1 — a parent who asked for
@@ -313,7 +315,7 @@ export function LogSheet({
   // The label comes from the domain in English ("Weight") and is put into
   // the reader's language here, at render.
   const measureProps = (name: MeasurementName) => {
-    const props = name === "weightGrams" && weightInKg ? KG_FIELD : units === "metric" ? numericFieldProps(name) : usMeasurementProps(name);
+    const props = name === "weightGrams" && weightInKg ? KG_FIELD : !usBody(units) ? numericFieldProps(name) : usMeasurementProps(name);
     return { ...props, label: t(props.label) };
   };
   // The crossing for measurements, plus the error text in the units the
@@ -366,7 +368,7 @@ export function LogSheet({
     if (weightInKg && outcome.field === "weightGrams") {
       return { ...outcome, message: `Enter a weight between ${KG_FIELD.min} and ${KG_FIELD.max} kg.` };
     }
-    if (units === "us" && (outcome.field === "weightGrams" || outcome.field === "lengthCm" || outcome.field === "headCm")) {
+    if (usBody(units) && (outcome.field === "weightGrams" || outcome.field === "lengthCm" || outcome.field === "headCm")) {
       return { ...outcome, message: usMeasurementError(outcome.field) };
     }
     // A pump's amount is not a bottle's, and it can be left out — the refusal
@@ -374,7 +376,7 @@ export function LogSheet({
     if (outcome.field === "amount" && (sheet === "pump" || editing?.type === "pump")) {
       return {
         ...outcome,
-        message: units === "us"
+        message: ozMilk(units)
           ? t("Enter an amount up to 33.8 oz, or leave it empty.")
           : t("Enter an amount between 1 and 1,000 ml, or leave it empty."),
       };
@@ -440,7 +442,7 @@ export function LogSheet({
     setWeightEntry(next);
     setFormError(null);
   }
-  const weightToggle = units === "metric" ? (
+  const weightToggle = !usBody(units) ? (
     <ToggleGroup type="single" value={weightEntry} className="weight-entry" aria-label={t("Weigh in")} onValueChange={(value) => value && changeWeightEntry(value as WeightEntry)}>
       <ToggleGroupItem value="kg">kg</ToggleGroupItem>
       <ToggleGroupItem value="g">g</ToggleGroupItem>
@@ -918,9 +920,9 @@ export function LogSheet({
           label={t("Amount")}
           optional
           unit={stepper.unit}
-          min={units === "metric" ? 1 : 0.1}
-          max={units === "metric" ? 1_000 : 33.8}
-          step={units === "metric" ? 1 : 0.1}
+          min={!ozMilk(units) ? 1 : 0.1}
+          max={!ozMilk(units) ? 1_000 : 33.8}
+          step={!ozMilk(units) ? 1 : 0.1}
           value={draft.pumpAmount}
           placeholder={t("Not measured")}
           inputRef={amountRef}

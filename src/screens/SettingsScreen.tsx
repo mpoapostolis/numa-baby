@@ -243,6 +243,9 @@ export default function SettingsScreen({
           >
             <ToggleGroupItem value="metric"><Ruler /><span><strong>{t("Metric")}</strong><small>ml · kg · cm</small></span></ToggleGroupItem>
             <ToggleGroupItem value="us"><Ruler /><span><strong>{t("US")}</strong><small>oz · lb · in</small></span></ToggleGroupItem>
+            {/* Milk in ounces, the baby in kilograms and centimetres — how a
+                parent asked for it, and how many families mix the two. */}
+            <ToggleGroupItem value="mixed"><Ruler /><span><strong>{t("Mixed")}</strong><small>oz · kg · cm</small></span></ToggleGroupItem>
           </ToggleGroup>
         </CardContent>
       </Card>

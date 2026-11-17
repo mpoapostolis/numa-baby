@@ -10,7 +10,7 @@ import { Milestone } from "./milestones";
 import { NightSummary } from "./nightSummary";
 import { RhythmRecord } from "./rhythm";
 import { formatTime, humanDuration } from "./time";
-import { UnitSystem, formatVolume, weightParts } from "./units";
+import { UnitSystem, formatVolume, ozMilk, weightParts } from "./units";
 import { VisitSummary } from "./visitSummary";
 import { LifetimeTotals } from "./lifetime";
 import { Activity } from "./types";
@@ -62,7 +62,7 @@ function hours(minutes: number): string {
 
 /** A lifetime of milk reads better in litres once it passes ten of them. */
 function bigVolume(ml: number, units: UnitSystem): string {
-  if (units === "metric" && ml >= 10_000) return `${(ml / 1_000).toFixed(1)} L`;
+  if (!ozMilk(units) && ml >= 10_000) return `${(ml / 1_000).toFixed(1)} L`;
   return formatVolume(ml, units);
 }
 

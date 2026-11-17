@@ -9,7 +9,7 @@ import { currentLocale, t } from "../i18n";
 import { useState } from "react";
 import { track } from "../domain/analytics";
 import { humanDuration } from "../domain/time";
-import { mlToOz, useUnits } from "../domain/units";
+import { mlToOz, ozMilk, useUnits } from "../domain/units";
 import { DaySummary, hasRoutineCare } from "../domain/daySummary";
 
 type Series = {
@@ -88,11 +88,11 @@ export function TrendChart({ days: allDays, groups, title }: {
   // Sleep speaks in hours-and-minutes like everywhere else in the app —
   // "612m a day" is exactly the arithmetic this app promises to spare.
   const isSleep = series.key === "sleep";
-  const unitLabel = isSleep ? undefined : isVolume && units === "us" ? "oz" : series.unit;
+  const unitLabel = isSleep ? undefined : isVolume && ozMilk(units) ? "oz" : series.unit;
   const fmt = (value: number) =>
     isSleep
       ? humanDuration(Math.round(value))
-      : isVolume && units === "us" ? String(Math.round(mlToOz(value) * 10) / 10) : String(value);
+      : isVolume && ozMilk(units) ? String(Math.round(mlToOz(value) * 10) / 10) : String(value);
 
   // Days before anything was ever logged are not zero-milk days — they are
   // days this app was not being used. Plotting them as zero would draw a

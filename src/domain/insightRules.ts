@@ -35,7 +35,7 @@ import {
   NHS_WEIGHT,
 } from "./sources";
 import { Activity, FeedingMode } from "./types";
-import { UnitSystem, formatGrams, formatTemperature, formatVolume, gramsToLb } from "./units";
+import { UnitSystem, formatGrams, formatTemperature, formatVolume, gramsToLb, usBody } from "./units";
 
 export type InsightTone = "seek-care" | "suggest" | "reassure";
 
@@ -124,14 +124,14 @@ function round(value: number): number {
 
 /** A source's round threshold in the parent's own degrees: "38 °C" / "100.4 °F". */
 function degrees(c: number, units: UnitSystem): string {
-  return units === "metric" ? `${c} °C` : formatTemperature(c, units);
+  return !usBody(units) ? `${c} °C` : formatTemperature(c, units);
 }
 
 /** A whole weight as logged: "3300 g" / "7.28 lb". Decimal pounds, not
     "7 lb 4 oz" — whole ounces would print 3400 g and 3390 g the same, on a
     card about one being under the other. */
 function loggedWeight(grams: number, units: UnitSystem): string {
-  return units === "metric" ? `${grams} g` : `${gramsToLb(grams).toFixed(2)} lb`;
+  return !usBody(units) ? `${grams} g` : `${gramsToLb(grams).toFixed(2)} lb`;
 }
 
 type Rule = {
@@ -519,7 +519,7 @@ const RULES: Rule[] = [
         vars: {
           gain: formatGrams(gain, units),
           band:
-            units === "metric"
+            !usBody(units)
               ? `${band.minGramsPerWeek}–${band.maxGramsPerWeek} g`
               : `${formatGrams(band.minGramsPerWeek, units)}–${formatGrams(band.maxGramsPerWeek, units)}`,
         },

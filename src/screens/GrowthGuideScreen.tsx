@@ -5,7 +5,7 @@ import { Button } from "../components/ui/button";
 import { ActivityGlyph } from "../components/ActivityGlyph";
 import { SproutChart } from "../components/illustrations";
 import { track } from "../domain/analytics";
-import { gramsToLb, useUnits } from "../domain/units";
+import { gramsToLb, usBody, useUnits } from "../domain/units";
 import { OutingChecklist } from "../components/OutingChecklist";
 import { CareCard, WATCH_FOR, WATCH_INSTINCT, WATCH_TIERS, careForAge } from "../domain/careGuidance";
 import { playForAge } from "../domain/playIdeas";
@@ -35,9 +35,9 @@ function useKgLabel() {
   const units = useUnits();
   return {
     units,
-    kg: (value: number) => (units === "metric" ? value.toFixed(1) : gramsToLb(value * 1_000).toFixed(1)),
-    unitWord: units === "metric" ? "kg" : "lb",
-    longUnit: units === "metric" ? t("kilograms") : t("pounds"),
+    kg: (value: number) => (!usBody(units) ? value.toFixed(1) : gramsToLb(value * 1_000).toFixed(1)),
+    unitWord: !usBody(units) ? "kg" : "lb",
+    longUnit: !usBody(units) ? t("kilograms") : t("pounds"),
   };
 }
 

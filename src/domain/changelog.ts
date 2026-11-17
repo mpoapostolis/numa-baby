@@ -24,6 +24,14 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-11-17.2",
+    title: "Milk in oz, the baby in kg and cm",
+    items: [
+      "“Can I choose oz for the milk and cm/kg for the measurements?” Yes: Settings → Units → Mixed. Bottles, pumping and the milk on Today and Insights are in ounces, with the half-ounce steps; weight, length, head and temperature stay in kg, cm and °C.",
+      "Only this phone changes, and nothing already saved changes: switch back and forth as you like.",
+    ],
+  },
+  {
     id: "2026-11-17",
     title: "Half ounces, and 5 ml steps",
     items: [

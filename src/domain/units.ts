@@ -16,7 +16,22 @@
 
 import { useSyncExternalStore } from "react";
 
-export type UnitSystem = "metric" | "us";
+// "mixed" is milk in ounces and the baby in kilograms and centimetres: "yes
+// i would appreciate if i can choose oz for milk amount and cm/kg for
+// measurements". The bottle is the American way and the scales the metric
+// one. Ask the two questions below, never compare to "metric" or "us"
+// directly, or a third system silently takes the wrong side.
+export type UnitSystem = "metric" | "us" | "mixed";
+
+/** Milk in ounces: the US system and the mixed one. */
+export function ozMilk(units: UnitSystem): boolean {
+  return units !== "metric";
+}
+
+/** Weight, length and temperature the American way: the US system only. */
+export function usBody(units: UnitSystem): boolean {
+  return units === "us";
+}
 
 const KEY = "numalog-units-v1";
 const OZ_IN_ML = 29.5735;
@@ -29,7 +44,8 @@ const listeners = new Set<() => void>();
 export function getUnits(): UnitSystem {
   if (cached === null) {
     try {
-      cached = window.localStorage.getItem(KEY) === "us" ? "us" : "metric";
+      const stored = window.localStorage.getItem(KEY);
+      cached = stored === "us" || stored === "mixed" ? stored : "metric";
     } catch {
       cached = "metric";
     }
@@ -69,14 +85,14 @@ export function ozToMl(oz: number): number {
 
 /** "120 ml" / "4 oz" — ounces to one decimal, whole numbers left whole. */
 export function formatVolume(ml: number, units: UnitSystem): string {
-  if (units === "metric") return `${ml} ml`;
+  if (!ozMilk(units)) return `${ml} ml`;
   const oz = mlToOz(ml);
   return `${trimmed(oz)} oz`;
 }
 
 /** The number and its unit separately, for figure blocks. */
 export function volumeParts(ml: number, units: UnitSystem): { value: string; unit: string } {
-  if (units === "metric") return { value: String(ml), unit: "ml" };
+  if (!ozMilk(units)) return { value: String(ml), unit: "ml" };
   return { value: trimmed(mlToOz(ml)), unit: "oz" };
 }
 
@@ -92,7 +108,7 @@ export function lbToGrams(lb: number): number {
 
 /** "4.20 kg" / "9 lb 4 oz" — the way each audience actually says it. */
 export function formatWeight(grams: number, units: UnitSystem): string {
-  if (units === "metric") return `${(grams / 1_000).toFixed(2)} kg`;
+  if (!usBody(units)) return `${(grams / 1_000).toFixed(2)} kg`;
   const totalOz = grams / (LB_IN_G / 16);
   const lb = Math.floor(totalOz / 16);
   const oz = Math.round(totalOz % 16);
@@ -104,7 +120,7 @@ export function formatWeight(grams: number, units: UnitSystem): string {
 /** A weight change, sign kept: "400 g" / "14.1 oz", and "1 lb 2 oz" once it
     passes a pound — the small unit each audience weighs a gain in. */
 export function formatGrams(grams: number, units: UnitSystem): string {
-  if (units === "metric") return `${Math.round(grams)} g`;
+  if (!usBody(units)) return `${Math.round(grams)} g`;
   const oz = Math.round((grams / (LB_IN_G / 16)) * 10) / 10;
   if (Math.abs(oz) < 16) return `${trimmed(oz)} oz`;
   return `${grams < 0 ? "-" : ""}${formatWeight(Math.abs(grams), units)}`;
@@ -112,13 +128,13 @@ export function formatGrams(grams: number, units: UnitSystem): string {
 
 /** Figure-block form: decimal, single unit. */
 export function weightParts(grams: number, units: UnitSystem): { value: string; unit: string } {
-  if (units === "metric") return { value: (grams / 1_000).toFixed(2), unit: "kg" };
+  if (!usBody(units)) return { value: (grams / 1_000).toFixed(2), unit: "kg" };
   return { value: gramsToLb(grams).toFixed(2), unit: "lb" };
 }
 
 /** kg → display for reference tables that already hold kilograms. */
 export function formatKg(kg: number, units: UnitSystem, decimals = 1): string {
-  if (units === "metric") return `${kg.toFixed(decimals)} kg`;
+  if (!usBody(units)) return `${kg.toFixed(decimals)} kg`;
   return `${gramsToLb(kg * 1_000).toFixed(decimals)} lb`;
 }
 
@@ -133,7 +149,7 @@ export function inToCm(inches: number): number {
 }
 
 export function formatLength(cm: number, units: UnitSystem): string {
-  if (units === "metric") return `${cm} cm`;
+  if (!usBody(units)) return `${cm} cm`;
   return `${cmToIn(cm).toFixed(1)} in`;
 }
 
@@ -160,35 +176,35 @@ export function fToC(f: number): number {
 
 /** A stored °C temperature, in the system's own degrees. */
 export function formatTemperature(c: number, units: UnitSystem): string {
-  if (units === "metric") return `${c.toFixed(1)} °C`;
+  if (!usBody(units)) return `${c.toFixed(1)} °C`;
   return `${cToF(c).toFixed(1)} °F`;
 }
 
 /** The bottle stepper's geometry per system: ±5 ml, or the half-ounce.
     Five, not ten, since a parent asked how to log 55 ml. */
 export function bottleStepper(units: UnitSystem) {
-  return units === "metric"
+  return !ozMilk(units)
     ? { min: 10, max: 400, step: 5, unit: "ml" }
     : { min: 0.5, max: 13.5, step: 0.5, unit: "oz" };
 }
 
 export function bottlePresets(units: UnitSystem): number[] {
-  return units === "metric" ? [60, 90, 120, 150] : [2, 3, 4, 5];
+  return !ozMilk(units) ? [60, 90, 120, 150] : [2, 3, 4, 5];
 }
 
 /** 90 ml or its 3 oz — the same default bottle either way. */
 export function defaultBottleDraft(units: UnitSystem, defaultMl: number): string {
-  return units === "metric" ? String(defaultMl) : trimmed(mlToOz(defaultMl));
+  return !ozMilk(units) ? String(defaultMl) : trimmed(mlToOz(defaultMl));
 }
 
 export function bottleDraftToMl(value: string, units: UnitSystem): number {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return NaN;
-  return units === "metric" ? parsed : ozToMl(parsed);
+  return !ozMilk(units) ? parsed : ozToMl(parsed);
 }
 
 export function mlToBottleDraft(ml: number, units: UnitSystem): string {
-  return units === "metric" ? String(ml) : trimmed(mlToOz(ml));
+  return !ozMilk(units) ? String(ml) : trimmed(mlToOz(ml));
 }
 
 const US_MEASUREMENT = {
@@ -214,13 +230,13 @@ export function usMeasurementError(name: MeasurementName): string {
 }
 
 export function measurementPlaceholder(name: MeasurementName, units: UnitSystem): string {
-  if (units === "metric") return { weightGrams: "3500", lengthCm: "51.5", headCm: "35.1", temperatureC: "36.7" }[name];
+  if (!usBody(units)) return { weightGrams: "3500", lengthCm: "51.5", headCm: "35.1", temperatureC: "36.7" }[name];
   return { weightGrams: "7.7", lengthCm: "20.3", headCm: "13.8", temperatureC: "98.1" }[name];
 }
 
 /** A display-units draft string, converted to the metric string validate expects. */
 export function measurementToMetric(name: MeasurementName, value: string, units: UnitSystem): string {
-  if (units === "metric" || value.trim() === "") return value;
+  if (!usBody(units) || value.trim() === "") return value;
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return value;
   if (name === "weightGrams") return String(lbToGrams(parsed));
@@ -230,7 +246,7 @@ export function measurementToMetric(name: MeasurementName, value: string, units:
 
 /** A stored metric value, rendered as the draft string a US-mode field edits. */
 export function metricToMeasurementDraft(name: MeasurementName, value: number, units: UnitSystem): string {
-  if (units === "metric") return String(value);
+  if (!usBody(units)) return String(value);
   if (name === "weightGrams") return gramsToLb(value).toFixed(2);
   if (name === "temperatureC") return cToF(value).toFixed(1);
   return cmToIn(value).toFixed(1);

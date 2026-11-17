@@ -15,7 +15,7 @@ import { DaySummary, hasRoutineCare, summarizeDays } from "../domain/daySummary"
 import { InsightRange, averageDay, groupDays, rangeDayCount, rangeGrain, rememberRange, rememberedRange } from "../domain/insightRange";
 import { ToggleGroup, ToggleGroupItem } from "../components/ui/toggle-group";
 import { nursingSideAverage } from "../domain/nursingSides";
-import { UnitSystem, bottleDraftToMl, formatVolume, formatWeight, mlToBottleDraft, useUnits, volumeParts, weightParts } from "../domain/units";
+import { UnitSystem, bottleDraftToMl, formatVolume, formatWeight, mlToBottleDraft, ozMilk, useUnits, volumeParts, weightParts } from "../domain/units";
 import { MILK_TARGET_MAX, MILK_TARGET_MIN, activeMilkTarget } from "../domain/validate";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "../components/ui/input-group";
 import { formatShortDay, formatTime, humanDuration, median } from "../domain/time";
@@ -152,14 +152,14 @@ function MilkTargetForm({ initialMl, units, onSave, onCancel }: {
             aria-invalid={invalid}
             onChange={(event) => { setValue(event.target.value); setInvalid(false); }}
           />
-          <InputGroupAddon align="inline-end"><InputGroupText>{units === "metric" ? "ml" : "oz"}</InputGroupText></InputGroupAddon>
+          <InputGroupAddon align="inline-end"><InputGroupText>{ozMilk(units) ? "oz" : "ml"}</InputGroupText></InputGroupAddon>
         </InputGroup>
         <Button type="submit">{t("Save")}</Button>
         <Button type="button" variant="ghost" onClick={onCancel}>{t("Cancel")}</Button>
       </div>
       {invalid && (
         <p className="intake-form-error" role="alert">
-          {units === "metric" ? t("Enter an amount between 25 and 2000 ml.") : t("Enter an amount between 1 and 67 oz.")}
+          {ozMilk(units) ? t("Enter an amount between 1 and 67 oz.") : t("Enter an amount between 25 and 2000 ml.")}
         </p>
       )}
     </form>
@@ -442,7 +442,7 @@ export default function InsightsScreen({
                   what the source actually says there. */}
               {intake.lowMl === intake.highMl
                 ? t("At {weight}, the usual guide is about {vol} a day at most.", { weight: formatWeight(intake.weightKg * 1_000, units), vol: formatVolume(intake.highMl, units) })
-                : t("At {weight}, the usual guide is about {range} a day.", { weight: formatWeight(intake.weightKg * 1_000, units), range: units === "metric" ? `${intake.lowMl}–${intake.highMl} ml` : `${volumeParts(intake.lowMl, units).value}–${formatVolume(intake.highMl, units)}` })}
+                : t("At {weight}, the usual guide is about {range} a day.", { weight: formatWeight(intake.weightKg * 1_000, units), range: !ozMilk(units) ? `${intake.lowMl}–${intake.highMl} ml` : `${volumeParts(intake.lowMl, units).value}–${formatVolume(intake.highMl, units)}` })}
             </h2>
           </figcaption>
 
