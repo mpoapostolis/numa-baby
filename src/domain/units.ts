@@ -164,10 +164,11 @@ export function formatTemperature(c: number, units: UnitSystem): string {
   return `${cToF(c).toFixed(1)} °F`;
 }
 
-/** The bottle stepper's geometry per system: ±10 ml, or the half-ounce. */
+/** The bottle stepper's geometry per system: ±5 ml, or the half-ounce.
+    Five, not ten, since a parent asked how to log 55 ml. */
 export function bottleStepper(units: UnitSystem) {
   return units === "metric"
-    ? { min: 10, max: 400, step: 10, unit: "ml" }
+    ? { min: 10, max: 400, step: 5, unit: "ml" }
     : { min: 0.5, max: 13.5, step: 0.5, unit: "oz" };
 }
 

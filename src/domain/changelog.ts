@@ -24,6 +24,14 @@ export type Release = {
 
 export const RELEASES: Release[] = [
   {
+    id: "2026-11-17",
+    title: "Half ounces, and 5 ml steps",
+    items: [
+      "“Can I log milk in oz, including .5 oz amounts?” Yes: Settings → Units → US. The bottle’s + and − now always land on a half ounce (4, 4.5, 5…), even when your earlier bottles were logged in ml.",
+      "In ml, + and − now go by 5 instead of 10, so 55 ml is a tap away.",
+    ],
+  },
+  {
     id: "2026-11-15.2",
     title: "Diapers, counted",
     items: [

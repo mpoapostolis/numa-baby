@@ -128,6 +128,10 @@ function FormulaBrandField({ brands, value, onChange }: { brands: string[]; valu
   );
 }
 
+function halfOunceSeed(draft: string, units: ReturnType<typeof useUnits>) {
+  return units === "us" ? String(Math.min(13.5, Math.max(0.5, Math.round(Number(draft) * 2) / 2))) : draft;
+}
+
 function sheetOpenedAt() {
   return Date.now();
 }
@@ -148,7 +152,9 @@ function initialSheetDraft(
     // Seed from the last saved bottle, clamped to the stepper's own range.
     // In US mode every draft string is in display units — what the person
     // typed is what the field shows — and crosses to metric once, on save.
-    bottleAmount: mlToBottleDraft(Math.min(400, Math.max(10, lastBottle?.amount ?? DEFAULT_BOTTLE_ML)), units),
+    // In ounces the seed starts on a half-ounce mark: the last bottle's 150 ml
+    // is "5", not "5.1". An edit still shows its own amount exactly.
+    bottleAmount: halfOunceSeed(mlToBottleDraft(Math.min(400, Math.max(10, lastBottle?.amount ?? DEFAULT_BOTTLE_ML)), units), units),
     milkType: lastBottle?.milkType ?? "formula",
     // The last bottle's tin, as the amount is the last bottle's amount.
     formulaBrand: (lastBottle && formulaBrand(lastBottle)) ?? "",
@@ -290,10 +296,17 @@ export function LogSheet({
   const weightEntry = useWeightEntry();
   const weightInKg = units === "metric" && weightEntry === "kg";
   const stepper = bottleStepper(units);
+  // + and − land on the scale's own marks. A 150 ml bottle is 5.1 oz, and
+  // stepping from it by half an ounce went 5.6, 6.1 — a parent who asked for
+  // "including .5 oz amounts" could never reach 5.5. Now + goes to the next
+  // mark up (5.5) and − to the next one down (5.0); on a mark, a whole step.
   // 4.1 + 0.5 is 4.6000000000000005 in floating point, and String() would put
   // that on the Save button. One decimal is the resolution of the whole scale.
-  const stepDraft = (value: number) =>
-    String(Math.round(Math.min(stepper.max, Math.max(stepper.min, value)) * 10) / 10);
+  const stepDraft = (current: number, direction: 1 | -1) => {
+    const marks = current / stepper.step;
+    const next = (direction > 0 ? Math.floor(marks + 1e-9) + 1 : Math.ceil(marks - 1e-9) - 1) * stepper.step;
+    return String(Math.round(Math.min(stepper.max, Math.max(stepper.min, next)) * 10) / 10);
+  };
   const presets = presetsFor(units);
   // Growth fields: metric props straight from the schema, or the same bounds
   // through the same conversion the values take.
@@ -963,9 +976,9 @@ export function LogSheet({
           <Field className="amount-field">
             <FieldLabel>{t("Amount")}</FieldLabel>
             <ButtonGroup className="amount-control" aria-label={t("Bottle amount")}>
-              <Button type="button" variant="outline" aria-label={t("Decrease amount")} disabled={Number(draft.bottleAmount) <= stepper.min} onClick={() => setDraft((current) => ({ ...current, bottleAmount: stepDraft((Number(current.bottleAmount) || stepper.min) - stepper.step) }))}><Minus /></Button>
+              <Button type="button" variant="outline" aria-label={t("Decrease amount")} disabled={Number(draft.bottleAmount) <= stepper.min} onClick={() => setDraft((current) => ({ ...current, bottleAmount: stepDraft(Number(current.bottleAmount) || stepper.min, -1) }))}><Minus /></Button>
               <ButtonGroupText role="status" aria-live="polite" aria-atomic="true"><strong>{draft.bottleAmount}</strong><span>{stepper.unit}</span></ButtonGroupText>
-              <Button type="button" variant="outline" aria-label={t("Increase amount")} disabled={Number(draft.bottleAmount) >= stepper.max} onClick={() => setDraft((current) => ({ ...current, bottleAmount: stepDraft((Number(current.bottleAmount) || 0) + stepper.step) }))}><Plus /></Button>
+              <Button type="button" variant="outline" aria-label={t("Increase amount")} disabled={Number(draft.bottleAmount) >= stepper.max} onClick={() => setDraft((current) => ({ ...current, bottleAmount: stepDraft(Number(current.bottleAmount) || 0, 1) }))}><Plus /></Button>
             </ButtonGroup>
             <ToggleGroup type="single" value={draft.bottleAmount} className="preset-row" aria-label={t("Preset amounts")} onValueChange={(value) => value && patch({ bottleAmount: value })}>
               {presets.map((amount, index) => {
